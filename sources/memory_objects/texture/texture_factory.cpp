@@ -85,7 +85,6 @@ std::unique_ptr<Texture> TextureFactory::create2DTextureImage(const LogicalDevic
         .maxAnisotropy = samplerAnisotropy,
         .maxLod = static_cast<float>(dimensions.mipLevels)
     };
-
     return createTextureMipmapImage(logicalDevice, commandBuffer, stagingBuffer.getVkBuffer(), dimensions.copyRegions, imageParams, samplerParams);
 }
 

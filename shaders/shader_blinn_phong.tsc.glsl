@@ -1,10 +1,10 @@
 #version 450
 
 // Constants for tessellation levels
-const float tessLevelOuter = 6.0;  // Outer tessellation level
-const float tessLevelInner = 6.0;  // Inner tessellation level
+const float tessLevelOuter = 10.0;  // Outer tessellation level
+const float tessLevelInner = 10.0;  // Inner tessellation level
 
-layout(vertices = 1) out;  // Using triangles, so 3 control points
+layout(vertices = 1) out;
 
 layout(location = 0) in vec2 inTexCoord[];
 layout(location = 1) in vec3 inNormal[];

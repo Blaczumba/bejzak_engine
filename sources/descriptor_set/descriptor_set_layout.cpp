@@ -15,7 +15,6 @@ DescriptorSetLayout::~DescriptorSetLayout() {
 
 void DescriptorSetLayout::addLayoutBinding(VkDescriptorType descriptorType, VkShaderStageFlags stageFlags, uint32_t descriptorCount, const VkSampler* pImmutableSamplers) {
 	_bindings.emplace_back(_binding++, descriptorType, descriptorCount, stageFlags, pImmutableSamplers);
-
     ++_descriptorTypeOccurances[descriptorType];
 }
 

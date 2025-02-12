@@ -29,10 +29,6 @@ DescriptorSet::DescriptorSet(const std::shared_ptr<const DescriptorPool>& descri
     }
 }
 
-DescriptorSet::~DescriptorSet() {
-    
-}
-
 void DescriptorSet::updateDescriptorSet(const std::vector<UniformBuffer*>& uniformBuffers) {
 
     std::vector<VkWriteDescriptorSet> descriptorWrites;

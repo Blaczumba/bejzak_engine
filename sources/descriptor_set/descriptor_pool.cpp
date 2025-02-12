@@ -11,11 +11,7 @@ DescriptorPool::DescriptorPool(const LogicalDevice& logicalDevice, const Descrip
 	size_t count = _descriptorSetLayout.getDescriptorTypeCounter().size();
 	poolSizes.reserve(count);
 	for (const auto [descriptorType, numOccurances] : _descriptorSetLayout.getDescriptorTypeCounter()) {
-		poolSizes.emplace_back(VkDescriptorPoolSize {
-				.type = descriptorType,
-				.descriptorCount = _maxNumSets * numOccurances,
-			}
-		);
+		poolSizes.emplace_back(descriptorType, _maxNumSets * numOccurances);
 	}
 
 	const VkDescriptorPoolCreateInfo poolInfo = {

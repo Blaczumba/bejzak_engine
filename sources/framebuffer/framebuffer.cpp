@@ -10,51 +10,56 @@
 #include <stdexcept>
 
 Framebuffer::Framebuffer(const Renderpass& renderpass, const Swapchain& swapchain, uint8_t swapchainIndex, const CommandPool& commandPool)
-    : _renderpass(renderpass), _swapchainIndex(swapchainIndex), _extent(swapchain.getExtent()) {
+    : _renderpass(renderpass), _swapchainIndex(swapchainIndex) {
     if (swapchain.getImagesCount() <= _swapchainIndex) {
         throw std::runtime_error("swapchainIndex does not fit in swapchain images count!");
     }
+    const VkExtent2D swapchainExtent = swapchain.getExtent();
     _viewport = VkViewport{
-        .width = static_cast<float>(_extent.width),
-        .height = static_cast<float>(_extent.height),
+        .width = static_cast<float>(swapchainExtent.width),
+        .height = static_cast<float>(swapchainExtent.height),
         .minDepth = 0.0f,
         .maxDepth = 1.0f
     };
     _scissor = VkRect2D{
-        .extent = _extent
+        .extent = swapchainExtent
     };
 
     const LogicalDevice& logicalDevice = commandPool.getLogicalDevice();
     const std::vector<VkAttachmentDescription>& descriptions = _renderpass.getAttachmentsLayout().getVkAttachmentDescriptions();
 
     std::vector<VkImageView> imageViews;
-
+    imageViews.reserve(descriptions.size());
+    _textureAttachments.reserve(descriptions.size());
     SingleTimeCommandBuffer handle(commandPool);
     const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
     for (const auto& description : descriptions) {
         switch (description.finalLayout) {
         case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
             imageViews.push_back(swapchain.getVkImageViews()[*_swapchainIndex]);
-            continue;
+            break;
         case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-            _textureAttachments.emplace_back(TextureFactory::createColorAttachment(logicalDevice, commandBuffer, description.format, description.samples, _extent));
+            _textureAttachments.push_back(TextureFactory::createColorAttachment(logicalDevice, commandBuffer, description.format, description.samples, swapchainExtent));
+            imageViews.push_back(_textureAttachments.back()->getVkImageView());
             break;
         case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-            _textureAttachments.emplace_back(TextureFactory::createDepthAttachment(logicalDevice, commandBuffer, description.format, description.samples, _extent));
+            _textureAttachments.push_back(TextureFactory::createDepthAttachment(logicalDevice, commandBuffer, description.format, description.samples, swapchainExtent));
+            imageViews.push_back(_textureAttachments.back()->getVkImageView());
             break;
         default:
             throw std::runtime_error("failed to recognize final layout in the framebuffer!");
         }
-        imageViews.push_back(_textureAttachments.back()->getVkImageView());
     }
+    imageViews.shrink_to_fit();
+    _textureAttachments.shrink_to_fit();
 
     const VkFramebufferCreateInfo framebufferInfo = {
         .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
         .renderPass = _renderpass.getVkRenderPass(),
         .attachmentCount = static_cast<uint32_t>(imageViews.size()),
         .pAttachments = imageViews.data(),
-        .width = _extent.width,
-        .height = _extent.height,
+        .width = swapchainExtent.width,
+        .height = swapchainExtent.height,
         .layers = 1,
     };
     if (vkCreateFramebuffer(_renderpass.getLogicalDevice().getVkDevice(), &framebufferInfo, nullptr, &_framebuffer) != VK_SUCCESS) {
@@ -78,15 +83,14 @@ Framebuffer::Framebuffer(const Renderpass& renderpass, std::vector<std::shared_p
     if (!extent.has_value()) {
         throw std::runtime_error("framebuffer has no textures specified!");
     }
-    _extent = *extent;
     _viewport = VkViewport{
-        .width = static_cast<float>(_extent.width),
-        .height = static_cast<float>(_extent.height),
+        .width = static_cast<float>(extent->width),
+        .height = static_cast<float>(extent->height),
         .minDepth = 0.0f,
         .maxDepth = 1.0f
     };
     _scissor = VkRect2D{
-        .extent = _extent
+        .extent = *extent
     };
 
     const VkFramebufferCreateInfo framebufferInfo = {
@@ -109,7 +113,7 @@ Framebuffer::~Framebuffer() {
 }
 
 VkExtent2D Framebuffer::getVkExtent() const {
-    return _extent;
+    return _scissor.extent;
 }
 
 const VkViewport& Framebuffer::getViewport() const {

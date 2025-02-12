@@ -17,7 +17,7 @@ PhysicalDevice::PhysicalDevice(const Window& window)
     for (const auto device : devices) {
         _propertyManager.initiate(device, surf);
         const QueueFamilyIndices& indices = _propertyManager.getQueueFamilyIndices();
-        bool extensionsSupported = _propertyManager.checkDeviceExtensionSupport();
+        const bool extensionsSupported = _propertyManager.checkDeviceExtensionSupport();
 
         bool swapChainAdequate = false;
         if (extensionsSupported) {

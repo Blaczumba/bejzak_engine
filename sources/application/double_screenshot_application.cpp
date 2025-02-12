@@ -515,9 +515,9 @@ void SingleApp::recordCommandBuffer(uint32_t imageIndex) {
         .pViewportDepths = &framebuffer.getViewport(),
     };
 
-    _threadPool.getThread(0).addJob([&]() {
+    auto f1 = std::async(std::launch::async, [&]() {
         _commandBuffers[_currentFrame][0]->begin(framebuffer, &scissorViewportInheritance);
-        VkCommandBuffer commandBuffer = _commandBuffers[_currentFrame][0]->getVkCommandBuffer();
+        const VkCommandBuffer commandBuffer = _commandBuffers[_currentFrame][0]->getVkCommandBuffer();
         vkCmdBindPipeline(commandBuffer, _graphicsPipeline->getVkPipelineBindPoint(), _graphicsPipeline->getVkPipeline());
 
         const OctreeNode* root = _octree->getRoot();
@@ -527,12 +527,12 @@ void SingleApp::recordCommandBuffer(uint32_t imageIndex) {
         if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
             throw std::runtime_error("failed to record command buffer!");
         }
-    });
+        });
 
-    _threadPool.getThread(1).addJob([&]() {
+    auto f2 = std::async(std::launch::async, [&]() {
         // Skybox
         _commandBuffers[_currentFrame][1]->begin(framebuffer, &scissorViewportInheritance);
-        VkCommandBuffer commandBuffer = _commandBuffers[_currentFrame][1]->getVkCommandBuffer();
+        const VkCommandBuffer commandBuffer = _commandBuffers[_currentFrame][1]->getVkCommandBuffer();
 
         vkCmdBindPipeline(commandBuffer, _graphicsPipelineSkybox->getVkPipelineBindPoint(), _graphicsPipelineSkybox->getVkPipeline());
         _vertexBufferCube->bind(commandBuffer);
@@ -548,9 +548,10 @@ void SingleApp::recordCommandBuffer(uint32_t imageIndex) {
         vkCmdDrawIndexed(commandBuffer, _indexBufferObject->getIndexCount(), 1, 0, 0, 0);
 
         vkEndCommandBuffer(commandBuffer);
-    });
+        });
 
-    _threadPool.wait();
+    f1.wait();
+    f2.wait();
 
     primaryCommandBuffer.executeSecondaryCommandBuffers({ _commandBuffers[_currentFrame][0]->getVkCommandBuffer(), _commandBuffers[_currentFrame][1]->getVkCommandBuffer() });
     primaryCommandBuffer.endRenderPass();

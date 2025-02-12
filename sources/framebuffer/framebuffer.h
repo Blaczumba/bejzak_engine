@@ -16,7 +16,6 @@ class Framebuffer {
 	VkFramebuffer _framebuffer;
 	std::vector<std::shared_ptr<Texture>> _textureAttachments;
 	const std::optional<uint8_t> _swapchainIndex;
-	VkExtent2D _extent;
 	VkViewport _viewport;
 	VkRect2D _scissor;
 

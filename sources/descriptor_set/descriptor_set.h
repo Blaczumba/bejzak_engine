@@ -14,12 +14,11 @@ class DescriptorSet {
 	VkDescriptorSet _descriptorSet;
 
 	std::vector<uint32_t> _dynamicBuffersBaseSizes;
-
 	const std::shared_ptr<const DescriptorPool> _descriptorPool;
 
 public:
 	DescriptorSet(const std::shared_ptr<const DescriptorPool>& descriptorPool);
-	~DescriptorSet();
+	~DescriptorSet() = default;
 
 	void updateDescriptorSet(const std::vector<UniformBuffer*>& uniformBuffers);
 	void bind(VkCommandBuffer commandBuffer, const Pipeline& pipeline, std::initializer_list<uint32_t> dynamicOffsetStrides = {});
