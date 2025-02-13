@@ -92,7 +92,7 @@ public:
         processIndices(indicesBuffer.get(), indices.data(), indices.size(), indexType);
         return VertexData<VertexType>{ 
             .vertices = std::move(vertices),
-            .indicesS = std::move(indicesBuffer),
+            .indices = std::move(indicesBuffer),
             .indexType = indexType
         };
     }

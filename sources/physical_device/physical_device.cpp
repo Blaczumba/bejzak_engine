@@ -30,11 +30,11 @@ PhysicalDevice::PhysicalDevice(const Window& window)
 
         bool discreteGPU = _propertyManager.isDiscreteGPU();
 
-        const std::array<bool, 5> conditions = {
+        const std::array conditions = {
             indices.isComplete(),
             extensionsSupported,
             swapChainAdequate,
-            supportedFeatures.samplerAnisotropy,
+            static_cast<bool>(supportedFeatures.samplerAnisotropy),
             discreteGPU
         };
 

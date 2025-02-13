@@ -6,7 +6,6 @@
 
 DescriptorSetLayout::DescriptorSetLayout(const LogicalDevice& logicalDevice) 
 	: _logicalDevice(logicalDevice), _binding(0) {
-
 }
 
 DescriptorSetLayout::~DescriptorSetLayout() {

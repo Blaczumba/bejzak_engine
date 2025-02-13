@@ -16,7 +16,6 @@ class PushConstants {
 public:
 	PushConstants(const PhysicalDevice& physicalDevice) {
 		const auto& limits = physicalDevice.getPropertyManager().getPhysicalDeviceLimits();
-
 		_maxSize = limits.maxPushConstantsSize;
 	}
 	PushConstants() = default;

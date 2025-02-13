@@ -10,17 +10,14 @@
 
 class ApplicationBase {
 protected:
-    std::shared_ptr<Instance> _instance;
-    std::shared_ptr<WindowGLFW> _window;
-
+    std::unique_ptr<Instance> _instance;
 #ifdef VALIDATION_LAYERS_ENABLED
-    std::shared_ptr<DebugMessenger> _debugMessenger;
+    std::unique_ptr<DebugMessenger> _debugMessenger;
 #endif // VALIDATION_LAYERS_ENABLED
-
+    std::unique_ptr<WindowGLFW> _window;
     std::unique_ptr<PhysicalDevice> _physicalDevice;
     std::unique_ptr<LogicalDevice> _logicalDevice;
     std::unique_ptr<Swapchain> _swapchain;
-
     std::unique_ptr<CommandPool> _singleTimeCommandPool;
 
 public:

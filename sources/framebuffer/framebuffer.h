@@ -21,11 +21,23 @@ class Framebuffer {
 
 	const Renderpass& _renderpass;
 
-public:
-	// Framebuffer for presenting images to the screen.
-	Framebuffer(const Renderpass& renderpass, const Swapchain& swapchain, uint8_t swapchainIndex, const CommandPool& commandPool);
-	// Ofscreen framebuffer requires all textures to have the same size.
+	Framebuffer(const Renderpass& renderpass, const Swapchain& swapchain, uint8_t swapchainImageIndex, const CommandPool& commandPool);
 	Framebuffer(const Renderpass& renderpass, std::vector<std::shared_ptr<Texture>>&& textures);
+
+public:
+	static std::unique_ptr<Framebuffer> createFromSwapchain(const Renderpass& renderpass, const Swapchain& swapchain, uint8_t swapchainImageIndex, const CommandPool& commandPool) {
+		return std::unique_ptr<Framebuffer>(new Framebuffer(renderpass, swapchain, swapchainImageIndex, commandPool));
+	}
+	
+	// TODO change to unique_ptr
+	template<typename... Textures>
+	static std::unique_ptr<Framebuffer> createFromTextures(const Renderpass& renderpass, std::shared_ptr<Textures>&&... textures) {
+		std::vector<std::shared_ptr<Texture>> tex;
+		tex.reserve(sizeof...(textures));
+		(tex.push_back(textures), ...);
+		return std::unique_ptr<Framebuffer>(new Framebuffer(renderpass, std::move(tex)));
+	}
+
 	~Framebuffer();
 
 	VkExtent2D getVkExtent() const;

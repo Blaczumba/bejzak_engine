@@ -76,16 +76,17 @@ void Swapchain::create() {
         imageCount = swapChainSupport.capabilities.maxImageCount;
     }
 
-    VkSwapchainCreateInfoKHR createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.surface = window.getVkSurfaceKHR();
+    VkSwapchainCreateInfoKHR createInfo = {
+        .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+        .surface = window.getVkSurfaceKHR(),
 
-    createInfo.minImageCount = imageCount;
-    createInfo.imageFormat = _surfaceFormat.format;
-    createInfo.imageColorSpace = _surfaceFormat.colorSpace;
-    createInfo.imageExtent = _extent;
-    createInfo.imageArrayLayers = 1;
-    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        .minImageCount = imageCount,
+        .imageFormat = _surfaceFormat.format,
+        .imageColorSpace = _surfaceFormat.colorSpace,
+        .imageExtent = _extent,
+        .imageArrayLayers = 1,
+        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+    };
 
     const QueueFamilyIndices& indices = propertyManager.getQueueFamilyIndices();
     uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
@@ -98,7 +99,6 @@ void Swapchain::create() {
     else {
         createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     }
-
     createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
     createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     createInfo.presentMode = presentMode;
@@ -111,8 +111,8 @@ void Swapchain::create() {
     vkGetSwapchainImagesKHR(device, _swapchain, &imageCount, nullptr);
     _images.resize(imageCount);
     vkGetSwapchainImagesKHR(device, _swapchain, &imageCount, _images.data());
-    _views.resize(imageCount);
-    std::transform(_images.cbegin(), _images.cend(), _views.begin(),
+    _views.reserve(imageCount);
+    std::transform(_images.cbegin(), _images.cend(), std::back_inserter(_views),
         [this](const VkImage image) {
             return _logicalDevice.createImageView(image, ImageParameters{
                     .format = _surfaceFormat.format,
@@ -124,6 +124,10 @@ void Swapchain::create() {
             );
         }
     );
+}
+
+std::unique_ptr<Swapchain> Swapchain::create(const LogicalDevice& logicalDevice) {
+    return std::unique_ptr<Swapchain>(new Swapchain(logicalDevice));
 }
 
 void Swapchain::recrete() {

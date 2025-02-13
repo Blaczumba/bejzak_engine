@@ -186,7 +186,7 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
             }
         }
 
-        vertexData.indicesS = std::move(indices);
+        vertexData.indices = std::move(indices);
         vertexData.indexType = indexType;
 
         // Load textures

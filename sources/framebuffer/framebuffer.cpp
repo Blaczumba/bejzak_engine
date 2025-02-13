@@ -9,8 +9,8 @@
 #include <optional>
 #include <stdexcept>
 
-Framebuffer::Framebuffer(const Renderpass& renderpass, const Swapchain& swapchain, uint8_t swapchainIndex, const CommandPool& commandPool)
-    : _renderpass(renderpass), _swapchainIndex(swapchainIndex) {
+Framebuffer::Framebuffer(const Renderpass& renderpass, const Swapchain& swapchain, uint8_t swapchainImageIndex, const CommandPool& commandPool)
+    : _renderpass(renderpass), _swapchainIndex(swapchainImageIndex) {
     if (swapchain.getImagesCount() <= _swapchainIndex) {
         throw std::runtime_error("swapchainIndex does not fit in swapchain images count!");
     }

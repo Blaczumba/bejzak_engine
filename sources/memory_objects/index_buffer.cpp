@@ -21,7 +21,6 @@ constexpr uint8_t getIndexSize(VkIndexType indexType) {
 
 }
 
-
 IndexBuffer::IndexBuffer(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer, VkIndexType indexType)
     : _logicalDevice(logicalDevice), _indexCount(stagingBuffer.getSize() / getIndexSize(indexType)), _indexType(indexType) {
     _indexBuffer = std::visit(Allocator{ _allocation, stagingBuffer.getSize() }, _logicalDevice.getMemoryAllocator());

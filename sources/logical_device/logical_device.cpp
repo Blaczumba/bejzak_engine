@@ -23,12 +23,8 @@ LogicalDevice::LogicalDevice(const PhysicalDevice& physicalDevice)
     queueCreateInfos.reserve(uniqueQueueFamilies.size());
     for (uint32_t queueFamily : uniqueQueueFamilies) {
         queueCreateInfos.emplace_back(
-            VkDeviceQueueCreateInfo{
-                .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-                .queueFamilyIndex = queueFamily,
-                .queueCount = 1,
-                .pQueuePriorities = &queuePriority
-            }
+            VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+            nullptr, 0, queueFamily, 1, &queuePriority
         );
     }
     const VkPhysicalDeviceIndexTypeUint8FeaturesEXT uint8IndexFeatures = {
@@ -88,7 +84,7 @@ LogicalDevice::LogicalDevice(const PhysicalDevice& physicalDevice)
 }
 
 const VkBuffer LogicalDevice::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage) const {
-    VkBufferCreateInfo bufferInfo = {
+    const VkBufferCreateInfo bufferInfo = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .size = size,
         .usage = usage,

@@ -4,6 +4,7 @@
 
 #include <vulkan/vulkan.h>
 
+#include <memory>
 #include <vector>
 
 class Window;
@@ -22,9 +23,11 @@ class Swapchain {
 
 	void cleanup();
 	void create();
+	Swapchain(const LogicalDevice& logicalDevice);
 
 public:
-	Swapchain(const LogicalDevice& logicalDevice);
+	static std::unique_ptr<Swapchain> create(const LogicalDevice& logicalDevice);
+
 	~Swapchain();
 	void recrete();
 

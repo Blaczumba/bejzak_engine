@@ -7,20 +7,21 @@
 #include <variant>
 
 VmaWrapper::VmaWrapper(const VkDevice device, const VkPhysicalDevice physicalDevice, const VkInstance instance) {
-	VmaAllocatorCreateInfo allocatorCreateInfo = {};
-	allocatorCreateInfo.flags = // VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT |
-		VMA_ALLOCATOR_CREATE_KHR_BIND_MEMORY2_BIT |
-		VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT |
-		VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT;
-	allocatorCreateInfo.physicalDevice = physicalDevice;
-	allocatorCreateInfo.device = device;
-	allocatorCreateInfo.instance = instance;
-
+	const VmaAllocatorCreateInfo allocatorCreateInfo = {
+		.flags = // VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT |
+			VMA_ALLOCATOR_CREATE_KHR_BIND_MEMORY2_BIT |
+			VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT |
+			VMA_ALLOCATOR_CREATE_BUFFER_DEVICE_ADDRESS_BIT,
+		.physicalDevice = physicalDevice,
+		.device = device,
+		.instance = instance
+	};
 	vmaCreateAllocator(&allocatorCreateInfo, &_allocator);
 }
 
 VmaWrapper::VmaWrapper(VmaWrapper&& allocator) {
-	_allocator = std::exchange(allocator._allocator, nullptr);
+	if (this != &allocator)
+		_allocator = std::exchange(allocator._allocator, nullptr);
 }
 
 VmaWrapper::~VmaWrapper() {

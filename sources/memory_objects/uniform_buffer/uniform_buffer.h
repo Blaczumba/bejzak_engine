@@ -8,9 +8,14 @@
 
 #include <memory>
 
-static VkDeviceSize getMemoryAlignment(size_t size, size_t minUboAlignment) {
+namespace {
+
+VkDeviceSize getMemoryAlignment(size_t size, size_t minUboAlignment) {
 	return minUboAlignment > 0 ? (size + minUboAlignment - 1) & ~(minUboAlignment - 1) : size;
 }
+
+}
+
 
 class UniformBuffer {
 protected:

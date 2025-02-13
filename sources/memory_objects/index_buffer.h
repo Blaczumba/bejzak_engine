@@ -32,7 +32,6 @@ private:
     struct Allocator {
         Allocation& allocation;
         const size_t size;
-
         const VkBuffer operator()(VmaWrapper& allocator) {
             auto [buffer, tmpAllocation, _] = allocator.createVkBuffer(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
             allocation = tmpAllocation;

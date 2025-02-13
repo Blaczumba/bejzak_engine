@@ -17,10 +17,8 @@ class FPSCamera : public Camera, public CallbackObserver {
 
     float _yaw = 0.0f;
     float _pitch = 0.0f;
-
     float _movementSpeed = 2.5f;
     float _mouseSensitivity = 0.005f;
-
     float _fovy = glm::radians(45.0f);
     float _aspectRatio = 1.0f;
     float _zNear = 0.1f;
