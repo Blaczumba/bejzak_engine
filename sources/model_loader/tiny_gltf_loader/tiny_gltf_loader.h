@@ -85,7 +85,7 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
         std::vector<glm::vec3> normals;
         std::vector<glm::vec3> tangents;
         std::vector<glm::vec3> bitangents;
-        Buffer<uint8_t> indices;
+        lib::Buffer<uint8_t> indices;
         uint32_t indicesCount;
         IndexTypeT indexType;
 
@@ -156,33 +156,33 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
 
             indicesCount = accessor.count;
             indexType = getMatchingIndexType(indicesCount);
-            indices = Buffer<uint8_t>(indicesCount * size_t{ indexType });
+            indices = lib::Buffer<uint8_t>(indicesCount * size_t{ indexType });
 
             // Determine the component type and process
             if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
                 const uint16_t* data = reinterpret_cast<const uint16_t*>(&buffer.data[accessor.byteOffset + bufferView.byteOffset]);
-                processIndices(indices.get(), data, indicesCount, indexType);
+                processIndices(indices.data(), data, indicesCount, indexType);
             }
             else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT) {
                 const uint32_t* data = reinterpret_cast<const uint32_t*>(&buffer.data[accessor.byteOffset + bufferView.byteOffset]);
-                processIndices(indices.get(), data, indicesCount, indexType);
+                processIndices(indices.data(), data, indicesCount, indexType);
             }
             else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE) {
                 const uint8_t* data = reinterpret_cast<const uint8_t*>(&buffer.data[accessor.byteOffset + bufferView.byteOffset]);
-                processIndices(indices.get(), data, indicesCount, indexType);
+                processIndices(indices.data(), data, indicesCount, indexType);
             }
         }
 
         if constexpr (VertexTraits<VertexType>::hasTangent || VertexTraits<VertexType>::hasBitangent) {
             switch (indexType) {
             case IndexTypeT::UINT8:
-                processTangentsBitangents(reinterpret_cast<uint8_t*>(indices.get()), indicesCount, vertexData.vertices);
+                processTangentsBitangents(reinterpret_cast<uint8_t*>(indices.data()), indicesCount, vertexData.vertices);
                 break;
             case IndexTypeT::UINT16:
-                processTangentsBitangents(reinterpret_cast<uint16_t*>(indices.get()), indicesCount, vertexData.vertices);
+                processTangentsBitangents(reinterpret_cast<uint16_t*>(indices.data()), indicesCount, vertexData.vertices);
                 break;
             case IndexTypeT::UINT32:
-                processTangentsBitangents(reinterpret_cast<uint32_t*>(indices.get()), indicesCount, vertexData.vertices);
+                processTangentsBitangents(reinterpret_cast<uint32_t*>(indices.data()), indicesCount, vertexData.vertices);
             }
         }
 

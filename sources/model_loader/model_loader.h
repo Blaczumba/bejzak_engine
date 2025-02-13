@@ -42,7 +42,7 @@ struct VertexData {
 	std::string metallicRoughnessTexture;
 	glm::mat4 model;
 
-	Buffer<uint8_t> indices;
+	lib::Buffer<uint8_t> indices;
 	IndexTypeT indexType;
 };
 

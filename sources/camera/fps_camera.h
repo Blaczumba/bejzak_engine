@@ -42,4 +42,7 @@ public:
 
     void move(glm::vec3 direction);
     void rotate(float theta, float phi);
+
+private:
+    void updateProjectionMatrix();
 };

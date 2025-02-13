@@ -32,7 +32,7 @@ SingleApp::SingleApp()
     createShadowResources();
 
     VertexData<VertexP> vertexDataCube = TinyOBJLoaderVertex::load<VertexP>(MODELS_PATH "cube.obj");
-    _assetManager->loadVertexData("cube.obj", vertexDataCube.vertices, std::span(vertexDataCube.indices.get(), vertexDataCube.indices.size()), uint8_t{ vertexDataCube.indexType });
+    _assetManager->loadVertexData("cube.obj", vertexDataCube.vertices, vertexDataCube.indices, uint8_t{ vertexDataCube.indexType });
     {
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
@@ -65,7 +65,7 @@ void SingleApp::loadObject() {
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
 
         VertexData<VertexPTN> vertexData = TinyOBJLoaderVertex::load<VertexPTN>(MODELS_PATH "cylinder8.obj");
-        _assetManager->loadVertexData("cube_normal.obj", vertexData.vertices, std::span(vertexData.indices.get(), vertexData.indices.size()), uint8_t{ vertexData.indexType });
+        _assetManager->loadVertexData("cube_normal.obj", vertexData.vertices, vertexData.indices, uint8_t{ vertexData.indexType });
         const AssetManager::VertexData& vData = _assetManager->getVertexData("cube_normal.obj");
         _vertexBufferObject = std::make_unique<VertexBuffer>(*_logicalDevice, commandBuffer, *vData.vertexBuffer);
         _vertexBufferPrimitiveObject = std::make_unique<VertexBuffer>(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives);
@@ -95,7 +95,7 @@ void SingleApp::loadObjects() {
         _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + _newVertexDataTBN[i].diffuseTexture);
         _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + _newVertexDataTBN[i].metallicRoughnessTexture);
         _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + _newVertexDataTBN[i].normalTexture);
-        _assetManager->loadVertexData(std::to_string(i), _newVertexDataTBN[i].vertices, std::span(_newVertexDataTBN[i].indices.get(), _newVertexDataTBN[i].indices.size()), uint8_t{ _newVertexDataTBN[i].indexType });
+        _assetManager->loadVertexData(std::to_string(i), _newVertexDataTBN[i].vertices, _newVertexDataTBN[i].indices, uint8_t{ _newVertexDataTBN[i].indexType });
     }
     const auto& propertyManager = _physicalDevice->getPropertyManager();
     float maxSamplerAnisotropy = propertyManager.getMaxSamplerAnisotropy();

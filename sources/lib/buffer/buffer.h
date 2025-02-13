@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <memory>
 
+namespace lib {
+
 template<typename T>
 class Buffer {
 	std::unique_ptr<T[]> _buffer;
@@ -45,6 +47,9 @@ public:
         return _buffer[index];
     }
 
-	T* get() { return _buffer.get(); }
+	const T* data() const { return _buffer.get(); }
+    T* data() { return _buffer.get(); }
 	size_t size() const { return _size; }
 };
+
+} // lib

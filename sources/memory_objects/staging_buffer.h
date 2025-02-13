@@ -3,6 +3,7 @@
 #include "memory_allocator/memory_allocator.h"
 #include "memory_objects/buffer_deallocator.h"
 #include "logical_device/logical_device.h"
+#include "lib/buffer/buffer.h"
 
 #include <vulkan/vulkan.h>
 
@@ -14,6 +15,12 @@ class StagingBuffer {
 public:
     template<typename Type>
     StagingBuffer(MemoryAllocator& memoryAllocator, const std::span<Type> data) : _memoryAllocator(memoryAllocator), _size(data.size() * sizeof(Type)) {
+        std::tie(_buffer, _mappedData) = std::visit(Allocator{ _allocation, _size }, _memoryAllocator);
+        std::memcpy(_mappedData, data.data(), _size);
+    }
+
+    template<typename Type>
+    StagingBuffer(MemoryAllocator& memoryAllocator, const lib::Buffer<Type> data) : _memoryAllocator(memoryAllocator), _size(data.size() * sizeof(Type)) {
         std::tie(_buffer, _mappedData) = std::visit(Allocator{ _allocation, _size }, _memoryAllocator);
         std::memcpy(_mappedData, data.data(), _size);
     }

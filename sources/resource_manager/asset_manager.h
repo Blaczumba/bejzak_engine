@@ -1,5 +1,6 @@
 #pragma once
 
+#include "lib/buffer/buffer.h"
 #include "logical_device/logical_device.h"
 #include "memory_objects/staging_buffer.h"
 #include "model_loader/image_loader/image_loader.h"
@@ -64,7 +65,7 @@ public:
 	void loadImageCubemapAsync(const std::string& filePath);
 
 	template<typename VertexType>
-	CacheCode loadVertexData(std::string_view key, const std::vector<VertexType>& vertices, const std::span<uint8_t> indices, uint8_t indexSize) {
+	CacheCode loadVertexData(std::string_view key, const std::vector<VertexType>& vertices, const lib::Buffer<uint8_t>& indices, uint8_t indexSize) {
 		// TODO: Needs refactoring
 		static_assert(VertexTraits<VertexType>::hasPosition, "Cannot load vertex data with no position defined");
 		auto createStagingBuffer = [&](const auto& data) {
