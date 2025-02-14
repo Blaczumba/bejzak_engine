@@ -11,7 +11,7 @@ class Buffer {
 	size_t _size;
 
 public:
-	Buffer() : _buffer(nullptr), _size(0) {}
+	Buffer() : _size(0) {}
 	explicit Buffer(size_t size) : _buffer(std::make_unique_for_overwrite<T[]>(size)), _size(size) {}
 
 	Buffer(const Buffer& other) : Buffer(other._size) {

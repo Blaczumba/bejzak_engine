@@ -60,7 +60,6 @@ public:
 		AABB aabb;
 	};
 
-	std::shared_future<std::unique_ptr<VertexData>> loadVertexDataAsync(const std::string& identifier, std::function<ImageResource()>&& loadingFunction);
 	void loadImage2DAsync(const std::string& filePath);
 	void loadImageCubemapAsync(const std::string& filePath);
 
@@ -68,19 +67,16 @@ public:
 	CacheCode loadVertexData(std::string_view key, const std::vector<VertexType>& vertices, const lib::Buffer<uint8_t>& indices, uint8_t indexSize) {
 		// TODO: Needs refactoring
 		static_assert(VertexTraits<VertexType>::hasPosition, "Cannot load vertex data with no position defined");
-		auto createStagingBuffer = [&](const auto& data) {
-			return StagingBuffer(_memoryAllocator, data);
-		};
-		StagingBuffer indexBuffer = createStagingBuffer(indices);
+		StagingBuffer indexBuffer(_memoryAllocator, indices);
 		auto handleVertexBuffer = [&]() -> std::tuple<std::optional<StagingBuffer>, StagingBuffer> {
 			if (typeid(VertexType) == typeid(VertexP)) {
-				return { std::nullopt, createStagingBuffer(std::span(vertices.data(), vertices.size()))};
+				return { std::nullopt, StagingBuffer(_memoryAllocator, std::span(vertices.data(), vertices.size()))};
 			}
 			else {
 				std::vector<glm::vec3> primitives;
 				primitives.reserve(vertices.size());
 				std::transform(vertices.begin(), vertices.end(), std::back_inserter(primitives), [](const VertexType& vertex) { return vertex.pos; });
-				return { createStagingBuffer(std::span(vertices.data(), vertices.size())), createStagingBuffer(std::span(primitives.data(), primitives.size())) };
+				return { StagingBuffer(_memoryAllocator, std::span(vertices.data(), vertices.size())), StagingBuffer(_memoryAllocator, std::span(primitives.data(), primitives.size())) };
 			}
 		};
 		auto [vertexBuffer, primitivesVertexBuffer] = handleVertexBuffer();
@@ -114,7 +110,7 @@ private:
 	MemoryAllocator& _memoryAllocator;
 
 	std::unordered_map<std::string, VertexData> _vertexDataResources;
-	std::unordered_map<std::string, std::shared_future<std::unique_ptr<VertexData>>> _awaitingVertexDataResources;
+	std::unordered_map<std::string, std::future<std::unique_ptr<VertexData>>> _awaitingVertexDataResources;
 
 	std::unordered_map<std::string, ImageData> _imageResources;
 	std::unordered_map<std::string, std::future<std::unique_ptr<ImageData>>> _awaitingImageResources;

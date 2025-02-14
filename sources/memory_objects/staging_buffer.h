@@ -14,15 +14,15 @@
 class StagingBuffer {
 public:
     template<typename Type>
-    StagingBuffer(MemoryAllocator& memoryAllocator, const std::span<Type> data) : _memoryAllocator(memoryAllocator), _size(data.size() * sizeof(Type)) {
+    StagingBuffer(MemoryAllocator& memoryAllocator, const std::span<Type> buffer) : _memoryAllocator(memoryAllocator), _size(buffer.size() * sizeof(Type)) {
         std::tie(_buffer, _mappedData) = std::visit(Allocator{ _allocation, _size }, _memoryAllocator);
-        std::memcpy(_mappedData, data.data(), _size);
+        std::memcpy(_mappedData, buffer.data(), _size);
     }
 
     template<typename Type>
-    StagingBuffer(MemoryAllocator& memoryAllocator, const lib::Buffer<Type> data) : _memoryAllocator(memoryAllocator), _size(data.size() * sizeof(Type)) {
+    StagingBuffer(MemoryAllocator& memoryAllocator, const lib::Buffer<Type> buffer) : _memoryAllocator(memoryAllocator), _size(buffer.size() * sizeof(Type)) {
         std::tie(_buffer, _mappedData) = std::visit(Allocator{ _allocation, _size }, _memoryAllocator);
-        std::memcpy(_mappedData, data.data(), _size);
+        std::memcpy(_mappedData, buffer.data(), _size);
     }
 
     ~StagingBuffer() {
