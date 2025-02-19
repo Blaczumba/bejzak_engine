@@ -156,7 +156,7 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
 
             indicesCount = accessor.count;
             indexType = getMatchingIndexType(indicesCount);
-            indices = lib::Buffer<uint8_t>(indicesCount * size_t{ indexType });
+            indices = lib::Buffer<uint8_t>(indicesCount * static_cast<size_t>(indexType));
 
             // Determine the component type and process
             if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {

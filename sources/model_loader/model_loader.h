@@ -24,13 +24,13 @@ std::enable_if_t<std::is_unsigned<IndexType>::value> processIndices(uint8_t* dst
 	size_t offset = {};
 	switch (indexType) {
 	case IndexTypeT::UINT8:
-		std::for_each(srcIndices, srcIndices + indicesCount, [=, &offset](const IndexType& srcIndex) {std::memcpy(dstIndices + offset, &static_cast<const uint8_t&>(srcIndex), size_t{ indexType }); offset += size_t{ indexType }; });
+		std::for_each(srcIndices, srcIndices + indicesCount, [=, &offset](const IndexType& srcIndex) {std::memcpy(dstIndices + offset, &static_cast<const uint8_t&>(srcIndex), static_cast<size_t>(indexType)); offset += static_cast<size_t>(indexType); });
 		break;
 	case IndexTypeT::UINT16:
-		std::for_each(srcIndices, srcIndices + indicesCount, [=, &offset](const IndexType& srcIndex) {std::memcpy(dstIndices + offset, &static_cast<const uint16_t&>(srcIndex), size_t{ indexType }); offset += size_t{ indexType }; });
+		std::for_each(srcIndices, srcIndices + indicesCount, [=, &offset](const IndexType& srcIndex) {std::memcpy(dstIndices + offset, &static_cast<const uint16_t&>(srcIndex), static_cast<size_t>(indexType)); offset += static_cast<size_t>(indexType); });
 		break;
 	case IndexTypeT::UINT32:
-		std::for_each(srcIndices, srcIndices + indicesCount, [=, &offset](const IndexType& srcIndex) {std::memcpy(dstIndices + offset, &static_cast<const uint32_t&>(srcIndex), size_t{ indexType }); offset += size_t{ indexType }; });
+		std::for_each(srcIndices, srcIndices + indicesCount, [=, &offset](const IndexType& srcIndex) {std::memcpy(dstIndices + offset, &static_cast<const uint32_t&>(srcIndex), static_cast<size_t>(indexType)); offset += static_cast<size_t>(indexType); });
 	}
 }
 

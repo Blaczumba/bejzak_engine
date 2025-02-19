@@ -15,19 +15,19 @@ if(NOT Vulkan_FOUND)
     message(FATAL_ERROR "Vulkan not found!")
 endif()
 
-find_package(Boost REQUIRED COMPONENTS ${BOOST_COMPONENTS})
-
-if(NOT Boost_FOUND)
-    message(WARNING "Boost not found!")
-else()
-    add_definitions(-DBOOST_ENABLED)
-
-    set(Boost_USE_STATIC_LIBS ON)
-    set(Boost_USE_MULTITHREADED ON)
-    set(Boost_USE_STATIC_RUNTIME OFF)
-
-    set(BOOST_COMPONENTS filesystem system)
-endif()
+# find_package(Boost REQUIRED COMPONENTS ${BOOST_COMPONENTS})
+# 
+# if(NOT Boost_FOUND)
+#     message(WARNING "Boost not found!")
+# else()
+#     add_definitions(-DBOOST_ENABLED)
+# 
+#     set(Boost_USE_STATIC_LIBS ON)
+#     set(Boost_USE_MULTITHREADED ON)
+#     set(Boost_USE_STATIC_RUNTIME OFF)
+# 
+#     set(BOOST_COMPONENTS filesystem system)
+# endif()
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build (Debug or Release)" FORCE)

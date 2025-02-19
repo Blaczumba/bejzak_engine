@@ -88,7 +88,7 @@ public:
             }
         }
         IndexTypeT indexType = getMatchingIndexType(indices.size());
-        lib::Buffer<uint8_t> indicesBuffer(indices.size() * size_t{ indexType });
+        lib::Buffer<uint8_t> indicesBuffer(indices.size() * static_cast<size_t>(indexType));
         processIndices(indicesBuffer.data(), indices.data(), indices.size(), indexType);
         return VertexData<VertexType>{ 
             .vertices = std::move(vertices),
