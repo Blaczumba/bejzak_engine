@@ -17,6 +17,15 @@ public:
 	Buffer(const Buffer& other) : Buffer(other._size) {
 		std::copy(other._buffer.get(), other._buffer.get() + _size, _buffer.get());
 	}
+    template<typename Iterator>
+    Buffer(Iterator begin, Iterator end) : Buffer(std::distance(begin, end)) {
+        std::copy(begin, end, _buffer.get());
+    }
+    template<typename Iterator>
+    Buffer(Iterator begin, size_t n) : Buffer(n) {
+        std::copy(begin, std::next(begin, n), _buffer.get());
+    }
+
 	Buffer(Buffer&& other) noexcept : _buffer(std::move(other._buffer)), _size(other._size) {}
 
     Buffer& operator=(const Buffer& other) {
