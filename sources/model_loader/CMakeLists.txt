@@ -1,4 +1,4 @@
-add_library(ModelLoader model_loader.cpp)
+add_library(ModelLoader model_loader.cpp "vertex_builder/vertex_builder.cpp" "vertex_builder/vertex_builder.h")
 
 add_subdirectory(obj_loader)
 add_subdirectory(tiny_gltf_loader)

@@ -87,11 +87,25 @@ public:
                 }
             }
         }
+        lib::Buffer<glm::vec3> positions(vertices.size());
+        lib::Buffer<glm::vec2> texCoords(vertices.size());
+        lib::Buffer<glm::vec3> normals(vertices.size());
+        for (size_t i = 0; i < vertices.size(); i++) {
+            if constexpr (VertexTraits<VertexT>::hasPosition)
+                positions[i] = vertices[i].pos;
+            if constexpr (VertexTraits<VertexT>::hasTexCoord)
+                texCoords[i] = vertices[i].texCoord;
+            if constexpr (VertexTraits<VertexT>::hasNormal)
+                normals[i] = vertices[i].normal;
+        }
         IndexType indexType = getMatchingIndexType(indices.size());
         lib::Buffer<uint8_t> indicesBuffer(indices.size() * static_cast<size_t>(indexType));
         processIndices(indicesBuffer.data(), indices.data(), indices.size(), indexType);
         return VertexData<VertexT>{ 
             .vertices = std::move(vertices),
+            .positions = std::move(positions),
+            .textureCoordinates = std::move(texCoords),
+            .normals = std::move(normals),
             .indices = std::move(indicesBuffer),
             .indexType = indexType
         };

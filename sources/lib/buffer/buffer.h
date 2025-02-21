@@ -58,6 +58,10 @@ public:
 
 	const T* data() const { return _buffer.get(); }
     T* data() { return _buffer.get(); }
+    const T* cbegin() const { return _buffer.get(); }
+    T* begin() { return _buffer.get(); }
+    const T* cend() const { return std::next(_buffer.get(), _size); }
+    T* end() { return std::next(_buffer.get(), _size); }
 	size_t size() const { return _size; }
 };
 

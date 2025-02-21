@@ -37,21 +37,35 @@ glm::mat4 GetNodeTransform(const tinygltf::Node& node) {
 }
 
 template<typename VertexType, typename IndexType>
-std::enable_if_t<std::is_unsigned<IndexType>::value> processTangentsBitangents(IndexType* indices, size_t size, std::vector<VertexType>& vertices) {
+std::enable_if_t<std::is_unsigned<IndexType>::value> processTangentsBitangents(IndexType* indices, size_t size, std::vector<VertexType>& vertices, lib::Buffer<glm::vec3>& positions, lib::Buffer<glm::vec2>& texCoords, lib::Buffer<glm::vec3>& tangents) {
     for (size_t i = 0; i < size; i += 3) {
         VertexType& v0 = vertices[indices[i]];
         VertexType& v1 = vertices[indices[i + 1]];
         VertexType& v2 = vertices[indices[i + 2]];
 
-        glm::vec3 edge1 = v1.pos - v0.pos;
-        glm::vec3 edge2 = v2.pos - v0.pos;
-        glm::vec2 deltaUV1 = v1.texCoord - v0.texCoord;
-        glm::vec2 deltaUV2 = v2.texCoord - v0.texCoord;
+        //glm::vec3 edge1 = v1.pos - v0.pos;
+        //glm::vec3 edge2 = v2.pos - v0.pos;
+        //glm::vec2 deltaUV1 = v1.texCoord - v0.texCoord;
+        //glm::vec2 deltaUV2 = v2.texCoord - v0.texCoord;
+
+        const glm::vec3& pos0 = positions[indices[i]];
+        const glm::vec3& pos1 = positions[indices[i + 1]];
+        const glm::vec3& pos2 = positions[indices[i + 2]];
+
+        const glm::vec2& texCoord0 = texCoords[indices[i]];
+        const glm::vec2& texCoord1 = texCoords[indices[i + 1]];
+        const glm::vec2& texCoord2 = texCoords[indices[i + 2]];
+
+        glm::vec3 edge1 = pos1 - pos0;
+        glm::vec3 edge2 = pos2 - pos0;
+        glm::vec2 deltaUV1 = texCoord1 - texCoord0;
+        glm::vec2 deltaUV2 = texCoord2 - texCoord0;
 
         // float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
 
         if constexpr (VertexTraits<VertexType>::hasTangent) {
             glm::vec3 tangent = glm::normalize(deltaUV2.y * edge1 - deltaUV1.y * edge2); // f scale
+            tangents[indices[i]] = tangents[indices[i + 1]] = tangents[indices[i + 2]] = tangent;
             v0.tangent = v1.tangent = v2.tangent = tangent;
         }
 
@@ -80,6 +94,12 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
     for (const auto& primitive : mesh.primitives) {
         const auto& attributes = primitive.attributes;
 
+        lib::Buffer<glm::vec3> _positions;
+        lib::Buffer<glm::vec2> _texCoords;
+        lib::Buffer<glm::vec3> _normals;
+        lib::Buffer<glm::vec3> _tangents;
+        lib::Buffer<glm::vec3> _bitangents;
+
         std::vector<glm::vec3> positions;
         std::vector<glm::vec2> texCoords;
         std::vector<glm::vec3> normals;
@@ -95,10 +115,11 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
                 const tinygltf::BufferView& bufferView = model.bufferViews[accessor.bufferView];
                 const tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
 
-                const float* data = reinterpret_cast<const float*>(&buffer.data[accessor.byteOffset + bufferView.byteOffset]);
+                const glm::vec3* data = reinterpret_cast<const glm::vec3*>(&buffer.data[accessor.byteOffset + bufferView.byteOffset]);
+                _positions = lib::Buffer<glm::vec3>(data, accessor.count);
                 positions.reserve(accessor.count);
                 for (size_t i = 0; i < accessor.count; ++i) {
-                    positions.emplace_back(data[i * 3], data[i * 3 + 1], data[i * 3 + 2]);
+                    positions.push_back(data[i]);
                 }
             }
         }
@@ -109,10 +130,11 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
                 const tinygltf::BufferView& bufferView = model.bufferViews[accessor.bufferView];
                 const tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
 
-                const float* data = reinterpret_cast<const float*>(&buffer.data[accessor.byteOffset + bufferView.byteOffset]);
+                const glm::vec2* data = reinterpret_cast<const glm::vec2*>(&buffer.data[accessor.byteOffset + bufferView.byteOffset]);
+                _texCoords = lib::Buffer<glm::vec2>(data, accessor.count);
                 texCoords.reserve(accessor.count);
                 for (size_t i = 0; i < accessor.count; ++i) {
-                    texCoords.emplace_back(data[i * 2], data[i * 2 + 1]);
+                    texCoords.push_back(data[i]);
                 }
             }
         }
@@ -123,10 +145,11 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
                 const tinygltf::BufferView& bufferView = model.bufferViews[accessor.bufferView];
                 const tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
 
-                const float* data = reinterpret_cast<const float*>(&buffer.data[accessor.byteOffset + bufferView.byteOffset]);
+                const glm::vec3* data = reinterpret_cast<const glm::vec3*>(&buffer.data[accessor.byteOffset + bufferView.byteOffset]);
+                _normals = lib::Buffer<glm::vec3>(data, accessor.count);
                 normals.reserve(accessor.count);
                 for (size_t i = 0; i < accessor.count; ++i) {
-                    normals.emplace_back(data[i * 3], data[i * 3 + 1], data[i * 3 + 2]);
+                    normals.push_back(data[i]);
                 }
             }
         }
@@ -173,19 +196,23 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
             }
         }
 
+        _tangents = lib::Buffer<glm::vec3>(_normals.size());
         if constexpr (VertexTraits<VertexType>::hasTangent || VertexTraits<VertexType>::hasBitangent) {
             switch (indexType) {
             case IndexType::UINT8:
-                processTangentsBitangents(reinterpret_cast<uint8_t*>(indices.data()), indicesCount, vertexData.vertices);
+                processTangentsBitangents(reinterpret_cast<uint8_t*>(indices.data()), indicesCount, vertexData.vertices, _positions, _texCoords, _tangents);
                 break;
             case IndexType::UINT16:
-                processTangentsBitangents(reinterpret_cast<uint16_t*>(indices.data()), indicesCount, vertexData.vertices);
+                processTangentsBitangents(reinterpret_cast<uint16_t*>(indices.data()), indicesCount, vertexData.vertices, _positions, _texCoords, _tangents);
                 break;
             case IndexType::UINT32:
-                processTangentsBitangents(reinterpret_cast<uint32_t*>(indices.data()), indicesCount, vertexData.vertices);
+                processTangentsBitangents(reinterpret_cast<uint32_t*>(indices.data()), indicesCount, vertexData.vertices, _positions, _texCoords, _tangents);
             }
         }
-
+        vertexData.positions = std::move(_positions);
+        vertexData.textureCoordinates = std::move(_texCoords);
+        vertexData.normals = std::move(_normals);
+        vertexData.tangents = std::move(_tangents);
         vertexData.indices = std::move(indices);
         vertexData.indexType = indexType;
 
@@ -210,7 +237,7 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
         }
     }
 
-    vertexDataList.emplace_back(std::move(vertexData));
+    vertexDataList.push_back(std::move(vertexData));
 
     for (const auto& childIndex : node.children) {
         ProcessNode<VertexType>(model, model.nodes[childIndex], currentTransform, vertexDataList);

@@ -64,7 +64,7 @@ public:
 	void loadImageCubemapAsync(const std::string& filePath);
 
 	template<typename VertexType>
-	CacheCode loadVertexData(std::string_view key, const std::vector<VertexType>& vertices, const lib::Buffer<uint8_t>& indices, uint8_t indexSize) {
+	CacheCode loadVertexData(std::string_view key, const lib::Buffer<VertexType>& vertices, const lib::Buffer<uint8_t>& indices, uint8_t indexSize) {
 		// TODO: Needs refactoring
 		static_assert(VertexTraits<VertexType>::hasPosition, "Cannot load vertex data with no position defined");
 		StagingBuffer indexBuffer(_memoryAllocator, indices);
@@ -75,7 +75,7 @@ public:
 			else {
 				std::vector<glm::vec3> primitives;
 				primitives.reserve(vertices.size());
-				std::transform(vertices.begin(), vertices.end(), std::back_inserter(primitives), [](const VertexType& vertex) { return vertex.pos; });
+				std::transform(vertices.cbegin(), vertices.cend(), std::back_inserter(primitives), [](const VertexType& vertex) { return vertex.pos; });
 				return { StagingBuffer(_memoryAllocator, std::span(vertices.data(), vertices.size())), StagingBuffer(_memoryAllocator, std::span(primitives.data(), primitives.size())) };
 			}
 		};

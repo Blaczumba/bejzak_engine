@@ -9,6 +9,7 @@
 #include "entity_component_system/component/transform.h"
 #include "entity_component_system/component/velocity.h"
 #include "pipeline/shader/shader_program.h"
+#include "primitives/vertex_builder.h"
 #include "render_pass/attachment/attachment_layout.h"
 #include "thread_pool/thread_pool.h"
 #include "memory_objects/staging_buffer.h"
@@ -32,7 +33,8 @@ SingleApp::SingleApp()
     createShadowResources();
 
     VertexData<VertexP> vertexDataCube = TinyOBJLoaderVertex::load<VertexP>(MODELS_PATH "cube.obj");
-    _assetManager->loadVertexData("cube.obj", vertexDataCube.vertices, vertexDataCube.indices, static_cast<uint8_t>(vertexDataCube.indexType));
+    lib::Buffer<VertexPTN> vertices = buildInterleavingVertexData(vertexDataCube.positions, vertexDataCube.textureCoordinates, vertexDataCube.normals);
+    _assetManager->loadVertexData("cube.obj", vertices, vertexDataCube.indices, static_cast<uint8_t>(vertexDataCube.indexType));
     {
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
@@ -65,7 +67,8 @@ void SingleApp::loadObject() {
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
 
         VertexData<VertexPTN> vertexData = TinyOBJLoaderVertex::load<VertexPTN>(MODELS_PATH "cylinder8.obj");
-        _assetManager->loadVertexData("cube_normal.obj", vertexData.vertices, vertexData.indices, static_cast<uint8_t>(vertexData.indexType));
+        lib::Buffer<VertexPTN> vertices = buildInterleavingVertexData(vertexData.positions, vertexData.textureCoordinates, vertexData.normals);
+        _assetManager->loadVertexData("cube_normal.obj", vertices, vertexData.indices, static_cast<uint8_t>(vertexData.indexType));
         const AssetManager::VertexData& vData = _assetManager->getVertexData("cube_normal.obj");
         _vertexBufferObject = std::make_unique<VertexBuffer>(*_logicalDevice, commandBuffer, *vData.vertexBuffer);
         _vertexBufferPrimitiveObject = std::make_unique<VertexBuffer>(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives);
@@ -98,7 +101,8 @@ void SingleApp::loadObjects() {
         _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + _newVertexDataTBN[i].normalTexture);
         auto end = std::chrono::high_resolution_clock::now();
         auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-        _assetManager->loadVertexData(std::to_string(i), _newVertexDataTBN[i].vertices, _newVertexDataTBN[i].indices, static_cast<uint8_t>(_newVertexDataTBN[i].indexType));
+        lib::Buffer<VertexPTNT> vertices = buildInterleavingVertexData(_newVertexDataTBN[i].positions, _newVertexDataTBN[i].textureCoordinates, _newVertexDataTBN[i].normals, _newVertexDataTBN[i].tangents);
+        _assetManager->loadVertexData(std::to_string(i), vertices, _newVertexDataTBN[i].indices, static_cast<uint8_t>(_newVertexDataTBN[i].indexType));
         std::cout << "Elapsed time: " << duration << " milliseconds" << std::endl;
     }
     const auto& propertyManager = _physicalDevice->getPropertyManager();
