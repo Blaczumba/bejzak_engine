@@ -1,12 +1,12 @@
 #pragma once
 
+#include <memory_objects/texture/image.h>
+
 #include <vulkan/vulkan.h>
 #include <vma/vk_mem_alloc.h>
 
 #include <unordered_map>
 #include <set>
-
-struct ImageParameters; // TODO Why I need to declare it if it is included
 
 class VmaWrapper {
 public:

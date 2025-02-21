@@ -34,14 +34,14 @@ struct Indices {
 
 class TinyOBJLoaderVertex {
 public:
-    template<typename VertexType>
-    static VertexData<VertexType> load(const std::string& filePath) {
+    template<typename VertexT>
+    static VertexData<VertexT> load(const std::string& filePath) {
         tinyobj::attrib_t attrib;
         std::vector<tinyobj::shape_t> shapes;
         std::vector<tinyobj::material_t> materials;
         std::string warning, error;
         
-        std::vector<VertexType> vertices;
+        std::vector<VertexT> vertices;
         std::vector<uint32_t> indices;
         
         if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warning, &error, filePath.data())) {
@@ -58,8 +58,8 @@ public:
                 else {
                     mp.insert({ idx, static_cast<uint32_t>(vertices.size()) });
         
-                    VertexType vertex{};
-                    if constexpr (VertexTraits<VertexType>::hasPosition) {
+                    VertexT vertex{};
+                    if constexpr (VertexTraits<VertexT>::hasPosition) {
                         vertex.pos = {
                             attrib.vertices[3 * index.vertex_index + 0],
                             attrib.vertices[3 * index.vertex_index + 1],
@@ -67,14 +67,14 @@ public:
                         };
                     }
                     
-                    if constexpr (VertexTraits<VertexType>::hasTexCoord) {
+                    if constexpr (VertexTraits<VertexT>::hasTexCoord) {
                         vertex.texCoord = {
                             attrib.texcoords[2 * index.texcoord_index + 0],
                             1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
                         };
                     }
         
-                    if constexpr (VertexTraits<VertexType>::hasNormal) {
+                    if constexpr (VertexTraits<VertexT>::hasNormal) {
                         vertex.normal = {
                             attrib.normals[3 * index.normal_index + 0],
                             attrib.normals[3 * index.normal_index + 1],
@@ -87,10 +87,10 @@ public:
                 }
             }
         }
-        IndexTypeT indexType = getMatchingIndexType(indices.size());
+        IndexType indexType = getMatchingIndexType(indices.size());
         lib::Buffer<uint8_t> indicesBuffer(indices.size() * static_cast<size_t>(indexType));
         processIndices(indicesBuffer.data(), indices.data(), indices.size(), indexType);
-        return VertexData<VertexType>{ 
+        return VertexData<VertexT>{ 
             .vertices = std::move(vertices),
             .indices = std::move(indicesBuffer),
             .indexType = indexType

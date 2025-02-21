@@ -53,6 +53,8 @@ private:
 	void generateMipmaps(VkCommandBuffer commandBuffer);
 };
 
+namespace {
+
 struct ImageCreator {
 	Allocation& allocation;
 	const ImageParameters& params;
@@ -67,3 +69,5 @@ struct ImageCreator {
 		throw std::runtime_error("Unrecognized allocator during Texture creation");
 	}
 };
+
+}

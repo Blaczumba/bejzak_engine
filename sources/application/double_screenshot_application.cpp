@@ -94,8 +94,12 @@ void SingleApp::loadObjects() {
             continue;
         _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + _newVertexDataTBN[i].diffuseTexture);
         _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + _newVertexDataTBN[i].metallicRoughnessTexture);
+        auto start = std::chrono::high_resolution_clock::now();
         _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + _newVertexDataTBN[i].normalTexture);
+        auto end = std::chrono::high_resolution_clock::now();
+        auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
         _assetManager->loadVertexData(std::to_string(i), _newVertexDataTBN[i].vertices, _newVertexDataTBN[i].indices, static_cast<uint8_t>(_newVertexDataTBN[i].indexType));
+        std::cout << "Elapsed time: " << duration << " milliseconds" << std::endl;
     }
     const auto& propertyManager = _physicalDevice->getPropertyManager();
     float maxSamplerAnisotropy = propertyManager.getMaxSamplerAnisotropy();

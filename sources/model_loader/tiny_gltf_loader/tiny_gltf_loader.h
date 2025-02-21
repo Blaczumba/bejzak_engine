@@ -87,7 +87,7 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
         std::vector<glm::vec3> bitangents;
         lib::Buffer<uint8_t> indices;
         uint32_t indicesCount;
-        IndexTypeT indexType;
+        IndexType indexType;
 
         if constexpr (VertexTraits<VertexType>::hasPosition) {
             if (attributes.find("POSITION") != attributes.end()) {
@@ -175,13 +175,13 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
 
         if constexpr (VertexTraits<VertexType>::hasTangent || VertexTraits<VertexType>::hasBitangent) {
             switch (indexType) {
-            case IndexTypeT::UINT8:
+            case IndexType::UINT8:
                 processTangentsBitangents(reinterpret_cast<uint8_t*>(indices.data()), indicesCount, vertexData.vertices);
                 break;
-            case IndexTypeT::UINT16:
+            case IndexType::UINT16:
                 processTangentsBitangents(reinterpret_cast<uint16_t*>(indices.data()), indicesCount, vertexData.vertices);
                 break;
-            case IndexTypeT::UINT32:
+            case IndexType::UINT32:
                 processTangentsBitangents(reinterpret_cast<uint32_t*>(indices.data()), indicesCount, vertexData.vertices);
             }
         }
@@ -238,15 +238,11 @@ std::vector<VertexData<VertexType>> LoadGLTF(const std::string& filePath) {
 
     std::vector<VertexData<VertexType>> vertexDataList;
 
-    auto start = std::chrono::high_resolution_clock::now();
     for (const auto& scene : model.scenes) {
         for (const auto& nodeIndex : scene.nodes) {
             const tinygltf::Node& node = model.nodes[nodeIndex];
             ProcessNode<VertexType>(model, node, glm::mat4(1.0f), vertexDataList);
         }
     }
-    auto end = std::chrono::high_resolution_clock::now();
-    auto duration = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-    std::cout << "Elapsed time: " << duration << " milliseconds" << std::endl;
     return vertexDataList;
 }

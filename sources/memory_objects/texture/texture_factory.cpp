@@ -8,9 +8,13 @@
 
 namespace {
 
+const VkImage allocate(Allocation& allocation, const ImageParameters& imageParameters, MemoryAllocator& memoryAllocator) {
+    return std::visit(ImageCreator{ allocation, imageParameters }, memoryAllocator);
+}
+
 std::unique_ptr<Texture> createImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkImageLayout dstLayout, Texture::Type type, ImageParameters&& imageParams) {
     Allocation allocation;
-    const VkImage image = std::visit(ImageCreator{ allocation, imageParams }, logicalDevice.getMemoryAllocator());
+    const VkImage image = allocate(allocation, imageParams, logicalDevice.getMemoryAllocator());
     const VkImageView view = logicalDevice.createImageView(image, imageParams);
     transitionImageLayout(commandBuffer, image, imageParams.layout, dstLayout, imageParams.aspect, imageParams.mipLevels, imageParams.layerCount);
     imageParams.layout = dstLayout;
@@ -20,7 +24,7 @@ std::unique_ptr<Texture> createImage(const LogicalDevice& logicalDevice, const V
 std::unique_ptr<Texture> createImageSampler(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkImageLayout dstLayout, Texture::Type type, ImageParameters& imageParams, const SamplerParameters& samplerParams) {
     const VkSampler sampler = logicalDevice.createSampler(samplerParams);
     Allocation allocation;
-    const VkImage image = std::visit(ImageCreator{ allocation, imageParams }, logicalDevice.getMemoryAllocator());
+    const VkImage image = allocate(allocation, imageParams, logicalDevice.getMemoryAllocator());
     const VkImageView view = logicalDevice.createImageView(image, imageParams);
     transitionImageLayout(commandBuffer, image, imageParams.layout, dstLayout, imageParams.aspect, imageParams.mipLevels, imageParams.layerCount);
     imageParams.layout = dstLayout;
@@ -29,7 +33,7 @@ std::unique_ptr<Texture> createImageSampler(const LogicalDevice& logicalDevice, 
 
 std::unique_ptr<Texture> createTextureMipmapImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, ImageParameters& imageParams, const SamplerParameters& samplerParams) {
     Allocation allocation;
-    const VkImage image = std::visit(ImageCreator{ allocation, imageParams }, logicalDevice.getMemoryAllocator());
+    const VkImage image = allocate(allocation, imageParams, logicalDevice.getMemoryAllocator());
     const VkImageView view = logicalDevice.createImageView(image, imageParams);
     const VkSampler sampler = logicalDevice.createSampler(samplerParams);
     transitionImageLayout(commandBuffer, image, imageParams.layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, imageParams.aspect, imageParams.mipLevels, imageParams.layerCount);
@@ -41,7 +45,7 @@ std::unique_ptr<Texture> createTextureMipmapImage(const LogicalDevice& logicalDe
 
 std::unique_ptr<Texture> createTextureImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, Texture::Type type, const VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, ImageParameters& imageParams, const SamplerParameters& samplerParams) {
     Allocation allocation;
-    const VkImage image = std::visit(ImageCreator{ allocation, imageParams }, logicalDevice.getMemoryAllocator());
+    const VkImage image = allocate(allocation, imageParams, logicalDevice.getMemoryAllocator());
     const VkImageView view = logicalDevice.createImageView(image, imageParams);
     const VkSampler sampler = logicalDevice.createSampler(samplerParams);
     transitionImageLayout(commandBuffer, image, imageParams.layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, imageParams.aspect, imageParams.mipLevels, imageParams.layerCount);
