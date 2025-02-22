@@ -41,13 +41,15 @@ struct VertexData {
 	lib::Buffer<glm::vec2> textureCoordinates;
 	lib::Buffer<glm::vec3> normals;
 	lib::Buffer<glm::vec3> tangents;
+	lib::Buffer<uint8_t> indices;
+	IndexType indexType;
+
+	glm::mat4 model;
+
 	std::string diffuseTexture;
 	std::string normalTexture;
 	std::string metallicRoughnessTexture;
-	glm::mat4 model;
 
-	lib::Buffer<uint8_t> indices;
-	IndexType indexType;
 };
 
 template<typename VertexType>

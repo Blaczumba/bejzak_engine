@@ -33,8 +33,9 @@ SingleApp::SingleApp()
     createShadowResources();
 
     VertexData<VertexP> vertexDataCube = TinyOBJLoaderVertex::load<VertexP>(MODELS_PATH "cube.obj");
-    lib::Buffer<VertexPTN> vertices = buildInterleavingVertexData(vertexDataCube.positions, vertexDataCube.textureCoordinates, vertexDataCube.normals);
-    _assetManager->loadVertexData("cube.obj", vertices, vertexDataCube.indices, static_cast<uint8_t>(vertexDataCube.indexType));
+    auto vertices = buildInterleavingVertexData(vertexDataCube.positions, vertexDataCube.textureCoordinates, vertexDataCube.normals);
+    if (vertices.has_value())
+        _assetManager->loadVertexData("cube.obj", *vertices, vertexDataCube.indices, static_cast<uint8_t>(vertexDataCube.indexType));
     {
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
@@ -67,8 +68,9 @@ void SingleApp::loadObject() {
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
 
         VertexData<VertexPTN> vertexData = TinyOBJLoaderVertex::load<VertexPTN>(MODELS_PATH "cylinder8.obj");
-        lib::Buffer<VertexPTN> vertices = buildInterleavingVertexData(vertexData.positions, vertexData.textureCoordinates, vertexData.normals);
-        _assetManager->loadVertexData("cube_normal.obj", vertices, vertexData.indices, static_cast<uint8_t>(vertexData.indexType));
+        auto vertices = buildInterleavingVertexData(vertexData.positions, vertexData.textureCoordinates, vertexData.normals);
+        if (vertices.has_value())
+            _assetManager->loadVertexData("cube_normal.obj", *vertices, vertexData.indices, static_cast<uint8_t>(vertexData.indexType));
         const AssetManager::VertexData& vData = _assetManager->getVertexData("cube_normal.obj");
         _vertexBufferObject = std::make_unique<VertexBuffer>(*_logicalDevice, commandBuffer, *vData.vertexBuffer);
         _vertexBufferPrimitiveObject = std::make_unique<VertexBuffer>(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives);
@@ -97,13 +99,14 @@ void SingleApp::loadObjects() {
             continue;
         _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + _newVertexDataTBN[i].diffuseTexture);
         _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + _newVertexDataTBN[i].metallicRoughnessTexture);
-        auto start = std::chrono::high_resolution_clock::now();
+        //auto start = std::chrono::high_resolution_clock::now();
         _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + _newVertexDataTBN[i].normalTexture);
-        auto end = std::chrono::high_resolution_clock::now();
-        auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-        lib::Buffer<VertexPTNT> vertices = buildInterleavingVertexData(_newVertexDataTBN[i].positions, _newVertexDataTBN[i].textureCoordinates, _newVertexDataTBN[i].normals, _newVertexDataTBN[i].tangents);
-        _assetManager->loadVertexData(std::to_string(i), vertices, _newVertexDataTBN[i].indices, static_cast<uint8_t>(_newVertexDataTBN[i].indexType));
-        std::cout << "Elapsed time: " << duration << " milliseconds" << std::endl;
+        //auto end = std::chrono::high_resolution_clock::now();
+        //auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+        auto vertices = buildInterleavingVertexData(_newVertexDataTBN[i].positions, _newVertexDataTBN[i].textureCoordinates, _newVertexDataTBN[i].normals, _newVertexDataTBN[i].tangents);
+        if (vertices.has_value())
+            _assetManager->loadVertexData(std::to_string(i), *vertices, _newVertexDataTBN[i].indices, static_cast<uint8_t>(_newVertexDataTBN[i].indexType));
+        // std::cout << "Elapsed time: " << duration << " milliseconds" << std::endl;
     }
     const auto& propertyManager = _physicalDevice->getPropertyManager();
     float maxSamplerAnisotropy = propertyManager.getMaxSamplerAnisotropy();
@@ -136,10 +139,7 @@ void SingleApp::loadObjects() {
             }
 
             auto descriptorSet = _descriptorPool->createDesriptorSet();
-            descriptorSet->updateDescriptorSet({ _dynamicUniformBuffersCamera.get(), _uniformMap[diffusePath].get(), _uniformBuffersLight.get(), _uniformBuffersObjects.get(), _shadowTextureUniform.get(), _uniformMap[normalPath].get(), _uniformMap[metallicRoughnessPath].get() });
-
-            std::vector<glm::vec3> pVertexData;
-            std::transform(_newVertexDataTBN[i].vertices.cbegin(), _newVertexDataTBN[i].vertices.cend(), std::back_inserter(pVertexData), [](const VertexPTNT& vertex) { return vertex.pos; });
+            descriptorSet->updateDescriptorSet({ _dynamicUniformBuffersCamera.get(), _uniformMap[diffusePath].get(), _uniformBuffersLight.get(), _uniformBuffersObjects.get(), _shadowTextureUniform.get(), _uniformMap[normalPath].get(), _uniformMap[metallicRoughnessPath].get() });;
 
             _objects.emplace_back("Object", e);
             const AssetManager::VertexData& vData = _assetManager->getVertexData(std::to_string(i));
@@ -148,7 +148,7 @@ void SingleApp::loadObjects() {
             msh.indexBuffer = std::make_shared<IndexBuffer>(*_logicalDevice, commandBuffer, vData.indexBuffer, vData.indexType);
             msh.vertexBufferPrimitive = std::make_shared<VertexBuffer>(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives);
             //msh.aabb = vData.aabb;
-            msh.aabb = createAABBfromVertices(pVertexData, _newVertexDataTBN[i].model);
+            msh.aabb = createAABBfromVertices(std::vector<glm::vec3>(_newVertexDataTBN[i].positions.cbegin(), _newVertexDataTBN[i].positions.cend()), _newVertexDataTBN[i].model);
             _registry.addComponent<MeshComponent>(e, std::move(msh));
 
             TransformComponent trsf;

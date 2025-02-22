@@ -3,7 +3,10 @@
 #include "lib/buffer/buffer.h"
 #include "primitives.h"
 
-lib::Buffer<VertexP> buildInterleavingVertexData(const lib::Buffer<glm::vec3>& positions);
-lib::Buffer<VertexPT> buildInterleavingVertexData(const lib::Buffer<glm::vec3>& positions, const lib::Buffer<glm::vec2>& texCoords);
-lib::Buffer<VertexPTN> buildInterleavingVertexData(const lib::Buffer<glm::vec3>& positions, const lib::Buffer<glm::vec2>& texCoords, const lib::Buffer<glm::vec3>& normals);
-lib::Buffer<VertexPTNT> buildInterleavingVertexData(const lib::Buffer<glm::vec3>& positions, const lib::Buffer<glm::vec2>& texCoords, const lib::Buffer<glm::vec3>& normals, const lib::Buffer<glm::vec3>& tangents);
+#include <expected>
+#include <string_view>
+
+std::expected<lib::Buffer<VertexP>, std::string_view> buildInterleavingVertexData(const lib::Buffer<glm::vec3>& positions);
+std::expected<lib::Buffer<VertexPT>, std::string_view> buildInterleavingVertexData(const lib::Buffer<glm::vec3>& positions, const lib::Buffer<glm::vec2>& texCoords);
+std::expected<lib::Buffer<VertexPTN>, std::string_view> buildInterleavingVertexData(const lib::Buffer<glm::vec3>& positions, const lib::Buffer<glm::vec2>& texCoords, const lib::Buffer<glm::vec3>& normals);
+std::expected<lib::Buffer<VertexPTNT>, std::string_view> buildInterleavingVertexData(const lib::Buffer<glm::vec3>& positions, const lib::Buffer<glm::vec2>& texCoords, const lib::Buffer<glm::vec3>& normals, const lib::Buffer<glm::vec3>& tangents);
