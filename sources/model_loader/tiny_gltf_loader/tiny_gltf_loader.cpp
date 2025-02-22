@@ -193,7 +193,6 @@ std::vector<VertexData> LoadGltf(const std::string& filePath) {
     }
 
     std::vector<VertexData> vertexDataList;
-
     for (const auto& scene : model.scenes) {
         for (const auto& nodeIndex : scene.nodes) {
             const tinygltf::Node& node = model.nodes[nodeIndex];

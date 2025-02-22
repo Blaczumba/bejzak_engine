@@ -20,15 +20,11 @@
 
 SingleApp::SingleApp()
     : ApplicationBase(), _threadPool(MAX_THREADS_IN_POOL) {
-    auto start = std::chrono::high_resolution_clock::now();
-    _newVertexDataTBN = LoadGltf(MODELS_PATH "sponza/scene.gltf");
-    auto stop = std::chrono::high_resolution_clock::now();
     _assetManager = std::make_unique<AssetManager>(_logicalDevice->getMemoryAllocator());
 
     createDescriptorSets();
     loadObjects();
     loadObject();
-    std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count() << std::endl;
     createPresentResources();
     createShadowResources();
 
@@ -94,33 +90,33 @@ void SingleApp::loadObject() {
 
 void SingleApp::loadObjects() {
     // TODO needs refactoring
-    for (uint32_t i = 0; i < _newVertexDataTBN.size(); i++) {
-        if (_newVertexDataTBN[i].normalTexture.empty() || _newVertexDataTBN[i].metallicRoughnessTexture.empty())
+    auto start = std::chrono::high_resolution_clock::now();
+    std::vector<VertexData> sceneData = LoadGltf(MODELS_PATH "sponza/scene.gltf");
+    auto stop = std::chrono::high_resolution_clock::now();
+    std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count() << std::endl;
+    for (uint32_t i = 0; i < sceneData.size(); i++) {
+        if (sceneData[i].normalTexture.empty() || sceneData[i].metallicRoughnessTexture.empty())
             continue;
-        _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + _newVertexDataTBN[i].diffuseTexture);
-        _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + _newVertexDataTBN[i].metallicRoughnessTexture);
-        //auto start = std::chrono::high_resolution_clock::now();
-        _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + _newVertexDataTBN[i].normalTexture);
-        //auto end = std::chrono::high_resolution_clock::now();
-        //auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
-        auto vertices = buildInterleavingVertexData(_newVertexDataTBN[i].positions, _newVertexDataTBN[i].textureCoordinates, _newVertexDataTBN[i].normals, _newVertexDataTBN[i].tangents);
+        _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + sceneData[i].diffuseTexture);
+        _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + sceneData[i].metallicRoughnessTexture);
+        _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + sceneData[i].normalTexture);
+        const auto vertices = buildInterleavingVertexData(sceneData[i].positions, sceneData[i].textureCoordinates, sceneData[i].normals, sceneData[i].tangents);
         if (vertices.has_value())
-            _assetManager->loadVertexData(std::to_string(i), *vertices, _newVertexDataTBN[i].indices, static_cast<uint8_t>(_newVertexDataTBN[i].indexType));
-        // std::cout << "Elapsed time: " << duration << " milliseconds" << std::endl;
+            _assetManager->loadVertexData(std::to_string(i), *vertices, sceneData[i].indices, static_cast<uint8_t>(sceneData[i].indexType));
     }
     const auto& propertyManager = _physicalDevice->getPropertyManager();
     float maxSamplerAnisotropy = propertyManager.getMaxSamplerAnisotropy();
-    _objects.reserve(_newVertexDataTBN.size());
+    _objects.reserve(sceneData.size());
     {
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
-        for (uint32_t i = 0; i < _newVertexDataTBN.size(); i++) {
+        for (uint32_t i = 0; i < sceneData.size(); i++) {
             Entity e = _registry.createEntity();
-            if (_newVertexDataTBN[i].normalTexture.empty() || _newVertexDataTBN[i].metallicRoughnessTexture.empty())
+            if (sceneData[i].normalTexture.empty() || sceneData[i].metallicRoughnessTexture.empty())
                 continue;
-            const std::string diffusePath = std::string(MODELS_PATH) + "sponza/" + _newVertexDataTBN[i].diffuseTexture;
-            const std::string metallicRoughnessPath = std::string(MODELS_PATH) + "sponza/" + _newVertexDataTBN[i].metallicRoughnessTexture;
-            const std::string normalPath = std::string(MODELS_PATH) + "sponza/" + _newVertexDataTBN[i].normalTexture;
+            const std::string diffusePath = std::string(MODELS_PATH) + "sponza/" + sceneData[i].diffuseTexture;
+            const std::string metallicRoughnessPath = std::string(MODELS_PATH) + "sponza/" + sceneData[i].metallicRoughnessTexture;
+            const std::string normalPath = std::string(MODELS_PATH) + "sponza/" + sceneData[i].normalTexture;
 
             if (!_uniformMap.contains(diffusePath)) {
                 const auto&[stagingBuffer, imageDimmensions] =  _assetManager->getImageData(diffusePath);
@@ -147,18 +143,17 @@ void SingleApp::loadObjects() {
             msh.vertexBuffer = std::make_shared<VertexBuffer>(*_logicalDevice, commandBuffer, vData.vertexBuffer.value());
             msh.indexBuffer = std::make_shared<IndexBuffer>(*_logicalDevice, commandBuffer, vData.indexBuffer, vData.indexType);
             msh.vertexBufferPrimitive = std::make_shared<VertexBuffer>(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives);
-            //msh.aabb = vData.aabb;
-            msh.aabb = createAABBfromVertices(std::vector<glm::vec3>(_newVertexDataTBN[i].positions.cbegin(), _newVertexDataTBN[i].positions.cend()), _newVertexDataTBN[i].model);
+            msh.aabb = createAABBfromVertices(std::vector<glm::vec3>(sceneData[i].positions.cbegin(), sceneData[i].positions.cend()), sceneData[i].model);
             _registry.addComponent<MeshComponent>(e, std::move(msh));
 
             TransformComponent trsf;
-            trsf.model = _newVertexDataTBN[i].model;
+            trsf.model = sceneData[i].model;
             _registry.addComponent<TransformComponent>(e, std::move(trsf));
 
             _entityToIndex.emplace(e, index);
             _entitytoDescriptorSet.emplace(e, std::move(descriptorSet));
         
-            _ubObject.model = _newVertexDataTBN[i].model;
+            _ubObject.model = sceneData[i].model;
             _uniformBuffersObjects->updateUniformBuffer(_ubObject, index++);
         }
         _ubObject.model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 2.0f, 0.0f));
@@ -186,7 +181,7 @@ void SingleApp::createDescriptorSets() {
         _shadowMap = TextureFactory::create2DShadowmap(*_logicalDevice, commandBuffer, 1024 * 2, 1024 * 2, VK_FORMAT_D32_SFLOAT);
     }
 
-    _uniformBuffersObjects = std::make_unique<UniformBufferData<UniformBufferObject>>(*_logicalDevice, _newVertexDataTBN.size() + 1);
+    _uniformBuffersObjects = std::make_unique<UniformBufferData<UniformBufferObject>>(*_logicalDevice, 200);
     _uniformBuffersLight = std::make_unique<UniformBufferData<UniformBufferLight>>(*_logicalDevice);
     _dynamicUniformBuffersCamera = std::make_unique<UniformBufferData<UniformBufferCamera>>(*_logicalDevice, MAX_FRAMES_IN_FLIGHT);
 
@@ -317,8 +312,6 @@ void SingleApp::run() {
         recordShadowCommandBuffer(commandBuffer, 0);
     }
 
-    // TODO not necessary
-    _newVertexDataTBN.clear();
     for (auto& object : _objects) {
         _registry.getComponent<MeshComponent>(object.getEntity()).vertexBufferPrimitive.reset();
     }

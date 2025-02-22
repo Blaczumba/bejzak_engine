@@ -30,7 +30,9 @@ std::expected<lib::Buffer<VertexPTN>, std::string_view> buildInterleavingVertexD
 		return std::unexpected(EMPTY_INPUT_DATA);
 	lib::Buffer<VertexPTN> vertices(positions.size());
 	for (size_t i = 0; i < vertices.size(); i++) {
-		vertices[i] = VertexPTN{ positions[i], texCoords[i], normals[i] };
+		vertices[i].pos = positions[i];
+		vertices[i].texCoord = texCoords[i];
+		vertices[i].normal = normals[i];
 	}
 	return vertices;
 }
@@ -42,7 +44,10 @@ std::expected<lib::Buffer<VertexPTNT>, std::string_view> buildInterleavingVertex
 		return std::unexpected(EMPTY_INPUT_DATA);
 	lib::Buffer<VertexPTNT> vertices(positions.size());
 	for (size_t i = 0; i < vertices.size(); i++) {
-		vertices[i] = VertexPTNT{ positions[i], texCoords[i], normals[i], tangents[i] };
+		vertices[i].pos = positions[i];
+		vertices[i].texCoord = texCoords[i];
+		vertices[i].normal = normals[i];
+		vertices[i].tangent = tangents[i];
 	}
 	return vertices;
 }
