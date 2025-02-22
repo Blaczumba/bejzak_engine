@@ -19,7 +19,7 @@
 #include <chrono>
 
 SingleApp::SingleApp()
-    : ApplicationBase(), _threadPool(MAX_THREADS_IN_POOL) {
+    : ApplicationBase() {
     _assetManager = std::make_unique<AssetManager>(_logicalDevice->getMemoryAllocator());
 
     createDescriptorSets();
@@ -515,7 +515,9 @@ void SingleApp::recordCommandBuffer(uint32_t imageIndex) {
         .pViewportDepths = &framebuffer.getViewport(),
     };
 
-    auto f1 = std::async(std::launch::async, [&]() {
+    std::array<std::future<void>, MAX_THREADS_IN_POOL> futures;
+
+    futures[0] = std::async(std::launch::async, [&]() {
         _commandBuffers[_currentFrame][0]->begin(framebuffer, &scissorViewportInheritance);
         const VkCommandBuffer commandBuffer = _commandBuffers[_currentFrame][0]->getVkCommandBuffer();
         vkCmdBindPipeline(commandBuffer, _graphicsPipeline->getVkPipelineBindPoint(), _graphicsPipeline->getVkPipeline());
@@ -529,7 +531,7 @@ void SingleApp::recordCommandBuffer(uint32_t imageIndex) {
         }
         });
 
-    auto f2 = std::async(std::launch::async, [&]() {
+    futures[1] = std::async(std::launch::async, [&]() {
         // Skybox
         _commandBuffers[_currentFrame][1]->begin(framebuffer, &scissorViewportInheritance);
         const VkCommandBuffer commandBuffer = _commandBuffers[_currentFrame][1]->getVkCommandBuffer();
@@ -550,8 +552,8 @@ void SingleApp::recordCommandBuffer(uint32_t imageIndex) {
         vkEndCommandBuffer(commandBuffer);
         });
 
-    f1.wait();
-    f2.wait();
+    futures[0].wait();
+    futures[1].wait();
 
     primaryCommandBuffer.executeSecondaryCommandBuffers({ _commandBuffers[_currentFrame][0]->getVkCommandBuffer(), _commandBuffers[_currentFrame][1]->getVkCommandBuffer() });
     primaryCommandBuffer.endRenderPass();

@@ -97,7 +97,6 @@ class SingleApp : public ApplicationBase {
     std::vector<std::vector<std::unique_ptr<SecondaryCommandBuffer>>> _commandBuffers;
     std::vector<std::vector<std::unique_ptr<SecondaryCommandBuffer>>> _shadowCommandBuffers;
 
-    ThreadPool _threadPool;
     std::vector<VkSemaphore> _shadowMapSemaphores;
     std::vector<VkSemaphore> _imageAvailableSemaphores;
     std::vector<VkSemaphore> _renderFinishedSemaphores;
