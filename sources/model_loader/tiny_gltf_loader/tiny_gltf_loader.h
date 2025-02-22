@@ -80,13 +80,12 @@ std::string getTextureUri(const tinygltf::Model& model, const tinygltf::Paramete
     return image.uri;
 }
 
-template<typename VertexType>
-void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::mat4 parentTransform, std::vector<VertexData<VertexType>>& vertexDataList) {
+void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::mat4 parentTransform, std::vector<VertexData>& vertexDataList) {
     glm::mat4 currentTransform = parentTransform * GetNodeTransform(node);
 
     if (node.mesh < 0) {
         for (const auto& childIndex : node.children) {
-            ProcessNode<VertexType>(model, model.nodes[childIndex], currentTransform, vertexDataList);
+            ProcessNode(model, model.nodes[childIndex], currentTransform, vertexDataList);
         }
         return;
     }
@@ -150,17 +149,15 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
         }
 
         tangents.resize(normals.size());
-        if constexpr (VertexTraits<VertexType>::hasTangent || VertexTraits<VertexType>::hasBitangent) {
-            switch (indexType) {
-            case IndexType::UINT8:
-                processTangents(reinterpret_cast<uint8_t*>(indices.data()), static_cast<size_t>(indicesCount), positions, texCoords, tangents);
-                break;
-            case IndexType::UINT16:
-                processTangents(reinterpret_cast<uint16_t*>(indices.data()), static_cast<size_t>(indicesCount), positions, texCoords, tangents);
-                break;
-            case IndexType::UINT32:
-                processTangents(reinterpret_cast<uint32_t*>(indices.data()), static_cast<size_t>(indicesCount), positions, texCoords, tangents);
-            }
+        switch (indexType) {
+        case IndexType::UINT8:
+            processTangents(reinterpret_cast<uint8_t*>(indices.data()), static_cast<size_t>(indicesCount), positions, texCoords, tangents);
+            break;
+        case IndexType::UINT16:
+            processTangents(reinterpret_cast<uint16_t*>(indices.data()), static_cast<size_t>(indicesCount), positions, texCoords, tangents);
+            break;
+        case IndexType::UINT32:
+            processTangents(reinterpret_cast<uint32_t*>(indices.data()), static_cast<size_t>(indicesCount), positions, texCoords, tangents);
         }
 
         // Load textures
@@ -173,16 +170,15 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
             metallicRoughnessTexture = getTextureUri(model, material.values, "metallicRoughnessTexture");
             normalTexture = getTextureUri(model, material.additionalValues, "normalTexture");
         }
-        vertexDataList.emplace_back(std::vector<VertexType>(), std::move(positions), std::move(texCoords), std::move(normals), std::move(tangents), std::move(indices), indexType, currentTransform, std::move(diffuseTexture), std::move(normalTexture), std::move(metallicRoughnessTexture));
+        vertexDataList.emplace_back(std::move(positions), std::move(texCoords), std::move(normals), std::move(tangents), std::move(indices), indexType, currentTransform, std::move(diffuseTexture), std::move(normalTexture), std::move(metallicRoughnessTexture));
     }
 
     for (const auto& childIndex : node.children) {
-        ProcessNode<VertexType>(model, model.nodes[childIndex], currentTransform, vertexDataList);
+        ProcessNode(model, model.nodes[childIndex], currentTransform, vertexDataList);
     }
 }
 
-template<typename VertexType>
-std::vector<VertexData<VertexType>> LoadGLTF(const std::string& filePath) {
+std::vector<VertexData> LoadGLTF(const std::string& filePath) {
     tinygltf::Model model;
     tinygltf::TinyGLTF loader;
     std::string err;
@@ -200,12 +196,12 @@ std::vector<VertexData<VertexType>> LoadGLTF(const std::string& filePath) {
         throw std::runtime_error("Failed to load GLTF file: " + filePath + "\n" + err);
     }
 
-    std::vector<VertexData<VertexType>> vertexDataList;
+    std::vector<VertexData> vertexDataList;
 
     for (const auto& scene : model.scenes) {
         for (const auto& nodeIndex : scene.nodes) {
             const tinygltf::Node& node = model.nodes[nodeIndex];
-            ProcessNode<VertexType>(model, node, glm::mat4(1.0f), vertexDataList);
+            ProcessNode(model, node, glm::mat4(1.0f), vertexDataList);
         }
     }
     return vertexDataList;

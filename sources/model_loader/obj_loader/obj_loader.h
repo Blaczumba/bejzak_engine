@@ -34,8 +34,7 @@ struct Indices {
 
 class TinyOBJLoaderVertex {
 public:
-    template<typename VertexT>
-    static VertexData<VertexT> load(const std::string& filePath) {
+    static VertexData load(const std::string& filePath) {
         tinyobj::attrib_t attrib;
         std::vector<tinyobj::shape_t> shapes;
         std::vector<tinyobj::material_t> materials;
@@ -73,8 +72,7 @@ public:
         IndexType indexType = getMatchingIndexType(indices.size());
         lib::Buffer<uint8_t> indicesBuffer(indices.size() * static_cast<size_t>(indexType));
         processIndices(indicesBuffer.data(), indices.data(), indices.size(), indexType);
-        return VertexData<VertexT>{ 
-            .vertices = std::vector<VertexT>(),
+        return VertexData{ 
             .positions = std::move(positions),
             .textureCoordinates = std::move(texCoords),
             .normals = std::move(normals),

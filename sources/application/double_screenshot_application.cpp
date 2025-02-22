@@ -21,7 +21,7 @@
 SingleApp::SingleApp()
     : ApplicationBase(), _threadPool(MAX_THREADS_IN_POOL) {
     auto start = std::chrono::high_resolution_clock::now();
-    _newVertexDataTBN = LoadGLTF<VertexPTNT>(MODELS_PATH "sponza/scene.gltf");
+    _newVertexDataTBN = LoadGLTF(MODELS_PATH "sponza/scene.gltf");
     auto stop = std::chrono::high_resolution_clock::now();
     _assetManager = std::make_unique<AssetManager>(_logicalDevice->getMemoryAllocator());
 
@@ -32,7 +32,7 @@ SingleApp::SingleApp()
     createPresentResources();
     createShadowResources();
 
-    VertexData<VertexPTN> vertexDataCube = TinyOBJLoaderVertex::load<VertexPTN>(MODELS_PATH "cube.obj");
+    VertexData vertexDataCube = TinyOBJLoaderVertex::load(MODELS_PATH "cube.obj");
     auto vertices = buildInterleavingVertexData(vertexDataCube.positions);
     if (vertices.has_value())
         _assetManager->loadVertexData("cube.obj", *vertices, vertexDataCube.indices, static_cast<uint8_t>(vertexDataCube.indexType));
@@ -67,7 +67,7 @@ void SingleApp::loadObject() {
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
 
-        VertexData<VertexPTN> vertexData = TinyOBJLoaderVertex::load<VertexPTN>(MODELS_PATH "cylinder8.obj");
+        VertexData vertexData = TinyOBJLoaderVertex::load(MODELS_PATH "cylinder8.obj");
         auto vertices = buildInterleavingVertexData(vertexData.positions, vertexData.textureCoordinates, vertexData.normals);
         if (vertices.has_value())
             _assetManager->loadVertexData("cube_normal.obj", *vertices, vertexData.indices, static_cast<uint8_t>(vertexData.indexType));

@@ -29,7 +29,7 @@
 
 class SingleApp : public ApplicationBase {
     uint32_t index = 0;
-    std::vector<VertexData<VertexPTNT>> _newVertexDataTBN;
+    std::vector<VertexData> _newVertexDataTBN;
     std::vector<std::unique_ptr<Texture>> _textures;
     std::unordered_map<std::string, std::shared_ptr<UniformBufferTexture>> _uniformMap;
     std::unordered_map<std::string, std::shared_ptr<VertexBuffer>> _vertexBufferMap;

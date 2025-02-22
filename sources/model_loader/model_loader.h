@@ -34,9 +34,7 @@ std::enable_if_t<std::is_unsigned<IndexT>::value> processIndices(uint8_t* dstInd
 	}
 }
 
-template<typename VertexType>
 struct VertexData {
-	std::vector<VertexType> vertices;
 	std::vector<glm::vec3> positions;
 	std::vector<glm::vec2> textureCoordinates;
 	std::vector<glm::vec3> normals;
@@ -52,7 +50,6 @@ struct VertexData {
 
 };
 
-template<typename VertexType>
 class ModelLoader {
 public:
 	~ModelLoader() = default;
