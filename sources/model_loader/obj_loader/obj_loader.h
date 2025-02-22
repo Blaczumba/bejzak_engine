@@ -41,8 +41,10 @@ public:
         std::vector<tinyobj::material_t> materials;
         std::string warning, error;
         
-        std::vector<VertexT> vertices;
         std::vector<uint32_t> indices;
+        std::vector<glm::vec3> positions;
+        std::vector<glm::vec2> texCoords;
+        std::vector<glm::vec3> normals;
         
         if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warning, &error, filePath.data())) {
             throw std::runtime_error(warning + error);
@@ -56,53 +58,23 @@ public:
                     indices.push_back(ptr->second);
                 }
                 else {
-                    mp.insert({ idx, static_cast<uint32_t>(vertices.size()) });
+                    mp.insert({ idx, static_cast<uint32_t>(positions.size()) });
         
-                    VertexT vertex{};
-                    if constexpr (VertexTraits<VertexT>::hasPosition) {
-                        vertex.pos = {
-                            attrib.vertices[3 * index.vertex_index + 0],
-                            attrib.vertices[3 * index.vertex_index + 1],
-                            attrib.vertices[3 * index.vertex_index + 2]
-                        };
-                    }
-                    
-                    if constexpr (VertexTraits<VertexT>::hasTexCoord) {
-                        vertex.texCoord = {
-                            attrib.texcoords[2 * index.texcoord_index + 0],
-                            1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
-                        };
-                    }
-        
-                    if constexpr (VertexTraits<VertexT>::hasNormal) {
-                        vertex.normal = {
-                            attrib.normals[3 * index.normal_index + 0],
-                            attrib.normals[3 * index.normal_index + 1],
-                            attrib.normals[3 * index.normal_index + 2]
-                        };
-                    }
-        
-                    indices.push_back(static_cast<uint32_t>(vertices.size()));
-                    vertices.push_back(vertex);
+                    indices.emplace_back(static_cast<uint32_t>(positions.size()));
+                    int vertexIndex = 3 * index.vertex_index;
+                    int texIndex = 2 * index.texcoord_index;
+                    int normalIndex = 3 * index.normal_index;
+                    positions.emplace_back(attrib.vertices[vertexIndex], attrib.vertices[vertexIndex + 1], attrib.vertices[vertexIndex + 2]);
+                    texCoords.emplace_back(attrib.texcoords[texIndex], 1.0f - attrib.texcoords[texIndex + 1]);
+                    normals.emplace_back(attrib.normals[normalIndex], attrib.normals[normalIndex + 1], attrib.normals[normalIndex + 2]);
                 }
             }
-        }
-        lib::Buffer<glm::vec3> positions(vertices.size());
-        lib::Buffer<glm::vec2> texCoords(vertices.size());
-        lib::Buffer<glm::vec3> normals(vertices.size());
-        for (size_t i = 0; i < vertices.size(); i++) {
-            if constexpr (VertexTraits<VertexT>::hasPosition)
-                positions[i] = vertices[i].pos;
-            if constexpr (VertexTraits<VertexT>::hasTexCoord)
-                texCoords[i] = vertices[i].texCoord;
-            if constexpr (VertexTraits<VertexT>::hasNormal)
-                normals[i] = vertices[i].normal;
         }
         IndexType indexType = getMatchingIndexType(indices.size());
         lib::Buffer<uint8_t> indicesBuffer(indices.size() * static_cast<size_t>(indexType));
         processIndices(indicesBuffer.data(), indices.data(), indices.size(), indexType);
         return VertexData<VertexT>{ 
-            .vertices = std::move(vertices),
+            .vertices = std::vector<VertexT>(),
             .positions = std::move(positions),
             .textureCoordinates = std::move(texCoords),
             .normals = std::move(normals),

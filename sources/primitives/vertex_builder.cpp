@@ -3,13 +3,16 @@
 constexpr std::string_view NOT_MATCHING_SIZES = "Sizes of input data do not match.";
 constexpr std::string_view EMPTY_INPUT_DATA = "Input data is empty.";
 
-std::expected<lib::Buffer<VertexP>, std::string_view> buildInterleavingVertexData(const lib::Buffer<glm::vec3>& positions) {
+std::expected<lib::Buffer<VertexP>, std::string_view> buildInterleavingVertexData(const std::vector<glm::vec3>& positions) {
 	if (positions.size() == 0)
 		return std::unexpected(EMPTY_INPUT_DATA);
-	return lib::Buffer<VertexP>(positions.size());
+	lib::Buffer<VertexP> vertices(positions.size());
+	std::transform(positions.cbegin(), positions.cend(), vertices.begin(),
+		[](const glm::vec3& pos) { return VertexP{ pos }; });
+	return vertices;
 }
 
-std::expected<lib::Buffer<VertexPT>, std::string_view> buildInterleavingVertexData(const lib::Buffer<glm::vec3>& positions, const lib::Buffer<glm::vec2>& texCoords) {
+std::expected<lib::Buffer<VertexPT>, std::string_view> buildInterleavingVertexData(const std::vector<glm::vec3>& positions, const std::vector<glm::vec2>& texCoords) {
 	if (positions.size() != texCoords.size())
 		return std::unexpected(NOT_MATCHING_SIZES);
 	if (positions.size() == 0)
@@ -20,7 +23,7 @@ std::expected<lib::Buffer<VertexPT>, std::string_view> buildInterleavingVertexDa
 	return vertices;
 }
 
-std::expected<lib::Buffer<VertexPTN>, std::string_view> buildInterleavingVertexData(const lib::Buffer<glm::vec3>& positions, const lib::Buffer<glm::vec2>& texCoords, const lib::Buffer<glm::vec3>& normals) {
+std::expected<lib::Buffer<VertexPTN>, std::string_view> buildInterleavingVertexData(const std::vector<glm::vec3>& positions, const std::vector<glm::vec2>& texCoords, const std::vector<glm::vec3>& normals) {
 	if (positions.size() != texCoords.size() || positions.size() != normals.size())
 		return std::unexpected(NOT_MATCHING_SIZES);
 	if (positions.size() == 0)
@@ -32,7 +35,7 @@ std::expected<lib::Buffer<VertexPTN>, std::string_view> buildInterleavingVertexD
 	return vertices;
 }
 
-std::expected<lib::Buffer<VertexPTNT>, std::string_view> buildInterleavingVertexData(const lib::Buffer<glm::vec3>& positions, const lib::Buffer<glm::vec2>& texCoords, const lib::Buffer<glm::vec3>& normals, const lib::Buffer<glm::vec3>& tangents) {
+std::expected<lib::Buffer<VertexPTNT>, std::string_view> buildInterleavingVertexData(const std::vector<glm::vec3>& positions, const std::vector<glm::vec2>& texCoords, const std::vector<glm::vec3>& normals, const std::vector<glm::vec3>& tangents) {
 	if (positions.size() != texCoords.size() || positions.size() != normals.size() || positions.size() != tangents.size())
 		return std::unexpected(NOT_MATCHING_SIZES);
 	if (positions.size() == 0)

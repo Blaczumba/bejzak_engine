@@ -49,7 +49,7 @@ std::span<const unsigned char> processAttribute(const tinygltf::Model& model, st
 }
 
 template<typename IndexType>
-std::enable_if_t<std::is_unsigned<IndexType>::value> processTangents(IndexType* indices, size_t size, lib::Buffer<glm::vec3>& positions, lib::Buffer<glm::vec2>& texCoords, lib::Buffer<glm::vec3>& tangents) {
+std::enable_if_t<std::is_unsigned<IndexType>::value> processTangents(IndexType* indices, size_t size, const std::vector<glm::vec3>& positions, const std::vector<glm::vec2>& texCoords, std::vector<glm::vec3>& tangents) {
     for (size_t i = 0; i < size; i += 3) {
         const glm::vec3& pos0 = positions[indices[i]];
         const glm::vec3& pos1 = positions[indices[i + 1]];
@@ -96,11 +96,11 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
     for (const auto& primitive : mesh.primitives) {
         const auto& attributes = primitive.attributes;
 
-        lib::Buffer<glm::vec3> positions;
-        lib::Buffer<glm::vec2> texCoords;
-        lib::Buffer<glm::vec3> normals;
-        lib::Buffer<glm::vec3> tangents;
-        lib::Buffer<glm::vec3> bitangents;
+        std::vector<glm::vec3> positions;
+        std::vector<glm::vec2> texCoords;
+        std::vector<glm::vec3> normals;
+        std::vector<glm::vec3> tangents;
+        std::vector<glm::vec3> bitangents;
 
         lib::Buffer<uint8_t> indices;
         uint32_t indicesCount;
@@ -109,19 +109,19 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
         auto positionsData = processAttribute(model, attributes, "POSITION");
         if (positionsData.data()) {
             const glm::vec3* data = reinterpret_cast<const glm::vec3*>(positionsData.data());
-            positions = lib::Buffer<glm::vec3>(data, positionsData.size());
+            positions = std::vector<glm::vec3>(data, data + positionsData.size());
         }
 
         auto textureCoordsData = processAttribute(model, attributes, "TEXCOORD_0");
         if (textureCoordsData.data()) {
             const glm::vec2* data = reinterpret_cast<const glm::vec2*>(textureCoordsData.data());
-            texCoords = lib::Buffer<glm::vec2>(data, textureCoordsData.size());
+            texCoords = std::vector<glm::vec2>(data, data + textureCoordsData.size());
         }
 
         auto normalsData = processAttribute(model, attributes, "NORMAL");
         if (normalsData.data()) {
             const glm::vec3* data = reinterpret_cast<const glm::vec3*>(normalsData.data());
-            normals = lib::Buffer<glm::vec3>(data, normalsData.size());
+            normals = std::vector<glm::vec3>(data, data + normalsData.size());
         }
 
         // Load indices
@@ -149,7 +149,7 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
             }
         }
 
-        tangents = lib::Buffer<glm::vec3>(normals.size());
+        tangents.resize(normals.size());
         if constexpr (VertexTraits<VertexType>::hasTangent || VertexTraits<VertexType>::hasBitangent) {
             switch (indexType) {
             case IndexType::UINT8:
@@ -162,6 +162,7 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
                 processTangents(reinterpret_cast<uint32_t*>(indices.data()), static_cast<size_t>(indicesCount), positions, texCoords, tangents);
             }
         }
+
         // Load textures
         std::string diffuseTexture;
         std::string metallicRoughnessTexture;

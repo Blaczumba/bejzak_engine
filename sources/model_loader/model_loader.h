@@ -37,10 +37,10 @@ std::enable_if_t<std::is_unsigned<IndexT>::value> processIndices(uint8_t* dstInd
 template<typename VertexType>
 struct VertexData {
 	std::vector<VertexType> vertices;
-	lib::Buffer<glm::vec3> positions;
-	lib::Buffer<glm::vec2> textureCoordinates;
-	lib::Buffer<glm::vec3> normals;
-	lib::Buffer<glm::vec3> tangents;
+	std::vector<glm::vec3> positions;
+	std::vector<glm::vec2> textureCoordinates;
+	std::vector<glm::vec3> normals;
+	std::vector<glm::vec3> tangents;
 	lib::Buffer<uint8_t> indices;
 	IndexType indexType;
 

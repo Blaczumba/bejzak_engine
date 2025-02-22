@@ -32,8 +32,8 @@ SingleApp::SingleApp()
     createPresentResources();
     createShadowResources();
 
-    VertexData<VertexP> vertexDataCube = TinyOBJLoaderVertex::load<VertexP>(MODELS_PATH "cube.obj");
-    auto vertices = buildInterleavingVertexData(vertexDataCube.positions, vertexDataCube.textureCoordinates, vertexDataCube.normals);
+    VertexData<VertexPTN> vertexDataCube = TinyOBJLoaderVertex::load<VertexPTN>(MODELS_PATH "cube.obj");
+    auto vertices = buildInterleavingVertexData(vertexDataCube.positions);
     if (vertices.has_value())
         _assetManager->loadVertexData("cube.obj", *vertices, vertexDataCube.indices, static_cast<uint8_t>(vertexDataCube.indexType));
     {
