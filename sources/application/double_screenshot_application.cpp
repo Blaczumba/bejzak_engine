@@ -1,5 +1,6 @@
 #include "double_screenshot_application.h"
 
+#include "lib/status/status.h"
 #include "memory_objects/texture/texture_factory.h"
 #include "model_loader/tiny_gltf_loader/tiny_gltf_loader.h"
 #include "entity_component_system/system/movement_system.h"
@@ -18,6 +19,7 @@
 #include <array>
 #include <chrono>
 
+
 SingleApp::SingleApp()
     : ApplicationBase() {
     _assetManager = std::make_unique<AssetManager>(_logicalDevice->getMemoryAllocator());
@@ -25,20 +27,9 @@ SingleApp::SingleApp()
     createDescriptorSets();
     loadObjects();
     loadObject();
+    loadCubemap();
     createPresentResources();
     createShadowResources();
-
-    VertexData vertexDataCube = loadObj(MODELS_PATH "cube.obj");
-    auto vertices = buildInterleavingVertexData(vertexDataCube.positions);
-    if (vertices.has_value())
-        _assetManager->loadVertexData("cube.obj", *vertices, vertexDataCube.indices, static_cast<uint8_t>(vertexDataCube.indexType));
-    {
-        SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
-        const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
-        const AssetManager::VertexData& vData = _assetManager->getVertexData("cube.obj");
-        _vertexBufferCube = std::make_unique<VertexBuffer>(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives);
-        _indexBufferCube = std::make_unique<IndexBuffer>(*_logicalDevice, commandBuffer, vData.indexBuffer, vData.indexType);
-    }
 
     createCommandBuffers();
     //_screenshot = std::make_unique<Screenshot>(*_logicalDevice);
@@ -52,6 +43,19 @@ SingleApp::SingleApp()
     createSyncObjects();
 }
 
+Status SingleApp::loadCubemap() {
+    ASSIGN_OR_RETURN(const auto vertexDataCube, loadObj(MODELS_PATH "cube.obj"));
+    ASSIGN_OR_RETURN(const auto vertices, buildInterleavingVertexData(vertexDataCube.positions));
+    _assetManager->loadVertexData("cube.obj", vertices, vertexDataCube.indices, static_cast<uint8_t>(vertexDataCube.indexType));
+    {
+        SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
+        const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
+        const AssetManager::VertexData& vData = _assetManager->getVertexData("cube.obj");
+        _vertexBufferCube = std::make_unique<VertexBuffer>(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives);
+        _indexBufferCube = std::make_unique<IndexBuffer>(*_logicalDevice, commandBuffer, vData.indexBuffer, vData.indexType);
+    }
+}
+
 void SingleApp::loadObject() {
     const std::string drakanTexturePath = TEXTURES_PATH "drakan.jpg";
     _assetManager->loadImage2DAsync(drakanTexturePath);
@@ -63,7 +67,7 @@ void SingleApp::loadObject() {
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
 
-        VertexData vertexData = loadObj(MODELS_PATH "cylinder8.obj");
+        VertexData vertexData = loadObj(MODELS_PATH "cylinder8.obj").value();
         auto vertices = buildInterleavingVertexData(vertexData.positions, vertexData.textureCoordinates, vertexData.normals);
         if (vertices.has_value())
             _assetManager->loadVertexData("cube_normal.obj", *vertices, vertexData.indices, static_cast<uint8_t>(vertexData.indexType));
@@ -91,7 +95,7 @@ void SingleApp::loadObject() {
 void SingleApp::loadObjects() {
     // TODO needs refactoring
     auto start = std::chrono::high_resolution_clock::now();
-    std::vector<VertexData> sceneData = LoadGltf(MODELS_PATH "sponza/scene.gltf");
+    std::vector<VertexData> sceneData = LoadGltf(MODELS_PATH "sponza/scene.gltf").value();
     auto stop = std::chrono::high_resolution_clock::now();
     std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count() << std::endl;
     for (uint32_t i = 0; i < sceneData.size(); i++) {

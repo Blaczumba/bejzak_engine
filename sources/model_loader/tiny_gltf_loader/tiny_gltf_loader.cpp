@@ -174,7 +174,7 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
     }
 }
 
-std::vector<VertexData> LoadGltf(const std::string& filePath) {
+std::expected<std::vector<VertexData>, std::string_view> LoadGltf(const std::string& filePath) {
     tinygltf::Model model;
     tinygltf::TinyGLTF loader;
     std::string err;
@@ -182,15 +182,11 @@ std::vector<VertexData> LoadGltf(const std::string& filePath) {
     bool ret;
 
     if (filePath.find(".glb") != std::string::npos || filePath.find(".bin") != std::string::npos)
-        ret = loader.LoadBinaryFromFile(&model, &err, &warn, filePath);
+        loader.LoadBinaryFromFile(&model, &err, &warn, filePath);
     else if (filePath.find(".gltf") != std::string::npos)
-        ret = loader.LoadASCIIFromFile(&model, &err, &warn, filePath);
+        loader.LoadASCIIFromFile(&model, &err, &warn, filePath);
     else
-        ret = false;
-
-    if (!ret) {
-        throw std::runtime_error("Failed to load GLTF file: " + filePath + "\n" + err);
-    }
+        return std::unexpected("Failed to load gltf file.");
 
     std::vector<VertexData> vertexDataList;
     for (const auto& scene : model.scenes) {

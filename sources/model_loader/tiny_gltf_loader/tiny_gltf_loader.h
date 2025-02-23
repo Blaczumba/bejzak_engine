@@ -2,7 +2,8 @@
 
 #include "model_loader/model_loader.h"
 
+#include <expected>
 #include <string>
 #include <vector>
 
-std::vector<VertexData> LoadGltf(const std::string& filePath);
+std::expected<std::vector<VertexData>, std::string_view> LoadGltf(const std::string& filePath);

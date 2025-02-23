@@ -8,6 +8,7 @@
 #include "descriptor_set/descriptor_set.h"
 #include "descriptor_set/descriptor_set_layout.h"
 #include "entity_component_system/system/movement_system.h"
+#include "lib/status/status.h"
 #include "memory_objects/index_buffer.h"
 #include "memory_objects/texture/texture.h"
 #include "memory_objects/uniform_buffer/push_constants.h"
@@ -133,4 +134,5 @@ private:
 
     void loadObjects();
     void loadObject();
+    Status loadCubemap();
 };
