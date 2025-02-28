@@ -1,12 +1,6 @@
 #version 450
 
-layout(binding=0) uniform CameraUniform {
-    mat4 view;
-    mat4 proj;
-    vec3 pos;
-} camera;
-
-layout(binding = 1) uniform sampler2D texSampler;
+layout(binding = 3) uniform sampler2D texSampler;
 layout(binding = 4) uniform sampler2DShadow shadowMap;
 layout(binding = 5) uniform sampler2D normalMap;
 layout(binding = 6) uniform sampler2D metallicRoughnessMap;

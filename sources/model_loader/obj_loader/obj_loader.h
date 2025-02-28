@@ -1,9 +1,9 @@
 #pragma once
 
+#include "lib/status/status.h"
 #include "model_loader/model_loader.h"
 
-#include <expected>
 #include <string>
 #include <string_view>
 
-std::expected<VertexData, std::string_view> loadObj(const std::string& filePath);
+lib::ErrorOr<VertexData> loadObj(const std::string& filePath);

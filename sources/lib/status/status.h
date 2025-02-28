@@ -1,17 +1,21 @@
 #pragma once
 
 #include <expected>
-#include <string_view>
+#include <string>
 #include <utility>
 
+namespace lib {
+
 template<typename T>
-using ErrorOr = std::expected<T, std::string_view>;
+using ErrorOr = std::expected<T, std::string>;
 
-using Status = std::expected<void, std::string_view>;
+using Status = std::expected<void, std::string>;
 
-#define RETURN_IF_ERROR(variable) \
-    if (!(variable).has_value())  \
-        return (variable).error();
+struct StatusOk : public Status {};
+
+using Error = std::unexpected<std::string>;
+
+}
 
 
 // Helper to generate a unique variable name using __LINE__
@@ -19,9 +23,22 @@ using Status = std::expected<void, std::string_view>;
 #define CONCAT(x, y) CONCAT_IMPL(x, y)
 #define UNIQUE_NAME(base) CONCAT(base, __LINE__)
 
-// Assigns the result of 'status' to 'variable' or returns an error
-#define ASSIGN_OR_RETURN(variable, status)                      \
-    auto&& UNIQUE_NAME(_result_) = (status);                    \
-    if (!UNIQUE_NAME(_result_).has_value())                     \
-        return std::unexpected(UNIQUE_NAME(_result_).error());  \
-    variable = UNIQUE_NAME(_result_).value();
+// #ifndef NDEBUG
+#define ASSIGN_OR_RETURN(variable, status)                          \
+        auto&& UNIQUE_NAME(_result_) = (status);                    \
+        /* In Debug mode, perform error checking */                 \
+        if (!UNIQUE_NAME(_result_).has_value())                     \
+            return std::unexpected(UNIQUE_NAME(_result_).error());  \
+        variable = std::move(UNIQUE_NAME(_result_).value())
+
+#define RETURN_IF_ERROR(status)                         \
+        auto&& UNIQUE_NAME(_result_) = (status);        \
+        if (!UNIQUE_NAME(_result_))                     \
+            return UNIQUE_NAME(_result_)
+/*#else
+    #define ASSIGN_OR_RETURN(variable, status)      \
+        variable = (status.value())
+
+    #define RETURN_IF_ERROR(status)                 \
+        status
+#endif  */                                                        

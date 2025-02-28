@@ -134,5 +134,5 @@ private:
 
     void loadObjects();
     void loadObject();
-    Status loadCubemap();
+    lib::Status loadCubemap();
 };

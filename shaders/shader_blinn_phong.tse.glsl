@@ -48,11 +48,11 @@ struct OutputPatch {
 layout(location = 0) in patch OutputPatch outPatch;
 
 vec2 interpolate2D(vec2 v0, vec2 v1, vec2 v2) {
-    return vec2(gl_TessCoord.x) * v0 + vec2(gl_TessCoord.y) * v1 + vec2(gl_TessCoord.z) * v2;
+    return gl_TessCoord.x * v0 + gl_TessCoord.y * v1 + gl_TessCoord.z * v2;
 }
 
 vec3 interpolate3D(vec3 v0, vec3 v1, vec3 v2) {
-    return vec3(gl_TessCoord.x) * v0 + vec3(gl_TessCoord.y) * v1 + vec3(gl_TessCoord.z) * v2;
+    return gl_TessCoord.x * v0 + gl_TessCoord.y * v1 + gl_TessCoord.z * v2;
 }
 
 void main() {
@@ -80,12 +80,7 @@ void main() {
 
     gl_Position = camera.proj * camera.view * vec4(tefragPosition, 1.0);
     teFragTexCoord = interpolate2D(outPatch.TexCoord[0], outPatch.TexCoord[1], outPatch.TexCoord[2]);
-//    teFragTexCoord = gl_TessCoord.x * inTexCoord[0] +
-//            gl_TessCoord.y * inTexCoord[1] +
-//            gl_TessCoord.z * inTexCoord[2];
+
     teLightFragPosition = BiasMat * light.projView * vec4(tefragPosition, 1.0);
     teNormal = interpolate3D(outPatch.Normal[0], outPatch.Normal[1], outPatch.Normal[2]);
-//    teNormal = gl_TessCoord.x * inNormal[0] +
-//                gl_TessCoord.y * inNormal[1] +
-//                gl_TessCoord.z * inNormal[2];
 }

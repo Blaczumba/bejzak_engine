@@ -43,10 +43,10 @@ SingleApp::SingleApp()
     createSyncObjects();
 }
 
-Status SingleApp::loadCubemap() {
+lib::Status SingleApp::loadCubemap() {
     ASSIGN_OR_RETURN(const auto vertexDataCube, loadObj(MODELS_PATH "cube.obj"));
     ASSIGN_OR_RETURN(const auto vertices, buildInterleavingVertexData(vertexDataCube.positions));
-    _assetManager->loadVertexData("cube.obj", vertices, vertexDataCube.indices, static_cast<uint8_t>(vertexDataCube.indexType));
+    RETURN_IF_ERROR(_assetManager->loadVertexData("cube.obj", vertices, vertexDataCube.indices, static_cast<uint8_t>(vertexDataCube.indexType)));
     {
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
@@ -54,6 +54,7 @@ Status SingleApp::loadCubemap() {
         _vertexBufferCube = std::make_unique<VertexBuffer>(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives);
         _indexBufferCube = std::make_unique<IndexBuffer>(*_logicalDevice, commandBuffer, vData.indexBuffer, vData.indexType);
     }
+    return lib::StatusOk();
 }
 
 void SingleApp::loadObject() {
@@ -139,7 +140,7 @@ void SingleApp::loadObjects() {
             }
 
             auto descriptorSet = _descriptorPool->createDesriptorSet();
-            descriptorSet->updateDescriptorSet({ _dynamicUniformBuffersCamera.get(), _uniformMap[diffusePath].get(), _uniformBuffersLight.get(), _uniformBuffersObjects.get(), _shadowTextureUniform.get(), _uniformMap[normalPath].get(), _uniformMap[metallicRoughnessPath].get() });;
+            descriptorSet->updateDescriptorSet({ _dynamicUniformBuffersCamera.get(), _uniformBuffersLight.get(), _uniformBuffersObjects.get(), _uniformMap[diffusePath].get(), _shadowTextureUniform.get(), _uniformMap[normalPath].get(), _uniformMap[metallicRoughnessPath].get() });;
 
             _objects.emplace_back("Object", e);
             const AssetManager::VertexData& vData = _assetManager->getVertexData(std::to_string(i));
