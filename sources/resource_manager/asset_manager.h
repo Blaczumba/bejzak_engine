@@ -95,7 +95,7 @@ public:
 		return lib::StatusOk();
 	}
 
-	const ImageData& getImageData(const std::string& filePath);
+	lib::ErrorOr<const ImageData*> getImageData(const std::string& filePath);
 	void deleteImage(std::string_view filePath);
 
 	const VertexData& getVertexData(std::string_view key) const {
@@ -104,7 +104,7 @@ public:
 	}
 
 private:
-	void loadImageAsync(const std::string& filePath, std::function<ImageResource(std::string_view)>&& loadingFunction);
+	void loadImageAsync(const std::string& filePath, std::function<lib::ErrorOr<ImageResource>(std::string_view)>&& loadingFunction);
 
 	MemoryAllocator& _memoryAllocator;
 
@@ -112,5 +112,5 @@ private:
 	std::unordered_map<std::string, std::future<std::unique_ptr<VertexData>>> _awaitingVertexDataResources;
 
 	std::unordered_map<std::string, ImageData> _imageResources;
-	std::unordered_map<std::string, std::future<std::unique_ptr<ImageData>>> _awaitingImageResources;
+	std::unordered_map<std::string, std::future<lib::ErrorOr<ImageData>>> _awaitingImageResources;
 };

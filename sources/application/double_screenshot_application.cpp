@@ -57,7 +57,7 @@ lib::Status SingleApp::loadCubemap() {
     return lib::StatusOk();
 }
 
-void SingleApp::loadObject() {
+lib::Status SingleApp::loadObject() {
     const std::string drakanTexturePath = TEXTURES_PATH "drakan.jpg";
     _assetManager->loadImage2DAsync(drakanTexturePath);
 
@@ -77,8 +77,8 @@ void SingleApp::loadObject() {
         _vertexBufferPrimitiveObject = std::make_unique<VertexBuffer>(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives);
         _indexBufferObject = std::make_unique<IndexBuffer>(*_logicalDevice, commandBuffer, vData.indexBuffer, vData.indexType);
 
-        const auto& [stagingBuffer, imageDimmensions] = _assetManager->getImageData(drakanTexturePath);
-        _textures.emplace_back(TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, stagingBuffer, imageDimmensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
+        ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(drakanTexturePath));
+        _textures.emplace_back(TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
     }
 
     _uniformMap.emplace(drakanTexturePath, std::make_shared<UniformBufferTexture>(*_textures.back()));
@@ -91,9 +91,11 @@ void SingleApp::loadObject() {
     descriptorSet->updateDescriptorSet({ _dynamicUniformBuffersCamera.get(), _uniformBuffersLight.get(), _objectUniform.get(), _uniformMap[drakanTexturePath].get(), _shadowTextureUniform.get() });
     _objectEntity = _registry.createEntity();
     _entitytoDescriptorSet.emplace(_objectEntity, std::move(descriptorSet));
+
+    return lib::StatusOk();
 }
 
-void SingleApp::loadObjects() {
+lib::Status SingleApp::loadObjects() {
     // TODO needs refactoring
     auto start = std::chrono::high_resolution_clock::now();
     std::vector<VertexData> sceneData = LoadGltf(MODELS_PATH "sponza/scene.gltf").value();
@@ -124,18 +126,18 @@ void SingleApp::loadObjects() {
             const std::string normalPath = std::string(MODELS_PATH) + "sponza/" + sceneData[i].normalTexture;
 
             if (!_uniformMap.contains(diffusePath)) {
-                const auto&[stagingBuffer, imageDimmensions] =  _assetManager->getImageData(diffusePath);
-                _textures.emplace_back(TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, stagingBuffer, imageDimmensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
+                ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(diffusePath));
+                _textures.emplace_back(TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
                 _uniformMap.emplace(diffusePath, std::make_shared<UniformBufferTexture>(*_textures.back()));
             }
             if (!_uniformMap.contains(normalPath)) {
-                const auto& [stagingBuffer, imageDimmensions] = _assetManager->getImageData(normalPath);
-                _textures.emplace_back(TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, stagingBuffer, imageDimmensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
+                ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(normalPath));
+                _textures.emplace_back(TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
                 _uniformMap.emplace(normalPath, std::make_shared<UniformBufferTexture>(*_textures.back()));
             }
             if (!_uniformMap.contains(metallicRoughnessPath)) {
-                const auto& [stagingBuffer, imageDimmensions] = _assetManager->getImageData(metallicRoughnessPath);
-                _textures.emplace_back(TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, stagingBuffer, imageDimmensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
+                ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(metallicRoughnessPath));
+                _textures.emplace_back(TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
                 _uniformMap.emplace(metallicRoughnessPath, std::make_shared<UniformBufferTexture>(*_textures.back()));
             }
 
@@ -172,17 +174,20 @@ void SingleApp::loadObjects() {
 
     for (const auto& object : _objects)
         _octree->addObject(&object, _registry.getComponent<MeshComponent>(object.getEntity()).aabb);
+
+    return lib::StatusOk();
 }
 
-void SingleApp::createDescriptorSets() {
+lib::Status SingleApp::createDescriptorSets() {
     const auto& propertyManager = _physicalDevice->getPropertyManager();
     float maxSamplerAnisotropy = propertyManager.getMaxSamplerAnisotropy();
     _assetManager->loadImageCubemapAsync(TEXTURES_PATH "cubemap_yokohama_rgba.ktx");
     {
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
-        const auto& [stagingBuffer, imageDimmensions] = _assetManager->getImageData(TEXTURES_PATH "cubemap_yokohama_rgba.ktx");
-        _textureCubemap = TextureFactory::createTextureCubemap(*_logicalDevice, commandBuffer, stagingBuffer, imageDimmensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy);
+
+        ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(TEXTURES_PATH "cubemap_yokohama_rgba.ktx"));
+        _textureCubemap = TextureFactory::createTextureCubemap(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy);
         _shadowMap = TextureFactory::create2DShadowmap(*_logicalDevice, commandBuffer, 1024 * 2, 1024 * 2, VK_FORMAT_D32_SFLOAT);
     }
 
@@ -214,6 +219,8 @@ void SingleApp::createDescriptorSets() {
     _ubLight.projView[1][1] = -_ubLight.projView[1][1];
     _ubLight.projView = _ubLight.projView * glm::lookAt(_ubLight.pos, glm::vec3(-3.82383f, 3.66503f, 1.30751f), glm::vec3(0.0f, 1.0f, 0.0f));
     _uniformBuffersLight->updateUniformBuffer(_ubLight);
+
+    return lib::StatusOk();
 }
 
 void SingleApp::createPresentResources() {

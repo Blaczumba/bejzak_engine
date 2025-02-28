@@ -128,11 +128,11 @@ private:
     void recordShadowCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
     void recreateSwapChain();
 
-    void createDescriptorSets();
+    lib::Status createDescriptorSets();
     void createPresentResources();
     void createShadowResources();
 
-    void loadObjects();
-    void loadObject();
+    lib::Status loadObjects();
+    lib::Status loadObject();
     lib::Status loadCubemap();
 };

@@ -7,12 +7,11 @@
 #include <stdexcept>
 #include <vector>
 
-ImageResource ImageLoader::load2DImage(std::string_view imagePath) {
+lib::ErrorOr<ImageResource> ImageLoader::load2DImage(std::string_view imagePath) {
     int width, height, channels;
     stbi_uc* pixels = stbi_load(imagePath.data(), &width, &height, &channels, STBI_rgb_alpha);
-
     if (!pixels) {
-        throw std::runtime_error("failed to load texture image!");
+        return lib::Error("Failed to load texture image.");
     }
 
     return ImageResource{
@@ -41,10 +40,10 @@ ImageResource ImageLoader::load2DImage(std::string_view imagePath) {
     };
 }
 
-ImageResource ImageLoader::loadCubemapImage(std::string_view imagePath) {
+lib::ErrorOr<ImageResource> ImageLoader::loadCubemapImage(std::string_view imagePath) {
 	ktxTexture* ktxTexture;
 	if (ktxResult result = ktxTexture_CreateFromNamedFile(imagePath.data(), KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT, &ktxTexture); result != KTX_SUCCESS) {
-		throw std::runtime_error("failed to load ktx file");
+		return lib::Error("Failed to load ktx file.");
 	}
 
 	ImageResource image{
@@ -64,7 +63,8 @@ ImageResource ImageLoader::loadCubemapImage(std::string_view imagePath) {
 			// Calculate offset into staging buffer for the current mip level and face
 			ktx_size_t offset;
 			if (ktxResult result = ktxTexture_GetImageOffset(ktxTexture, level, 0, face, &offset); result != KTX_SUCCESS) {
-				throw std::runtime_error("failed to get image offset");
+				ktxTexture_Destroy(ktxTexture);
+				return lib::Error("Failed to get image offset.");
 			}
 
 			image.dimensions.copyRegions.emplace_back(
