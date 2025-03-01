@@ -21,12 +21,6 @@
 #include <unordered_map>
 #include <unordered_set>
 
-enum class CacheCode : uint8_t {
-	NOT_CACHED,
-	NOT_YET_PROCESSED,
-	CACHED
-};
-
 namespace {
 
 constexpr VkIndexType getIndexType(uint8_t indexSize) {
