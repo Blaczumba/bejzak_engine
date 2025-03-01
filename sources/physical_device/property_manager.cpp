@@ -7,7 +7,7 @@
 #include <cstring>
 #include <stdexcept>
 
-void PhysicalDevicePropertyManager::initiate(const VkPhysicalDevice physicalDevice, const VkSurfaceKHR surface) {
+PhysicalDevicePropertyManager::PhysicalDevicePropertyManager(const VkPhysicalDevice physicalDevice, const VkSurfaceKHR surface) {
     _physicalDevice = physicalDevice;
     _surface = surface;
 

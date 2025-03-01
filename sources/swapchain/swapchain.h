@@ -1,5 +1,6 @@
 #pragma once
 
+#include "lib/status/status.h"
 #include "memory_objects/texture/texture.h"
 
 #include <vulkan/vulkan.h>
@@ -21,15 +22,13 @@ class Swapchain {
 	std::vector<VkImage> _images;
 	std::vector<VkImageView> _views;
 
-	void cleanup();
-	void create();
-	Swapchain(const LogicalDevice& logicalDevice);
+	Swapchain(const VkSwapchainKHR swapchain, const LogicalDevice& logicalDevice, VkSurfaceFormatKHR format, VkExtent2D extent, std::vector<VkImage>&& images, std::vector<VkImageView>&& views);
 
 public:
-	static std::unique_ptr<Swapchain> create(const LogicalDevice& logicalDevice);
+	// If we want to recreate the swapchain use this factory method and pass an old (currently existing) swapchain.
+	static lib::ErrorOr<std::unique_ptr<Swapchain>> create(const LogicalDevice& logicalDevice, const Swapchain* oldSwapchain = nullptr);
 
 	~Swapchain();
-	void recrete();
 
 	const VkSwapchainKHR getVkSwapchain() const;
 	const VkFormat getVkFormat() const;

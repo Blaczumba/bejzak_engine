@@ -17,13 +17,15 @@ VkExtent2D chooseSwapExtent(VkExtent2D actualWindowExtent, const VkSurfaceCapabi
 
 }   // namespace
 
-Swapchain::Swapchain(const LogicalDevice& logicalDevice)
-	: _logicalDevice(logicalDevice) {
-    create();
-}
+Swapchain::Swapchain(const VkSwapchainKHR swapchain, const LogicalDevice& logicalDevice, VkSurfaceFormatKHR surfaceFormat, VkExtent2D extent, std::vector<VkImage>&& images, std::vector<VkImageView>&& views)
+	: _swapchain(swapchain), _logicalDevice(logicalDevice), _surfaceFormat(surfaceFormat), _extent(extent), _images(std::move(images)), _views(std::move(views)) { }
 
 Swapchain::~Swapchain() {
-    cleanup();
+    const VkDevice device = _logicalDevice.getVkDevice();
+    for (const VkImageView view : _views) {
+        vkDestroyImageView(device, view, nullptr);
+    }
+    vkDestroySwapchainKHR(device, _swapchain, nullptr);
 }
 
 const VkSwapchainKHR Swapchain::getVkSwapchain() const {
@@ -50,26 +52,16 @@ const std::vector<VkImageView>& Swapchain::getVkImageViews() const {
     return _views;
 }
 
-void Swapchain::cleanup() {
-    const VkDevice device = _logicalDevice.getVkDevice();
-
-    for (const VkImageView view : _views) {
-        vkDestroyImageView(device, view, nullptr);
-    }
-
-    vkDestroySwapchainKHR(device, _swapchain, nullptr);
-}
-
-void Swapchain::create() {
-    const auto& propertyManager = _logicalDevice.getPhysicalDevice().getPropertyManager();
+lib::ErrorOr<std::unique_ptr<Swapchain>> Swapchain::create(const LogicalDevice& logicalDevice, const Swapchain* oldSwapchain) {
+    const auto& propertyManager = logicalDevice.getPhysicalDevice().getPropertyManager();
 
     const SwapChainSupportDetails swapChainSupport = propertyManager.getSwapChainSupportDetails();
-    const VkDevice device = _logicalDevice.getVkDevice();
+    const VkDevice device = logicalDevice.getVkDevice();
     const VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes, VK_PRESENT_MODE_MAILBOX_KHR);
-    const Window& window = _logicalDevice.getPhysicalDevice().getWindow();
+    const Window& window = logicalDevice.getPhysicalDevice().getWindow();
 
-    _surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats, VK_FORMAT_B8G8R8A8_SRGB);
-    _extent = chooseSwapExtent(window.getFramebufferSize(), swapChainSupport.capabilities);
+    const VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats, VK_FORMAT_B8G8R8A8_SRGB);
+    const VkExtent2D extent = chooseSwapExtent(window.getFramebufferSize(), swapChainSupport.capabilities);
 
     uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
     if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
@@ -81,9 +73,9 @@ void Swapchain::create() {
         .surface = window.getVkSurfaceKHR(),
 
         .minImageCount = imageCount,
-        .imageFormat = _surfaceFormat.format,
-        .imageColorSpace = _surfaceFormat.colorSpace,
-        .imageExtent = _extent,
+        .imageFormat = surfaceFormat.format,
+        .imageColorSpace = surfaceFormat.colorSpace,
+        .imageExtent = extent,
         .imageArrayLayers = 1,
         .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
     };
@@ -103,36 +95,30 @@ void Swapchain::create() {
     createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     createInfo.presentMode = presentMode;
     createInfo.clipped = VK_TRUE;
+    createInfo.oldSwapchain = oldSwapchain ? oldSwapchain->getVkSwapchain() : nullptr;
 
-    if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &_swapchain) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create swap chain!");
+    VkSwapchainKHR swapchain;
+    if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapchain) != VK_SUCCESS) {
+        return lib::Error("Failed to create swap chain.");
     }
 
-    vkGetSwapchainImagesKHR(device, _swapchain, &imageCount, nullptr);
-    _images.resize(imageCount);
-    vkGetSwapchainImagesKHR(device, _swapchain, &imageCount, _images.data());
-    _views.reserve(imageCount);
-    std::transform(_images.cbegin(), _images.cend(), std::back_inserter(_views),
-        [this](const VkImage image) {
-            return _logicalDevice.createImageView(image, ImageParameters{
-                    .format = _surfaceFormat.format,
-                    .width = _extent.width,
-                    .height = _extent.height,
+    vkGetSwapchainImagesKHR(device, swapchain, &imageCount, nullptr);
+    std::vector<VkImage> images(imageCount);
+    vkGetSwapchainImagesKHR(device, swapchain, &imageCount, images.data());
+    std::vector<VkImageView> views;
+    std::transform(images.cbegin(), images.cend(), std::back_inserter(views),
+        [&](const VkImage image) {
+            return logicalDevice.createImageView(image, ImageParameters{
+                    .format = surfaceFormat.format,
+                    .width = extent.width,
+                    .height = extent.height,
                     .layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                     .aspect = VK_IMAGE_ASPECT_COLOR_BIT,
                 }
             );
         }
     );
-}
-
-std::unique_ptr<Swapchain> Swapchain::create(const LogicalDevice& logicalDevice) {
-    return std::unique_ptr<Swapchain>(new Swapchain(logicalDevice));
-}
-
-void Swapchain::recrete() {
-    cleanup();
-    create();
+    return std::unique_ptr<Swapchain>(new Swapchain(swapchain, logicalDevice, surfaceFormat, extent, std::move(images), std::move(views)));
 }
 
 VkResult Swapchain::acquireNextImage(VkSemaphore presentCompleteSemaphore, uint32_t* imageIndex) const {

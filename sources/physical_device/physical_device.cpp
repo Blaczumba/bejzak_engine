@@ -9,26 +9,27 @@
 
 #include <vulkan/vulkan.hpp>
 
-PhysicalDevice::PhysicalDevice(const Window& window)
-	: _window(window) {
-    const std::vector<VkPhysicalDevice> devices = _window.getInstance().getAvailablePhysicalDevices();
-    const VkSurfaceKHR surf = _window.getVkSurfaceKHR();
+PhysicalDevice::PhysicalDevice(const VkPhysicalDevice physicalDevice, const Window& window, PhysicalDevicePropertyManager&& propertManager)
+	: _device(physicalDevice), _window(window), _propertyManager(std::move(propertManager)) { }
 
-    for (const auto device : devices) {
-        _propertyManager.initiate(device, surf);
-        const QueueFamilyIndices& indices = _propertyManager.getQueueFamilyIndices();
-        const bool extensionsSupported = _propertyManager.checkDeviceExtensionSupport();
+lib::ErrorOr<std::unique_ptr<PhysicalDevice>> PhysicalDevice::create(const Window& window) {
+    const VkSurfaceKHR surf = window.getVkSurfaceKHR();
+
+    for (const auto device : window.getInstance().getAvailablePhysicalDevices()) {
+        PhysicalDevicePropertyManager propertyManager(device, surf);
+        const QueueFamilyIndices& indices = propertyManager.getQueueFamilyIndices();
+        const bool extensionsSupported = propertyManager.checkDeviceExtensionSupport();
 
         bool swapChainAdequate = false;
         if (extensionsSupported) {
-            const SwapChainSupportDetails swapChainSupport = _propertyManager.getSwapChainSupportDetails();
+            const SwapChainSupportDetails swapChainSupport = propertyManager.getSwapChainSupportDetails();
             swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
         }
 
         VkPhysicalDeviceFeatures supportedFeatures;
         vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
 
-        bool discreteGPU = _propertyManager.isDiscreteGPU();
+        bool discreteGPU = propertyManager.isDiscreteGPU();
 
         const std::array conditions = {
             indices.isComplete(),
@@ -38,16 +39,11 @@ PhysicalDevice::PhysicalDevice(const Window& window)
             discreteGPU
         };
 
-        bool suitable = std::all_of(conditions.cbegin(), conditions.cend(), [](bool condition) { return condition; });
-        if (suitable) {
-            _device = device;
-            break;
+        if (std::all_of(conditions.cbegin(), conditions.cend(), [](bool condition) { return condition; })) {
+            return std::unique_ptr<PhysicalDevice>(new PhysicalDevice(device, window, std::move(propertyManager)));
         }
     }
-
-    if (_device == VK_NULL_HANDLE) {
-        throw std::runtime_error("failed to find a suitable GPU!");
-    }
+    return lib::Error("failed to find a suitable GPU!");
 }
 
 const VkPhysicalDevice PhysicalDevice::getVkPhysicalDevice() const {

@@ -34,10 +34,9 @@ class PhysicalDevicePropertyManager {
     QueueFamilyIndices findQueueFamilyIncides() const;
     SwapChainSupportDetails querySwapchainSupportDetails() const;
 
-    PhysicalDevicePropertyManager() = default;
-    void initiate(const VkPhysicalDevice physicalDevice, const VkSurfaceKHR surface);
-
 public:
+    PhysicalDevicePropertyManager(const VkPhysicalDevice physicalDevice, const VkSurfaceKHR surface);
+
     VkSampleCountFlagBits getMaxUsableSampleCount() const;
     float getMaxSamplerAnisotropy() const;
 

@@ -23,9 +23,9 @@ ApplicationBase::ApplicationBase() {
 #endif // VALIDATION_LAYERS_ENABLED
 
 	_window = std::make_unique<WindowGLFW>(*_instance, "Bejzak Engine", 1920, 1080);
-	_physicalDevice = std::make_unique<PhysicalDevice>(*_window);
+	_physicalDevice = PhysicalDevice::create(*_window).value();
 	_logicalDevice = _physicalDevice->createLogicalDevice();
-	_swapchain = Swapchain::create(*_logicalDevice);
+	_swapchain = Swapchain::create(*_logicalDevice).value();
 
 	_singleTimeCommandPool = std::make_unique<CommandPool>(*_logicalDevice);
 }

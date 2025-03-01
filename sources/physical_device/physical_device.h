@@ -1,5 +1,6 @@
 #pragma once
 
+#include "lib/status/status.h"
 #include "property_manager.h"
 #include "window/window/window.h"
 
@@ -10,13 +11,17 @@
 class LogicalDevice;
 
 class PhysicalDevice {
-    VkPhysicalDevice _device = VK_NULL_HANDLE;
+    const VkPhysicalDevice _device;
     const Window& _window;
 
-    PhysicalDevicePropertyManager _propertyManager;
+    const PhysicalDevicePropertyManager _propertyManager;
+
+	PhysicalDevice(const VkPhysicalDevice physicalDevice, const Window& window, PhysicalDevicePropertyManager&& propertManager);
 
 public:
-	PhysicalDevice(const Window& window);
+    ~PhysicalDevice() = default;
+
+    static lib::ErrorOr<std::unique_ptr<PhysicalDevice>> create(const Window& window);
 
     const VkPhysicalDevice getVkPhysicalDevice() const;
     const Window& getWindow() const;
