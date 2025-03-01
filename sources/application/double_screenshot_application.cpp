@@ -1,5 +1,6 @@
 #include "double_screenshot_application.h"
 
+#include "lib/status/status.h"
 #include "memory_objects/texture/texture_factory.h"
 #include "model_loader/tiny_gltf_loader/tiny_gltf_loader.h"
 #include "entity_component_system/system/movement_system.h"
@@ -9,29 +10,28 @@
 #include "entity_component_system/component/transform.h"
 #include "entity_component_system/component/velocity.h"
 #include "pipeline/shader/shader_program.h"
-#include "render_pass/attachment/attachment_factory.h"
+#include "primitives/vertex_builder.h"
 #include "render_pass/attachment/attachment_layout.h"
 #include "thread_pool/thread_pool.h"
+#include "memory_objects/staging_buffer.h"
 
 #include <algorithm>
 #include <array>
 #include <chrono>
 
+
 SingleApp::SingleApp()
     : ApplicationBase() {
-    _newVertexDataTBN = LoadGLTF<VertexPTNT, uint16_t>(MODELS_PATH "sponza/scene.gltf");
+    _assetManager = std::make_unique<AssetManager>(_logicalDevice->getMemoryAllocator());
 
     createDescriptorSets();
     loadObjects();
+    loadObject();
+    loadCubemap();
     createPresentResources();
     createShadowResources();
 
-    VertexData<VertexP, uint16_t> vertexDataCube = TinyOBJLoaderVertex::extract<VertexP, uint16_t>(MODELS_PATH "cube.obj");
-    _vertexBufferCube = std::make_unique<VertexBuffer>(*_singleTimeCommandPool, vertexDataCube.vertices);
-    _indexBufferCube = std::make_unique<IndexBuffer>(*_singleTimeCommandPool, vertexDataCube.indices);
-
     createCommandBuffers();
-
     //_screenshot = std::make_unique<Screenshot>(*_logicalDevice);
     //_screenshot->addImageToObserved(_framebufferTextures[1]->getImage(), "hig_res_screenshot.ppm");
     _camera = std::make_unique<FPSCamera>(glm::radians(45.0f), 1920.0f / 1080.0f, 0.01f, 100.0f);
@@ -43,59 +43,129 @@ SingleApp::SingleApp()
     createSyncObjects();
 }
 
-void SingleApp::loadObjects() {
+lib::Status SingleApp::loadCubemap() {
+    ASSIGN_OR_RETURN(const auto vertexDataCube, loadObj(MODELS_PATH "cube.obj"));
+    ASSIGN_OR_RETURN(const auto vertices, buildInterleavingVertexData(vertexDataCube.positions));
+    RETURN_IF_ERROR(_assetManager->loadVertexData("cube.obj", vertices, vertexDataCube.indices, static_cast<uint8_t>(vertexDataCube.indexType)));
+    {
+        SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
+        const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
+        const AssetManager::VertexData& vData = _assetManager->getVertexData("cube.obj");
+        _vertexBufferCube = std::make_unique<VertexBuffer>(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives);
+        _indexBufferCube = std::make_unique<IndexBuffer>(*_logicalDevice, commandBuffer, vData.indexBuffer, vData.indexType);
+    }
+    return lib::StatusOk();
+}
+
+lib::Status SingleApp::loadObject() {
+    const std::string drakanTexturePath = TEXTURES_PATH "drakan.jpg";
+    _assetManager->loadImage2DAsync(drakanTexturePath);
+
     const auto& propertyManager = _physicalDevice->getPropertyManager();
     float maxSamplerAnisotropy = propertyManager.getMaxSamplerAnisotropy();
-    uint32_t index = 0;
 
-    _objects.reserve(_newVertexDataTBN.size());
-    for (uint32_t i = 0; i < _newVertexDataTBN.size(); i++) {
-        Entity e = _registry.createEntity();
-        if (_newVertexDataTBN[i].normalTextures.empty() || _newVertexDataTBN[i].metallicRoughnessTextures.empty())
-            continue;
-        const std::string diffusePath = std::string(MODELS_PATH) + "sponza/" + _newVertexDataTBN[i].diffuseTextures[0];
-        const std::string metallicRoughnessPath = std::string(MODELS_PATH) + "sponza/" + _newVertexDataTBN[i].metallicRoughnessTextures[0];
-        const std::string normalPath = std::string(MODELS_PATH) + "sponza/" + _newVertexDataTBN[i].normalTextures[0];
+    {
+        SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
+        const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
 
-        if (!_uniformMap.contains(diffusePath)) {
-            _textures.emplace_back(TextureFactory::create2DTextureImage(*_singleTimeCommandPool, diffusePath, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
-            _uniformMap.emplace(std::make_pair(diffusePath, std::make_shared<UniformBufferTexture>(*_textures.back())));
-        }
-        if (!_uniformMap.contains(normalPath)) {
-            _textures.emplace_back(TextureFactory::create2DTextureImage(*_singleTimeCommandPool, normalPath, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
-            _uniformMap.emplace(std::make_pair(normalPath, std::make_shared<UniformBufferTexture>(*_textures.back())));
-        }
-        if (!_uniformMap.contains(metallicRoughnessPath)) {
-            _textures.emplace_back(TextureFactory::create2DTextureImage(*_singleTimeCommandPool, metallicRoughnessPath, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
-            _uniformMap.emplace(std::make_pair(metallicRoughnessPath, std::make_shared<UniformBufferTexture>(*_textures.back())));
-        }
+        VertexData vertexData = loadObj(MODELS_PATH "cylinder8.obj").value();
+        auto vertices = buildInterleavingVertexData(vertexData.positions, vertexData.textureCoordinates, vertexData.normals);
+        if (vertices.has_value())
+            _assetManager->loadVertexData("cube_normal.obj", *vertices, vertexData.indices, static_cast<uint8_t>(vertexData.indexType));
+        const AssetManager::VertexData& vData = _assetManager->getVertexData("cube_normal.obj");
+        _vertexBufferObject = std::make_unique<VertexBuffer>(*_logicalDevice, commandBuffer, *vData.vertexBuffer);
+        _vertexBufferPrimitiveObject = std::make_unique<VertexBuffer>(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives);
+        _indexBufferObject = std::make_unique<IndexBuffer>(*_logicalDevice, commandBuffer, vData.indexBuffer, vData.indexType);
 
-        auto descriptorSet = _descriptorPool->createDesriptorSet();
-        descriptorSet->updateDescriptorSet({ _dynamicUniformBuffersCamera.get(), _uniformMap[diffusePath].get(), _uniformBuffersLight.get(), _uniformBuffersObjects.get(), _shadowTextureUniform.get(), _uniformMap[normalPath].get(), _uniformMap[metallicRoughnessPath].get() });
-
-        std::vector<glm::vec3> pVertexData;
-        std::transform(_newVertexDataTBN[i].vertices.cbegin(), _newVertexDataTBN[i].vertices.cend(), std::back_inserter(pVertexData), [](const VertexPTNT& vertex) { return vertex.pos; });
-
-        _objects.emplace_back("Object", e);
-
-        MeshComponent msh;
-        msh.vertexBuffer = std::make_shared<VertexBuffer>(*_singleTimeCommandPool, _newVertexDataTBN[i].vertices);
-        msh.indexBuffer = std::make_shared<IndexBuffer>(*_singleTimeCommandPool, _newVertexDataTBN[i].indices);
-        msh.vertexBufferPrimitive = std::make_shared<VertexBuffer>(*_singleTimeCommandPool, pVertexData);
-        msh.aabb = createAABBfromVertices(pVertexData, _newVertexDataTBN[i].model);
-        _registry.addComponent<MeshComponent>(e, std::move(msh));
-
-        TransformComponent trsf;
-        trsf.model = _newVertexDataTBN[i].model;
-        _registry.addComponent<TransformComponent>(e, std::move(trsf));
-
-        _entityToIndex.emplace(e, index);
-        _entitytoDescriptorSet.emplace(e, std::move(descriptorSet));
-        
-        _ubObject.model = _newVertexDataTBN[i].model;
-        _uniformBuffersObjects->updateUniformBuffer(&_ubObject, index++);
+        ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(drakanTexturePath));
+        _textures.emplace_back(TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
     }
 
+    _uniformMap.emplace(drakanTexturePath, std::make_shared<UniformBufferTexture>(*_textures.back()));
+    UniformBufferObject object = {
+        .model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 2.0f, 0.0f))
+    };
+    _objectUniform = std::make_unique<UniformBufferData<UniformBufferObject>>(*_logicalDevice);
+    _objectUniform->updateUniformBuffer(object);
+    auto descriptorSet = _descriptorPoolNormal->createDesriptorSet();
+    descriptorSet->updateDescriptorSet({ _dynamicUniformBuffersCamera.get(), _uniformBuffersLight.get(), _objectUniform.get(), _uniformMap[drakanTexturePath].get(), _shadowTextureUniform.get() });
+    _objectEntity = _registry.createEntity();
+    _entitytoDescriptorSet.emplace(_objectEntity, std::move(descriptorSet));
+
+    return lib::StatusOk();
+}
+
+lib::Status SingleApp::loadObjects() {
+    // TODO needs refactoring
+    auto start = std::chrono::high_resolution_clock::now();
+    std::vector<VertexData> sceneData = LoadGltf(MODELS_PATH "sponza/scene.gltf").value();
+    auto stop = std::chrono::high_resolution_clock::now();
+    std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count() << std::endl;
+    for (uint32_t i = 0; i < sceneData.size(); i++) {
+        if (sceneData[i].normalTexture.empty() || sceneData[i].metallicRoughnessTexture.empty())
+            continue;
+        _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + sceneData[i].diffuseTexture);
+        _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + sceneData[i].metallicRoughnessTexture);
+        _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + sceneData[i].normalTexture);
+        const auto vertices = buildInterleavingVertexData(sceneData[i].positions, sceneData[i].textureCoordinates, sceneData[i].normals, sceneData[i].tangents);
+        if (vertices.has_value())
+            _assetManager->loadVertexData(std::to_string(i), *vertices, sceneData[i].indices, static_cast<uint8_t>(sceneData[i].indexType));
+    }
+    const auto& propertyManager = _physicalDevice->getPropertyManager();
+    float maxSamplerAnisotropy = propertyManager.getMaxSamplerAnisotropy();
+    _objects.reserve(sceneData.size());
+    {
+        SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
+        const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
+        for (uint32_t i = 0; i < sceneData.size(); i++) {
+            Entity e = _registry.createEntity();
+            if (sceneData[i].normalTexture.empty() || sceneData[i].metallicRoughnessTexture.empty())
+                continue;
+            const std::string diffusePath = std::string(MODELS_PATH) + "sponza/" + sceneData[i].diffuseTexture;
+            const std::string metallicRoughnessPath = std::string(MODELS_PATH) + "sponza/" + sceneData[i].metallicRoughnessTexture;
+            const std::string normalPath = std::string(MODELS_PATH) + "sponza/" + sceneData[i].normalTexture;
+
+            if (!_uniformMap.contains(diffusePath)) {
+                ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(diffusePath));
+                _textures.emplace_back(TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
+                _uniformMap.emplace(diffusePath, std::make_shared<UniformBufferTexture>(*_textures.back()));
+            }
+            if (!_uniformMap.contains(normalPath)) {
+                ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(normalPath));
+                _textures.emplace_back(TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
+                _uniformMap.emplace(normalPath, std::make_shared<UniformBufferTexture>(*_textures.back()));
+            }
+            if (!_uniformMap.contains(metallicRoughnessPath)) {
+                ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(metallicRoughnessPath));
+                _textures.emplace_back(TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
+                _uniformMap.emplace(metallicRoughnessPath, std::make_shared<UniformBufferTexture>(*_textures.back()));
+            }
+
+            auto descriptorSet = _descriptorPool->createDesriptorSet();
+            descriptorSet->updateDescriptorSet({ _dynamicUniformBuffersCamera.get(), _uniformBuffersLight.get(), _uniformBuffersObjects.get(), _uniformMap[diffusePath].get(), _shadowTextureUniform.get(), _uniformMap[normalPath].get(), _uniformMap[metallicRoughnessPath].get() });;
+
+            _objects.emplace_back("Object", e);
+            const AssetManager::VertexData& vData = _assetManager->getVertexData(std::to_string(i));
+            MeshComponent msh;
+            msh.vertexBuffer = std::make_shared<VertexBuffer>(*_logicalDevice, commandBuffer, vData.vertexBuffer.value());
+            msh.indexBuffer = std::make_shared<IndexBuffer>(*_logicalDevice, commandBuffer, vData.indexBuffer, vData.indexType);
+            msh.vertexBufferPrimitive = std::make_shared<VertexBuffer>(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives);
+            msh.aabb = createAABBfromVertices(std::vector<glm::vec3>(sceneData[i].positions.cbegin(), sceneData[i].positions.cend()), sceneData[i].model);
+            _registry.addComponent<MeshComponent>(e, std::move(msh));
+
+            TransformComponent trsf;
+            trsf.model = sceneData[i].model;
+            _registry.addComponent<TransformComponent>(e, std::move(trsf));
+
+            _entityToIndex.emplace(e, index);
+            _entitytoDescriptorSet.emplace(e, std::move(descriptorSet));
+        
+            _ubObject.model = sceneData[i].model;
+            _uniformBuffersObjects->updateUniformBuffer(_ubObject, index++);
+        }
+        _ubObject.model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 2.0f, 0.0f));
+        _uniformBuffersObjects->updateUniformBuffer(_ubObject, index);
+    }
     AABB sceneAABB = _registry.getComponent<MeshComponent>(_objects[0].getEntity()).aabb;
     for (int i = 1; i < _objects.size(); i++) {
         sceneAABB.extend(_registry.getComponent<MeshComponent>(_objects[i].getEntity()).aabb);
@@ -104,28 +174,39 @@ void SingleApp::loadObjects() {
 
     for (const auto& object : _objects)
         _octree->addObject(&object, _registry.getComponent<MeshComponent>(object.getEntity()).aabb);
+
+    return lib::StatusOk();
 }
 
-void SingleApp::createDescriptorSets() {
+lib::Status SingleApp::createDescriptorSets() {
     const auto& propertyManager = _physicalDevice->getPropertyManager();
     float maxSamplerAnisotropy = propertyManager.getMaxSamplerAnisotropy();
-    _textureCubemap = TextureFactory::createCubemap(*_singleTimeCommandPool, TEXTURES_PATH "cubemap_yokohama_rgba.ktx", VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy);
-    _shadowMap = TextureFactory::create2DShadowmap(*_singleTimeCommandPool, 1024 * 2, 1024 * 2, VK_FORMAT_D32_SFLOAT);
+    _assetManager->loadImageCubemapAsync(TEXTURES_PATH "cubemap_yokohama_rgba.ktx");
+    {
+        SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
+        const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
 
-    _uniformBuffersObjects = std::make_unique<UniformBufferData<UniformBufferObject>>(*_logicalDevice, _newVertexDataTBN.size());
+        ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(TEXTURES_PATH "cubemap_yokohama_rgba.ktx"));
+        _textureCubemap = TextureFactory::createTextureCubemap(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy);
+        _shadowMap = TextureFactory::create2DShadowmap(*_logicalDevice, commandBuffer, 1024 * 2, 1024 * 2, VK_FORMAT_D32_SFLOAT);
+    }
+
+    _uniformBuffersObjects = std::make_unique<UniformBufferData<UniformBufferObject>>(*_logicalDevice, 200);
     _uniformBuffersLight = std::make_unique<UniformBufferData<UniformBufferLight>>(*_logicalDevice);
     _dynamicUniformBuffersCamera = std::make_unique<UniformBufferData<UniformBufferCamera>>(*_logicalDevice, MAX_FRAMES_IN_FLIGHT);
 
     _skyboxTextureUniform = std::make_unique<UniformBufferTexture>(*_textureCubemap);
     _shadowTextureUniform = std::make_unique<UniformBufferTexture>(*_shadowMap);
 
-    _pbrShaderProgram = ShaderProgramFactory::createShaderProgram(ShaderProgramType::PBR, *_logicalDevice);
+    _pbrShaderProgram = ShaderProgramFactory::createShaderProgram(ShaderProgramType::PBR_TESSELLATION, *_logicalDevice);
+    _normalShaderProgram = ShaderProgramFactory::createShaderProgram(ShaderProgramType::NORMAL, *_logicalDevice);
     _skyboxShaderProgram = ShaderProgramFactory::createShaderProgram(ShaderProgramType::SKYBOX, *_logicalDevice);
     _shadowShaderProgram = ShaderProgramFactory::createShaderProgram(ShaderProgramType::SHADOW, *_logicalDevice);
 
     _descriptorPool = std::make_shared<DescriptorPool>(*_logicalDevice, _pbrShaderProgram->getDescriptorSetLayout(), 150);
+    _descriptorPoolNormal = std::make_unique<DescriptorPool>(*_logicalDevice, _normalShaderProgram->getDescriptorSetLayout(), 1);
     _descriptorPoolSkybox = std::make_shared<DescriptorPool>(*_logicalDevice, _skyboxShaderProgram->getDescriptorSetLayout(), 1);
-    _descriptorPoolShadow = std::make_shared<DescriptorPool>(*_logicalDevice, _shadowShaderProgram->getDescriptorSetLayout(), 1);
+    _descriptorPoolShadow = std::make_shared<DescriptorPool>(*_logicalDevice, _shadowShaderProgram->getDescriptorSetLayout(), 2);
 
     _descriptorSetSkybox = _descriptorPoolSkybox->createDesriptorSet();
     _descriptorSetShadow = _descriptorPoolShadow->createDesriptorSet();
@@ -137,7 +218,9 @@ void SingleApp::createDescriptorSets() {
     _ubLight.projView = glm::perspective(glm::radians(120.0f), 1.0f, 0.01f, 40.0f);
     _ubLight.projView[1][1] = -_ubLight.projView[1][1];
     _ubLight.projView = _ubLight.projView * glm::lookAt(_ubLight.pos, glm::vec3(-3.82383f, 3.66503f, 1.30751f), glm::vec3(0.0f, 1.0f, 0.0f));
-    _uniformBuffersLight->updateUniformBuffer(&_ubLight);
+    _uniformBuffersLight->updateUniformBuffer(_ubLight);
+
+    return lib::StatusOk();
 }
 
 void SingleApp::createPresentResources() {
@@ -146,18 +229,18 @@ void SingleApp::createPresentResources() {
     const VkExtent2D extent = _swapchain->getExtent();
 
     AttachmentLayout attachmentsLayout;
-    attachmentsLayout.addAttachment(AttachmentFactory::createColorResolvePresentAttachment(swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE));
-    attachmentsLayout.addAttachment(AttachmentFactory::createColorResolveAttachment(swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE));
-    attachmentsLayout.addAttachment(AttachmentFactory::createColorAttachment(swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE, msaaSamples));
-    attachmentsLayout.addAttachment(AttachmentFactory::createColorAttachment(swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE, msaaSamples));
-    attachmentsLayout.addAttachment(AttachmentFactory::createDepthAttachment(findDepthFormat(), VK_ATTACHMENT_STORE_OP_DONT_CARE, msaaSamples));
+    attachmentsLayout.addColorResolvePresentAttachment(swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE);
+    //attachmentsLayout.addColorResolveAttachment(swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE);
+    attachmentsLayout.addColorAttachment(swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE, msaaSamples);
+    //attachmentsLayout.addColorAttachment(swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE, msaaSamples);
+    attachmentsLayout.addDepthAttachment(findDepthFormat(), VK_ATTACHMENT_STORE_OP_DONT_CARE, msaaSamples);
 
     Subpass subpass(attachmentsLayout);
     subpass.addSubpassOutputAttachment(0);
     subpass.addSubpassOutputAttachment(1);
     subpass.addSubpassOutputAttachment(2);
-    subpass.addSubpassOutputAttachment(3);
-    subpass.addSubpassOutputAttachment(4);
+    //subpass.addSubpassOutputAttachment(3);
+    //subpass.addSubpassOutputAttachment(4);
 
     _renderPass = std::make_shared<Renderpass>(*_logicalDevice, attachmentsLayout);
     _renderPass->addSubpass(subpass);
@@ -171,42 +254,49 @@ void SingleApp::createPresentResources() {
     _renderPass->create();
 
     for (uint8_t i = 0; i < _swapchain->getImagesCount(); ++i) {
-        _framebuffers.emplace_back(std::make_unique<Framebuffer>(*_renderPass, *_swapchain, i, *_singleTimeCommandPool));
+        _framebuffers.emplace_back(Framebuffer::createFromSwapchain(*_renderPass, *_swapchain, i, *_singleTimeCommandPool));
     }
-
-    const GraphicsPipelineParameters pbrParameters = {
-        .msaaSamples = msaaSamples,
-        // .patchControlPoints = 3,
-    };
-    _graphicsPipeline = std::make_unique<GraphicsPipeline>(*_renderPass, *_pbrShaderProgram, pbrParameters);
-
-    const GraphicsPipelineParameters skyboxParameters = {
-        .cullMode = VK_CULL_MODE_FRONT_BIT,
-        .msaaSamples = msaaSamples
-    };
-    _graphicsPipelineSkybox = std::make_unique<GraphicsPipeline>(*_renderPass, *_skyboxShaderProgram, skyboxParameters);
+    {
+        const GraphicsPipelineParameters parameters = {
+            .msaaSamples = msaaSamples,
+            .patchControlPoints = 3,
+        };
+        _graphicsPipeline = std::make_unique<GraphicsPipeline>(*_renderPass, *_pbrShaderProgram, parameters);
+    }
+    {
+        const GraphicsPipelineParameters parameters = {
+            .cullMode = VK_CULL_MODE_FRONT_BIT,
+            .msaaSamples = msaaSamples
+        };
+        _graphicsPipelineSkybox = std::make_unique<GraphicsPipeline>(*_renderPass, *_skyboxShaderProgram, parameters);
+    }
+    {
+        const GraphicsPipelineParameters parameters = {
+            .msaaSamples = msaaSamples,
+            .patchControlPoints = 3
+        };
+        _graphicsPipelineNormal = std::make_unique<GraphicsPipeline>(*_renderPass, *_normalShaderProgram, parameters);
+    }
 }
 
 void SingleApp::createShadowResources() {
     const VkSampleCountFlagBits shadowMsaaSamples = VK_SAMPLE_COUNT_1_BIT;
     const VkFormat imageFormat = VK_FORMAT_D32_SFLOAT;
     const VkExtent2D extent = { 1024 * 2, 1024 * 2 };
-
     AttachmentLayout attachmentLayout;
-    attachmentLayout.addAttachment(AttachmentFactory::createShadowAttachment(imageFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
-
+    attachmentLayout.addShadowAttachment(imageFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     Subpass subpass(attachmentLayout);
     subpass.addSubpassOutputAttachment(0);
 
     _shadowRenderPass = std::make_shared<Renderpass>(*_logicalDevice, attachmentLayout);
     _shadowRenderPass->addSubpass(subpass);
     _shadowRenderPass->create();
-
-    _shadowFramebuffer = std::make_unique<Framebuffer>(*_shadowRenderPass, std::vector<std::shared_ptr<Texture>>{ _shadowMap });
+    _shadowFramebuffer = Framebuffer::createFromTextures(*_shadowRenderPass, std::move(_shadowMap) );
 
     const GraphicsPipelineParameters parameters = {
+        .cullMode = VK_CULL_MODE_FRONT_BIT,
         .depthBiasConstantFactor = 0.7f,
-        .depthBiasSlopeFactor = 2.0f
+        .depthBiasSlopeFactor = 2.0f,
     };
     _shadowPipeline = std::make_unique<GraphicsPipeline>(*_shadowRenderPass, *_shadowShaderProgram, parameters);
 }
@@ -238,8 +328,6 @@ void SingleApp::run() {
         _registry.getComponent<MeshComponent>(object.getEntity()).vertexBufferPrimitive.reset();
     }
 
-    _threadPool = std::make_unique<ThreadPool>(MAX_THREADS_IN_POOL);
-
     while (_window->open()) {
         _callbackManager->pollEvents();
         draw();
@@ -269,7 +357,7 @@ void SingleApp::draw() {
         _commandBuffers[_currentFrame][i]->resetCommandBuffer();
 
     //recordShadowCommandBuffer(_shadowCommandBuffers[_currentFrame], imageIndex);
-    recordCommandBuffer(_primaryCommandBuffer[_currentFrame]->getVkCommandBuffer(), imageIndex);
+    recordCommandBuffer(imageIndex);
 
     VkSubmitInfo submitInfo{};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -301,8 +389,9 @@ void SingleApp::draw() {
         throw std::runtime_error("failed to present swap chain image!");
     }
 
-    if (++_currentFrame == MAX_FRAMES_IN_FLIGHT)
+    if (++_currentFrame == MAX_FRAMES_IN_FLIGHT) {
         _currentFrame = 0;
+    }
 }
 
 VkFormat SingleApp::findDepthFormat() const {
@@ -349,13 +438,10 @@ void SingleApp::createSyncObjects() {
 }
 
 void SingleApp::updateUniformBuffer(uint32_t currentFrame) {
-    const VkExtent2D swapchainExtent = _swapchain->getExtent();
-
     _ubCamera.view = _camera->getViewMatrix();
     _ubCamera.proj = _camera->getProjectionMatrix();
     _ubCamera.pos = _camera->getPosition();
-
-    _dynamicUniformBuffersCamera->updateUniformBuffer(&_ubCamera, currentFrame);
+    _dynamicUniformBuffersCamera->updateUniformBuffer(_ubCamera, currentFrame);
 }
 
 void SingleApp::createCommandBuffers() {
@@ -414,99 +500,77 @@ void SingleApp::recordOctreeSecondaryCommandBuffer(const VkCommandBuffer command
     }
 }
 
-void SingleApp::recordCommandBuffer(VkCommandBuffer primaryCommandBuffer, uint32_t imageIndex) {
-    const VkCommandBufferBeginInfo beginInfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+void SingleApp::recordCommandBuffer(uint32_t imageIndex) {
+    const Framebuffer& framebuffer = *_framebuffers[imageIndex];
+    const PrimaryCommandBuffer& primaryCommandBuffer = *_primaryCommandBuffer[_currentFrame];
+    primaryCommandBuffer.begin();
+    primaryCommandBuffer.beginRenderPass(framebuffer);
+
+    //const VkExtent2D framebufferExtent = framebuffer.getVkExtent();
+    //const VkViewport viewport = {
+    //    .x = 0.0f,
+    //    .y = 0.0f,
+    //    .width = (float)framebufferExtent.width,
+    //    .height = (float)framebufferExtent.height,
+    //    .minDepth = 0.0f,
+    //    .maxDepth = 1.0f
+    //};
+    //const VkRect2D scissor = {
+    //    .offset = { 0, 0 },
+    //    .extent = framebufferExtent
+    //};
+
+    const VkCommandBufferInheritanceViewportScissorInfoNV scissorViewportInheritance = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_VIEWPORT_SCISSOR_INFO_NV,
+        .viewportScissor2D = VK_TRUE,
+        .viewportDepthCount = 1,
+        .pViewportDepths = &framebuffer.getViewport(),
     };
 
-    if (vkBeginCommandBuffer(primaryCommandBuffer, &beginInfo) != VK_SUCCESS) {
-        throw std::runtime_error("failed to begin recording command buffer!");
-    }
+    std::array<std::future<void>, MAX_THREADS_IN_POOL> futures;
 
-    const auto& clearValues = _renderPass->getAttachmentsLayout().getVkClearValues();
-    const VkRenderPassBeginInfo renderPassInfo = {
-        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-        .renderPass = _renderPass->getVkRenderPass(),
-        .framebuffer = _framebuffers[imageIndex]->getVkFramebuffer(),
-        .renderArea = {
-            .offset = { 0, 0 },
-            .extent = _swapchain->getExtent()
-        },
-        .clearValueCount = static_cast<uint32_t>(clearValues.size()),
-        .pClearValues = clearValues.data()
-    };
-
-    vkCmdBeginRenderPass(primaryCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-
-    const VkExtent2D swapchainExtent = _swapchain->getExtent();
-
-    const VkViewport viewport = {
-        .x = 0.0f,
-        .y = 0.0f,
-        .width = (float)swapchainExtent.width,
-        .height = (float)swapchainExtent.height,
-        .minDepth = 0.0f,
-        .maxDepth = 1.0f
-    };
-
-    const VkRect2D scissor = {
-        .offset = { 0, 0 },
-        .extent = swapchainExtent
-    };
-
-    const VkCommandBufferInheritanceInfo inheritanceInfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-        .renderPass = _renderPass->getVkRenderPass(),
-        .subpass = 0,
-        .framebuffer = _framebuffers[imageIndex]->getVkFramebuffer()
-    };
-
-    const VkCommandBufferBeginInfo cmdBufferBeginInfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-        .flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
-        .pInheritanceInfo = &inheritanceInfo
-    };
-
-    std::array<VkCommandBuffer, MAX_THREADS_IN_POOL> commandBuffers;
-    std::transform(_commandBuffers[_currentFrame].cbegin(), _commandBuffers[_currentFrame].cend(), commandBuffers.begin(), [](const std::unique_ptr<CommandBuffer>& cmdBuff) { return cmdBuff->getVkCommandBuffer(); });
-
-    _threadPool->getThread(0)->addJob([&]() {
-        vkBeginCommandBuffer(commandBuffers[0], &cmdBufferBeginInfo);
-        vkCmdSetViewport(commandBuffers[0], 0, 1, &viewport);
-        vkCmdSetScissor(commandBuffers[0], 0, 1, &scissor);
-        vkCmdSetViewport(commandBuffers[0], 0, 1, &viewport);
+    futures[0] = std::async(std::launch::async, [&]() {
+        _commandBuffers[_currentFrame][0]->begin(framebuffer, &scissorViewportInheritance);
+        const VkCommandBuffer commandBuffer = _commandBuffers[_currentFrame][0]->getVkCommandBuffer();
+        vkCmdBindPipeline(commandBuffer, _graphicsPipeline->getVkPipelineBindPoint(), _graphicsPipeline->getVkPipeline());
 
         const OctreeNode* root = _octree->getRoot();
         const auto& planes = extractFrustumPlanes(_camera->getProjectionMatrix() * _camera->getViewMatrix());
+        recordOctreeSecondaryCommandBuffer(commandBuffer, root, planes);
 
-        vkCmdBindPipeline(commandBuffers[0], _graphicsPipeline->getVkPipelineBindPoint(), _graphicsPipeline->getVkPipeline());
-        recordOctreeSecondaryCommandBuffer(commandBuffers[0], root, planes);
-
-        if (vkEndCommandBuffer(commandBuffers[0]) != VK_SUCCESS) {
+        if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
             throw std::runtime_error("failed to record command buffer!");
         }
-    });
+        });
 
-    _threadPool->getThread(1)->addJob([&]() {
+    futures[1] = std::async(std::launch::async, [&]() {
         // Skybox
-        vkBeginCommandBuffer(commandBuffers[1], &cmdBufferBeginInfo);
-        vkCmdSetViewport(commandBuffers[1], 0, 1, &viewport);
-        vkCmdSetScissor(commandBuffers[1], 0, 1, &scissor);
-        vkCmdBindPipeline(commandBuffers[1], _graphicsPipelineSkybox->getVkPipelineBindPoint(), _graphicsPipelineSkybox->getVkPipeline());
+        _commandBuffers[_currentFrame][1]->begin(framebuffer, &scissorViewportInheritance);
+        const VkCommandBuffer commandBuffer = _commandBuffers[_currentFrame][1]->getVkCommandBuffer();
 
-        _vertexBufferCube->bind(commandBuffers[1]);
-        _indexBufferCube->bind(commandBuffers[1]);
-        _descriptorSetSkybox->bind(commandBuffers[1], *_graphicsPipelineSkybox, { _currentFrame });
-        vkCmdDrawIndexed(commandBuffers[1], _indexBufferCube->getIndexCount(), 1, 0, 0, 0);
-        vkEndCommandBuffer(commandBuffers[1]);
-    });
+        vkCmdBindPipeline(commandBuffer, _graphicsPipelineSkybox->getVkPipelineBindPoint(), _graphicsPipelineSkybox->getVkPipeline());
+        _vertexBufferCube->bind(commandBuffer);
+        _indexBufferCube->bind(commandBuffer);
+        _descriptorSetSkybox->bind(commandBuffer, *_graphicsPipelineSkybox, { _currentFrame });
+        vkCmdDrawIndexed(commandBuffer, _indexBufferCube->getIndexCount(), 1, 0, 0, 0);
 
-    _threadPool->wait();
+        // Object
+        vkCmdBindPipeline(commandBuffer, _graphicsPipelineNormal->getVkPipelineBindPoint(), _graphicsPipelineNormal->getVkPipeline());
+        _vertexBufferObject->bind(commandBuffer);
+        _indexBufferObject->bind(commandBuffer);
+        _entitytoDescriptorSet[_objectEntity]->bind(commandBuffer, *_graphicsPipelineNormal, { _currentFrame });
+        vkCmdDrawIndexed(commandBuffer, _indexBufferObject->getIndexCount(), 1, 0, 0, 0);
 
-    vkCmdExecuteCommands(primaryCommandBuffer, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
-    vkCmdEndRenderPass(primaryCommandBuffer);
+        vkEndCommandBuffer(commandBuffer);
+        });
 
-    if (vkEndCommandBuffer(primaryCommandBuffer) != VK_SUCCESS) {
+    futures[0].wait();
+    futures[1].wait();
+
+    primaryCommandBuffer.executeSecondaryCommandBuffers({ _commandBuffers[_currentFrame][0]->getVkCommandBuffer(), _commandBuffers[_currentFrame][1]->getVkCommandBuffer() });
+    primaryCommandBuffer.endRenderPass();
+
+    if (primaryCommandBuffer.end() != VK_SUCCESS) {
         throw std::runtime_error("failed to record command buffer!");
     }
 }
@@ -554,10 +618,15 @@ void SingleApp::recordShadowCommandBuffer(VkCommandBuffer commandBuffer, uint32_
         VkBuffer vertexBuffers[] = { meshComponent.vertexBufferPrimitive->getVkBuffer() };
         const IndexBuffer* indexBuffer = meshComponent.indexBuffer.get();
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-        vkCmdBindIndexBuffer(commandBuffer, indexBuffer->getVkBuffer(), 0, indexBuffer->getIndexType());
         _descriptorSetShadow->bind(commandBuffer, *_shadowPipeline, { _entityToIndex[object.getEntity()] });
+        vkCmdBindIndexBuffer(commandBuffer, indexBuffer->getVkBuffer(), 0, indexBuffer->getIndexType());
         vkCmdDrawIndexed(commandBuffer, indexBuffer->getIndexCount(), 1, 0, 0, 0);
     }
+
+    _vertexBufferPrimitiveObject->bind(commandBuffer);
+    _indexBufferObject->bind(commandBuffer);
+    _descriptorSetShadow->bind(commandBuffer, *_shadowPipeline, { index });
+    vkCmdDrawIndexed(commandBuffer, _indexBufferObject->getIndexCount(), 1, 0, 0, 0);
 
     vkCmdEndRenderPass(commandBuffer);
     //if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
@@ -577,6 +646,6 @@ void SingleApp::recreateSwapChain() {
 
     _swapchain->recrete();
     for (uint8_t i = 0; i < _swapchain->getImagesCount(); ++i) {
-        _framebuffers[i] = std::make_unique<Framebuffer>(*_renderPass, *_swapchain, i, *_singleTimeCommandPool);
+        _framebuffers[i] = Framebuffer::createFromSwapchain(*_renderPass, *_swapchain, i, *_singleTimeCommandPool);
     }
 }

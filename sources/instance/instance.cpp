@@ -10,7 +10,6 @@
 #include <stdexcept>
 
 Instance::Instance(std::string_view engineName, const std::vector<const char*>& requiredExtensions) {
-
 #ifdef VALIDATION_LAYERS_ENABLED
     if (!checkValidationLayerSupport()) {
         throw std::runtime_error("validation layers requested, but not available!");
@@ -27,12 +26,12 @@ Instance::Instance(std::string_view engineName, const std::vector<const char*>& 
     };
 
 #ifdef VALIDATION_LAYERS_ENABLED
-    VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = populateDebugMessengerCreateInfoUtility();
+    const VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = populateDebugMessengerCreateInfoUtility();
 #else
     VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
 #endif // VALIDATION_LAYERS_ENABLED
 
-    VkInstanceCreateInfo createInfo = {
+    const VkInstanceCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
     #ifdef VALIDATION_LAYERS_ENABLED
         .pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugCreateInfo,

@@ -29,10 +29,6 @@ DescriptorSet::DescriptorSet(const std::shared_ptr<const DescriptorPool>& descri
     }
 }
 
-DescriptorSet::~DescriptorSet() {
-    
-}
-
 void DescriptorSet::updateDescriptorSet(const std::vector<UniformBuffer*>& uniformBuffers) {
 
     std::vector<VkWriteDescriptorSet> descriptorWrites;
@@ -40,9 +36,7 @@ void DescriptorSet::updateDescriptorSet(const std::vector<UniformBuffer*>& unifo
 
     for (size_t j = 0; j < uniformBuffers.size(); j++) {
         const UniformBuffer* uniformBuffer = uniformBuffers[j];
-
         descriptorWrites.emplace_back(uniformBuffer->getVkWriteDescriptorSet(_descriptorSet, j));
-
         if (uniformBuffer->getVkDescriptorType() == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
             _dynamicBuffersBaseSizes.emplace_back(uniformBuffer->getSize());
         }
@@ -54,7 +48,6 @@ void DescriptorSet::updateDescriptorSet(const std::vector<UniformBuffer*>& unifo
 void DescriptorSet::bind(VkCommandBuffer commandBuffer, const Pipeline& pipeline, std::initializer_list<uint32_t> dynamicOffsetStrides) {
     std::array<uint32_t, 16> sizes;
     std::transform(dynamicOffsetStrides.begin(), dynamicOffsetStrides.end(), _dynamicBuffersBaseSizes.cbegin(), sizes.begin(), std::multiplies<uint32_t>());
-
     vkCmdBindDescriptorSets(commandBuffer, pipeline.getVkPipelineBindPoint(), pipeline.getVkPipelineLayout(), 0, 1, &_descriptorSet, dynamicOffsetStrides.size(), sizes.data());
 }
 

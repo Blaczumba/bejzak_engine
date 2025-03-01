@@ -1,5 +1,7 @@
 #pragma once
 
+#include "memory_objects/staging_buffer.h"
+
 #include <vulkan/vulkan.h>
 
 #include <cstring>
@@ -11,16 +13,14 @@ class LogicalDevice;
 
 class IndexBuffer {
     VkBuffer _indexBuffer;
-    VkDeviceMemory _indexBufferMemory;
+    Allocation _allocation;
     const uint32_t _indexCount;
     const VkIndexType _indexType;
 
     const LogicalDevice& _logicalDevice;
 
 public:
-    IndexBuffer(const CommandPool& commandPool, const std::vector<uint8_t>& indices);
-    IndexBuffer(const CommandPool& commandPool, const std::vector<uint16_t>& indices);
-    IndexBuffer(const CommandPool& commandPool, const std::vector<uint32_t>& indices);
+    IndexBuffer(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer, VkIndexType indexType);
     ~IndexBuffer();
 
     VkIndexType getIndexType() const;
@@ -29,5 +29,17 @@ public:
     void bind(const VkCommandBuffer commandBuffer) const;
 
 private:
-    void createIndexBuffer(const CommandPool& commandPool, const void* indicesData, VkDeviceSize bufferSize);
+    struct Allocator {
+        Allocation& allocation;
+        const size_t size;
+        const VkBuffer operator()(VmaWrapper& allocator) {
+            auto [buffer, tmpAllocation, _] = allocator.createVkBuffer(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
+            allocation = tmpAllocation;
+            return buffer;
+        }
+
+        const VkBuffer operator()(auto&&) {
+            throw std::runtime_error("Unrecognized allocator in IndexBuffer creation");
+        }
+    };
 };

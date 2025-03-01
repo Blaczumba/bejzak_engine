@@ -1,6 +1,6 @@
 #include "object.h"
 
-Object::Object(const std::string_view name, Entity entity)
+Object::Object(std::string_view name, Entity entity)
     : _entity(entity), _name(name), _parent(nullptr) {
 }
 

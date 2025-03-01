@@ -8,6 +8,7 @@
 #include "descriptor_set/descriptor_set.h"
 #include "descriptor_set/descriptor_set_layout.h"
 #include "entity_component_system/system/movement_system.h"
+#include "lib/status/status.h"
 #include "memory_objects/index_buffer.h"
 #include "memory_objects/texture/texture.h"
 #include "memory_objects/uniform_buffer/push_constants.h"
@@ -17,6 +18,8 @@
 #include "object/object.h"
 #include "framebuffer/framebuffer.h"
 #include "render_pass/render_pass.h"
+#include "resource_manager/asset_manager.h"
+#include "resource_manager/resource_manager.h"
 #include "scene/octree/octree.h"
 #include "screenshot/screenshot.h"
 #include "thread_pool/thread_pool.h"
@@ -26,7 +29,7 @@
 #include <unordered_map>
 
 class SingleApp : public ApplicationBase {
-    std::vector<VertexData<VertexPTNT, uint16_t>> _newVertexDataTBN;
+    uint32_t index = 0;
     std::vector<std::unique_ptr<Texture>> _textures;
     std::unordered_map<std::string, std::shared_ptr<UniformBufferTexture>> _uniformMap;
     std::unordered_map<std::string, std::shared_ptr<VertexBuffer>> _vertexBufferMap;
@@ -36,16 +39,26 @@ class SingleApp : public ApplicationBase {
     std::vector<Object> _objects;
     std::unique_ptr<Octree> _octree;
     Registry _registry;
+    std::unique_ptr<AssetManager> _assetManager;
+    std::unique_ptr<ResourceManager> _resourceManager;
 
     std::shared_ptr<Renderpass> _renderPass;
     std::vector<std::unique_ptr<Framebuffer>> _framebuffers;
     std::unique_ptr<GraphicsPipeline> _graphicsPipeline;
+    std::unique_ptr<GraphicsPipeline> _graphicsPipelineNormal;
     std::unique_ptr<GraphicsPipeline> _graphicsPipelineSkybox;
 
     std::shared_ptr<Renderpass> _shadowRenderPass;
     std::unique_ptr<Framebuffer> _shadowFramebuffer;
     std::shared_ptr<Texture> _shadowMap;
     std::unique_ptr<GraphicsPipeline> _shadowPipeline;
+
+    std::unique_ptr<VertexBuffer> _vertexBufferObject;
+    std::unique_ptr<VertexBuffer> _vertexBufferPrimitiveObject;
+    std::unique_ptr<IndexBuffer> _indexBufferObject;
+    std::unique_ptr<DescriptorSet> _objectDescriptorSet;
+    std::unique_ptr<UniformBufferData<UniformBufferObject>> _objectUniform;
+    Entity _objectEntity;
 
     std::unique_ptr<VertexBuffer> _vertexBufferCube;
     std::unique_ptr<IndexBuffer> _indexBufferCube;
@@ -62,10 +75,12 @@ class SingleApp : public ApplicationBase {
     std::unique_ptr<UniformBufferTexture> _shadowTextureUniform;
 
     std::shared_ptr<DescriptorPool> _descriptorPool;
+    std::shared_ptr<DescriptorPool> _descriptorPoolNormal;
     std::shared_ptr<DescriptorPool> _descriptorPoolSkybox;
     std::shared_ptr<DescriptorPool> _descriptorPoolShadow;
 
     std::unique_ptr<GraphicsShaderProgram> _shadowShaderProgram;
+    std::unique_ptr<GraphicsShaderProgram> _normalShaderProgram;
     std::unique_ptr<GraphicsShaderProgram> _pbrShaderProgram;
     std::unique_ptr<GraphicsShaderProgram> _skyboxShaderProgram;
 
@@ -79,11 +94,10 @@ class SingleApp : public ApplicationBase {
     std::unique_ptr<FPSCamera> _camera;
 
     std::vector<std::unique_ptr<CommandPool>> _commandPool;
-    std::vector<std::unique_ptr<CommandBuffer>> _primaryCommandBuffer;
-    std::vector<std::vector<std::unique_ptr<CommandBuffer>>> _commandBuffers;
-    std::vector<std::vector<std::unique_ptr<CommandBuffer>>> _shadowCommandBuffers;
+    std::vector<std::unique_ptr<PrimaryCommandBuffer>> _primaryCommandBuffer;
+    std::vector<std::vector<std::unique_ptr<SecondaryCommandBuffer>>> _commandBuffers;
+    std::vector<std::vector<std::unique_ptr<SecondaryCommandBuffer>>> _shadowCommandBuffers;
 
-    std::unique_ptr<ThreadPool> _threadPool;
     std::vector<VkSemaphore> _shadowMapSemaphores;
     std::vector<VkSemaphore> _imageAvailableSemaphores;
     std::vector<VkSemaphore> _renderFinishedSemaphores;
@@ -109,14 +123,16 @@ private:
     void createCommandBuffers();
     void createSyncObjects();
     void updateUniformBuffer(uint32_t currentImage);
-    void recordCommandBuffer(VkCommandBuffer primaryCommandBuffer, uint32_t imageIndex);
+    void recordCommandBuffer(uint32_t imageIndex);
     void recordOctreeSecondaryCommandBuffer(const VkCommandBuffer commandBuffer, const OctreeNode* node, const std::array<glm::vec4, NUM_CUBE_FACES>& planes);
     void recordShadowCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
     void recreateSwapChain();
 
-    void createDescriptorSets();
+    lib::Status createDescriptorSets();
     void createPresentResources();
     void createShadowResources();
 
-    void loadObjects();
+    lib::Status loadObjects();
+    lib::Status loadObject();
+    lib::Status loadCubemap();
 };

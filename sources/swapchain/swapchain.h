@@ -4,6 +4,7 @@
 
 #include <vulkan/vulkan.h>
 
+#include <memory>
 #include <vector>
 
 class Window;
@@ -20,9 +21,15 @@ class Swapchain {
 	std::vector<VkImage> _images;
 	std::vector<VkImageView> _views;
 
-public:
+	void cleanup();
+	void create();
 	Swapchain(const LogicalDevice& logicalDevice);
+
+public:
+	static std::unique_ptr<Swapchain> create(const LogicalDevice& logicalDevice);
+
 	~Swapchain();
+	void recrete();
 
 	const VkSwapchainKHR getVkSwapchain() const;
 	const VkFormat getVkFormat() const;
@@ -30,12 +37,6 @@ public:
 	uint32_t getImagesCount() const;
 	const std::vector<VkImage>& getVkImages() const;
 	const std::vector<VkImageView>& getVkImageViews() const;
-
-	void cleanup();
-	void create();
-	void recrete();
-
-	uint32_t imageIndex; // TODO
 
 	VkResult acquireNextImage(VkSemaphore presentCompleteSemaphore, uint32_t* imageIndex) const;
 	VkResult present(uint32_t imageIndex, VkSemaphore waitSemaphore) const;

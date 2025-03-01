@@ -49,6 +49,54 @@ struct VertexPTNTB {
     static constexpr size_t num_attributes = 5;
 };
 
+template <typename VertexType>
+struct VertexTraits;
+
+template <>
+struct VertexTraits<VertexP> {
+    static constexpr bool hasPosition = true;
+    static constexpr bool hasTexCoord = false;
+    static constexpr bool hasNormal = false;
+    static constexpr bool hasTangent = false;
+    static constexpr bool hasBitangent = false;
+};
+
+template <>
+struct VertexTraits<VertexPT> {
+    static constexpr bool hasPosition = true;
+    static constexpr bool hasTexCoord = true;
+    static constexpr bool hasNormal = false;
+    static constexpr bool hasTangent = false;
+    static constexpr bool hasBitangent = false;
+};
+
+template <>
+struct VertexTraits<VertexPTN> {
+    static constexpr bool hasPosition = true;
+    static constexpr bool hasTexCoord = true;
+    static constexpr bool hasNormal = true;
+    static constexpr bool hasTangent = false;
+    static constexpr bool hasBitangent = false;
+};
+
+template <>
+struct VertexTraits<VertexPTNT> {
+    static constexpr bool hasPosition = true;
+    static constexpr bool hasTexCoord = true;
+    static constexpr bool hasNormal = true;
+    static constexpr bool hasTangent = true;
+    static constexpr bool hasBitangent = false;
+};
+
+template <>
+struct VertexTraits<VertexPTNTB> {
+    static constexpr bool hasPosition = true;
+    static constexpr bool hasTexCoord = true;
+    static constexpr bool hasNormal = true;
+    static constexpr bool hasTangent = true;
+    static constexpr bool hasBitangent = true;
+};
+
 struct UniformBufferLight {
     alignas(16) glm::mat4 projView;
     alignas(16) glm::vec3 pos;

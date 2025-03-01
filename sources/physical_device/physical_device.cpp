@@ -1,12 +1,13 @@
 #include "physical_device.h"
 
-#include "config/config.h"
 #include "logical_device/logical_device.h"
 
 #include <algorithm>
 #include <array>
 #include <iostream>
 #include <stdexcept>
+
+#include <vulkan/vulkan.hpp>
 
 PhysicalDevice::PhysicalDevice(const Window& window)
 	: _window(window) {
@@ -16,7 +17,7 @@ PhysicalDevice::PhysicalDevice(const Window& window)
     for (const auto device : devices) {
         _propertyManager.initiate(device, surf);
         const QueueFamilyIndices& indices = _propertyManager.getQueueFamilyIndices();
-        bool extensionsSupported = _propertyManager.checkDeviceExtensionSupport();
+        const bool extensionsSupported = _propertyManager.checkDeviceExtensionSupport();
 
         bool swapChainAdequate = false;
         if (extensionsSupported) {
@@ -29,16 +30,15 @@ PhysicalDevice::PhysicalDevice(const Window& window)
 
         bool discreteGPU = _propertyManager.isDiscreteGPU();
 
-        const std::array<bool, 5> conditions = {
+        const std::array conditions = {
             indices.isComplete(),
             extensionsSupported,
             swapChainAdequate,
-            supportedFeatures.samplerAnisotropy,
+            static_cast<bool>(supportedFeatures.samplerAnisotropy),
             discreteGPU
         };
 
         bool suitable = std::all_of(conditions.cbegin(), conditions.cend(), [](bool condition) { return condition; });
-
         if (suitable) {
             _device = device;
             break;

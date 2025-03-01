@@ -1,6 +1,6 @@
 #version 450
 
-layout(binding = 3) uniform ObjectUniform {
+layout(binding = 2) uniform ObjectUniform {
     mat4 model;
 
 } object;
@@ -19,5 +19,5 @@ void main() {
     outTexCoord = inTexCoord;
     mat3 normalMatrix = transpose(inverse(mat3(object.model)));
     outNormal = normalize(normalMatrix * inNormal);
-    outTangent = inTangent - dot(inTangent, outNormal) * outNormal;
+    outTangent = normalize(normalMatrix * inTangent);
 }

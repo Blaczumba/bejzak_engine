@@ -7,7 +7,7 @@
 #include <set>
 #include <vector>
 
-#include <boost/container/flat_set.hpp>
+// #include <boost/container/flat_set.hpp>
 
 class ComponentPool {
 public:
@@ -17,33 +17,29 @@ public:
 
 template<typename Component>
 class ComponentPoolImpl : public ComponentPool {
-	std::vector<Component> _components;
-	std::set<Entity> _entities;		// TODO: Change to flat map.
+	std::vector<std::pair<Entity, Component>> _components;
+	std::array<Entity, MAX_ENTITIES> _entities; // TODO Try unordered flat map
 
 public:
 	~ComponentPoolImpl() override = default;
 
 	void addComponent(Entity entity, Component&& component) {
-		_entities.emplace(entity);
-		_components.resize(*_entities.crbegin() + 1);
-		_components[entity] = std::move(component);
+		_entities[entity] = _components.size();
+		_components.emplace_back(entity, component);
 	}
 
 	void destroyEntity(Entity entity) override {
-		_entities.erase(entity);
-		_components.resize(*_entities.crbegin() + 1);
-		_components[entity] = Component{};
+		Entity lastEntity = _components.back().first;
+		_components[_entities[entity]] = std::move(_components.back());
+		_entities[lastEntity] = _entities[entity];
+		_components.pop_back();
 	}
 
 	Component& getComponent(Entity entity) {
-		return _components[entity];
+		return _components[_entities[entity]].second;
 	}
 
-	std::vector<Component>& getComponents() {
+	std::vector<std::pair<Entity, Component>>& getComponents() {
 		return _components;
-	}
-
-	std::pair<Entity, Entity> getMinMax() const {
-		return std::make_pair(*_entities.cbegin(), *_entities.crbegin());
 	}
 };

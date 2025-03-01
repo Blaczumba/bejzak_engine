@@ -57,35 +57,25 @@ public:
 
 	template<typename... Components>
 	void updateComponents(std::function<void(Components&...)> callback) {
-		Signature signature;
-		(signature.set(Components::getComponentID()), ...);
-
-		auto components = std::tuple<std::vector<Components>&...>(
-			static_cast<ComponentPoolImpl<Components>*>(_componentsData[Components::getComponentID()].get())->getComponents()...
-		);
-
-		Entity min = 0;
-		Entity max = MAX_ENTITIES - 1;
-
-		auto updateMinMax = [&min, &max](auto* componentPool) {
-			auto [minEntity, maxEntity] = componentPool->getMinMax();
-			min = std::max(min, minEntity);
-			max = std::min(max, maxEntity);
+		Signature signature = getSignature<Components...>();
+		// Ensure the components exist in the registry
+		std::tuple<ComponentPoolImpl<Components>&...> pools = {
+			*(static_cast<ComponentPoolImpl<Components>*>(_componentsData[Components::getComponentID()].get()))...
 		};
 
-		(updateMinMax(static_cast<ComponentPoolImpl<Components>*>(_componentsData[Components::getComponentID()].get())), ...);
-
-		for (Entity entity = min; entity <= max; ++entity) {
+		// Iterate over all entities
+		for (Entity entity = 0; entity < MAX_ENTITIES; ++entity) { // TODO: get entities from system probably.
+			// Check if the entity matches the signature of these components
 			if ((_signatures[entity] & signature) == signature) {
-				callback(std::get<std::vector<Components>&>(components)[entity]...);
+				// Get references to the components for the entity
+				callback(std::get<ComponentPoolImpl<Components>&>(pools).getComponent(entity)...);
 			}
 		}
 	}
 
 	template<typename... Components>
 	void updateComponents(std::function<void(Components&...)> callback, const std::vector<Entity>& entities) {
-		Signature signature;
-		(signature.set(Components::getComponentID()), ...);
+		const Signature signature = getSignature<Components...>();
 
 		auto components = std::tuple<std::vector<Components>&...>(
 			static_cast<ComponentPoolImpl<Components>*>(_componentsData[Components::getComponentID()].get())->getComponents()...

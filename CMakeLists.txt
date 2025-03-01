@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.19)
 
-set(CMAKE_PROJECT_NAME VulkanProject)
+set(CMAKE_PROJECT_NAME BejzakEngine)
 
 project(${CMAKE_PROJECT_NAME})
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -15,19 +15,19 @@ if(NOT Vulkan_FOUND)
     message(FATAL_ERROR "Vulkan not found!")
 endif()
 
-find_package(Boost REQUIRED COMPONENTS ${BOOST_COMPONENTS})
-
-if(NOT Boost_FOUND)
-    message(WARNING "Boost not found!")
-else()
-    add_definitions(-DBOOST_ENABLED)
-
-    set(Boost_USE_STATIC_LIBS ON)
-    set(Boost_USE_MULTITHREADED ON)
-    set(Boost_USE_STATIC_RUNTIME OFF)
-
-    set(BOOST_COMPONENTS filesystem system)
-endif()
+# find_package(Boost REQUIRED COMPONENTS ${BOOST_COMPONENTS})
+# 
+# if(NOT Boost_FOUND)
+#     message(WARNING "Boost not found!")
+# else()
+#     add_definitions(-DBOOST_ENABLED)
+# 
+#     set(Boost_USE_STATIC_LIBS ON)
+#     set(Boost_USE_MULTITHREADED ON)
+#     set(Boost_USE_STATIC_RUNTIME OFF)
+# 
+#     set(BOOST_COMPONENTS filesystem system)
+# endif()
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build (Debug or Release)" FORCE)

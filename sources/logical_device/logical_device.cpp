@@ -2,6 +2,8 @@
 
 #include "config/config.h"
 
+#include <vulkan/vulkan.h>
+
 #include <set>
 #include <stdexcept>
 
@@ -10,36 +12,53 @@ LogicalDevice::LogicalDevice(const PhysicalDevice& physicalDevice)
     const QueueFamilyIndices& indices = physicalDevice.getPropertyManager().getQueueFamilyIndices();
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-    const std::set<uint32_t> uniqueQueueFamilies = { 
-        *indices.graphicsFamily, 
-        *indices.presentFamily, 
-        *indices.computeFamily, 
-        *indices.transferFamily 
+    const std::set<uint32_t> uniqueQueueFamilies = {
+        *indices.graphicsFamily,
+        *indices.presentFamily,
+        *indices.computeFamily,
+        *indices.transferFamily
     };
 
     float queuePriority = 1.0f;
     queueCreateInfos.reserve(uniqueQueueFamilies.size());
     for (uint32_t queueFamily : uniqueQueueFamilies) {
         queueCreateInfos.emplace_back(
-            VkDeviceQueueCreateInfo {
-                .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-                .queueFamilyIndex = queueFamily,
-                .queueCount = 1,
-                .pQueuePriorities = &queuePriority
-            }
+            VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+            nullptr, 0, queueFamily, 1, &queuePriority
         );
     }
+    const VkPhysicalDeviceIndexTypeUint8FeaturesEXT uint8IndexFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INDEX_TYPE_UINT8_FEATURES_EXT,
+        .indexTypeUint8 = VK_TRUE
+    };
 
-    const VkPhysicalDeviceFeatures deviceFeatures = {
-        .geometryShader = VK_TRUE,
-        .tessellationShader = VK_TRUE,
-        .sampleRateShading = VK_TRUE,
-        .depthClamp = VK_TRUE,
-        .samplerAnisotropy = VK_TRUE
+    const VkPhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
+        .pNext = (void*)&uint8IndexFeatures,
+        .bufferDeviceAddress = VK_TRUE
+    };
+
+    const VkPhysicalDeviceInheritedViewportScissorFeaturesNV viewportScissorsFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INHERITED_VIEWPORT_SCISSOR_FEATURES_NV,
+        .pNext = (void*)&bufferDeviceAddressFeatures,
+        .inheritedViewportScissor2D = VK_TRUE
+    };
+
+    const VkPhysicalDeviceFeatures2 deviceFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+        .pNext = (void*)&viewportScissorsFeatures,
+        .features = {
+            .geometryShader = VK_TRUE,
+            .tessellationShader = VK_TRUE,
+            .sampleRateShading = VK_TRUE,
+            .depthClamp = VK_TRUE,
+            .samplerAnisotropy = VK_TRUE
+        }
     };
 
     const VkDeviceCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+        .pNext = &deviceFeatures,
         .queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size()),
         .pQueueCreateInfos = queueCreateInfos.data(),
     #ifdef VALIDATION_LAYERS_ENABLED
@@ -50,12 +69,13 @@ LogicalDevice::LogicalDevice(const PhysicalDevice& physicalDevice)
     #endif  // VALIDATION_LAYERS_ENABLED
         .enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
         .ppEnabledExtensionNames = deviceExtensions.data(),
-        .pEnabledFeatures = &deviceFeatures,
     };
 
     if (vkCreateDevice(_physicalDevice.getVkPhysicalDevice(), &createInfo, nullptr, &_device) != VK_SUCCESS) {
         throw std::runtime_error("failed to create logical device!");
     }
+
+    _memoryAllocator.emplace<VmaWrapper>(_device, _physicalDevice.getVkPhysicalDevice(), _physicalDevice.getWindow().getInstance().getVkInstance());
 
     vkGetDeviceQueue(_device, *indices.graphicsFamily, 0, &_graphicsQueue);
     vkGetDeviceQueue(_device, *indices.presentFamily, 0, &_presentQueue);
@@ -63,38 +83,8 @@ LogicalDevice::LogicalDevice(const PhysicalDevice& physicalDevice)
     vkGetDeviceQueue(_device, *indices.transferFamily, 0, &_transferQueue);
 }
 
-void LogicalDevice::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer& buffer, VkDeviceMemory& bufferMemory) const {
-    VkBufferCreateInfo bufferInfo = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = size,
-        .usage = usage,
-        .sharingMode = VK_SHARING_MODE_EXCLUSIVE
-    };
-
-    if (vkCreateBuffer(_device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create buffer!");
-    }
-
-    const auto& propertyManager = _physicalDevice.getPropertyManager();
-
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(_device, buffer, &memRequirements);
-
-    const VkMemoryAllocateInfo allocInfo = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .allocationSize = memRequirements.size,
-        .memoryTypeIndex = propertyManager.findMemoryType(memRequirements.memoryTypeBits, properties)
-    };
-
-    if (vkAllocateMemory(_device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate buffer memory!");
-    }
-
-    vkBindBufferMemory(_device, buffer, bufferMemory, 0);
-}
-
 const VkBuffer LogicalDevice::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage) const {
-    VkBufferCreateInfo bufferInfo = {
+    const VkBufferCreateInfo bufferInfo = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .size = size,
         .usage = usage,
@@ -110,7 +100,6 @@ const VkBuffer LogicalDevice::createBuffer(VkDeviceSize size, VkBufferUsageFlags
 
 const VkDeviceMemory LogicalDevice::createBufferMemory(VkBuffer buffer, VkMemoryPropertyFlags properties) const {
     const auto& propertyManager = _physicalDevice.getPropertyManager();
-
     VkMemoryRequirements memRequirements;
     vkGetBufferMemoryRequirements(_device, buffer, &memRequirements);
 
@@ -133,7 +122,7 @@ const VkImage LogicalDevice::createImage(const ImageParameters& params) const {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .imageType = VK_IMAGE_TYPE_2D,
         .format = params.format,
-        .extent = { 
+        .extent = {
             .width = params.width,
             .height = params.height,
             .depth = 1
@@ -242,7 +231,15 @@ const VkSampler LogicalDevice::createSampler(const SamplerParameters& params) co
     return sampler;
 }
 
+void LogicalDevice::sendDataToMemory(const VkDeviceMemory memory, const void* data, size_t size) const {
+    void* mappedMemory;
+    vkMapMemory(_device, memory, 0, size, 0, &mappedMemory);
+    std::memcpy(mappedMemory, data, size);
+    // vkUnmapMemory(_device, memory);
+}
+
 LogicalDevice::~LogicalDevice() {
+    std::get<VmaWrapper>(_memoryAllocator).destroy();
     vkDestroyDevice(_device, nullptr);
 }
 
@@ -252,6 +249,10 @@ const VkDevice LogicalDevice::getVkDevice() const {
 
 const PhysicalDevice& LogicalDevice::getPhysicalDevice() const {
     return _physicalDevice;
+}
+
+MemoryAllocator& LogicalDevice::getMemoryAllocator() const {
+    return _memoryAllocator;
 }
 
 const VkQueue LogicalDevice::getQueue(QueueType queueType) const {

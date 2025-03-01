@@ -51,6 +51,7 @@ public:
 };
 
 enum class ShaderProgramType {
+    NORMAL,
     PBR,
     PBR_TESSELLATION,
     SKYBOX,
@@ -63,23 +64,26 @@ class ShaderProgramFactory {
 public:
     static std::unique_ptr<GraphicsShaderProgram> createShaderProgram(ShaderProgramType type, const LogicalDevice& logicalDevice) {
         switch (type) {
+        case ShaderProgramType::NORMAL:
+            return createNormalMappingProgram(logicalDevice);
+            break;
         case ShaderProgramType::PBR:
-            return configurePBRProgram(logicalDevice);
+            return createPBRProgram(logicalDevice);
             break;
         case ShaderProgramType::PBR_TESSELLATION:
-            return configurePBRTesselationProgram(logicalDevice);
+            return createPBRTesselationProgram(logicalDevice);
             break;
         case ShaderProgramType::SKYBOX:
-            return configureSkyboxProgram(logicalDevice);
+            return createSkyboxProgram(logicalDevice);
             break;
         case ShaderProgramType::SHADOW:
-            return configureShadowProgram(logicalDevice);
+            return createShadowProgram(logicalDevice);
             break;
         case ShaderProgramType::SKYBOX_OFFSCREEN:
-            return configureSkyboxOffscreenProgram(logicalDevice);
+            return createSkyboxOffscreenProgram(logicalDevice);
             break;
         case ShaderProgramType::PBR_OFFSCREEN:
-            return configurePBROffscreenProgram(logicalDevice);
+            return createPBROffscreenProgram(logicalDevice);
             break;
         default:
             throw std::invalid_argument("Unsupported ShaderProgramType");
@@ -87,10 +91,11 @@ public:
     }
 
 private:
-    static std::unique_ptr<GraphicsShaderProgram> configurePBRProgram(const LogicalDevice& logicalDevice);
-    static std::unique_ptr<GraphicsShaderProgram> configurePBRTesselationProgram(const LogicalDevice& logicalDevice);
-    static std::unique_ptr<GraphicsShaderProgram> configureSkyboxProgram(const LogicalDevice& logicalDevice);
-    static std::unique_ptr<GraphicsShaderProgram> configureShadowProgram(const LogicalDevice& logicalDevice);
-    static std::unique_ptr<GraphicsShaderProgram> configureSkyboxOffscreenProgram(const LogicalDevice& logicalDevice);
-    static std::unique_ptr<GraphicsShaderProgram> configurePBROffscreenProgram(const LogicalDevice& logicalDevice);
+    static std::unique_ptr<GraphicsShaderProgram> createNormalMappingProgram(const LogicalDevice& logicalDevice);
+    static std::unique_ptr<GraphicsShaderProgram> createPBRProgram(const LogicalDevice& logicalDevice);
+    static std::unique_ptr<GraphicsShaderProgram> createPBRTesselationProgram(const LogicalDevice& logicalDevice);
+    static std::unique_ptr<GraphicsShaderProgram> createSkyboxProgram(const LogicalDevice& logicalDevice);
+    static std::unique_ptr<GraphicsShaderProgram> createShadowProgram(const LogicalDevice& logicalDevice);
+    static std::unique_ptr<GraphicsShaderProgram> createSkyboxOffscreenProgram(const LogicalDevice& logicalDevice);
+    static std::unique_ptr<GraphicsShaderProgram> createPBROffscreenProgram(const LogicalDevice& logicalDevice);
 };

@@ -8,14 +8,9 @@ DescriptorPool::DescriptorPool(const LogicalDevice& logicalDevice, const Descrip
 	: _logicalDevice(logicalDevice), _descriptorSetLayout(descriptorSetLayout), _maxNumSets(maxNumSets), _allocatedSets(0) {
 
 	std::vector<VkDescriptorPoolSize> poolSizes;
-	size_t count = _descriptorSetLayout.getDescriptorTypeCounter().size();
-	poolSizes.reserve(count);
+	poolSizes.reserve(_descriptorSetLayout.getDescriptorTypeCounter().size());
 	for (const auto [descriptorType, numOccurances] : _descriptorSetLayout.getDescriptorTypeCounter()) {
-		poolSizes.emplace_back(VkDescriptorPoolSize {
-				.type = descriptorType,
-				.descriptorCount = _maxNumSets * numOccurances,
-			}
-		);
+		poolSizes.emplace_back(descriptorType, _maxNumSets * numOccurances);
 	}
 
 	const VkDescriptorPoolCreateInfo poolInfo = {

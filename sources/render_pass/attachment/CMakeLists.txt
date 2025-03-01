@@ -1,4 +1,4 @@
-add_library(Attachment attachment_factory.cpp attachment_layout.cpp)
+add_library(Attachment attachment_layout.cpp)
 
 target_link_libraries(Attachment PUBLIC Vulkan::Vulkan)
 

@@ -17,16 +17,15 @@ ApplicationBase::ApplicationBase() {
 #endif // VALIDATION_LAYERS_ENABLED
 	requiredExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
-	_instance = std::make_shared<Instance>("Bejzak Engine", requiredExtensions);
-	_window = std::make_shared<WindowGLFW>(*_instance, "Bejzak Engine", 1920, 1080);
-
+	_instance = std::make_unique<Instance>("Bejzak Engine", requiredExtensions);
 #ifdef VALIDATION_LAYERS_ENABLED
-	_debugMessenger = std::make_shared<DebugMessenger>(_instance);
+	_debugMessenger = std::make_unique<DebugMessenger>(*_instance);
 #endif // VALIDATION_LAYERS_ENABLED
 
+	_window = std::make_unique<WindowGLFW>(*_instance, "Bejzak Engine", 1920, 1080);
 	_physicalDevice = std::make_unique<PhysicalDevice>(*_window);
 	_logicalDevice = _physicalDevice->createLogicalDevice();
-	_swapchain = std::make_unique<Swapchain>(*_logicalDevice);
+	_swapchain = Swapchain::create(*_logicalDevice);
 
 	_singleTimeCommandPool = std::make_unique<CommandPool>(*_logicalDevice);
 }

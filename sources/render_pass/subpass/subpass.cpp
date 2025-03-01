@@ -22,21 +22,15 @@ void Subpass::addSubpassOutputAttachment(uint32_t attachmentBinding) {
     if (_layout.getAttachmentsCount() <= attachmentBinding)
         throw std::runtime_error("attachmentBinding is not a valid index in attachments vector!");
 
-    const Attachment& attachment = _layout.getAttachments()[attachmentBinding];
-    const VkAttachmentReference attachmentReference = {
-        .attachment = attachmentBinding,
-        .layout = attachment.getSubpassImageLayout()
-    };
-
-    switch (attachment.getAttachmentType()) {
-    case Attachment::Type::COLOR_ATTACHMENT:
-        _colorAttachmentRefs.push_back(attachmentReference);
+    switch (_layout.getAttachmentsTypes()[attachmentBinding]) {
+    case Attachment::Type::COLOR:
+        _colorAttachmentRefs.emplace_back(attachmentBinding, _layout.getVkSubpassLayouts()[attachmentBinding]);
         break;
-    case Attachment::Type::COLOR_ATTACHMENT_RESOLVE:
-        _colorAttachmentResolveRefs.push_back(attachmentReference);
+    case Attachment::Type::COLOR_RESOLVE:
+        _colorAttachmentResolveRefs.emplace_back(attachmentBinding, _layout.getVkSubpassLayouts()[attachmentBinding]);
         break;
-    case Attachment::Type::DEPTH_ATTACHMENT:
-        _depthAttachmentRefs.push_back(attachmentReference);
+    case Attachment::Type::DEPTH:
+        _depthAttachmentRefs.emplace_back(attachmentBinding, _layout.getVkSubpassLayouts()[attachmentBinding]);
         break;
     default:
         throw std::runtime_error("Unknown attachment type");
@@ -46,10 +40,5 @@ void Subpass::addSubpassOutputAttachment(uint32_t attachmentBinding) {
 void Subpass::addSubpassInputAttachment(uint32_t attachmentBinding, VkImageLayout layout) {
     if (_layout.getAttachmentsCount() <= attachmentBinding)
         throw std::runtime_error("attachmentBinding is not a valid index in attachments vector!");
-
-    const VkAttachmentReference attachmentReference = {
-        .attachment = attachmentBinding,
-        .layout = layout
-    };
-    _inputAttachmentRefs.push_back(attachmentReference);
+    _inputAttachmentRefs.emplace_back(attachmentBinding, layout);
 }

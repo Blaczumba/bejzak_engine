@@ -42,4 +42,4 @@ public:
     }
 };
 
-} // namespace lib
+} // lib

@@ -13,13 +13,10 @@ Renderpass::Renderpass(const LogicalDevice& logicalDevice, const AttachmentLayou
 void Renderpass::create() {
     cleanup();
 
-    const std::vector<Attachment>& attachments = _attachmentsLayout.getAttachments();
-    std::vector<VkAttachmentDescription> attachmentDescriptions;
-    attachmentDescriptions.resize(attachments.size());
-    std::transform(attachments.cbegin(), attachments.cend(), attachmentDescriptions.begin(), [](const Attachment& attachment) { return attachment.getDescription(); });
+    const std::vector<VkAttachmentDescription>& attachmentDescriptions = _attachmentsLayout.getVkAttachmentDescriptions();
     std::vector<VkSubpassDescription> subpassDescriptions;
-    subpassDescriptions.resize(_subpasses.size());
-    std::transform(_subpasses.cbegin(), _subpasses.cend(), subpassDescriptions.begin(), [](const Subpass& subpass) { return subpass.getVkSubpassDescription(); });
+    subpassDescriptions.reserve(_subpasses.size());
+    std::transform(_subpasses.cbegin(), _subpasses.cend(), std::back_inserter(subpassDescriptions), [](const Subpass& subpass) { return subpass.getVkSubpassDescription(); });
 
     const VkRenderPassCreateInfo renderPassInfo = {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,

@@ -19,7 +19,7 @@ class Object {
     std::vector<Object*> _children;
 
 public:
-    Object(const std::string_view name, Entity entity);
+    Object(std::string_view name, Entity entity);
     void SetParent(Object* newParent);
     Entity getEntity() const;
 };

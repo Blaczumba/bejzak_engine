@@ -1,7 +1,5 @@
 #pragma once
 
-#include "render_pass/attachment/attachment.h"
-
 #include <vulkan/vulkan.h>
 
 #include <algorithm>

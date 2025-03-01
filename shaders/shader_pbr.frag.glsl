@@ -19,7 +19,6 @@ layout(location = 3) in vec3 TBNLightPos;
 layout(location = 4) in vec3 TBNViewPos;
 
 layout(location = 0) out vec4 outColor;
-layout(location = 1) out vec4 outColor1;
 
 const int KELNER_SIZE = 9;  
 const ivec2 offsets[] = ivec2[](
@@ -76,7 +75,7 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
 }
 
 void main() {
-    vec3 albedo = texture(texSampler, fragTexCoord).rgb;
+    vec3 albedo = texture(texSampler, fragTexCoord, 0).rgb;
     vec2 metallicRoughness = texture(metallicRoughnessMap, fragTexCoord).bg;
     vec3 normal = normalize(2.0 * texture(normalMap, fragTexCoord).rgb - 1.0);
 
@@ -106,5 +105,4 @@ void main() {
 
     vec3 ambient = vec3(0.1) * albedo * ao;
     outColor = vec4(ambient + calculateShadow() * Lo, 1.0);
-    outColor1 = outColor;
 }

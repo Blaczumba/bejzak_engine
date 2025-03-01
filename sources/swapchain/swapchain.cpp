@@ -51,7 +51,7 @@ const std::vector<VkImageView>& Swapchain::getVkImageViews() const {
 }
 
 void Swapchain::cleanup() {
-    VkDevice device = _logicalDevice.getVkDevice();
+    const VkDevice device = _logicalDevice.getVkDevice();
 
     for (const VkImageView view : _views) {
         vkDestroyImageView(device, view, nullptr);
@@ -68,7 +68,7 @@ void Swapchain::create() {
     const VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes, VK_PRESENT_MODE_MAILBOX_KHR);
     const Window& window = _logicalDevice.getPhysicalDevice().getWindow();
 
-    _surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats, VK_FORMAT_R8G8B8A8_SRGB);
+    _surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats, VK_FORMAT_B8G8R8A8_SRGB);
     _extent = chooseSwapExtent(window.getFramebufferSize(), swapChainSupport.capabilities);
 
     uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
@@ -76,16 +76,17 @@ void Swapchain::create() {
         imageCount = swapChainSupport.capabilities.maxImageCount;
     }
 
-    VkSwapchainCreateInfoKHR createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    createInfo.surface = window.getVkSurfaceKHR();
+    VkSwapchainCreateInfoKHR createInfo = {
+        .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
+        .surface = window.getVkSurfaceKHR(),
 
-    createInfo.minImageCount = imageCount;
-    createInfo.imageFormat = _surfaceFormat.format;
-    createInfo.imageColorSpace = _surfaceFormat.colorSpace;
-    createInfo.imageExtent = _extent;
-    createInfo.imageArrayLayers = 1;
-    createInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+        .minImageCount = imageCount,
+        .imageFormat = _surfaceFormat.format,
+        .imageColorSpace = _surfaceFormat.colorSpace,
+        .imageExtent = _extent,
+        .imageArrayLayers = 1,
+        .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+    };
 
     const QueueFamilyIndices& indices = propertyManager.getQueueFamilyIndices();
     uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
@@ -98,7 +99,6 @@ void Swapchain::create() {
     else {
         createInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
     }
-
     createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
     createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     createInfo.presentMode = presentMode;
@@ -110,10 +110,9 @@ void Swapchain::create() {
 
     vkGetSwapchainImagesKHR(device, _swapchain, &imageCount, nullptr);
     _images.resize(imageCount);
-    _views.resize(imageCount);
     vkGetSwapchainImagesKHR(device, _swapchain, &imageCount, _images.data());
-
-    std::transform(_images.cbegin(), _images.cend(), _views.begin(),
+    _views.reserve(imageCount);
+    std::transform(_images.cbegin(), _images.cend(), std::back_inserter(_views),
         [this](const VkImage image) {
             return _logicalDevice.createImageView(image, ImageParameters{
                     .format = _surfaceFormat.format,
@@ -125,6 +124,10 @@ void Swapchain::create() {
             );
         }
     );
+}
+
+std::unique_ptr<Swapchain> Swapchain::create(const LogicalDevice& logicalDevice) {
+    return std::unique_ptr<Swapchain>(new Swapchain(logicalDevice));
 }
 
 void Swapchain::recrete() {
@@ -155,7 +158,6 @@ VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>
     auto availableFormat = std::find_if(availableFormats.cbegin(), availableFormats.cend(), [=](const auto& format) {
         return format.format == preferredFormat && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
         });
-
     return (availableFormat != availableFormats.cend()) ? *availableFormat : availableFormats[0];
 }
 

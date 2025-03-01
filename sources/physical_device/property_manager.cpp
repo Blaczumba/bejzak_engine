@@ -60,10 +60,10 @@ QueueFamilyIndices PhysicalDevicePropertyManager::findQueueFamilyIncides() const
 }
 
 VkSampleCountFlagBits PhysicalDevicePropertyManager::getMaxUsableSampleCount() const {
-    VkSampleCountFlags counts = _properties.limits.framebufferColorSampleCounts & _properties.limits.framebufferDepthSampleCounts;
+    const VkSampleCountFlags counts = _properties.limits.framebufferColorSampleCounts & _properties.limits.framebufferDepthSampleCounts;
 
     // Sorted msaa samples.
-    std::array<VkSampleCountFlagBits, 7> samples = {
+    const std::array<VkSampleCountFlagBits, 7> samples = {
         VK_SAMPLE_COUNT_64_BIT,
         VK_SAMPLE_COUNT_32_BIT,
         VK_SAMPLE_COUNT_16_BIT,

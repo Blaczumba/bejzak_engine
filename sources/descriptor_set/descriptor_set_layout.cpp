@@ -6,7 +6,6 @@
 
 DescriptorSetLayout::DescriptorSetLayout(const LogicalDevice& logicalDevice) 
 	: _logicalDevice(logicalDevice), _binding(0) {
-
 }
 
 DescriptorSetLayout::~DescriptorSetLayout() {
@@ -15,8 +14,7 @@ DescriptorSetLayout::~DescriptorSetLayout() {
 
 void DescriptorSetLayout::addLayoutBinding(VkDescriptorType descriptorType, VkShaderStageFlags stageFlags, uint32_t descriptorCount, const VkSampler* pImmutableSamplers) {
 	_bindings.emplace_back(_binding++, descriptorType, descriptorCount, stageFlags, pImmutableSamplers);
-
-    _descriptorTypeOccurances[descriptorType]++;
+    ++_descriptorTypeOccurances[descriptorType];
 }
 
 void DescriptorSetLayout::create() {
@@ -24,7 +22,7 @@ void DescriptorSetLayout::create() {
         throw std::runtime_error("error: trying to create already created descriptor set layout");
     }
 
-    VkDescriptorSetLayoutCreateInfo layoutInfo = {
+    const VkDescriptorSetLayoutCreateInfo layoutInfo = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
         .bindingCount = static_cast<uint32_t>(_bindings.size()),
         .pBindings = _bindings.data()

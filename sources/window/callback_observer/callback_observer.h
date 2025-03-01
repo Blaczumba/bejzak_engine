@@ -17,7 +17,7 @@ struct CallbackData {
 	bool keyboardAction	= false;
 	bool mouseAction = false;
 
-	std::vector<Keyboard::Key> keys	= {};
+	std::vector<Keyboard::Key> keys;
 
 	float xoffset = 0.0f;
 	float yoffset = 0.0f;
