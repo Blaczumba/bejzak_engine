@@ -9,7 +9,13 @@
 #include <iostream>
 #include <stdexcept>
 
-Instance::Instance(std::string_view engineName, const std::vector<const char*>& requiredExtensions) {
+Instance::Instance(const VkInstance instance) : _instance(instance) { }
+
+Instance::~Instance() {
+    vkDestroyInstance(_instance, nullptr);
+}
+
+lib::ErrorOr<std::unique_ptr<Instance>> Instance::create(std::string_view engineName, const std::vector<const char*>& requiredExtensions) {
 #ifdef VALIDATION_LAYERS_ENABLED
     if (!checkValidationLayerSupport()) {
         throw std::runtime_error("validation layers requested, but not available!");
@@ -47,20 +53,19 @@ Instance::Instance(std::string_view engineName, const std::vector<const char*>& 
         .ppEnabledExtensionNames = requiredExtensions.data()
     };
 
-    if (vkCreateInstance(&createInfo, nullptr, &_instance) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create instance!");
+    VkInstance instance;
+    if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
+        return lib::Error("Failed to create instance.");
     }
-}
 
-Instance::~Instance() {
-    vkDestroyInstance(_instance, nullptr);
+    return std::unique_ptr<Instance>(new Instance(instance));
 }
 
 const VkInstance Instance::getVkInstance() const {
     return _instance;
 }
 
-bool Instance::checkValidationLayerSupport() const {
+bool Instance::checkValidationLayerSupport() {
     uint32_t layerCount;
     vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 

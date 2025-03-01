@@ -17,7 +17,7 @@ ApplicationBase::ApplicationBase() {
 #endif // VALIDATION_LAYERS_ENABLED
 	requiredExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
-	_instance = std::make_unique<Instance>("Bejzak Engine", requiredExtensions);
+	_instance = Instance::create("Bejzak Engine", requiredExtensions).value();
 #ifdef VALIDATION_LAYERS_ENABLED
 	_debugMessenger = std::make_unique<DebugMessenger>(*_instance);
 #endif // VALIDATION_LAYERS_ENABLED

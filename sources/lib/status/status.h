@@ -17,7 +17,6 @@ using Error = std::unexpected<std::string>;
 
 }
 
-
 // Helper to generate a unique variable name using __LINE__
 #define CONCAT_IMPL(x, y) x##y
 #define CONCAT(x, y) CONCAT_IMPL(x, y)
