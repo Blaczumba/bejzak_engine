@@ -15,7 +15,8 @@ PhysicalDevice::PhysicalDevice(const VkPhysicalDevice physicalDevice, const Wind
 lib::ErrorOr<std::unique_ptr<PhysicalDevice>> PhysicalDevice::create(const Window& window) {
     const VkSurfaceKHR surf = window.getVkSurfaceKHR();
 
-    for (const auto device : window.getInstance().getAvailablePhysicalDevices()) {
+    ASSIGN_OR_RETURN(const lib::Buffer<VkPhysicalDevice> devices, window.getInstance().getAvailablePhysicalDevices());
+    for (const auto device : devices) {
         PhysicalDevicePropertyManager propertyManager(device, surf);
         const QueueFamilyIndices& indices = propertyManager.getQueueFamilyIndices();
         const bool extensionsSupported = propertyManager.checkDeviceExtensionSupport();

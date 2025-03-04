@@ -1,5 +1,7 @@
 #pragma once
 
+#include "lib/buffer/buffer.h"
+
 #include <vulkan/vulkan.h>
 
 #include <optional>
@@ -16,8 +18,8 @@ struct QueueFamilyIndices {
 
 struct SwapChainSupportDetails {
     VkSurfaceCapabilitiesKHR capabilities;
-    std::vector<VkSurfaceFormatKHR> formats;
-    std::vector<VkPresentModeKHR> presentModes;
+    lib::Buffer<VkSurfaceFormatKHR> formats;
+    lib::Buffer<VkPresentModeKHR> presentModes;
 };
 
 class PhysicalDevicePropertyManager {
@@ -26,8 +28,8 @@ class PhysicalDevicePropertyManager {
 
     VkPhysicalDeviceProperties _properties              = {};
     VkPhysicalDeviceMemoryProperties _memoryProperties  = {};
-    std::vector<VkExtensionProperties> _availableExtensions;
-    std::vector<VkQueueFamilyProperties> _queueFamilies;
+    lib::Buffer<VkExtensionProperties> _availableExtensions;
+    lib::Buffer<VkQueueFamilyProperties> _queueFamilies;
 
     QueueFamilyIndices _queueFamilyIndices;
 
@@ -45,8 +47,8 @@ public:
     const QueueFamilyIndices& getQueueFamilyIndices() const;
     SwapChainSupportDetails getSwapChainSupportDetails() const;
 
-    const std::vector<VkQueueFamilyProperties>& getQueueFamilyProperties() const;
-    const std::vector<VkExtensionProperties>& getAvailableExtensionProperties() const;
+    const lib::Buffer<VkQueueFamilyProperties>& getQueueFamilyProperties() const;
+    const lib::Buffer<VkExtensionProperties>& getAvailableExtensionProperties() const;
 
     bool isDiscreteGPU() const;
     bool checkDeviceExtensionSupport() const;

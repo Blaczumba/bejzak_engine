@@ -1,5 +1,6 @@
 #pragma once
 
+#include "lib/buffer/buffer.h"
 #include "lib/status/status.h"
 
 #include <vulkan/vulkan.h>
@@ -21,5 +22,5 @@ public:
 	static lib::ErrorOr<std::unique_ptr<Instance>> create(std::string_view engineName, const std::vector<const char*>& requiredExtensions);
 
 	const VkInstance getVkInstance() const;
-	std::vector<VkPhysicalDevice> getAvailablePhysicalDevices() const;
+	lib::ErrorOr<lib::Buffer<VkPhysicalDevice>> getAvailablePhysicalDevices() const;
 };

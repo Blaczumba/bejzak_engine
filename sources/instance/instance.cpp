@@ -18,11 +18,11 @@ Instance::~Instance() {
 lib::ErrorOr<std::unique_ptr<Instance>> Instance::create(std::string_view engineName, const std::vector<const char*>& requiredExtensions) {
 #ifdef VALIDATION_LAYERS_ENABLED
     if (!checkValidationLayerSupport()) {
-        throw std::runtime_error("validation layers requested, but not available!");
+        return lib::Error("validation layers requested, but not available!");
     }
 #endif // VALIDATION_LAYERS_ENABLED
 
-    VkApplicationInfo appInfo = {
+    const VkApplicationInfo appInfo = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pApplicationName = engineName.data(),
         .applicationVersion = VK_MAKE_VERSION(1, 0, 0),
@@ -69,7 +69,7 @@ bool Instance::checkValidationLayerSupport() {
     uint32_t layerCount;
     vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 
-    std::vector<VkLayerProperties> availableLayers(layerCount);
+    lib::Buffer<VkLayerProperties> availableLayers(layerCount);
     vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
 
     // Check if all validation layers are in available layers.
@@ -80,15 +80,15 @@ bool Instance::checkValidationLayerSupport() {
     });
 }
 
-std::vector<VkPhysicalDevice> Instance::getAvailablePhysicalDevices() const {
-    uint32_t deviceCount = 0;
+lib::ErrorOr<lib::Buffer<VkPhysicalDevice>> Instance::getAvailablePhysicalDevices() const {
+    uint32_t deviceCount;
     vkEnumeratePhysicalDevices(_instance, &deviceCount, nullptr);
 
     if (deviceCount == 0) {
-        throw std::runtime_error("failed to find GPUs with Vulkan support!");
+        return lib::Error("failed to find GPUs with Vulkan support!");
     }
 
-    std::vector<VkPhysicalDevice> devices(deviceCount);
+    lib::Buffer<VkPhysicalDevice> devices(deviceCount);
     vkEnumeratePhysicalDevices(_instance, &deviceCount, devices.data());
 
     return devices;

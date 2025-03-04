@@ -1,5 +1,6 @@
 #pragma once
 
+#include "lib/buffer/buffer.h"
 #include "lib/status/status.h"
 #include "memory_objects/texture/texture.h"
 

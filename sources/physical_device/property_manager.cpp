@@ -1,5 +1,6 @@
 #include "property_manager.h"
 
+#include "lib/buffer/buffer.h"
 #include "config/config.h"
 
 #include <algorithm>
@@ -18,13 +19,13 @@ PhysicalDevicePropertyManager::PhysicalDevicePropertyManager(const VkPhysicalDev
     uint32_t extensionCount;
     vkEnumerateDeviceExtensionProperties(_physicalDevice, nullptr, &extensionCount, nullptr);
 
-    _availableExtensions.resize(extensionCount);
+    _availableExtensions = lib::Buffer<VkExtensionProperties>(extensionCount);
     vkEnumerateDeviceExtensionProperties(_physicalDevice, nullptr, &extensionCount, _availableExtensions.data());
 
     uint32_t queueFamilyCount = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &queueFamilyCount, nullptr);
 
-    _queueFamilies.resize(queueFamilyCount);
+    _queueFamilies = lib::Buffer<VkQueueFamilyProperties>(queueFamilyCount);
     vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &queueFamilyCount, _queueFamilies.data());
 
     _queueFamilyIndices = findQueueFamilyIncides();
@@ -33,7 +34,7 @@ PhysicalDevicePropertyManager::PhysicalDevicePropertyManager(const VkPhysicalDev
 QueueFamilyIndices PhysicalDevicePropertyManager::findQueueFamilyIncides() const {
     QueueFamilyIndices indices;
 
-    std::vector<VkQueueFamilyProperties> queueFamilies = getQueueFamilyProperties();
+    lib::Buffer<VkQueueFamilyProperties> queueFamilies = getQueueFamilyProperties();
 
     for (uint32_t i = 0; i < queueFamilies.size() && !indices.isComplete(); i++) {
         VkBool32 presentSupport = false;
@@ -93,7 +94,7 @@ SwapChainSupportDetails PhysicalDevicePropertyManager::querySwapchainSupportDeta
     vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, _surface, &formatCount, nullptr);
 
     if (formatCount != 0) {
-        details.formats.resize(formatCount);
+        details.formats = lib::Buffer<VkSurfaceFormatKHR>(formatCount);
         vkGetPhysicalDeviceSurfaceFormatsKHR(_physicalDevice, _surface, &formatCount, details.formats.data());
     }
 
@@ -101,7 +102,7 @@ SwapChainSupportDetails PhysicalDevicePropertyManager::querySwapchainSupportDeta
     vkGetPhysicalDeviceSurfacePresentModesKHR(_physicalDevice, _surface, &presentModeCount, nullptr);
 
     if (presentModeCount != 0) {
-        details.presentModes.resize(presentModeCount);
+        details.presentModes = lib::Buffer<VkPresentModeKHR>(presentModeCount);
         vkGetPhysicalDeviceSurfacePresentModesKHR(_physicalDevice, _surface, &presentModeCount, details.presentModes.data());
     }
 
@@ -117,16 +118,16 @@ SwapChainSupportDetails PhysicalDevicePropertyManager::getSwapChainSupportDetail
     return querySwapchainSupportDetails();
 }
 
-const std::vector<VkQueueFamilyProperties>& PhysicalDevicePropertyManager::getQueueFamilyProperties() const {
+const lib::Buffer<VkQueueFamilyProperties>& PhysicalDevicePropertyManager::getQueueFamilyProperties() const {
     return _queueFamilies;
 }
 
-const std::vector<VkExtensionProperties>& PhysicalDevicePropertyManager::getAvailableExtensionProperties() const {
+const lib::Buffer<VkExtensionProperties>& PhysicalDevicePropertyManager::getAvailableExtensionProperties() const {
     return _availableExtensions;
 }
 
 bool PhysicalDevicePropertyManager::checkDeviceExtensionSupport() const {
-    std::vector<VkExtensionProperties> availableExtensions = getAvailableExtensionProperties();
+    lib::Buffer<VkExtensionProperties> availableExtensions = getAvailableExtensionProperties();
 
     // Check if all deviceExtensions are in availableExtensions.
     return std::all_of(deviceExtensions.cbegin(), deviceExtensions.cend(), [&](const char* extension) {

@@ -25,6 +25,9 @@ public:
     Buffer(Iterator begin, size_t n) : Buffer(n) {
         std::copy(begin, std::next(begin, n), _buffer.get());
     }
+    Buffer(std::initializer_list<T> init) : Buffer(init.size()) {
+        std::copy(init.begin(), init.end(), _buffer.get());
+    }
 
 	Buffer(Buffer&& other) noexcept : _buffer(std::move(other._buffer)), _size(other._size) {}
 
@@ -56,12 +59,22 @@ public:
         return _buffer[index];
     }
 
-	const T* data() const { return _buffer.get(); }
+    bool empty() const {
+        return _size == 0;
+    }
+
+    const T* data() const { return _buffer.get(); }
     T* data() { return _buffer.get(); }
-    const T* cbegin() const { return _buffer.get(); }
+
+    const T* begin() const { return _buffer.get(); }
     T* begin() { return _buffer.get(); }
-    const T* cend() const { return std::next(_buffer.get(), _size); }
+
+    const T* end() const { return std::next(_buffer.get(), _size); }
     T* end() { return std::next(_buffer.get(), _size); }
+
+    const T* cbegin() const { return _buffer.get(); }
+    const T* cend() const { return std::next(_buffer.get(), _size); }
+
 	size_t size() const { return _size; }
 };
 

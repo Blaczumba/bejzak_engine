@@ -11,8 +11,8 @@
 
 namespace {
 
-VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats, VkFormat preferredFormat);
-VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes, VkPresentModeKHR preferredMode);
+VkSurfaceFormatKHR chooseSwapSurfaceFormat(const lib::Buffer<VkSurfaceFormatKHR>& availableFormats, VkFormat preferredFormat);
+VkPresentModeKHR chooseSwapPresentMode(const lib::Buffer<VkPresentModeKHR>& availablePresentModes, VkPresentModeKHR preferredMode);
 VkExtent2D chooseSwapExtent(VkExtent2D actualWindowExtent, const VkSurfaceCapabilitiesKHR& capabilities);
 
 }   // namespace
@@ -140,14 +140,14 @@ VkResult Swapchain::present(uint32_t imageIndex, VkSemaphore waitSemaphore) cons
 
 namespace {
 
-VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats, VkFormat preferredFormat) {
+VkSurfaceFormatKHR chooseSwapSurfaceFormat(const lib::Buffer<VkSurfaceFormatKHR>& availableFormats, VkFormat preferredFormat) {
     auto availableFormat = std::find_if(availableFormats.cbegin(), availableFormats.cend(), [=](const auto& format) {
         return format.format == preferredFormat && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
         });
     return (availableFormat != availableFormats.cend()) ? *availableFormat : availableFormats[0];
 }
 
-VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes, VkPresentModeKHR preferredMode) {
+VkPresentModeKHR chooseSwapPresentMode(const lib::Buffer<VkPresentModeKHR>& availablePresentModes, VkPresentModeKHR preferredMode) {
     auto availablePresentMode = std::find_if(availablePresentModes.cbegin(), availablePresentModes.cend(), [=](const auto& mode) {
         return mode == preferredMode;
         });
