@@ -253,8 +253,9 @@ void SingleApp::createPresentResources() {
     );
     _renderPass->create();
 
+    _framebuffers.reserve(_swapchain->getImagesCount());
     for (uint8_t i = 0; i < _swapchain->getImagesCount(); ++i) {
-        _framebuffers.emplace_back(Framebuffer::createFromSwapchain(*_renderPass, *_swapchain, i, *_singleTimeCommandPool));
+        _framebuffers.emplace_back(Framebuffer::createFromSwapchain(*_renderPass, *_swapchain, *_singleTimeCommandPool, i).value());
     }
     {
         const GraphicsPipelineParameters parameters = {
@@ -291,7 +292,7 @@ void SingleApp::createShadowResources() {
     _shadowRenderPass = std::make_shared<Renderpass>(*_logicalDevice, attachmentLayout);
     _shadowRenderPass->addSubpass(subpass);
     _shadowRenderPass->create();
-    _shadowFramebuffer = Framebuffer::createFromTextures(*_shadowRenderPass, std::move(_shadowMap) );
+    _shadowFramebuffer = Framebuffer::createFromTextures(*_shadowRenderPass, { _shadowMap }).value();
 
     const GraphicsPipelineParameters parameters = {
         .cullMode = VK_CULL_MODE_FRONT_BIT,
@@ -646,6 +647,6 @@ void SingleApp::recreateSwapChain() {
 
     _swapchain = Swapchain::create(*_logicalDevice, _swapchain.get()).value();
     for (uint8_t i = 0; i < _swapchain->getImagesCount(); ++i) {
-        _framebuffers[i] = Framebuffer::createFromSwapchain(*_renderPass, *_swapchain, i, *_singleTimeCommandPool);
+        _framebuffers[i] = Framebuffer::createFromSwapchain(*_renderPass, *_swapchain, *_singleTimeCommandPool, i).value();
     }
 }

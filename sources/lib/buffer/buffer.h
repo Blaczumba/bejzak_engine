@@ -15,6 +15,7 @@ public:
 	explicit Buffer(size_t size) : _buffer(std::make_unique_for_overwrite<T[]>(size)), _size(size) {}
 
 	Buffer(const Buffer& other) : Buffer(other._size) {
+        // TODO if sizes are equal then do not allocate memory
 		std::copy(other._buffer.get(), other._buffer.get() + _size, _buffer.get());
 	}
     template<typename Iterator>
@@ -29,12 +30,13 @@ public:
         std::copy(init.begin(), init.end(), _buffer.get());
     }
 
-	Buffer(Buffer&& other) noexcept : _buffer(std::move(other._buffer)), _size(other._size) {}
+	Buffer(Buffer&& other) noexcept : _buffer(std::move(other._buffer)), _size(std::exchange(other._size, 0)) {}
 
     Buffer& operator=(const Buffer& other) {
         if (this == &other) {
             return *this;
         }
+        // TODO if sizes are equal then do not allocate memory
         _size = other._size;
         _buffer = std::make_unique_for_overwrite<T[]>(_size);
         std::copy(other._buffer.get(), other._buffer.get() + _size, _buffer.get());
@@ -46,8 +48,7 @@ public:
             return *this;
         }
         _buffer = std::move(other._buffer);
-        _size = other._size;
-        other._size = 0;
+        _size = std::exchange(other._size, 0);
         return *this;
     }
 

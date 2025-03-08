@@ -1,5 +1,7 @@
 #pragma once
 
+#include "lib/status/status.h"
+#include "lib/buffer/buffer.h"
 #include "memory_objects/texture/texture_factory.h"
 #include "render_pass/render_pass.h"
 
@@ -7,6 +9,7 @@
 
 #include <initializer_list>
 #include <memory>
+#include <optional>
 #include <vector>
 
 class CommandPool;
@@ -14,29 +17,18 @@ class Swapchain;
 
 class Framebuffer {
 	VkFramebuffer _framebuffer;
-	std::vector<std::shared_ptr<Texture>> _textureAttachments;
-	const std::optional<uint8_t> _swapchainIndex;
-	VkViewport _viewport;
-	VkRect2D _scissor;
 
 	const Renderpass& _renderpass;
 
-	Framebuffer(const Renderpass& renderpass, const Swapchain& swapchain, uint8_t swapchainImageIndex, const CommandPool& commandPool);
-	Framebuffer(const Renderpass& renderpass, std::vector<std::shared_ptr<Texture>>&& textures);
+	VkViewport _viewport;
+	VkRect2D _scissor;
+	lib::Buffer<std::shared_ptr<Texture>> _textureAttachments;
+
+	Framebuffer(const VkFramebuffer framebuffer, const Renderpass& renderpass, const VkViewport& viewport, const VkRect2D& scissor, lib::Buffer<std::shared_ptr<Texture>>&& textures);
 
 public:
-	static std::unique_ptr<Framebuffer> createFromSwapchain(const Renderpass& renderpass, const Swapchain& swapchain, uint8_t swapchainImageIndex, const CommandPool& commandPool) {
-		return std::unique_ptr<Framebuffer>(new Framebuffer(renderpass, swapchain, swapchainImageIndex, commandPool));
-	}
-	
-	// TODO change to unique_ptr
-	template<typename... Textures>
-	static std::unique_ptr<Framebuffer> createFromTextures(const Renderpass& renderpass, std::shared_ptr<Textures>&&... textures) {
-		std::vector<std::shared_ptr<Texture>> tex;
-		tex.reserve(sizeof...(textures));
-		(tex.push_back(textures), ...);
-		return std::unique_ptr<Framebuffer>(new Framebuffer(renderpass, std::move(tex)));
-	}
+	static lib::ErrorOr<std::unique_ptr<Framebuffer>> createFromSwapchain(const Renderpass& renderpass, const Swapchain& swapchain, const CommandPool& commandPool, uint8_t swapchainImageIndex);
+	static lib::ErrorOr<std::unique_ptr<Framebuffer>> createFromTextures(const Renderpass& renderpass, lib::Buffer<std::shared_ptr<Texture>>&& textures);
 
 	~Framebuffer();
 

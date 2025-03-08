@@ -17,7 +17,7 @@ VkExtent2D chooseSwapExtent(VkExtent2D actualWindowExtent, const VkSurfaceCapabi
 
 }   // namespace
 
-Swapchain::Swapchain(const VkSwapchainKHR swapchain, const LogicalDevice& logicalDevice, VkSurfaceFormatKHR surfaceFormat, VkExtent2D extent, std::vector<VkImage>&& images, std::vector<VkImageView>&& views)
+Swapchain::Swapchain(const VkSwapchainKHR swapchain, const LogicalDevice& logicalDevice, VkSurfaceFormatKHR surfaceFormat, VkExtent2D extent, lib::Buffer<VkImage>&& images, lib::Buffer<VkImageView>&& views)
 	: _swapchain(swapchain), _logicalDevice(logicalDevice), _surfaceFormat(surfaceFormat), _extent(extent), _images(std::move(images)), _views(std::move(views)) { }
 
 Swapchain::~Swapchain() {
@@ -44,11 +44,11 @@ uint32_t Swapchain::getImagesCount() const {
     return _images.size();
 }
 
-const std::vector<VkImage>& Swapchain::getVkImages() const {
+const lib::Buffer<VkImage>& Swapchain::getVkImages() const {
     return _images;
 }
 
-const std::vector<VkImageView>& Swapchain::getVkImageViews() const {
+const lib::Buffer<VkImageView>& Swapchain::getVkImageViews() const {
     return _views;
 }
 
@@ -103,10 +103,11 @@ lib::ErrorOr<std::unique_ptr<Swapchain>> Swapchain::create(const LogicalDevice& 
     }
 
     vkGetSwapchainImagesKHR(device, swapchain, &imageCount, nullptr);
-    std::vector<VkImage> images(imageCount);
+    lib::Buffer<VkImage> images(imageCount);
     vkGetSwapchainImagesKHR(device, swapchain, &imageCount, images.data());
-    std::vector<VkImageView> views;
-    std::transform(images.cbegin(), images.cend(), std::back_inserter(views),
+
+    lib::Buffer<VkImageView> views(imageCount);
+    std::transform(images.cbegin(), images.cend(), views.begin(),
         [&](const VkImage image) {
             return logicalDevice.createImageView(image, ImageParameters{
                     .format = surfaceFormat.format,
