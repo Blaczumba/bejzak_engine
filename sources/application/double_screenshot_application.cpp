@@ -69,13 +69,12 @@ lib::Status SingleApp::loadObject() {
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
 
         VertexData vertexData = loadObj(MODELS_PATH "cylinder8.obj").value();
-        auto vertices = buildInterleavingVertexData(vertexData.positions, vertexData.textureCoordinates, vertexData.normals);
-        if (vertices.has_value())
-            _assetManager->loadVertexData("cube_normal.obj", *vertices, vertexData.indices, static_cast<uint8_t>(vertexData.indexType));
+        ASSIGN_OR_RETURN(auto vertices, buildInterleavingVertexData(vertexData.positions, vertexData.textureCoordinates, vertexData.normals));
+        RETURN_IF_ERROR(_assetManager->loadVertexData("cube_normal.obj", vertices, vertexData.indices, static_cast<uint8_t>(vertexData.indexType)));
         const AssetManager::VertexData& vData = _assetManager->getVertexData("cube_normal.obj");
-        _vertexBufferObject = VertexBuffer::create(*_logicalDevice, commandBuffer, *vData.vertexBuffer).value();
-        _vertexBufferPrimitiveObject = VertexBuffer::create(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives).value();
-        _indexBufferObject = IndexBuffer::create(*_logicalDevice, commandBuffer, vData.indexBuffer, vData.indexType).value();
+        ASSIGN_OR_RETURN(_vertexBufferObject, VertexBuffer::create(*_logicalDevice, commandBuffer, *vData.vertexBuffer));
+        ASSIGN_OR_RETURN(_vertexBufferPrimitiveObject, VertexBuffer::create(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives));
+        ASSIGN_OR_RETURN(_indexBufferObject, IndexBuffer::create(*_logicalDevice, commandBuffer, vData.indexBuffer, vData.indexType));
 
         ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(drakanTexturePath));
         ASSIGN_OR_RETURN(auto texture, TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
