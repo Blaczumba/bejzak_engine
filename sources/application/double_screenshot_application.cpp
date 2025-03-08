@@ -51,8 +51,8 @@ lib::Status SingleApp::loadCubemap() {
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
         const AssetManager::VertexData& vData = _assetManager->getVertexData("cube.obj");
-        _vertexBufferCube = std::make_unique<VertexBuffer>(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives);
-        _indexBufferCube = std::make_unique<IndexBuffer>(*_logicalDevice, commandBuffer, vData.indexBuffer, vData.indexType);
+        _vertexBufferCube = VertexBuffer::create(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives).value();
+        _indexBufferCube = IndexBuffer::create(*_logicalDevice, commandBuffer, vData.indexBuffer, vData.indexType).value();
     }
     return lib::StatusOk();
 }
@@ -73,9 +73,9 @@ lib::Status SingleApp::loadObject() {
         if (vertices.has_value())
             _assetManager->loadVertexData("cube_normal.obj", *vertices, vertexData.indices, static_cast<uint8_t>(vertexData.indexType));
         const AssetManager::VertexData& vData = _assetManager->getVertexData("cube_normal.obj");
-        _vertexBufferObject = std::make_unique<VertexBuffer>(*_logicalDevice, commandBuffer, *vData.vertexBuffer);
-        _vertexBufferPrimitiveObject = std::make_unique<VertexBuffer>(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives);
-        _indexBufferObject = std::make_unique<IndexBuffer>(*_logicalDevice, commandBuffer, vData.indexBuffer, vData.indexType);
+        _vertexBufferObject = VertexBuffer::create(*_logicalDevice, commandBuffer, *vData.vertexBuffer).value();
+        _vertexBufferPrimitiveObject = VertexBuffer::create(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives).value();
+        _indexBufferObject = IndexBuffer::create(*_logicalDevice, commandBuffer, vData.indexBuffer, vData.indexType).value();
 
         ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(drakanTexturePath));
         _textures.emplace_back(TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
@@ -147,9 +147,9 @@ lib::Status SingleApp::loadObjects() {
             _objects.emplace_back("Object", e);
             const AssetManager::VertexData& vData = _assetManager->getVertexData(std::to_string(i));
             MeshComponent msh;
-            msh.vertexBuffer = std::make_shared<VertexBuffer>(*_logicalDevice, commandBuffer, vData.vertexBuffer.value());
-            msh.indexBuffer = std::make_shared<IndexBuffer>(*_logicalDevice, commandBuffer, vData.indexBuffer, vData.indexType);
-            msh.vertexBufferPrimitive = std::make_shared<VertexBuffer>(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives);
+            msh.vertexBuffer = VertexBuffer::create(*_logicalDevice, commandBuffer, vData.vertexBuffer.value()).value();
+            msh.indexBuffer = IndexBuffer::create(*_logicalDevice, commandBuffer, vData.indexBuffer, vData.indexType).value();
+            msh.vertexBufferPrimitive = VertexBuffer::create(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives).value();
             msh.aabb = createAABBfromVertices(std::vector<glm::vec3>(sceneData[i].positions.cbegin(), sceneData[i].positions.cend()), sceneData[i].model);
             _registry.addComponent<MeshComponent>(e, std::move(msh));
 

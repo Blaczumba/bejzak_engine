@@ -17,9 +17,12 @@ class VertexBuffer {
 
 	const LogicalDevice& _logicalDevice;
 
+	VertexBuffer(const VkBuffer vertexBuffer, const Allocation allocation, const LogicalDevice& logicalDevice);
+
 public:
-	VertexBuffer(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer);
     ~VertexBuffer();
+
+    static lib::ErrorOr<std::unique_ptr<VertexBuffer>> create(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer);
 
     const VkBuffer getVkBuffer() const;
     void bind(const VkCommandBuffer commandBuffer) const;

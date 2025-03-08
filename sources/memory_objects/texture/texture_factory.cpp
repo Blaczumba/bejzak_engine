@@ -18,7 +18,7 @@ std::unique_ptr<Texture> createImage(const LogicalDevice& logicalDevice, const V
     const VkImageView view = logicalDevice.createImageView(image, imageParams);
     transitionImageLayout(commandBuffer, image, imageParams.layout, dstLayout, imageParams.aspect, imageParams.mipLevels, imageParams.layerCount);
     imageParams.layout = dstLayout;
-    return std::make_unique<Texture>(logicalDevice, type, image, allocation, imageParams, view);
+    return Texture::create(logicalDevice, type, image, allocation, imageParams, view);
 }
 
 std::unique_ptr<Texture> createImageSampler(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkImageLayout dstLayout, Texture::Type type, ImageParameters& imageParams, const SamplerParameters& samplerParams) {
@@ -28,7 +28,7 @@ std::unique_ptr<Texture> createImageSampler(const LogicalDevice& logicalDevice, 
     const VkImageView view = logicalDevice.createImageView(image, imageParams);
     transitionImageLayout(commandBuffer, image, imageParams.layout, dstLayout, imageParams.aspect, imageParams.mipLevels, imageParams.layerCount);
     imageParams.layout = dstLayout;
-    return std::make_unique<Texture>(logicalDevice, type, image, allocation, imageParams, view, sampler, samplerParams);
+    return Texture::create(logicalDevice, type, image, allocation, imageParams, view, sampler, samplerParams);
 }
 
 std::unique_ptr<Texture> createTextureMipmapImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, ImageParameters& imageParams, const SamplerParameters& samplerParams) {
@@ -40,7 +40,7 @@ std::unique_ptr<Texture> createTextureMipmapImage(const LogicalDevice& logicalDe
     copyBufferToImage(commandBuffer, copyBuffer, image, copyRegions);
     generateImageMipmaps(commandBuffer, image, imageParams.format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, imageParams.width, imageParams.height, imageParams.mipLevels, imageParams.layerCount);
     imageParams.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    return std::make_unique<Texture>(logicalDevice, Texture::Type::IMAGE_2D, image, allocation, imageParams, view, sampler, samplerParams);
+    return Texture::create(logicalDevice, Texture::Type::IMAGE_2D, image, allocation, imageParams, view, sampler, samplerParams);
 }
 
 std::unique_ptr<Texture> createTextureImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, Texture::Type type, const VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, ImageParameters& imageParams, const SamplerParameters& samplerParams) {
@@ -52,7 +52,7 @@ std::unique_ptr<Texture> createTextureImage(const LogicalDevice& logicalDevice, 
     copyBufferToImage(commandBuffer, copyBuffer, image, copyRegions);
     transitionImageLayout(commandBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, imageParams.aspect, imageParams.mipLevels, imageParams.layerCount);
     imageParams.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    return std::make_unique<Texture>(logicalDevice, type, image, allocation, imageParams, view, sampler, samplerParams);
+    return Texture::create(logicalDevice, type, image, allocation, imageParams, view, sampler, samplerParams);
 }
 
 }

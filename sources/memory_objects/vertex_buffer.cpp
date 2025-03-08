@@ -1,15 +1,19 @@
 #include "vertex_buffer.h"
 
-VertexBuffer::VertexBuffer(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer)
-    : _logicalDevice(logicalDevice) {
-    _vertexBuffer = std::visit(Allocator{ _allocation, stagingBuffer.getSize() }, _logicalDevice.getMemoryAllocator());
-    copyBufferToBuffer(commandBuffer, stagingBuffer.getVkBuffer(), _vertexBuffer, stagingBuffer.getSize());
-}
+VertexBuffer::VertexBuffer(const VkBuffer vertexBuffer, const Allocation allocation, const LogicalDevice& logicalDevice)
+    : _vertexBuffer(vertexBuffer), _allocation(allocation), _logicalDevice(logicalDevice) {}
 
 VertexBuffer::~VertexBuffer() {
     if (_vertexBuffer != VK_NULL_HANDLE) {
         std::visit(BufferDeallocator{ _vertexBuffer }, _logicalDevice.getMemoryAllocator(), _allocation);
     }
+}
+
+lib::ErrorOr<std::unique_ptr<VertexBuffer>> VertexBuffer::create(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer) {
+    Allocation allocation;
+    const VkBuffer vertexBuffer = std::visit(Allocator{ allocation, stagingBuffer.getSize() }, logicalDevice.getMemoryAllocator());
+    copyBufferToBuffer(commandBuffer, stagingBuffer.getVkBuffer(), vertexBuffer, stagingBuffer.getSize());
+    return std::unique_ptr<VertexBuffer>(new VertexBuffer(vertexBuffer, allocation, logicalDevice));
 }
 
 const VkBuffer VertexBuffer::getVkBuffer() const {

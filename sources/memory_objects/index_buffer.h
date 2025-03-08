@@ -1,5 +1,6 @@
 #pragma once
 
+#include "lib/status/status.h"
 #include "memory_objects/staging_buffer.h"
 
 #include <vulkan/vulkan.h>
@@ -14,14 +15,17 @@ class LogicalDevice;
 class IndexBuffer {
     VkBuffer _indexBuffer;
     Allocation _allocation;
-    const uint32_t _indexCount;
-    const VkIndexType _indexType;
+    VkIndexType _indexType;
+    uint32_t _indexCount;
 
     const LogicalDevice& _logicalDevice;
 
+    IndexBuffer(const VkBuffer indexBuffer, const Allocation allocation, const LogicalDevice& logicalDevice, VkIndexType indexType, uint32_t indexCount);
+
 public:
-    IndexBuffer(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer, VkIndexType indexType);
     ~IndexBuffer();
+
+    static lib::ErrorOr<std::unique_ptr<IndexBuffer>> create(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer, VkIndexType indexType);
 
     VkIndexType getIndexType() const;
     const VkBuffer getVkBuffer() const;

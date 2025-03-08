@@ -28,6 +28,7 @@ class LogicalDevice {
 
 public:
 	LogicalDevice(const PhysicalDevice& physicalDevice);
+
 	~LogicalDevice();
 
 	const VkBuffer createBuffer(VkDeviceSize size, VkBufferUsageFlags usage) const;

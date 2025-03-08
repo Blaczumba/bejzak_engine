@@ -30,6 +30,11 @@ VmaWrapper::~VmaWrapper() {
 	}
 }
 
+void VmaWrapper::destroy() {
+	vmaDestroyAllocator(_allocator);
+	_allocator = nullptr;
+}
+
 std::tuple<VkBuffer, VmaAllocation, void*> VmaWrapper::createVkBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags) {
 	const VkBufferCreateInfo bufferInfo = {
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,

@@ -24,9 +24,9 @@ public:
 		CUBEMAP
 	};
 
-	Texture(const LogicalDevice& logicalDevice, Texture::Type type, const VkImage image, Allocation allocation, const ImageParameters& imageParameters, const VkImageView view = VK_NULL_HANDLE, const VkSampler sampler = VK_NULL_HANDLE, const SamplerParameters& samplerParameters = {});
-	Texture(Texture&& texture) noexcept;
 	~Texture();
+
+	static std::unique_ptr<Texture> create(const LogicalDevice& logicalDevice, Texture::Type type, const VkImage image, const Allocation allocation, const ImageParameters& imageParameters, const VkImageView view = VK_NULL_HANDLE, const VkSampler sampler = VK_NULL_HANDLE, const SamplerParameters& samplerParameters = {});
 
 	void transitionLayout(VkCommandBuffer commandBuffer, VkImageLayout newLayout);
 
@@ -38,12 +38,14 @@ public:
 	VkExtent2D getVkExtent2D() const;
 
 private:
+	Texture(const LogicalDevice& logicalDevice, Texture::Type type, const VkImage image, const Allocation allocation, const ImageParameters& imageParameters, const VkImageView view, const VkSampler sampler, const SamplerParameters& samplerParameters);
+	
 	const Type _type;
 
 	Allocation _allocation;
-	VkImage _image = VK_NULL_HANDLE;
-	VkImageView _view = VK_NULL_HANDLE;
-	VkSampler _sampler = VK_NULL_HANDLE;
+	VkImage _image;
+	VkImageView _view;
+	VkSampler _sampler;
 
 	ImageParameters _imageParameters;
 	SamplerParameters _samplerParameters;

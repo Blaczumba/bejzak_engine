@@ -8,15 +8,13 @@
 
 #include <stdexcept>
 
-Texture::Texture(const LogicalDevice& logicalDevice, Texture::Type type, const VkImage image, Allocation allocation, const ImageParameters& imageParameters, const VkImageView view, const VkSampler sampler, const SamplerParameters& samplerParameters)
+Texture::Texture(const LogicalDevice& logicalDevice, Texture::Type type, const VkImage image, const Allocation allocation, const ImageParameters& imageParameters, const VkImageView view, const VkSampler sampler, const SamplerParameters& samplerParameters)
     : _logicalDevice(logicalDevice), _type(type), _image(image), _allocation(allocation), _imageParameters(imageParameters), _view(view), _sampler(sampler), _samplerParameters(samplerParameters) {
 
 }
 
-Texture::Texture(Texture&& texture) noexcept : _logicalDevice(texture._logicalDevice), _type(texture._type),
-    _image(std::exchange(texture._image, VK_NULL_HANDLE)), _view(std::exchange(texture._view, VK_NULL_HANDLE)), _sampler(std::exchange(texture._sampler, VK_NULL_HANDLE)),
-    _imageParameters(texture._imageParameters), _samplerParameters(texture._samplerParameters) {
-
+std::unique_ptr<Texture> Texture::create(const LogicalDevice& logicalDevice, Texture::Type type, const VkImage image, const Allocation allocation, const ImageParameters& imageParameters, const VkImageView view, const VkSampler sampler, const SamplerParameters& samplerParameters) {
+    return std::unique_ptr<Texture>(new Texture(logicalDevice, type, image, allocation, imageParameters, view, sampler, samplerParameters));
 }
 
 namespace {

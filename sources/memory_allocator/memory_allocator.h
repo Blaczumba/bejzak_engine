@@ -1,6 +1,7 @@
 #pragma once
 
-#include <memory_objects/texture/image.h>
+#include "lib/status/status.h"
+#include "memory_objects/texture/image.h"
 
 #include <vulkan/vulkan.h>
 #include <vma/vk_mem_alloc.h>
@@ -15,10 +16,7 @@ public:
 	VmaWrapper(VmaWrapper&& allocator);
 	~VmaWrapper();
 
-	void destroy() {
-		vmaDestroyAllocator(_allocator);
-		_allocator = nullptr;
-	}
+	void destroy();
 
 	std::tuple<VkBuffer, VmaAllocation, void*> createVkBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags = 0U);
 	void destroyVkBuffer(const VkBuffer buffer, const VmaAllocation allocation);

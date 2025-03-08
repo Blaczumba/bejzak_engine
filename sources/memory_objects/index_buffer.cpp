@@ -21,10 +21,16 @@ constexpr uint8_t getIndexSize(VkIndexType indexType) {
 
 }
 
-IndexBuffer::IndexBuffer(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer, VkIndexType indexType)
-    : _logicalDevice(logicalDevice), _indexCount(stagingBuffer.getSize() / getIndexSize(indexType)), _indexType(indexType) {
-    _indexBuffer = std::visit(Allocator{ _allocation, stagingBuffer.getSize() }, _logicalDevice.getMemoryAllocator());
-    copyBufferToBuffer(commandBuffer, stagingBuffer.getVkBuffer(), _indexBuffer, stagingBuffer.getSize());
+IndexBuffer::IndexBuffer(const VkBuffer indexBuffer, const Allocation allocation, const LogicalDevice& logicalDevice, VkIndexType indexType, uint32_t indexCount)
+    : _indexBuffer(indexBuffer), _allocation(allocation), _logicalDevice(logicalDevice), _indexType(indexType), _indexCount(indexCount) {
+
+}
+
+lib::ErrorOr<std::unique_ptr<IndexBuffer>> IndexBuffer::create(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer, VkIndexType indexType) {
+    Allocation allocation;
+    const VkBuffer indexBuffer = std::visit(Allocator{ allocation, stagingBuffer.getSize() }, logicalDevice.getMemoryAllocator());
+    copyBufferToBuffer(commandBuffer, stagingBuffer.getVkBuffer(), indexBuffer, stagingBuffer.getSize());
+    return std::unique_ptr<IndexBuffer>(new IndexBuffer(indexBuffer, allocation, logicalDevice, indexType, stagingBuffer.getSize() / getIndexSize(indexType)));
 }
 
 IndexBuffer::~IndexBuffer() {

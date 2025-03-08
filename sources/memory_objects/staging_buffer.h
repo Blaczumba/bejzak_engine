@@ -20,29 +20,17 @@ public:
     }
 
     template<typename Type>
-    StagingBuffer(MemoryAllocator& memoryAllocator, const lib::Buffer<Type> buffer) : _memoryAllocator(memoryAllocator), _size(buffer.size() * sizeof(Type)) {
+    StagingBuffer(MemoryAllocator& memoryAllocator, const lib::Buffer<Type>& buffer) : _memoryAllocator(memoryAllocator), _size(buffer.size() * sizeof(Type)) {
         std::tie(_buffer, _mappedData) = std::visit(Allocator{ _allocation, _size }, _memoryAllocator);
         std::memcpy(_mappedData, buffer.data(), _size);
     }
 
-    ~StagingBuffer() {
-        if (_buffer != VK_NULL_HANDLE) {
-            std::visit(BufferDeallocator{ _buffer }, _memoryAllocator, _allocation);
-        }
-    }
+    ~StagingBuffer();
 
-    StagingBuffer(StagingBuffer&& stagingBuffer) noexcept
-        : _buffer(std::exchange(stagingBuffer._buffer, VK_NULL_HANDLE)), _allocation(stagingBuffer._allocation), _size(stagingBuffer._size),
-        _mappedData(stagingBuffer._mappedData), _memoryAllocator(stagingBuffer._memoryAllocator) {
-    }
+    StagingBuffer(StagingBuffer&& stagingBuffer) noexcept;
 
-    const VkBuffer getVkBuffer() const {
-        return _buffer;
-    }
-
-    uint32_t getSize() const {
-        return _size;
-    }
+    const VkBuffer getVkBuffer() const;
+    uint32_t getSize() const;
 
 private:
     VkBuffer _buffer;
