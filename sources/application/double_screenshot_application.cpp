@@ -235,15 +235,8 @@ void SingleApp::createPresentResources() {
     //              .addColorAttachment(swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE)
                     .addDepthAttachment(findDepthFormat(), VK_ATTACHMENT_STORE_OP_DONT_CARE);
 
-    Subpass subpass(attachmentsLayout);
-    subpass.addOutputAttachment(0);
-    subpass.addOutputAttachment(1);
-    subpass.addOutputAttachment(2);
-    //subpass.addOutputAttachment(3);
-    //subpass.addOutputAttachment(4);
-
     _renderPass = Renderpass::create(*_logicalDevice, attachmentsLayout).value();
-    _renderPass->addSubpass(subpass);
+    _renderPass->addSubpass({0, 1, 2});
     _renderPass->addDependency(VK_SUBPASS_EXTERNAL,
         0,
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
@@ -285,11 +278,9 @@ void SingleApp::createShadowResources() {
     const VkExtent2D extent = { 1024 * 2, 1024 * 2 };
     AttachmentLayout attachmentLayout;
     attachmentLayout.addShadowAttachment(imageFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    Subpass subpass(attachmentLayout);
-    subpass.addOutputAttachment(0);
 
     _shadowRenderPass = Renderpass::create(*_logicalDevice, attachmentLayout).value();
-    _shadowRenderPass->addSubpass(subpass);
+    _shadowRenderPass->addSubpass({0});
     _shadowRenderPass->build();
 
     _shadowFramebuffer = Framebuffer::createFromTextures(*_shadowRenderPass, { _shadowMap }).value();

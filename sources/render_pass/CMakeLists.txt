@@ -1,9 +1,8 @@
 add_subdirectory(attachment)
-add_subdirectory(subpass)
 
-add_library(Renderpass render_pass.cpp subpass/subpass.h subpass/subpass.cpp)
+add_library(Renderpass render_pass.cpp)
 
-target_link_libraries(Renderpass PUBLIC LogicalDevice Subpass Attachment)
+target_link_libraries(Renderpass PUBLIC LogicalDevice Attachment)
 target_link_libraries(Renderpass PUBLIC Vulkan::Vulkan)
 
 target_include_directories(Renderpass PUBLIC ${CMAKE_SOURCE_DIR}/sources)
