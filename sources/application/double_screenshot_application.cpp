@@ -228,21 +228,21 @@ void SingleApp::createPresentResources() {
     const VkFormat swapchainImageFormat = _swapchain->getVkFormat();
     const VkExtent2D extent = _swapchain->getExtent();
 
-    AttachmentLayout attachmentsLayout;
-    attachmentsLayout.addColorResolvePresentAttachment(swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE);
-    //attachmentsLayout.addColorResolveAttachment(swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE);
-    attachmentsLayout.addColorAttachment(swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE, msaaSamples);
-    //attachmentsLayout.addColorAttachment(swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE, msaaSamples);
-    attachmentsLayout.addDepthAttachment(findDepthFormat(), VK_ATTACHMENT_STORE_OP_DONT_CARE, msaaSamples);
+    AttachmentLayout attachmentsLayout(msaaSamples);
+    attachmentsLayout.addColorResolvePresentAttachment(swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE)
+    //              .addColorResolveAttachment(swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE)
+                    .addColorAttachment(swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE)
+    //              .addColorAttachment(swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE)
+                    .addDepthAttachment(findDepthFormat(), VK_ATTACHMENT_STORE_OP_DONT_CARE);
 
     Subpass subpass(attachmentsLayout);
-    subpass.addSubpassOutputAttachment(0);
-    subpass.addSubpassOutputAttachment(1);
-    subpass.addSubpassOutputAttachment(2);
-    //subpass.addSubpassOutputAttachment(3);
-    //subpass.addSubpassOutputAttachment(4);
+    subpass.addOutputAttachment(0);
+    subpass.addOutputAttachment(1);
+    subpass.addOutputAttachment(2);
+    //subpass.addOutputAttachment(3);
+    //subpass.addOutputAttachment(4);
 
-    _renderPass = std::make_shared<Renderpass>(*_logicalDevice, attachmentsLayout);
+    _renderPass = Renderpass::create(*_logicalDevice, attachmentsLayout).value();
     _renderPass->addSubpass(subpass);
     _renderPass->addDependency(VK_SUBPASS_EXTERNAL,
         0,
@@ -251,7 +251,7 @@ void SingleApp::createPresentResources() {
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
         VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
     );
-    _renderPass->create();
+    _renderPass->build();
 
     _framebuffers.reserve(_swapchain->getImagesCount());
     for (uint8_t i = 0; i < _swapchain->getImagesCount(); ++i) {
@@ -281,17 +281,17 @@ void SingleApp::createPresentResources() {
 }
 
 void SingleApp::createShadowResources() {
-    const VkSampleCountFlagBits shadowMsaaSamples = VK_SAMPLE_COUNT_1_BIT;
     const VkFormat imageFormat = VK_FORMAT_D32_SFLOAT;
     const VkExtent2D extent = { 1024 * 2, 1024 * 2 };
     AttachmentLayout attachmentLayout;
     attachmentLayout.addShadowAttachment(imageFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     Subpass subpass(attachmentLayout);
-    subpass.addSubpassOutputAttachment(0);
+    subpass.addOutputAttachment(0);
 
-    _shadowRenderPass = std::make_shared<Renderpass>(*_logicalDevice, attachmentLayout);
+    _shadowRenderPass = Renderpass::create(*_logicalDevice, attachmentLayout).value();
     _shadowRenderPass->addSubpass(subpass);
-    _shadowRenderPass->create();
+    _shadowRenderPass->build();
+
     _shadowFramebuffer = Framebuffer::createFromTextures(*_shadowRenderPass, { _shadowMap }).value();
 
     const GraphicsPipelineParameters parameters = {

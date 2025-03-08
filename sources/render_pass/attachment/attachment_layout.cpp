@@ -3,6 +3,12 @@
 #include <algorithm>
 #include <iterator>
 
+AttachmentLayout::AttachmentLayout(VkSampleCountFlagBits numMsaaSamples) : _numMsaaSamples(numMsaaSamples) {}
+
+VkSampleCountFlagBits AttachmentLayout::getNumMsaaSamples() const {
+	return _numMsaaSamples;
+}
+
 const std::vector<VkClearValue>& AttachmentLayout::getVkClearValues() const {
 	return _clearValues;
 }
@@ -27,46 +33,52 @@ uint32_t AttachmentLayout::getColorAttachmentsCount() const {
 	return std::count(_attachmentTypes.cbegin(), _attachmentTypes.cend(), Attachment::Type::COLOR);
 }
 
-void AttachmentLayout::addColorAttachment(VkFormat format, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp, VkSampleCountFlagBits samples) {
+AttachmentLayout& AttachmentLayout::addColorAttachment(VkFormat format, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp) {
 	_clearValues.emplace_back(VkClearValue{ .color = { 0.0f, 0.0f, 0.0f, 1.0f } });
-	_attachmentDescriptions.emplace_back(createDescription(format, samples, loadOp, storeOp, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
+	_attachmentDescriptions.emplace_back(createDescription(format, _numMsaaSamples, loadOp, storeOp, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
 	_subpassImageLayouts.emplace_back(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	_attachmentTypes.emplace_back(Attachment::Type::COLOR);
+	return *this;
 }
 
-void AttachmentLayout::addColorPresentAttachment(VkFormat format, VkAttachmentLoadOp loadOp) {
+AttachmentLayout& AttachmentLayout::addColorPresentAttachment(VkFormat format, VkAttachmentLoadOp loadOp) {
 	_clearValues.emplace_back(VkClearValue{ .color = { 0.0f, 0.0f, 0.0f, 1.0f } });
 	_attachmentDescriptions.emplace_back(createDescription(format, VK_SAMPLE_COUNT_1_BIT, loadOp, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR));
 	_subpassImageLayouts.emplace_back(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	_attachmentTypes.emplace_back(Attachment::Type::COLOR);
+	return *this;
 }
 
-void AttachmentLayout::addDepthAttachment(VkFormat format, VkAttachmentStoreOp storeOp, VkSampleCountFlagBits samples, VkAttachmentLoadOp stencilLoadOp, VkAttachmentStoreOp stencilStoreOp) {
+AttachmentLayout& AttachmentLayout::addDepthAttachment(VkFormat format, VkAttachmentStoreOp storeOp, VkAttachmentLoadOp stencilLoadOp, VkAttachmentStoreOp stencilStoreOp) {
 	_clearValues.emplace_back(VkClearValue{ .depthStencil = { 1.0f, 0 } });
-	_attachmentDescriptions.emplace_back(createDescription(format, samples, VK_ATTACHMENT_LOAD_OP_CLEAR, storeOp, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, stencilLoadOp, stencilStoreOp));
+	_attachmentDescriptions.emplace_back(createDescription(format, _numMsaaSamples, VK_ATTACHMENT_LOAD_OP_CLEAR, storeOp, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, stencilLoadOp, stencilStoreOp));
 	_subpassImageLayouts.emplace_back(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 	_attachmentTypes.emplace_back(Attachment::Type::DEPTH);
+	return *this;
 }
 
-void AttachmentLayout::addShadowAttachment(VkFormat format, VkImageLayout finalLayout) {
+AttachmentLayout& AttachmentLayout::addShadowAttachment(VkFormat format, VkImageLayout finalLayout) {
 	_clearValues.emplace_back(VkClearValue{ .depthStencil = { 1.0f, 0 } });
 	_attachmentDescriptions.emplace_back(createDescription(format, VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_CLEAR, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED, finalLayout));
 	_subpassImageLayouts.emplace_back(VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 	_attachmentTypes.emplace_back(Attachment::Type::DEPTH);
+	return *this;
 }
 
-void AttachmentLayout::addColorResolveAttachment(VkFormat format, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp) {
+AttachmentLayout& AttachmentLayout::addColorResolveAttachment(VkFormat format, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp) {
 	_clearValues.emplace_back(VkClearValue{ .color = { 0.0f, 0.0f, 0.0f, 1.0f } });
 	_attachmentDescriptions.emplace_back(createDescription(format, VK_SAMPLE_COUNT_1_BIT, loadOp, storeOp, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL));
 	_subpassImageLayouts.emplace_back(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	_attachmentTypes.emplace_back(Attachment::Type::COLOR_RESOLVE);
+	return *this;
 }
 
-void AttachmentLayout::addColorResolvePresentAttachment(VkFormat format, VkAttachmentLoadOp loadOp) {
+AttachmentLayout& AttachmentLayout::addColorResolvePresentAttachment(VkFormat format, VkAttachmentLoadOp loadOp) {
 	_clearValues.emplace_back(VkClearValue{ .color = { 0.0f, 0.0f, 0.0f, 1.0f } });
 	_attachmentDescriptions.emplace_back(createDescription(format, VK_SAMPLE_COUNT_1_BIT, loadOp, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR));
 	_subpassImageLayouts.emplace_back(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
 	_attachmentTypes.emplace_back(Attachment::Type::COLOR_RESOLVE);
+	return *this;
 }
 
 VkAttachmentDescription AttachmentLayout::createDescription(

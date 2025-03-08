@@ -1,5 +1,7 @@
 #pragma once
 
+#include "lib/status/status.h"
+
 #include <vulkan/vulkan.h>
 
 #include <algorithm>
@@ -17,9 +19,12 @@ class Subpass {
 	std::vector<VkAttachmentReference> _colorAttachmentResolveRefs;
 
 public:
-	Subpass(const AttachmentLayout& layout);
-	void addSubpassOutputAttachment(uint32_t attachmentBinding);
-	void addSubpassInputAttachment(uint32_t attachmentBinding, VkImageLayout layout);
+	explicit Subpass(const AttachmentLayout& layout);
+
+	~Subpass() = default;
+
+	lib::Status addOutputAttachment(uint32_t attachmentBinding);
+	lib::Status addInputAttachment(uint32_t attachmentBinding, VkImageLayout imageLayout);
 	VkSubpassDescription getVkSubpassDescription() const;
 
 	const std::vector<VkAttachmentReference>& getInputAttachmentRefs() const { return _inputAttachmentRefs; }

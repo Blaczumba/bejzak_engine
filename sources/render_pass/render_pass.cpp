@@ -10,13 +10,18 @@ Renderpass::Renderpass(const LogicalDevice& logicalDevice, const AttachmentLayou
     : _logicalDevice(logicalDevice), _attachmentsLayout(layout) {
 }
 
-void Renderpass::create() {
-    cleanup();
+lib::ErrorOr<std::unique_ptr<Renderpass>> Renderpass::create(const LogicalDevice& logicalDevice, const AttachmentLayout& layout) {
+    return std::unique_ptr<Renderpass>(new Renderpass(logicalDevice, layout));
+}
+
+lib::Status Renderpass::build() {
+    if (_renderpass != VK_NULL_HANDLE) {
+        vkDestroyRenderPass(_logicalDevice.getVkDevice(), _renderpass, nullptr);
+    }
 
     const std::vector<VkAttachmentDescription>& attachmentDescriptions = _attachmentsLayout.getVkAttachmentDescriptions();
-    std::vector<VkSubpassDescription> subpassDescriptions;
-    subpassDescriptions.reserve(_subpasses.size());
-    std::transform(_subpasses.cbegin(), _subpasses.cend(), std::back_inserter(subpassDescriptions), [](const Subpass& subpass) { return subpass.getVkSubpassDescription(); });
+    lib::Buffer<VkSubpassDescription> subpassDescriptions(_subpasses.size());
+    std::transform(_subpasses.cbegin(), _subpasses.cend(), subpassDescriptions.begin(), [](const Subpass& subpass) { return subpass.getVkSubpassDescription(); });
 
     const VkRenderPassCreateInfo renderPassInfo = {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
@@ -29,19 +34,14 @@ void Renderpass::create() {
     };
 
     if (vkCreateRenderPass(_logicalDevice.getVkDevice(), &renderPassInfo, nullptr, &_renderpass) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create render pass!");
+        return lib::Error("failed to create render pass!");
     }
-}
 
-void Renderpass::cleanup() {
-    if (_renderpass != VK_NULL_HANDLE)
-        vkDestroyRenderPass(_logicalDevice.getVkDevice(), _renderpass, nullptr);
-
-    _renderpass = VK_NULL_HANDLE;
+    return lib::StatusOk();
 }
 
 Renderpass::~Renderpass() {
-    cleanup();
+    vkDestroyRenderPass(_logicalDevice.getVkDevice(), _renderpass, nullptr);
 }
 
 const VkRenderPass Renderpass::getVkRenderPass() const {
@@ -57,15 +57,7 @@ void Renderpass::addSubpass(const Subpass& subpass) {
 }
 
 void Renderpass::addDependency(uint32_t srcSubpassIndex, uint32_t dstSubpassIndex, VkPipelineStageFlags srcStageMask, VkAccessFlags srcAccessMask, VkPipelineStageFlags dstStageMask, VkAccessFlags dstAccessMask) {
-    const VkSubpassDependency dependency = {
-        .srcSubpass = srcSubpassIndex,
-        .dstSubpass = dstSubpassIndex,
-        .srcStageMask = srcStageMask,
-        .dstStageMask = dstStageMask,
-        .srcAccessMask = srcAccessMask,
-        .dstAccessMask = dstAccessMask
-    };
-    _subpassDepencies.push_back(dependency);
+    _subpassDepencies.emplace_back(srcSubpassIndex, dstSubpassIndex, srcStageMask, dstStageMask, srcAccessMask, dstAccessMask);
 }
 
 const LogicalDevice& Renderpass::getLogicalDevice() const {

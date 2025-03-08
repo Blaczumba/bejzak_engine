@@ -18,9 +18,9 @@ VkSubpassDescription Subpass::getVkSubpassDescription() const {
     };
 }
 
-void Subpass::addSubpassOutputAttachment(uint32_t attachmentBinding) {
+lib::Status Subpass::addOutputAttachment(uint32_t attachmentBinding) {
     if (_layout.getAttachmentsCount() <= attachmentBinding)
-        throw std::runtime_error("attachmentBinding is not a valid index in attachments vector!");
+        return lib::Error("attachmentBinding is not a valid index in attachments vector!");
 
     switch (_layout.getAttachmentsTypes()[attachmentBinding]) {
     case Attachment::Type::COLOR:
@@ -33,12 +33,14 @@ void Subpass::addSubpassOutputAttachment(uint32_t attachmentBinding) {
         _depthAttachmentRefs.emplace_back(attachmentBinding, _layout.getVkSubpassLayouts()[attachmentBinding]);
         break;
     default:
-        throw std::runtime_error("Unknown attachment type");
+        return lib::Error("Unknown attachment type");
     }
+    return lib::StatusOk();
 }
 
-void Subpass::addSubpassInputAttachment(uint32_t attachmentBinding, VkImageLayout layout) {
+lib::Status Subpass::addInputAttachment(uint32_t attachmentBinding, VkImageLayout imageLayout) {
     if (_layout.getAttachmentsCount() <= attachmentBinding)
-        throw std::runtime_error("attachmentBinding is not a valid index in attachments vector!");
-    _inputAttachmentRefs.emplace_back(attachmentBinding, layout);
+        return lib::Error("attachmentBinding is not a valid index in attachments vector!");
+    _inputAttachmentRefs.emplace_back(attachmentBinding, imageLayout);
+    return lib::StatusOk();
 }

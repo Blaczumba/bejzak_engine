@@ -1,5 +1,6 @@
 #pragma once
 
+#include "lib/status/status.h"
 #include "logical_device/logical_device.h"
 #include "subpass/subpass.h"
 #include "memory_objects/texture/texture_factory.h"
@@ -21,11 +22,14 @@ class Renderpass {
 
 	const LogicalDevice& _logicalDevice;
 
-public:
 	Renderpass(const LogicalDevice& logicalDevice, const AttachmentLayout& layout);
+
+public:
+	static lib::ErrorOr<std::unique_ptr<Renderpass>> create(const LogicalDevice& logicalDevice, const AttachmentLayout& layout);
+
 	~Renderpass();
-	void create();
-	void cleanup();
+
+	lib::Status build();
 
 	const VkRenderPass getVkRenderPass() const;
 	const AttachmentLayout& getAttachmentsLayout() const;
