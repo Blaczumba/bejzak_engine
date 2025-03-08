@@ -21,7 +21,7 @@ public:
 	std::tuple<VkBuffer, VmaAllocation, void*> createVkBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags = 0U);
 	void destroyVkBuffer(const VkBuffer buffer, const VmaAllocation allocation);
 	void sendDataToBufferMemory(const VkBuffer buffer, const VmaAllocation allocation, const void* data, size_t size);
-	std::pair<VkImage, VmaAllocation> createVkImage(const ImageParameters& params, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags = 0U);
+	lib::ErrorOr<std::pair<VkImage, VmaAllocation>> createVkImage(const ImageParameters& params, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags = 0U);
 	void destroyVkImage(const VkImage image, const VmaAllocation allocation);
 
 private:

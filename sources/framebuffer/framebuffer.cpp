@@ -38,14 +38,16 @@ lib::ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromSwapchain(cons
         case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
             imageViews[i] = swapchain.getVkImageViews()[swapchainImageIndex];
             break;
-        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-            textureAttachments[i] = TextureFactory::createColorAttachment(logicalDevice, commandBuffer, description.format, description.samples, swapchainExtent);
+        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL: {
+            ASSIGN_OR_RETURN(textureAttachments[i], TextureFactory::createColorAttachment(logicalDevice, commandBuffer, description.format, description.samples, swapchainExtent));
             imageViews[i] = textureAttachments[i]->getVkImageView();
             break;
-        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-            textureAttachments[i] = TextureFactory::createDepthAttachment(logicalDevice, commandBuffer, description.format, description.samples, swapchainExtent);
+        }
+        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL: {
+            ASSIGN_OR_RETURN(textureAttachments[i], TextureFactory::createDepthAttachment(logicalDevice, commandBuffer, description.format, description.samples, swapchainExtent));
             imageViews[i] = textureAttachments[i]->getVkImageView();
             break;
+        }
         default:
             return lib::Error("Failed to recognize final layout in the framebuffer.");
         }

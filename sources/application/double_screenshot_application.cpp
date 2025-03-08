@@ -78,7 +78,8 @@ lib::Status SingleApp::loadObject() {
         _indexBufferObject = IndexBuffer::create(*_logicalDevice, commandBuffer, vData.indexBuffer, vData.indexType).value();
 
         ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(drakanTexturePath));
-        _textures.emplace_back(TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
+        ASSIGN_OR_RETURN(auto texture, TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
+        _textures.emplace_back(std::move(texture));
     }
 
     _uniformMap.emplace(drakanTexturePath, std::make_shared<UniformBufferTexture>(*_textures.back()));
@@ -127,17 +128,20 @@ lib::Status SingleApp::loadObjects() {
 
             if (!_uniformMap.contains(diffusePath)) {
                 ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(diffusePath));
-                _textures.emplace_back(TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
+                ASSIGN_OR_RETURN(auto texture, TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
+                _textures.emplace_back(std::move(texture));
                 _uniformMap.emplace(diffusePath, std::make_shared<UniformBufferTexture>(*_textures.back()));
             }
             if (!_uniformMap.contains(normalPath)) {
                 ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(normalPath));
-                _textures.emplace_back(TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
+                ASSIGN_OR_RETURN(auto texture, TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
+                _textures.emplace_back(std::move(texture));
                 _uniformMap.emplace(normalPath, std::make_shared<UniformBufferTexture>(*_textures.back()));
             }
             if (!_uniformMap.contains(metallicRoughnessPath)) {
                 ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(metallicRoughnessPath));
-                _textures.emplace_back(TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
+                ASSIGN_OR_RETURN(auto texture, TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
+                _textures.emplace_back(std::move(texture));
                 _uniformMap.emplace(metallicRoughnessPath, std::make_shared<UniformBufferTexture>(*_textures.back()));
             }
 
@@ -187,8 +191,8 @@ lib::Status SingleApp::createDescriptorSets() {
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
 
         ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(TEXTURES_PATH "cubemap_yokohama_rgba.ktx"));
-        _textureCubemap = TextureFactory::createTextureCubemap(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy);
-        _shadowMap = TextureFactory::create2DShadowmap(*_logicalDevice, commandBuffer, 1024 * 2, 1024 * 2, VK_FORMAT_D32_SFLOAT);
+        ASSIGN_OR_RETURN(_textureCubemap, TextureFactory::createTextureCubemap(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
+        ASSIGN_OR_RETURN(_shadowMap, TextureFactory::create2DShadowmap(*_logicalDevice, commandBuffer, 1024 * 2, 1024 * 2, VK_FORMAT_D32_SFLOAT));
     }
 
     _uniformBuffersObjects = std::make_unique<UniformBufferData<UniformBufferObject>>(*_logicalDevice, 200);

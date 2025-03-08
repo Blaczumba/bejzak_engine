@@ -52,9 +52,10 @@ std::tuple<VkBuffer, VmaAllocation, void*> VmaWrapper::createVkBuffer(VkDeviceSi
 	VmaAllocation allocation;
 	VmaAllocationInfo allocationInfo;
 	if (vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo, &buffer, &allocation, &allocationInfo) != VK_SUCCESS) {
-		throw std::runtime_error("failed to create buffer!");
+		// return lib::Error("failed to create buffer!");
+		
 	};
-	return { buffer, allocation, allocationInfo.pMappedData };
+	return std::tuple{ buffer, allocation, allocationInfo.pMappedData };
 }
 
 void VmaWrapper::destroyVkBuffer(const VkBuffer buffer, const VmaAllocation allocation) {
@@ -65,7 +66,7 @@ void VmaWrapper::sendDataToBufferMemory(const VkBuffer buffer, const VmaAllocati
 	vmaCopyMemoryToAllocation(_allocator, data, allocation, 0, size);
 }
 
-std::pair<VkImage, VmaAllocation> VmaWrapper::createVkImage(const ImageParameters& params, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags) {
+lib::ErrorOr<std::pair<VkImage, VmaAllocation>> VmaWrapper::createVkImage(const ImageParameters& params, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags) {
 	VkImageCreateInfo imageInfo = {
 		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 		.imageType = VK_IMAGE_TYPE_2D,
@@ -94,8 +95,10 @@ std::pair<VkImage, VmaAllocation> VmaWrapper::createVkImage(const ImageParameter
 
 	VmaAllocation allocation;
 	VkImage image;
-	vmaCreateImage(_allocator, &imageInfo, &vmaAllocInfo, &image, &allocation, nullptr);
-	return { image, allocation };
+	if (vmaCreateImage(_allocator, &imageInfo, &vmaAllocInfo, &image, &allocation, nullptr) != VK_SUCCESS) {
+		return lib::Error("Failed to create Buffer.");
+	}
+	return std::pair{ image, allocation };
 }
 
 void VmaWrapper::destroyVkImage(const VkImage image, const VmaAllocation allocation) {

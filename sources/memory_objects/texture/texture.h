@@ -1,5 +1,6 @@
 #pragma once
 
+#include "lib/status/status.h"
 #include "memory_allocator/memory_allocator.h"
 #include "memory_allocator/allocation.h"
 #include "memory_objects/buffers.h"
@@ -61,14 +62,14 @@ struct ImageCreator {
 	Allocation& allocation;
 	const ImageParameters& params;
 
-	const VkImage operator()(VmaWrapper& allocator) {
-		auto[image, tmpAllocation] = allocator.createVkImage(params, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
-		allocation = tmpAllocation;
-		return image;
+	const lib::ErrorOr<VkImage> operator()(VmaWrapper& allocator) {
+		ASSIGN_OR_RETURN(std::pair imageData, allocator.createVkImage(params, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE));
+		allocation = imageData.second;
+		return imageData.first;
 	}
 
-	const VkImage operator()(auto&&) {
-		throw std::runtime_error("Unrecognized allocator during Texture creation");
+	const lib::ErrorOr<VkImage> operator()(auto&&) {
+		return lib::Error("Unrecognized allocator during Texture creation");
 	}
 };
 

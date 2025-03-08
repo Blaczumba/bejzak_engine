@@ -1,5 +1,6 @@
 #include "texture_factory.h"
 
+#include "lib/status/status.h"
 #include "logical_device/logical_device.h"
 #include "memory_objects/staging_buffer.h"
 #include "model_loader/image_loader/image_loader.h"
@@ -8,32 +9,32 @@
 
 namespace {
 
-const VkImage allocate(Allocation& allocation, const ImageParameters& imageParameters, MemoryAllocator& memoryAllocator) {
+const lib::ErrorOr<VkImage> allocate(Allocation& allocation, const ImageParameters& imageParameters, MemoryAllocator& memoryAllocator) {
     return std::visit(ImageCreator{ allocation, imageParameters }, memoryAllocator);
 }
 
-std::unique_ptr<Texture> createImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkImageLayout dstLayout, Texture::Type type, ImageParameters&& imageParams) {
+lib::ErrorOr<std::unique_ptr<Texture>> createImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkImageLayout dstLayout, Texture::Type type, ImageParameters&& imageParams) {
     Allocation allocation;
-    const VkImage image = allocate(allocation, imageParams, logicalDevice.getMemoryAllocator());
+    ASSIGN_OR_RETURN(const VkImage image, allocate(allocation, imageParams, logicalDevice.getMemoryAllocator()));
     const VkImageView view = logicalDevice.createImageView(image, imageParams);
     transitionImageLayout(commandBuffer, image, imageParams.layout, dstLayout, imageParams.aspect, imageParams.mipLevels, imageParams.layerCount);
     imageParams.layout = dstLayout;
     return Texture::create(logicalDevice, type, image, allocation, imageParams, view);
 }
 
-std::unique_ptr<Texture> createImageSampler(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkImageLayout dstLayout, Texture::Type type, ImageParameters& imageParams, const SamplerParameters& samplerParams) {
+lib::ErrorOr<std::unique_ptr<Texture>> createImageSampler(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkImageLayout dstLayout, Texture::Type type, ImageParameters& imageParams, const SamplerParameters& samplerParams) {
     const VkSampler sampler = logicalDevice.createSampler(samplerParams);
     Allocation allocation;
-    const VkImage image = allocate(allocation, imageParams, logicalDevice.getMemoryAllocator());
+    ASSIGN_OR_RETURN(const VkImage image, allocate(allocation, imageParams, logicalDevice.getMemoryAllocator()));
     const VkImageView view = logicalDevice.createImageView(image, imageParams);
     transitionImageLayout(commandBuffer, image, imageParams.layout, dstLayout, imageParams.aspect, imageParams.mipLevels, imageParams.layerCount);
     imageParams.layout = dstLayout;
     return Texture::create(logicalDevice, type, image, allocation, imageParams, view, sampler, samplerParams);
 }
 
-std::unique_ptr<Texture> createTextureMipmapImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, ImageParameters& imageParams, const SamplerParameters& samplerParams) {
+lib::ErrorOr<std::unique_ptr<Texture>> createTextureMipmapImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, ImageParameters& imageParams, const SamplerParameters& samplerParams) {
     Allocation allocation;
-    const VkImage image = allocate(allocation, imageParams, logicalDevice.getMemoryAllocator());
+    ASSIGN_OR_RETURN(const VkImage image, allocate(allocation, imageParams, logicalDevice.getMemoryAllocator()));
     const VkImageView view = logicalDevice.createImageView(image, imageParams);
     const VkSampler sampler = logicalDevice.createSampler(samplerParams);
     transitionImageLayout(commandBuffer, image, imageParams.layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, imageParams.aspect, imageParams.mipLevels, imageParams.layerCount);
@@ -43,9 +44,9 @@ std::unique_ptr<Texture> createTextureMipmapImage(const LogicalDevice& logicalDe
     return Texture::create(logicalDevice, Texture::Type::IMAGE_2D, image, allocation, imageParams, view, sampler, samplerParams);
 }
 
-std::unique_ptr<Texture> createTextureImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, Texture::Type type, const VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, ImageParameters& imageParams, const SamplerParameters& samplerParams) {
+lib::ErrorOr<std::unique_ptr<Texture>> createTextureImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, Texture::Type type, const VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, ImageParameters& imageParams, const SamplerParameters& samplerParams) {
     Allocation allocation;
-    const VkImage image = allocate(allocation, imageParams, logicalDevice.getMemoryAllocator());
+    ASSIGN_OR_RETURN(const VkImage image, allocate(allocation, imageParams, logicalDevice.getMemoryAllocator()));
     const VkImageView view = logicalDevice.createImageView(image, imageParams);
     const VkSampler sampler = logicalDevice.createSampler(samplerParams);
     transitionImageLayout(commandBuffer, image, imageParams.layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, imageParams.aspect, imageParams.mipLevels, imageParams.layerCount);
@@ -57,7 +58,7 @@ std::unique_ptr<Texture> createTextureImage(const LogicalDevice& logicalDevice, 
 
 }
 
-std::unique_ptr<Texture> TextureFactory::create2DShadowmap(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, uint32_t width, uint32_t height, VkFormat format) {
+lib::ErrorOr<std::unique_ptr<Texture>> TextureFactory::create2DShadowmap(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, uint32_t width, uint32_t height, VkFormat format) {
     ImageParameters imageParams = {
         .format = format,
         .width = width,
@@ -75,7 +76,7 @@ std::unique_ptr<Texture> TextureFactory::create2DShadowmap(const LogicalDevice& 
     return createImageSampler(logicalDevice, commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, Texture::Type::SHADOWMAP, imageParams, samplerParams);
 }
 
-std::unique_ptr<Texture> TextureFactory::create2DTextureImage(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer, const ImageDimensions& dimensions, VkFormat format, float samplerAnisotropy) {
+lib::ErrorOr<std::unique_ptr<Texture>> TextureFactory::create2DTextureImage(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer, const ImageDimensions& dimensions, VkFormat format, float samplerAnisotropy) {
     ImageParameters imageParams = {
         .format = format,
         .width = dimensions.width,
@@ -92,7 +93,7 @@ std::unique_ptr<Texture> TextureFactory::create2DTextureImage(const LogicalDevic
     return createTextureMipmapImage(logicalDevice, commandBuffer, stagingBuffer.getVkBuffer(), dimensions.copyRegions, imageParams, samplerParams);
 }
 
-std::unique_ptr<Texture> TextureFactory::createTextureCubemap(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer, const ImageDimensions& dimensions, VkFormat format, float samplerAnisotropy) {
+lib::ErrorOr<std::unique_ptr<Texture>> TextureFactory::createTextureCubemap(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer, const ImageDimensions& dimensions, VkFormat format, float samplerAnisotropy) {
     ImageParameters imageParams = {
         .format = format,
         .width = dimensions.width,
@@ -109,7 +110,7 @@ std::unique_ptr<Texture> TextureFactory::createTextureCubemap(const LogicalDevic
     return createTextureImage(logicalDevice, commandBuffer, Texture::Type::CUBEMAP, stagingBuffer.getVkBuffer(), dimensions.copyRegions, imageParams, samplerParams);
 }
 
-std::unique_ptr<Texture> TextureFactory::createColorAttachment(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkFormat format, VkSampleCountFlagBits samples, VkExtent2D extent) {
+lib::ErrorOr<std::unique_ptr<Texture>> TextureFactory::createColorAttachment(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkFormat format, VkSampleCountFlagBits samples, VkExtent2D extent) {
     return createImage(logicalDevice, commandBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, Texture::Type::COLOR_ATTACHMENT,
         ImageParameters{
             .format = format,
@@ -133,7 +134,7 @@ bool hasStencil(VkFormat format) {
     return std::find(formats.begin(), formats.end(), format) != std::end(formats);
 }
 
-std::unique_ptr<Texture> TextureFactory::createDepthAttachment(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkFormat format, VkSampleCountFlagBits samples, VkExtent2D extent) {
+lib::ErrorOr<std::unique_ptr<Texture>> TextureFactory::createDepthAttachment(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkFormat format, VkSampleCountFlagBits samples, VkExtent2D extent) {
     const VkImageAspectFlags aspect = hasStencil(format) ? VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT : VK_IMAGE_ASPECT_DEPTH_BIT;
     return createImage(logicalDevice, commandBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, Texture::Type::DEPTH_ATTACHMENT,
         ImageParameters{
