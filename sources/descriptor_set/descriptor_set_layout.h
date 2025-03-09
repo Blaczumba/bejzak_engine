@@ -1,7 +1,10 @@
 #pragma once
 
+#include "lib/status/status.h"
+
 #include <vulkan/vulkan.h>
 
+#include <memory>
 #include <unordered_map>
 #include <vector>
 
@@ -17,13 +20,16 @@ class DescriptorSetLayout {
 
 	const LogicalDevice& _logicalDevice;
 
-public:
 	DescriptorSetLayout(const LogicalDevice& logicalDevice);
+
+public:
 	~DescriptorSetLayout();
 
+	static std::unique_ptr<DescriptorSetLayout> create(const LogicalDevice& logicalDevice);
+
+	lib::Status build();
 
 	void addLayoutBinding(VkDescriptorType descriptorType, VkShaderStageFlags stageFlags, uint32_t descriptorCount = 1, const VkSampler* pImmutableSamplers = nullptr);
-	void create();
 
 	const VkDescriptorSetLayout getVkDescriptorSetLayout() const;
 	const DescriptorTypeCounterDict& getDescriptorTypeCounter() const;

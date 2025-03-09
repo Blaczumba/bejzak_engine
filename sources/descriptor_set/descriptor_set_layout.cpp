@@ -17,9 +17,13 @@ void DescriptorSetLayout::addLayoutBinding(VkDescriptorType descriptorType, VkSh
     ++_descriptorTypeOccurances[descriptorType];
 }
 
-void DescriptorSetLayout::create() {
+std::unique_ptr<DescriptorSetLayout> DescriptorSetLayout::create(const LogicalDevice& logicalDevice) {
+    return std::unique_ptr<DescriptorSetLayout>(new DescriptorSetLayout(logicalDevice));
+}
+
+lib::Status DescriptorSetLayout::build() {
     if (_descriptorSetLayout) {
-        throw std::runtime_error("error: trying to create already created descriptor set layout");
+        vkDestroyDescriptorSetLayout(_logicalDevice.getVkDevice(), _descriptorSetLayout, nullptr);
     }
 
     const VkDescriptorSetLayoutCreateInfo layoutInfo = {
@@ -29,8 +33,9 @@ void DescriptorSetLayout::create() {
     };
 
     if (vkCreateDescriptorSetLayout(_logicalDevice.getVkDevice(), &layoutInfo, nullptr, &_descriptorSetLayout) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create descriptor set layout!");
+        return lib::Error("failed to create descriptor set layout!");
     }
+    return lib::StatusOk();
 }
 
 const VkDescriptorSetLayout DescriptorSetLayout::getVkDescriptorSetLayout() const {
