@@ -5,7 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
-using DescriptorTypeCounterDict = std::unordered_map<VkDescriptorType, uint8_t>;
+using DescriptorTypeCounterDict = std::unordered_map<VkDescriptorType, uint32_t>;
 
 class LogicalDevice;
 
@@ -20,6 +20,7 @@ class DescriptorSetLayout {
 public:
 	DescriptorSetLayout(const LogicalDevice& logicalDevice);
 	~DescriptorSetLayout();
+
 
 	void addLayoutBinding(VkDescriptorType descriptorType, VkShaderStageFlags stageFlags, uint32_t descriptorCount = 1, const VkSampler* pImmutableSamplers = nullptr);
 	void create();

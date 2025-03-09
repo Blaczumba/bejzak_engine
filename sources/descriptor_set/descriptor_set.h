@@ -1,5 +1,7 @@
 #pragma once
 
+#include "lib/status/status.h"
+
 #include <vulkan/vulkan.h>
 
 #include <memory>
@@ -16,12 +18,15 @@ class DescriptorSet {
 	std::vector<uint32_t> _dynamicBuffersBaseSizes;
 	const std::shared_ptr<const DescriptorPool> _descriptorPool;
 
+	DescriptorSet(const VkDescriptorSet descriptorSet, const std::shared_ptr<const DescriptorPool>& descriptorPool);
+
 public:
-	DescriptorSet(const std::shared_ptr<const DescriptorPool>& descriptorPool);
 	~DescriptorSet() = default;
 
-	void updateDescriptorSet(const std::vector<UniformBuffer*>& uniformBuffers);
-	void bind(VkCommandBuffer commandBuffer, const Pipeline& pipeline, std::initializer_list<uint32_t> dynamicOffsetStrides = {});
+	static lib::ErrorOr<std::unique_ptr<DescriptorSet>> create(const std::shared_ptr<const DescriptorPool>& descriptorPool);
+
+	void updateDescriptorSet(std::initializer_list<UniformBuffer*> uniformBuffers);
+	void bind(const VkCommandBuffer commandBuffer, const Pipeline& pipeline, std::initializer_list<uint32_t> dynamicOffsetStrides = {});
 
 	const VkDescriptorSet getVkDescriptorSet(size_t i) const;
 

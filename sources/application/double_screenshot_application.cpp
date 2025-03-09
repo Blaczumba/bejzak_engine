@@ -87,7 +87,7 @@ lib::Status SingleApp::loadObject() {
     };
     _objectUniform = std::make_unique<UniformBufferData<UniformBufferObject>>(*_logicalDevice);
     _objectUniform->updateUniformBuffer(object);
-    auto descriptorSet = _descriptorPoolNormal->createDesriptorSet();
+    ASSIGN_OR_RETURN(auto descriptorSet, _descriptorPoolNormal->createDesriptorSet());
     descriptorSet->updateDescriptorSet({ _dynamicUniformBuffersCamera.get(), _uniformBuffersLight.get(), _objectUniform.get(), _uniformMap[drakanTexturePath].get(), _shadowTextureUniform.get() });
     _objectEntity = _registry.createEntity();
     _entitytoDescriptorSet.emplace(_objectEntity, std::move(descriptorSet));
@@ -141,7 +141,7 @@ lib::Status SingleApp::loadObjects() {
                 _uniformMap.emplace(metallicRoughnessPath, std::make_shared<UniformBufferTexture>(*_textures.back()));
             }
 
-            auto descriptorSet = _descriptorPool->createDesriptorSet();
+            ASSIGN_OR_RETURN(auto descriptorSet, _descriptorPool->createDesriptorSet());
             descriptorSet->updateDescriptorSet({ _dynamicUniformBuffersCamera.get(), _uniformBuffersLight.get(), _uniformBuffersObjects.get(), _uniformMap[diffusePath].get(), _shadowTextureUniform.get(), _uniformMap[normalPath].get(), _uniformMap[metallicRoughnessPath].get() });;
 
             _objects.emplace_back("Object", e);
@@ -203,13 +203,13 @@ lib::Status SingleApp::createDescriptorSets() {
     _skyboxShaderProgram = ShaderProgramFactory::createShaderProgram(ShaderProgramType::SKYBOX, *_logicalDevice);
     _shadowShaderProgram = ShaderProgramFactory::createShaderProgram(ShaderProgramType::SHADOW, *_logicalDevice);
 
-    _descriptorPool = std::make_shared<DescriptorPool>(*_logicalDevice, _pbrShaderProgram->getDescriptorSetLayout(), 150);
-    _descriptorPoolNormal = std::make_unique<DescriptorPool>(*_logicalDevice, _normalShaderProgram->getDescriptorSetLayout(), 1);
-    _descriptorPoolSkybox = std::make_shared<DescriptorPool>(*_logicalDevice, _skyboxShaderProgram->getDescriptorSetLayout(), 1);
-    _descriptorPoolShadow = std::make_shared<DescriptorPool>(*_logicalDevice, _shadowShaderProgram->getDescriptorSetLayout(), 2);
+    ASSIGN_OR_RETURN(_descriptorPool, DescriptorPool::create(*_logicalDevice, _pbrShaderProgram->getDescriptorSetLayout(), 150));
+    ASSIGN_OR_RETURN(_descriptorPoolNormal, DescriptorPool::create(*_logicalDevice, _normalShaderProgram->getDescriptorSetLayout(), 1));
+    ASSIGN_OR_RETURN(_descriptorPoolSkybox, DescriptorPool::create(*_logicalDevice, _skyboxShaderProgram->getDescriptorSetLayout(), 1));
+    ASSIGN_OR_RETURN(_descriptorPoolShadow, DescriptorPool::create(*_logicalDevice, _shadowShaderProgram->getDescriptorSetLayout(), 2));
 
-    _descriptorSetSkybox = _descriptorPoolSkybox->createDesriptorSet();
-    _descriptorSetShadow = _descriptorPoolShadow->createDesriptorSet();
+    ASSIGN_OR_RETURN(_descriptorSetSkybox, _descriptorPoolSkybox->createDesriptorSet());
+    ASSIGN_OR_RETURN(_descriptorSetShadow, _descriptorPoolShadow->createDesriptorSet());
 
     _descriptorSetSkybox->updateDescriptorSet({ _dynamicUniformBuffersCamera.get(), _skyboxTextureUniform.get() });
     _descriptorSetShadow->updateDescriptorSet({ _uniformBuffersLight.get(),  _uniformBuffersObjects.get() });

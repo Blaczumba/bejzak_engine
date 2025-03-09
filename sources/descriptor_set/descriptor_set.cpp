@@ -2,6 +2,8 @@
 
 #include "descriptor_pool.h"
 #include "descriptor_set_layout.h"
+#include "lib/buffer/buffer.h"
+#include "lib/status/status.h"
 #include "logical_device/logical_device.h"
 #include "memory_objects/uniform_buffer/uniform_buffer.h"
 #include "pipeline/pipeline.h"
@@ -13,40 +15,40 @@
 #include <string>
 #include <unordered_map>
 
-DescriptorSet::DescriptorSet(const std::shared_ptr<const DescriptorPool>& descriptorPool)
-	: _descriptorPool(descriptorPool) {
-    const VkDescriptorSetLayout layout = _descriptorPool->getDescriptorSetLayout().getVkDescriptorSetLayout();
+DescriptorSet::DescriptorSet(const VkDescriptorSet descriptorSet, const std::shared_ptr<const DescriptorPool>& descriptorPool)
+	: _descriptorSet(descriptorSet), _descriptorPool(descriptorPool) {}
+
+lib::ErrorOr<std::unique_ptr<DescriptorSet>> DescriptorSet::create(const std::shared_ptr<const DescriptorPool>& descriptorPool) {
+    const VkDescriptorSetLayout layout = descriptorPool->getDescriptorSetLayout().getVkDescriptorSetLayout();
 
     const VkDescriptorSetAllocateInfo allocInfo = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-        .descriptorPool = _descriptorPool->getVkDescriptorPool(),
+        .descriptorPool = descriptorPool->getVkDescriptorPool(),
         .descriptorSetCount = 1,
         .pSetLayouts = &layout
     };
 
-    if (vkAllocateDescriptorSets(_descriptorPool->getLogicalDevice().getVkDevice(), &allocInfo, &_descriptorSet) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate descriptor sets!");
+    VkDescriptorSet descriptorSet;
+    if (vkAllocateDescriptorSets(descriptorPool->getLogicalDevice().getVkDevice(), &allocInfo, &descriptorSet) != VK_SUCCESS) {
+        return lib::Error("failed to allocate descriptor sets!");
     }
+    return std::unique_ptr<DescriptorSet>(new DescriptorSet(descriptorSet, descriptorPool));
 }
 
-void DescriptorSet::updateDescriptorSet(const std::vector<UniformBuffer*>& uniformBuffers) {
-
-    std::vector<VkWriteDescriptorSet> descriptorWrites;
-    descriptorWrites.reserve(uniformBuffers.size());
-
-    for (size_t j = 0; j < uniformBuffers.size(); j++) {
-        const UniformBuffer* uniformBuffer = uniformBuffers[j];
-        descriptorWrites.emplace_back(uniformBuffer->getVkWriteDescriptorSet(_descriptorSet, j));
+void DescriptorSet::updateDescriptorSet(std::initializer_list<UniformBuffer*> uniformBuffers) {
+    lib::Buffer<VkWriteDescriptorSet> descriptorWrites(uniformBuffers.size());
+    for (size_t i = 0; i < uniformBuffers.size(); ++i) {
+        const UniformBuffer* uniformBuffer = *(uniformBuffers.begin() + i);
+        descriptorWrites[i] = uniformBuffer->getVkWriteDescriptorSet(_descriptorSet, i);
         if (uniformBuffer->getVkDescriptorType() == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
             _dynamicBuffersBaseSizes.emplace_back(uniformBuffer->getSize());
         }
     }
-
     vkUpdateDescriptorSets(_descriptorPool->getLogicalDevice().getVkDevice(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 }
 
-void DescriptorSet::bind(VkCommandBuffer commandBuffer, const Pipeline& pipeline, std::initializer_list<uint32_t> dynamicOffsetStrides) {
-    std::array<uint32_t, 16> sizes;
+void DescriptorSet::bind(const VkCommandBuffer commandBuffer, const Pipeline& pipeline, std::initializer_list<uint32_t> dynamicOffsetStrides) {
+    std::array<uint32_t, 4> sizes;
     std::transform(dynamicOffsetStrides.begin(), dynamicOffsetStrides.end(), _dynamicBuffersBaseSizes.cbegin(), sizes.begin(), std::multiplies<uint32_t>());
     vkCmdBindDescriptorSets(commandBuffer, pipeline.getVkPipelineBindPoint(), pipeline.getVkPipelineLayout(), 0, 1, &_descriptorSet, dynamicOffsetStrides.size(), sizes.data());
 }
