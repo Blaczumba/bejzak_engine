@@ -34,9 +34,7 @@ lib::ErrorOr<std::unique_ptr<IndexBuffer>> IndexBuffer::create(const LogicalDevi
 }
 
 IndexBuffer::~IndexBuffer() {
-    if (_indexBuffer != VK_NULL_HANDLE) {
-        std::visit(BufferDeallocator{ _indexBuffer }, _logicalDevice.getMemoryAllocator(), _allocation);
-    }
+    std::visit(BufferDeallocator{ _indexBuffer }, _logicalDevice.getMemoryAllocator(), _allocation);
 }
 
 const VkBuffer IndexBuffer::getVkBuffer() const {

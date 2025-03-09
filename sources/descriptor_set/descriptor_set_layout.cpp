@@ -22,7 +22,7 @@ std::unique_ptr<DescriptorSetLayout> DescriptorSetLayout::create(const LogicalDe
 }
 
 lib::Status DescriptorSetLayout::build() {
-    if (_descriptorSetLayout) {
+    if (_descriptorSetLayout != VK_NULL_HANDLE) {
         vkDestroyDescriptorSetLayout(_logicalDevice.getVkDevice(), _descriptorSetLayout, nullptr);
     }
 

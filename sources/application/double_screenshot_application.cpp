@@ -636,7 +636,7 @@ void SingleApp::recreateSwapChain() {
     _camera->setAspectRatio(static_cast<float>(extent.width) / extent.height);
     vkDeviceWaitIdle(_logicalDevice->getVkDevice());
 
-    _swapchain = Swapchain::create(*_logicalDevice, _swapchain.get()).value();
+    _swapchain = Swapchain::create(*_logicalDevice, _swapchain->getVkSwapchain()).value();
     for (uint8_t i = 0; i < _swapchain->getImagesCount(); ++i) {
         _framebuffers[i] = Framebuffer::createFromSwapchain(*_renderPass, *_swapchain, *_singleTimeCommandPool, i).value();
     }

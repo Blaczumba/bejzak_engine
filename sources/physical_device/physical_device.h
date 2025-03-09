@@ -26,6 +26,4 @@ public:
     const VkPhysicalDevice getVkPhysicalDevice() const;
     const Window& getWindow() const;
     const PhysicalDevicePropertyManager& getPropertyManager() const;
-
-    std::unique_ptr<LogicalDevice> createLogicalDevice();
 };

@@ -58,7 +58,3 @@ const Window& PhysicalDevice::getWindow() const {
 const PhysicalDevicePropertyManager& PhysicalDevice::getPropertyManager() const {
     return _propertyManager;
 }
-
-std::unique_ptr<LogicalDevice> PhysicalDevice::createLogicalDevice() {
-    return std::make_unique<LogicalDevice>(*this);
-}

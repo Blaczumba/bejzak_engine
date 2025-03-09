@@ -4,9 +4,7 @@ VertexBuffer::VertexBuffer(const VkBuffer vertexBuffer, const Allocation allocat
     : _vertexBuffer(vertexBuffer), _allocation(allocation), _logicalDevice(logicalDevice) {}
 
 VertexBuffer::~VertexBuffer() {
-    if (_vertexBuffer != VK_NULL_HANDLE) {
-        std::visit(BufferDeallocator{ _vertexBuffer }, _logicalDevice.getMemoryAllocator(), _allocation);
-    }
+    std::visit(BufferDeallocator{ _vertexBuffer }, _logicalDevice.getMemoryAllocator(), _allocation);
 }
 
 lib::ErrorOr<std::unique_ptr<VertexBuffer>> VertexBuffer::create(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer) {

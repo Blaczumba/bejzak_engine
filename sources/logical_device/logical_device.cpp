@@ -1,17 +1,28 @@
 #include "logical_device.h"
 
 #include "config/config.h"
+#include "lib/buffer/buffer.h"
 
 #include <vulkan/vulkan.h>
 
+#include <algorithm>
 #include <set>
 #include <stdexcept>
 
-LogicalDevice::LogicalDevice(const PhysicalDevice& physicalDevice)
-    : _physicalDevice(physicalDevice) {
+LogicalDevice::LogicalDevice(const VkDevice logicalDevice, const PhysicalDevice& physicalDevice, const VkQueue graphicsQueue, const VkQueue presentQueue, const VkQueue computeQueue, const VkQueue transferQueue)
+    : _device(logicalDevice), _physicalDevice(physicalDevice),
+    _memoryAllocator(std::in_place_type<VmaWrapper>, logicalDevice, physicalDevice.getVkPhysicalDevice(), _physicalDevice.getWindow().getInstance().getVkInstance()),
+    _graphicsQueue(graphicsQueue), _presentQueue(presentQueue), _computeQueue(computeQueue), _transferQueue(transferQueue){
+}
+
+LogicalDevice::~LogicalDevice() {
+    std::get<VmaWrapper>(_memoryAllocator).destroy();
+    vkDestroyDevice(_device, nullptr);
+}
+
+lib::ErrorOr<std::unique_ptr<LogicalDevice>> LogicalDevice::create(const PhysicalDevice& physicalDevice) {
     const QueueFamilyIndices& indices = physicalDevice.getPropertyManager().getQueueFamilyIndices();
 
-    std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
     const std::set<uint32_t> uniqueQueueFamilies = {
         *indices.graphicsFamily,
         *indices.presentFamily,
@@ -20,13 +31,12 @@ LogicalDevice::LogicalDevice(const PhysicalDevice& physicalDevice)
     };
 
     float queuePriority = 1.0f;
-    queueCreateInfos.reserve(uniqueQueueFamilies.size());
-    for (uint32_t queueFamily : uniqueQueueFamilies) {
-        queueCreateInfos.emplace_back(
-            VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-            nullptr, 0, queueFamily, 1, &queuePriority
-        );
-    }
+    lib::Buffer<VkDeviceQueueCreateInfo> queueCreateInfos(uniqueQueueFamilies.size());
+    std::transform(uniqueQueueFamilies.cbegin(), uniqueQueueFamilies.cend(), queueCreateInfos.begin(), [&queuePriority](uint32_t queueFamilyIndex) {
+            return VkDeviceQueueCreateInfo{ VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, nullptr, 0, queueFamilyIndex, 1, &queuePriority }; 
+        }
+    );
+
     const VkPhysicalDeviceIndexTypeUint8FeaturesEXT uint8IndexFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INDEX_TYPE_UINT8_FEATURES_EXT,
         .indexTypeUint8 = VK_TRUE
@@ -71,19 +81,21 @@ LogicalDevice::LogicalDevice(const PhysicalDevice& physicalDevice)
         .ppEnabledExtensionNames = deviceExtensions.data(),
     };
 
-    if (vkCreateDevice(_physicalDevice.getVkPhysicalDevice(), &createInfo, nullptr, &_device) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create logical device!");
+    VkDevice logicalDevice;
+    if (vkCreateDevice(physicalDevice.getVkPhysicalDevice(), &createInfo, nullptr, &logicalDevice) != VK_SUCCESS) {
+        return lib::Error("failed to create logical device!");
     }
 
-    _memoryAllocator.emplace<VmaWrapper>(_device, _physicalDevice.getVkPhysicalDevice(), _physicalDevice.getWindow().getInstance().getVkInstance());
-
-    vkGetDeviceQueue(_device, *indices.graphicsFamily, 0, &_graphicsQueue);
-    vkGetDeviceQueue(_device, *indices.presentFamily, 0, &_presentQueue);
-    vkGetDeviceQueue(_device, *indices.computeFamily, 0, &_computeQueue);
-    vkGetDeviceQueue(_device, *indices.transferFamily, 0, &_transferQueue);
+    VkQueue graphicsQueue, presentQueue, computeQueue, transferQueue;
+    vkGetDeviceQueue(logicalDevice, *indices.graphicsFamily, 0, &graphicsQueue);
+    vkGetDeviceQueue(logicalDevice, *indices.presentFamily, 0, &presentQueue);
+    vkGetDeviceQueue(logicalDevice, *indices.computeFamily, 0, &computeQueue);
+    vkGetDeviceQueue(logicalDevice, *indices.transferFamily, 0, &transferQueue);
+    return std::unique_ptr<LogicalDevice>(new LogicalDevice(logicalDevice, physicalDevice, graphicsQueue, presentQueue, computeQueue, transferQueue));
 }
 
 const VkBuffer LogicalDevice::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage) const {
+    // DEPRECATED
     const VkBufferCreateInfo bufferInfo = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .size = size,
@@ -99,6 +111,7 @@ const VkBuffer LogicalDevice::createBuffer(VkDeviceSize size, VkBufferUsageFlags
 }
 
 const VkDeviceMemory LogicalDevice::createBufferMemory(VkBuffer buffer, VkMemoryPropertyFlags properties) const {
+    // DEPRECATED
     const auto& propertyManager = _physicalDevice.getPropertyManager();
     VkMemoryRequirements memRequirements;
     vkGetBufferMemoryRequirements(_device, buffer, &memRequirements);
@@ -118,6 +131,7 @@ const VkDeviceMemory LogicalDevice::createBufferMemory(VkBuffer buffer, VkMemory
 }
 
 const VkImage LogicalDevice::createImage(const ImageParameters& params) const {
+    // DEPRECATED
     VkImageCreateInfo imageInfo = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
         .imageType = VK_IMAGE_TYPE_2D,
@@ -147,6 +161,7 @@ const VkImage LogicalDevice::createImage(const ImageParameters& params) const {
 }
 
 const VkDeviceMemory LogicalDevice::createImageMemory(const VkImage image, const ImageParameters& params) const {
+    // DEPRECATED
     const auto& propertyManager = _physicalDevice.getPropertyManager();
 
     VkMemoryRequirements memRequirements;
@@ -168,6 +183,7 @@ const VkDeviceMemory LogicalDevice::createImageMemory(const VkImage image, const
 }
 
 const VkImageView LogicalDevice::createImageView(const VkImage image, const ImageParameters& params) const {
+    // DEPRECATED
     const VkImageSubresourceRange range = {
         .aspectMask = params.aspect,
         .baseMipLevel = 0,
@@ -195,6 +211,7 @@ const VkImageView LogicalDevice::createImageView(const VkImage image, const Imag
 }
 
 const VkSampler LogicalDevice::createSampler(const SamplerParameters& params) const {
+    // DEPRECATED
     VkSamplerCreateInfo samplerInfo = {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
         .magFilter = params.magFilter,
@@ -232,15 +249,11 @@ const VkSampler LogicalDevice::createSampler(const SamplerParameters& params) co
 }
 
 void LogicalDevice::sendDataToMemory(const VkDeviceMemory memory, const void* data, size_t size) const {
+    // DEPRECATED
     void* mappedMemory;
     vkMapMemory(_device, memory, 0, size, 0, &mappedMemory);
     std::memcpy(mappedMemory, data, size);
     // vkUnmapMemory(_device, memory);
-}
-
-LogicalDevice::~LogicalDevice() {
-    std::get<VmaWrapper>(_memoryAllocator).destroy();
-    vkDestroyDevice(_device, nullptr);
 }
 
 const VkDevice LogicalDevice::getVkDevice() const {

@@ -24,7 +24,7 @@ ApplicationBase::ApplicationBase() {
 
 	_window = std::make_unique<WindowGLFW>(*_instance, "Bejzak Engine", 1920, 1080);
 	_physicalDevice = PhysicalDevice::create(*_window).value();
-	_logicalDevice = _physicalDevice->createLogicalDevice();
+	_logicalDevice = LogicalDevice::create(*_physicalDevice).value();
 	_swapchain = Swapchain::create(*_logicalDevice).value();
 
 	_singleTimeCommandPool = std::make_unique<CommandPool>(*_logicalDevice);

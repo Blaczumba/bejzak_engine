@@ -52,7 +52,7 @@ const lib::Buffer<VkImageView>& Swapchain::getVkImageViews() const {
     return _views;
 }
 
-lib::ErrorOr<std::unique_ptr<Swapchain>> Swapchain::create(const LogicalDevice& logicalDevice, const Swapchain* oldSwapchain) {
+lib::ErrorOr<std::unique_ptr<Swapchain>> Swapchain::create(const LogicalDevice& logicalDevice, const VkSwapchainKHR oldSwapchain) {
     const auto& propertyManager = logicalDevice.getPhysicalDevice().getPropertyManager();
 
     const SwapChainSupportDetails swapChainSupport = propertyManager.getSwapChainSupportDetails();
@@ -95,7 +95,7 @@ lib::ErrorOr<std::unique_ptr<Swapchain>> Swapchain::create(const LogicalDevice& 
     createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
     createInfo.presentMode = presentMode;
     createInfo.clipped = VK_TRUE;
-    createInfo.oldSwapchain = oldSwapchain ? oldSwapchain->getVkSwapchain() : nullptr;
+    createInfo.oldSwapchain = oldSwapchain;
 
     VkSwapchainKHR swapchain;
     if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapchain) != VK_SUCCESS) {

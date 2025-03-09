@@ -7,8 +7,9 @@
 #include <stdexcept>
 
 lib::Status Renderpass::Subpass::addOutputAttachment(const AttachmentLayout& layout, uint32_t attachmentBinding) {
-    if (layout.getAttachmentsCount() <= attachmentBinding)
+    if (layout.getAttachmentsCount() <= attachmentBinding) {
         return lib::Error("attachmentBinding is not a valid index in attachments vector!");
+    }
 
     switch (layout.getAttachmentsTypes()[attachmentBinding]) {
     case Attachment::Type::COLOR:
@@ -27,8 +28,9 @@ lib::Status Renderpass::Subpass::addOutputAttachment(const AttachmentLayout& lay
 }
 
 lib::Status Renderpass::Subpass::addInputAttachment(const AttachmentLayout& layout, uint32_t attachmentBinding, VkImageLayout imageLayout) {
-    if (layout.getAttachmentsCount() <= attachmentBinding)
+    if (layout.getAttachmentsCount() <= attachmentBinding) {
         return lib::Error("attachmentBinding is not a valid index in attachments vector!");
+    }
     _inputAttachmentRefs.emplace_back(attachmentBinding, imageLayout);
     return lib::StatusOk();
 }
