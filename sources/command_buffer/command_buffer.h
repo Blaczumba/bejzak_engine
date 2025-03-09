@@ -50,8 +50,6 @@ public:
 	void endRenderPass() const;
 	void executeSecondaryCommandBuffers(std::initializer_list<VkCommandBuffer> commandBuffers) const;
 	VkResult submit(QueueType type, const VkSemaphore waitSemaphore, const VkSemaphore signalSemaphore, const VkFence waitFence) const;
-
-	const VkViewport& getViewport() const;
 };
 
 class SecondaryCommandBuffer : public CommandBuffer {
@@ -71,5 +69,5 @@ public:
 	SingleTimeCommandBuffer(const CommandPool& commandPool, QueueType queueType = QueueType::GRAPHICS);
 	~SingleTimeCommandBuffer();
 
-	VkCommandBuffer getCommandBuffer() const;
+	const VkCommandBuffer getCommandBuffer() const;
 };

@@ -1,4 +1,6 @@
 #include "tiny_gltf_loader.h"
+
+#include "lib/status/status.h"
 #include "model_loader/model_loader.h"
 #include "primitives/primitives.h"
 
@@ -174,7 +176,7 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
     }
 }
 
-std::expected<std::vector<VertexData>, std::string_view> LoadGltf(const std::string& filePath) {
+lib::ErrorOr<std::vector<VertexData>> LoadGltf(const std::string& filePath) {
     tinygltf::Model model;
     tinygltf::TinyGLTF loader;
     std::string err;
@@ -186,7 +188,7 @@ std::expected<std::vector<VertexData>, std::string_view> LoadGltf(const std::str
     else if (filePath.find(".gltf") != std::string::npos)
         loader.LoadASCIIFromFile(&model, &err, &warn, filePath);
     else
-        return std::unexpected("Failed to load gltf file.");
+        return lib::Error("Failed to load gltf file.");
 
     std::vector<VertexData> vertexDataList;
     for (const auto& scene : model.scenes) {

@@ -1,19 +1,19 @@
 #pragma once
 
 #include <expected>
-#include <string>
+#include <string_view>
 #include <utility>
 
 namespace lib {
 
 template<typename T>
-using ErrorOr = std::expected<T, std::string>;
+using ErrorOr = std::expected<T, std::string_view>;
 
-using Status = std::expected<void, std::string>;
+using Status = std::expected<void, std::string_view>;
 
 struct StatusOk : public Status {};
 
-using Error = std::unexpected<std::string>;
+using Error = std::unexpected<std::string_view>;
 
 }
 
@@ -26,13 +26,13 @@ using Error = std::unexpected<std::string>;
 #define ASSIGN_OR_RETURN(variable, status)                          \
         auto&& UNIQUE_NAME(_result_) = (status);                    \
         /* In Debug mode, perform error checking */                 \
-        if (!UNIQUE_NAME(_result_).has_value())                     \
+        if (!UNIQUE_NAME(_result_).has_value()) [[unlikely]]        \
             return std::unexpected(UNIQUE_NAME(_result_).error());  \
         variable = std::move(UNIQUE_NAME(_result_).value())
 
 #define RETURN_IF_ERROR(status)                         \
         auto&& UNIQUE_NAME(_result_) = (status);        \
-        if (!UNIQUE_NAME(_result_))                     \
+        if (!UNIQUE_NAME(_result_)) [[unlikely]]        \
             return UNIQUE_NAME(_result_)
 /*#else
     #define ASSIGN_OR_RETURN(variable, status)      \

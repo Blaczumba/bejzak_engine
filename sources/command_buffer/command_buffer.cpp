@@ -208,6 +208,6 @@ SingleTimeCommandBuffer::~SingleTimeCommandBuffer() {
     vkFreeCommandBuffers(device, _commandPool.getVkCommandPool(), 1, &_commandBuffer);
 }
 
-VkCommandBuffer SingleTimeCommandBuffer::getCommandBuffer() const {
+const VkCommandBuffer SingleTimeCommandBuffer::getCommandBuffer() const {
     return _commandBuffer;
 }

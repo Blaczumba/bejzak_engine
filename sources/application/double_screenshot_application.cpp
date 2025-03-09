@@ -44,15 +44,15 @@ SingleApp::SingleApp()
 }
 
 lib::Status SingleApp::loadCubemap() {
-    ASSIGN_OR_RETURN(const auto vertexDataCube, loadObj(MODELS_PATH "cube.obj"));
-    ASSIGN_OR_RETURN(const auto vertices, buildInterleavingVertexData(vertexDataCube.positions));
+    ASSIGN_OR_RETURN(const VertexData vertexDataCube, loadObj(MODELS_PATH "cube.obj"));
+    ASSIGN_OR_RETURN(const lib::Buffer<VertexP> vertices, buildInterleavingVertexData(vertexDataCube.positions));
     RETURN_IF_ERROR(_assetManager->loadVertexData("cube.obj", vertices, vertexDataCube.indices, static_cast<uint8_t>(vertexDataCube.indexType)));
     {
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
         const AssetManager::VertexData& vData = _assetManager->getVertexData("cube.obj");
-        _vertexBufferCube = VertexBuffer::create(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives).value();
-        _indexBufferCube = IndexBuffer::create(*_logicalDevice, commandBuffer, vData.indexBuffer, vData.indexType).value();
+        ASSIGN_OR_RETURN(_vertexBufferCube, VertexBuffer::create(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives));
+        ASSIGN_OR_RETURN(_indexBufferCube, IndexBuffer::create(*_logicalDevice, commandBuffer, vData.indexBuffer, vData.indexType));
     }
     return lib::StatusOk();
 }
@@ -68,8 +68,8 @@ lib::Status SingleApp::loadObject() {
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
 
-        VertexData vertexData = loadObj(MODELS_PATH "cylinder8.obj").value();
-        ASSIGN_OR_RETURN(auto vertices, buildInterleavingVertexData(vertexData.positions, vertexData.textureCoordinates, vertexData.normals));
+        ASSIGN_OR_RETURN(const VertexData vertexData, loadObj(MODELS_PATH "cylinder8.obj"));
+        ASSIGN_OR_RETURN(const lib::Buffer<VertexPTN> vertices, buildInterleavingVertexData(vertexData.positions, vertexData.textureCoordinates, vertexData.normals));
         RETURN_IF_ERROR(_assetManager->loadVertexData("cube_normal.obj", vertices, vertexData.indices, static_cast<uint8_t>(vertexData.indexType)));
         const AssetManager::VertexData& vData = _assetManager->getVertexData("cube_normal.obj");
         ASSIGN_OR_RETURN(_vertexBufferObject, VertexBuffer::create(*_logicalDevice, commandBuffer, *vData.vertexBuffer));
@@ -97,10 +97,7 @@ lib::Status SingleApp::loadObject() {
 
 lib::Status SingleApp::loadObjects() {
     // TODO needs refactoring
-    auto start = std::chrono::high_resolution_clock::now();
-    std::vector<VertexData> sceneData = LoadGltf(MODELS_PATH "sponza/scene.gltf").value();
-    auto stop = std::chrono::high_resolution_clock::now();
-    std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count() << std::endl;
+    ASSIGN_OR_RETURN(auto sceneData, LoadGltf(MODELS_PATH "sponza/scene.gltf"));
     for (uint32_t i = 0; i < sceneData.size(); i++) {
         if (sceneData[i].normalTexture.empty() || sceneData[i].metallicRoughnessTexture.empty())
             continue;
