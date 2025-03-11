@@ -51,7 +51,7 @@ Renderpass::Renderpass(const LogicalDevice& logicalDevice, const AttachmentLayou
     : _logicalDevice(logicalDevice), _attachmentsLayout(layout) {
 }
 
-lib::ErrorOr<std::unique_ptr<Renderpass>> Renderpass::create(const LogicalDevice& logicalDevice, const AttachmentLayout& layout) {
+std::unique_ptr<Renderpass> Renderpass::create(const LogicalDevice& logicalDevice, const AttachmentLayout& layout) {
     return std::unique_ptr<Renderpass>(new Renderpass(logicalDevice, layout));
 }
 

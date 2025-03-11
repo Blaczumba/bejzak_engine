@@ -126,11 +126,11 @@ private:
     void recordCommandBuffer(uint32_t imageIndex);
     void recordOctreeSecondaryCommandBuffer(const VkCommandBuffer commandBuffer, const OctreeNode* node, const std::array<glm::vec4, NUM_CUBE_FACES>& planes);
     void recordShadowCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
-    void recreateSwapChain();
+    lib::Status recreateSwapChain();
 
     lib::Status createDescriptorSets();
-    void createPresentResources();
-    void createShadowResources();
+    lib::Status createPresentResources();
+    lib::Status createShadowResources();
 
     lib::Status loadObjects();
     lib::Status loadObject();

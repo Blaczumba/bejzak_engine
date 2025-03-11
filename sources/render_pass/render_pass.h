@@ -36,7 +36,7 @@ class Renderpass {
 
 public:
 	// Allocates memory for object and leaves it in initial state.
-	static lib::ErrorOr<std::unique_ptr<Renderpass>> create(const LogicalDevice& logicalDevice, const AttachmentLayout& layout);
+	static std::unique_ptr<Renderpass> create(const LogicalDevice& logicalDevice, const AttachmentLayout& layout);
 
 	~Renderpass();
 

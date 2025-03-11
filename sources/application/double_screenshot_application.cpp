@@ -19,7 +19,6 @@
 #include <array>
 #include <chrono>
 
-
 SingleApp::SingleApp()
     : ApplicationBase() {
     _assetManager = std::make_unique<AssetManager>(_logicalDevice->getMemoryAllocator());
@@ -104,9 +103,8 @@ lib::Status SingleApp::loadObjects() {
         _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + sceneData[i].diffuseTexture);
         _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + sceneData[i].metallicRoughnessTexture);
         _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + sceneData[i].normalTexture);
-        const auto vertices = buildInterleavingVertexData(sceneData[i].positions, sceneData[i].textureCoordinates, sceneData[i].normals, sceneData[i].tangents);
-        if (vertices.has_value())
-            _assetManager->loadVertexData(std::to_string(i), *vertices, sceneData[i].indices, static_cast<uint8_t>(sceneData[i].indexType));
+        ASSIGN_OR_RETURN(const auto vertices, buildInterleavingVertexData(sceneData[i].positions, sceneData[i].textureCoordinates, sceneData[i].normals, sceneData[i].tangents));
+        _assetManager->loadVertexData(std::to_string(i), vertices, sceneData[i].indices, static_cast<uint8_t>(sceneData[i].indexType));
     }
     const auto& propertyManager = _physicalDevice->getPropertyManager();
     float maxSamplerAnisotropy = propertyManager.getMaxSamplerAnisotropy();
@@ -125,19 +123,19 @@ lib::Status SingleApp::loadObjects() {
             if (!_uniformMap.contains(diffusePath)) {
                 ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(diffusePath));
                 ASSIGN_OR_RETURN(auto texture, TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
-                _textures.emplace_back(std::move(texture));
+                _textures.push_back(std::move(texture));
                 _uniformMap.emplace(diffusePath, std::make_shared<UniformBufferTexture>(*_textures.back()));
             }
             if (!_uniformMap.contains(normalPath)) {
                 ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(normalPath));
                 ASSIGN_OR_RETURN(auto texture, TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
-                _textures.emplace_back(std::move(texture));
+                _textures.push_back(std::move(texture));
                 _uniformMap.emplace(normalPath, std::make_shared<UniformBufferTexture>(*_textures.back()));
             }
             if (!_uniformMap.contains(metallicRoughnessPath)) {
                 ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(metallicRoughnessPath));
                 ASSIGN_OR_RETURN(auto texture, TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
-                _textures.emplace_back(std::move(texture));
+                _textures.push_back(std::move(texture));
                 _uniformMap.emplace(metallicRoughnessPath, std::make_shared<UniformBufferTexture>(*_textures.back()));
             }
 
@@ -147,9 +145,9 @@ lib::Status SingleApp::loadObjects() {
             _objects.emplace_back("Object", e);
             const AssetManager::VertexData& vData = _assetManager->getVertexData(std::to_string(i));
             MeshComponent msh;
-            msh.vertexBuffer = VertexBuffer::create(*_logicalDevice, commandBuffer, vData.vertexBuffer.value()).value();
-            msh.indexBuffer = IndexBuffer::create(*_logicalDevice, commandBuffer, vData.indexBuffer, vData.indexType).value();
-            msh.vertexBufferPrimitive = VertexBuffer::create(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives).value();
+            ASSIGN_OR_RETURN(msh.vertexBuffer, VertexBuffer::create(*_logicalDevice, commandBuffer, vData.vertexBuffer.value()));
+            ASSIGN_OR_RETURN(msh.indexBuffer, IndexBuffer::create(*_logicalDevice, commandBuffer, vData.indexBuffer, vData.indexType));
+            ASSIGN_OR_RETURN(msh.vertexBufferPrimitive, VertexBuffer::create(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives));
             msh.aabb = createAABBfromVertices(std::vector<glm::vec3>(sceneData[i].positions.cbegin(), sceneData[i].positions.cend()), sceneData[i].model);
             _registry.addComponent<MeshComponent>(e, std::move(msh));
 
@@ -223,7 +221,7 @@ lib::Status SingleApp::createDescriptorSets() {
     return lib::StatusOk();
 }
 
-void SingleApp::createPresentResources() {
+lib::Status SingleApp::createPresentResources() {
     const VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_4_BIT;
     const VkFormat swapchainImageFormat = _swapchain->getVkFormat();
     const VkExtent2D extent = _swapchain->getExtent();
@@ -235,8 +233,8 @@ void SingleApp::createPresentResources() {
     //              .addColorAttachment(swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE)
                     .addDepthAttachment(findDepthFormat(), VK_ATTACHMENT_STORE_OP_DONT_CARE);
 
-    _renderPass = Renderpass::create(*_logicalDevice, attachmentsLayout).value();
-    _renderPass->addSubpass({0, 1, 2});
+    _renderPass = Renderpass::create(*_logicalDevice, attachmentsLayout);
+    RETURN_IF_ERROR(_renderPass->addSubpass({0, 1, 2}));
     _renderPass->addDependency(VK_SUBPASS_EXTERNAL,
         0,
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
@@ -244,11 +242,12 @@ void SingleApp::createPresentResources() {
         VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
         VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
     );
-    _renderPass->build();
+    RETURN_IF_ERROR(_renderPass->build());
 
     _framebuffers.reserve(_swapchain->getImagesCount());
     for (uint8_t i = 0; i < _swapchain->getImagesCount(); ++i) {
-        _framebuffers.emplace_back(Framebuffer::createFromSwapchain(*_renderPass, *_swapchain, *_singleTimeCommandPool, i).value());
+        ASSIGN_OR_RETURN(auto framebuffer, Framebuffer::createFromSwapchain(*_renderPass, *_swapchain, *_singleTimeCommandPool, i));
+        _framebuffers.push_back(std::move(framebuffer));
     }
     {
         const GraphicsPipelineParameters parameters = {
@@ -273,17 +272,17 @@ void SingleApp::createPresentResources() {
     }
 }
 
-void SingleApp::createShadowResources() {
+lib::Status SingleApp::createShadowResources() {
     const VkFormat imageFormat = VK_FORMAT_D32_SFLOAT;
     const VkExtent2D extent = { 1024 * 2, 1024 * 2 };
     AttachmentLayout attachmentLayout;
     attachmentLayout.addShadowAttachment(imageFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-    _shadowRenderPass = Renderpass::create(*_logicalDevice, attachmentLayout).value();
-    _shadowRenderPass->addSubpass({0});
-    _shadowRenderPass->build();
+    _shadowRenderPass = Renderpass::create(*_logicalDevice, attachmentLayout);
+    RETURN_IF_ERROR(_shadowRenderPass->addSubpass({0}));
+    RETURN_IF_ERROR(_shadowRenderPass->build());
 
-    _shadowFramebuffer = Framebuffer::createFromTextures(*_shadowRenderPass, { _shadowMap }).value();
+    ASSIGN_OR_RETURN(_shadowFramebuffer, Framebuffer::createFromTextures(*_shadowRenderPass, { _shadowMap }));
 
     const GraphicsPipelineParameters parameters = {
         .cullMode = VK_CULL_MODE_FRONT_BIT,
@@ -626,7 +625,7 @@ void SingleApp::recordShadowCommandBuffer(VkCommandBuffer commandBuffer, uint32_
     //}
 }
 
-void SingleApp::recreateSwapChain() {
+lib::Status SingleApp::recreateSwapChain() {
     VkExtent2D extent{};
     while (extent.width == 0 || extent.height == 0) {
         extent = _window->getFramebufferSize();
@@ -636,8 +635,9 @@ void SingleApp::recreateSwapChain() {
     _camera->setAspectRatio(static_cast<float>(extent.width) / extent.height);
     vkDeviceWaitIdle(_logicalDevice->getVkDevice());
 
-    _swapchain = Swapchain::create(*_logicalDevice, _swapchain->getVkSwapchain()).value();
+    ASSIGN_OR_RETURN(_swapchain, Swapchain::create(*_logicalDevice, _swapchain->getVkSwapchain()));
     for (uint8_t i = 0; i < _swapchain->getImagesCount(); ++i) {
-        _framebuffers[i] = Framebuffer::createFromSwapchain(*_renderPass, *_swapchain, *_singleTimeCommandPool, i).value();
+        ASSIGN_OR_RETURN(_framebuffers[i], Framebuffer::createFromSwapchain(*_renderPass, *_swapchain, *_singleTimeCommandPool, i));
     }
+    return lib::StatusOk();
 }

@@ -16,6 +16,7 @@ LogicalDevice::LogicalDevice(const VkDevice logicalDevice, const PhysicalDevice&
 }
 
 LogicalDevice::~LogicalDevice() {
+    // TODO refactor
     std::get<VmaWrapper>(_memoryAllocator).destroy();
     vkDestroyDevice(_device, nullptr);
 }
