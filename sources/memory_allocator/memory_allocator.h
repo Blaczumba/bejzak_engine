@@ -18,10 +18,21 @@ public:
 
 	void destroy();
 
-	std::tuple<VkBuffer, VmaAllocation, void*> createVkBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags = 0U);
+	struct Buffer {
+		VkBuffer buffer;
+		VmaAllocation allocation;
+		void* mappedData;
+	};
+
+	struct Image {
+		VkImage image;
+		VmaAllocation allocation;
+	};
+
+	lib::ErrorOr<Buffer> createVkBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags = 0U);
 	void destroyVkBuffer(const VkBuffer buffer, const VmaAllocation allocation);
 	void sendDataToBufferMemory(const VkBuffer buffer, const VmaAllocation allocation, const void* data, size_t size);
-	lib::ErrorOr<std::pair<VkImage, VmaAllocation>> createVkImage(const ImageParameters& params, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags = 0U);
+	lib::ErrorOr<Image> createVkImage(const ImageParameters& params, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags = 0U);
 	void destroyVkImage(const VkImage image, const VmaAllocation allocation);
 
 private:

@@ -83,14 +83,14 @@ private:
 		Allocation& allocation;
 		const size_t size;
 
-		std::tuple<VkBuffer, void*> operator()(VmaWrapper& allocator) {
-			auto [buffer, vmaAllocation, data] = allocator.createVkBuffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_ONLY, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT);
-			allocation = vmaAllocation;
-			return std::make_tuple(buffer, data);
+		lib::ErrorOr<std::tuple<VkBuffer, void*>> operator()(VmaWrapper& allocator) {
+			ASSIGN_OR_RETURN(VmaWrapper::Buffer buffer, allocator.createVkBuffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_ONLY, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT));
+			allocation = buffer.allocation;
+			return std::make_tuple(buffer.buffer, buffer.mappedData);
 		}
 
-		std::tuple<VkBuffer, void*> operator()(auto&&) {
-			throw std::runtime_error("Not recognized allocator for UniformBufferData creation");
+		lib::ErrorOr<std::tuple<VkBuffer, void*>> operator()(auto&&) {
+			return lib::Error("Not recognized allocator for UniformBufferData creation");
 		}
 	};
 };
@@ -102,7 +102,7 @@ UniformBufferData<UniformBufferType>::UniformBufferData(const LogicalDevice& log
 	const PhysicalDevice& physicalDevice = _logicalDevice.getPhysicalDevice();
 	const auto& limits = physicalDevice.getPropertyManager().getPhysicalDeviceLimits();
 	_size = getMemoryAlignment(sizeof(UniformBufferType), limits.minUniformBufferOffsetAlignment);
-	std::tie(_uniformBuffer, _uniformBufferMapped) = std::visit(Allocator{ _allocation, _count * _size }, logicalDevice.getMemoryAllocator());
+	std::tie(_uniformBuffer, _uniformBufferMapped) = std::visit(Allocator{ _allocation, _count * _size }, logicalDevice.getMemoryAllocator()).value();
 	
 	_bufferInfo = VkDescriptorBufferInfo{
 		.buffer = _uniformBuffer,

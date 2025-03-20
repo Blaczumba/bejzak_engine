@@ -36,14 +36,14 @@ private:
     struct Allocator {
         Allocation& allocation;
         const size_t size;
-        const VkBuffer operator()(VmaWrapper& allocator) {
-            auto [buffer, tmpAllocation, _] = allocator.createVkBuffer(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE);
-            allocation = tmpAllocation;
-            return buffer;
+        lib::ErrorOr<VkBuffer> operator()(VmaWrapper& allocator) {
+            ASSIGN_OR_RETURN(VmaWrapper::Buffer buffer, allocator.createVkBuffer(size, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE));
+            allocation = buffer.allocation;
+            return buffer.buffer;
         }
 
-        const VkBuffer operator()(auto&&) {
-            throw std::runtime_error("Unrecognized allocator in IndexBuffer creation");
+        lib::ErrorOr<VkBuffer> operator()(auto&&) {
+            return lib::Error("Unrecognized allocator in IndexBuffer creation");
         }
     };
 };

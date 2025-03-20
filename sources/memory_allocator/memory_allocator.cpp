@@ -35,7 +35,7 @@ void VmaWrapper::destroy() {
 	_allocator = nullptr;
 }
 
-std::tuple<VkBuffer, VmaAllocation, void*> VmaWrapper::createVkBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags) {
+lib::ErrorOr<VmaWrapper::Buffer> VmaWrapper::createVkBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags) {
 	const VkBufferCreateInfo bufferInfo = {
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 		.size = size,
@@ -52,10 +52,10 @@ std::tuple<VkBuffer, VmaAllocation, void*> VmaWrapper::createVkBuffer(VkDeviceSi
 	VmaAllocation allocation;
 	VmaAllocationInfo allocationInfo;
 	if (vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo, &buffer, &allocation, &allocationInfo) != VK_SUCCESS) {
-		// return lib::Error("failed to create buffer!");
+		return lib::Error("failed to create buffer!");
 		
 	};
-	return std::tuple{ buffer, allocation, allocationInfo.pMappedData };
+	return VmaWrapper::Buffer{ buffer, allocation, allocationInfo.pMappedData };
 }
 
 void VmaWrapper::destroyVkBuffer(const VkBuffer buffer, const VmaAllocation allocation) {
@@ -66,7 +66,7 @@ void VmaWrapper::sendDataToBufferMemory(const VkBuffer buffer, const VmaAllocati
 	vmaCopyMemoryToAllocation(_allocator, data, allocation, 0, size);
 }
 
-lib::ErrorOr<std::pair<VkImage, VmaAllocation>> VmaWrapper::createVkImage(const ImageParameters& params, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags) {
+lib::ErrorOr<VmaWrapper::Image> VmaWrapper::createVkImage(const ImageParameters& params, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags) {
 	VkImageCreateInfo imageInfo = {
 		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 		.imageType = VK_IMAGE_TYPE_2D,
@@ -98,7 +98,7 @@ lib::ErrorOr<std::pair<VkImage, VmaAllocation>> VmaWrapper::createVkImage(const 
 	if (vmaCreateImage(_allocator, &imageInfo, &vmaAllocInfo, &image, &allocation, nullptr) != VK_SUCCESS) {
 		return lib::Error("Failed to create Buffer.");
 	}
-	return std::pair{ image, allocation };
+	return VmaWrapper::Image{ image, allocation };
 }
 
 void VmaWrapper::destroyVkImage(const VkImage image, const VmaAllocation allocation) {

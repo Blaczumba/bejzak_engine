@@ -1,19 +1,19 @@
 #pragma once
 
 #include <expected>
-#include <string_view>
+#include <string>
 #include <utility>
 
 namespace lib {
 
 template<typename T>
-using ErrorOr = std::expected<T, std::string_view>;
+using ErrorOr = std::expected<T, std::string>;
 
-using Status = std::expected<void, std::string_view>;
+using Status = std::expected<void, std::string>;
 
 struct StatusOk : public Status {};
 
-using Error = std::unexpected<std::string_view>;
+using Error = std::unexpected<std::string>;
 
 }
 

@@ -63,9 +63,9 @@ struct ImageCreator {
 	const ImageParameters& params;
 
 	const lib::ErrorOr<VkImage> operator()(VmaWrapper& allocator) {
-		ASSIGN_OR_RETURN(std::pair imageData, allocator.createVkImage(params, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE));
-		allocation = imageData.second;
-		return imageData.first;
+		ASSIGN_OR_RETURN(VmaWrapper::Image imageData, allocator.createVkImage(params, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE));
+		allocation = imageData.allocation;
+		return imageData.image;
 	}
 
 	const lib::ErrorOr<VkImage> operator()(auto&&) {
