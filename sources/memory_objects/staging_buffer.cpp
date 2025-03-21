@@ -1,14 +1,11 @@
 #include "staging_buffer.h"
 
-StagingBuffer::~StagingBuffer() {
-    if (_buffer != VK_NULL_HANDLE) {
-        std::visit(BufferDeallocator{ _buffer }, _memoryAllocator, _allocation);
-    }
+StagingBuffer::StagingBuffer(const VkBuffer buffer, const Allocation allocation, uint32_t size, MemoryAllocator& memoryAllocator)
+    : _buffer(buffer), _allocation(allocation), _size(size), _memoryAllocator(memoryAllocator) {
 }
 
-StagingBuffer::StagingBuffer(StagingBuffer&& stagingBuffer) noexcept
-    : _buffer(std::exchange(stagingBuffer._buffer, VK_NULL_HANDLE)), _allocation(stagingBuffer._allocation), _size(stagingBuffer._size),
-    _mappedData(stagingBuffer._mappedData), _memoryAllocator(stagingBuffer._memoryAllocator) {
+StagingBuffer::~StagingBuffer() {
+    std::visit(BufferDeallocator{ _buffer }, _memoryAllocator, _allocation);
 }
 
 const VkBuffer StagingBuffer::getVkBuffer() const {

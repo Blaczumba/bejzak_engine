@@ -13,11 +13,13 @@ void AssetManager::loadImageAsync(const std::string& filePath, std::function<lib
 
     auto future = std::async(std::launch::async, ([this, filePath, loadingFunction = std::move(loadingFunction)]() {
         lib::ErrorOr<ImageResource> resource = loadingFunction(filePath);
-        if (!resource.has_value())
-            return lib::ErrorOr<ImageData>(lib::Error(std::move(resource.error())));
-        StagingBuffer stagingBuffer(_memoryAllocator, std::span(static_cast<uint8_t*>(resource->data), resource->size));
+        if (!resource.has_value()) [[unlikely]]
+            return lib::ErrorOr<ImageData>(lib::Error(resource.error()));
+        auto stagingBuffer = StagingBuffer::create(_memoryAllocator, std::span(static_cast<uint8_t*>(resource->data), resource->size));
+        if (!stagingBuffer.has_value()) [[unlikely]]
+            return lib::ErrorOr<ImageData>(lib::Error(stagingBuffer.error()));
         ImageLoader::deallocateResources(*resource);
-        return lib::ErrorOr<ImageData>(ImageData(std::move(stagingBuffer), std::move(resource->dimensions)));
+        return lib::ErrorOr<ImageData>(ImageData(std::move(stagingBuffer.value()), std::move(resource->dimensions)));
     }));
     _awaitingImageResources.emplace(filePath, std::move(future));
 }

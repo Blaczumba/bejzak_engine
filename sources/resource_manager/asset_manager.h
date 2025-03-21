@@ -43,38 +43,26 @@ public:
 	AssetManager(MemoryAllocator& memoryAllocator);
 	
 	struct ImageData {
-		StagingBuffer stagingBuffer;
+		std::unique_ptr<StagingBuffer> stagingBuffer;
 		ImageDimensions imageDimensions;
 	};
 
 	struct VertexData {
-		std::optional<StagingBuffer> vertexBuffer;	// std::nullopt when the type is VertexP.
-		StagingBuffer indexBuffer;
+		std::unique_ptr<StagingBuffer> vertexBuffer;
+		std::unique_ptr<StagingBuffer> indexBuffer;
 		VkIndexType indexType;
-		StagingBuffer vertexBufferPrimitives;	// VertexP/glm::vec3 buffer.
+		std::unique_ptr<StagingBuffer> vertexBufferPrimitives;	// VertexP/glm::vec3 buffer.
 		AABB aabb;
 	};
 
 	void loadImage2DAsync(const std::string& filePath);
 	void loadImageCubemapAsync(const std::string& filePath);
 
-	template<typename VertexType>
-	lib::Status loadVertexData(std::string_view key, const lib::Buffer<VertexType>& vertices, const lib::Buffer<uint8_t>& indices, uint8_t indexSize) {
-		// TODO: Needs refactoring
-		static_assert(VertexTraits<VertexType>::hasPosition, "Cannot load vertex data with no position defined");
-		StagingBuffer indexBuffer(_memoryAllocator, indices);
-		auto handleVertexBuffer = [&]() -> std::tuple<std::optional<StagingBuffer>, StagingBuffer> {
-			if (typeid(VertexType) == typeid(VertexP)) {
-				return { std::nullopt, StagingBuffer(_memoryAllocator, std::span(vertices.data(), vertices.size()))};
-			}
-			else {
-				std::vector<glm::vec3> primitives;
-				primitives.reserve(vertices.size());
-				std::transform(vertices.cbegin(), vertices.cend(), std::back_inserter(primitives), [](const VertexType& vertex) { return vertex.pos; });
-				return { StagingBuffer(_memoryAllocator, std::span(vertices.data(), vertices.size())), StagingBuffer(_memoryAllocator, std::span(primitives.data(), primitives.size())) };
-			}
-		};
-		auto [vertexBuffer, primitivesVertexBuffer] = handleVertexBuffer();
+	template<typename VertexType, typename PrimitivesType>
+	lib::Status loadVertexData(std::string_view key, const lib::Buffer<VertexType>& vertices, const lib::Buffer<PrimitivesType>& primitives, const lib::Buffer<uint8_t>& indices, uint8_t indexSize) {
+		ASSIGN_OR_RETURN(auto indexBuffer, StagingBuffer::create(_memoryAllocator, indices));
+		ASSIGN_OR_RETURN(auto vertexBuffer, StagingBuffer::create(_memoryAllocator, vertices));
+		ASSIGN_OR_RETURN(auto primitivesVertexBuffer, StagingBuffer::create(_memoryAllocator, primitives));
 		_vertexDataResources.emplace(
 			std::piecewise_construct,
 			std::forward_as_tuple(key),
@@ -83,6 +71,24 @@ public:
 				std::move(indexBuffer),
 				getIndexType(indexSize),
 				std::move(primitivesVertexBuffer),
+				AABB{}
+			)
+		);
+		return lib::StatusOk();
+	}
+
+	template<typename VertexType>
+	lib::Status loadVertexData(std::string_view key, const lib::Buffer<VertexType>& vertices, const lib::Buffer<uint8_t>& indices, uint8_t indexSize) {
+		ASSIGN_OR_RETURN(auto vertexBuffer, StagingBuffer::create(_memoryAllocator, vertices));
+		ASSIGN_OR_RETURN(auto indexBuffer, StagingBuffer::create(_memoryAllocator, indices));
+		_vertexDataResources.emplace(
+			std::piecewise_construct,
+			std::forward_as_tuple(key),
+			std::forward_as_tuple(
+				nullptr,
+				std::move(indexBuffer),
+				getIndexType(indexSize),
+				std::move(vertexBuffer),
 				AABB{}
 			)
 		);

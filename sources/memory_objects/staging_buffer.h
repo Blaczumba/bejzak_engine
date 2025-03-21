@@ -12,23 +12,20 @@
 #include <variant>
 #include <vector>
 
-class StagingBuffer {
-public:
-    template<typename Type>
-    StagingBuffer(MemoryAllocator& memoryAllocator, const std::span<Type> buffer) : _memoryAllocator(memoryAllocator), _size(buffer.size() * sizeof(Type)) {
-        std::tie(_buffer, _mappedData) = std::visit(Allocator{ _allocation, _size }, _memoryAllocator).value();
-        std::memcpy(_mappedData, buffer.data(), _size);
-    }
+template <typename T>
+concept BufferLike = requires(T t) {
+    { t.data() } -> std::convertible_to<const void*>;
+    { t.size() } -> std::convertible_to<std::size_t>;
+};
 
-    template<typename Type>
-    StagingBuffer(MemoryAllocator& memoryAllocator, const lib::Buffer<Type>& buffer) : _memoryAllocator(memoryAllocator), _size(buffer.size() * sizeof(Type)) {
-        std::tie(_buffer, _mappedData) = std::visit(Allocator{ _allocation, _size }, _memoryAllocator).value();
-        std::memcpy(_mappedData, buffer.data(), _size);
-    }
+class StagingBuffer {
+    StagingBuffer(const VkBuffer buffer, const Allocation allocation, uint32_t size, MemoryAllocator& memoryAllocator);
+
+public:
+    template <BufferLike Type>
+    static lib::ErrorOr<std::unique_ptr<StagingBuffer>> create(MemoryAllocator& memoryAllocator, const Type& buffer);
 
     ~StagingBuffer();
-
-    StagingBuffer(StagingBuffer&& stagingBuffer) noexcept;
 
     const VkBuffer getVkBuffer() const;
     uint32_t getSize() const;
@@ -37,7 +34,7 @@ private:
     VkBuffer _buffer;
     Allocation _allocation;
     uint32_t _size;
-    void* _mappedData;
+
     MemoryAllocator& _memoryAllocator;
 
     struct Allocator {
@@ -55,5 +52,14 @@ private:
         }
     };
 };
+
+template <BufferLike Type>
+static lib::ErrorOr<std::unique_ptr<StagingBuffer>> StagingBuffer::create(MemoryAllocator& memoryAllocator, const Type& buffer) {
+    const uint32_t size = buffer.size() * sizeof(std::decay_t<decltype(*buffer.data())>);
+    Allocation allocation;
+    ASSIGN_OR_RETURN(const std::pair bufferData, std::visit(Allocator{ allocation, size }, memoryAllocator));
+    std::memcpy(bufferData.second, buffer.data(), size);
+    return std::unique_ptr<StagingBuffer>(new StagingBuffer(bufferData.first, allocation, size, memoryAllocator));
+}
 
 

@@ -50,8 +50,8 @@ lib::Status SingleApp::loadCubemap() {
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
         const AssetManager::VertexData& vData = _assetManager->getVertexData("cube.obj");
-        ASSIGN_OR_RETURN(_vertexBufferCube, VertexBuffer::create(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives));
-        ASSIGN_OR_RETURN(_indexBufferCube, IndexBuffer::create(*_logicalDevice, commandBuffer, vData.indexBuffer, vData.indexType));
+        ASSIGN_OR_RETURN(_vertexBufferCube, VertexBuffer::create(*_logicalDevice, commandBuffer, *vData.vertexBufferPrimitives));
+        ASSIGN_OR_RETURN(_indexBufferCube, IndexBuffer::create(*_logicalDevice, commandBuffer, *vData.indexBuffer, vData.indexType));
     }
     return lib::StatusOk();
 }
@@ -69,14 +69,15 @@ lib::Status SingleApp::loadObject() {
 
         ASSIGN_OR_RETURN(const VertexData vertexData, loadObj(MODELS_PATH "cylinder8.obj"));
         ASSIGN_OR_RETURN(const lib::Buffer<VertexPTN> vertices, buildInterleavingVertexData(vertexData.positions, vertexData.textureCoordinates, vertexData.normals));
-        RETURN_IF_ERROR(_assetManager->loadVertexData("cube_normal.obj", vertices, vertexData.indices, static_cast<uint8_t>(vertexData.indexType)));
+        ASSIGN_OR_RETURN(const lib::Buffer<VertexPTN> primitives, buildInterleavingVertexData(vertexData.positions, vertexData.textureCoordinates, vertexData.normals));
+        RETURN_IF_ERROR(_assetManager->loadVertexData("cube_normal.obj", vertices, primitives, vertexData.indices, static_cast<uint8_t>(vertexData.indexType)));
         const AssetManager::VertexData& vData = _assetManager->getVertexData("cube_normal.obj");
         ASSIGN_OR_RETURN(_vertexBufferObject, VertexBuffer::create(*_logicalDevice, commandBuffer, *vData.vertexBuffer));
-        ASSIGN_OR_RETURN(_vertexBufferPrimitiveObject, VertexBuffer::create(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives));
-        ASSIGN_OR_RETURN(_indexBufferObject, IndexBuffer::create(*_logicalDevice, commandBuffer, vData.indexBuffer, vData.indexType));
+        ASSIGN_OR_RETURN(_vertexBufferPrimitiveObject, VertexBuffer::create(*_logicalDevice, commandBuffer, *vData.vertexBufferPrimitives));
+        ASSIGN_OR_RETURN(_indexBufferObject, IndexBuffer::create(*_logicalDevice, commandBuffer, *vData.indexBuffer, vData.indexType));
 
         ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(drakanTexturePath));
-        ASSIGN_OR_RETURN(auto texture, TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
+        ASSIGN_OR_RETURN(auto texture, TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, *imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
         _textures.emplace_back(std::move(texture));
     }
 
@@ -84,7 +85,7 @@ lib::Status SingleApp::loadObject() {
     UniformBufferObject object = {
         .model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 2.0f, 0.0f))
     };
-    _objectUniform = std::make_unique<UniformBufferData<UniformBufferObject>>(*_logicalDevice);
+    ASSIGN_OR_RETURN(_objectUniform, UniformBufferData<UniformBufferObject>::create(*_logicalDevice));
     _objectUniform->updateUniformBuffer(object);
     ASSIGN_OR_RETURN(auto descriptorSet, _descriptorPoolNormal->createDesriptorSet());
     descriptorSet->updateDescriptorSet({ _dynamicUniformBuffersCamera.get(), _uniformBuffersLight.get(), _objectUniform.get(), _uniformMap[drakanTexturePath].get(), _shadowTextureUniform.get() });
@@ -104,7 +105,8 @@ lib::Status SingleApp::loadObjects() {
         _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + sceneData[i].metallicRoughnessTexture);
         _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + sceneData[i].normalTexture);
         ASSIGN_OR_RETURN(const auto vertices, buildInterleavingVertexData(sceneData[i].positions, sceneData[i].textureCoordinates, sceneData[i].normals, sceneData[i].tangents));
-        _assetManager->loadVertexData(std::to_string(i), vertices, sceneData[i].indices, static_cast<uint8_t>(sceneData[i].indexType));
+        ASSIGN_OR_RETURN(const auto primitives, buildInterleavingVertexData(sceneData[i].positions));
+        _assetManager->loadVertexData(std::to_string(i), vertices, primitives, sceneData[i].indices, static_cast<uint8_t>(sceneData[i].indexType));
     }
     const auto& propertyManager = _physicalDevice->getPropertyManager();
     float maxSamplerAnisotropy = propertyManager.getMaxSamplerAnisotropy();
@@ -116,25 +118,25 @@ lib::Status SingleApp::loadObjects() {
             Entity e = _registry.createEntity();
             if (sceneData[i].normalTexture.empty() || sceneData[i].metallicRoughnessTexture.empty())
                 continue;
-            const std::string diffusePath = std::string(MODELS_PATH) + "sponza/" + sceneData[i].diffuseTexture;
-            const std::string metallicRoughnessPath = std::string(MODELS_PATH) + "sponza/" + sceneData[i].metallicRoughnessTexture;
-            const std::string normalPath = std::string(MODELS_PATH) + "sponza/" + sceneData[i].normalTexture;
+            const std::string diffusePath = MODELS_PATH "sponza/" + sceneData[i].diffuseTexture;
+            const std::string metallicRoughnessPath = MODELS_PATH "sponza/" + sceneData[i].metallicRoughnessTexture;
+            const std::string normalPath = MODELS_PATH "sponza/" + sceneData[i].normalTexture;
 
             if (!_uniformMap.contains(diffusePath)) {
                 ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(diffusePath));
-                ASSIGN_OR_RETURN(auto texture, TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
+                ASSIGN_OR_RETURN(auto texture, TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, *imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
                 _textures.push_back(std::move(texture));
                 _uniformMap.emplace(diffusePath, std::make_shared<UniformBufferTexture>(*_textures.back()));
             }
             if (!_uniformMap.contains(normalPath)) {
                 ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(normalPath));
-                ASSIGN_OR_RETURN(auto texture, TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
+                ASSIGN_OR_RETURN(auto texture, TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, *imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
                 _textures.push_back(std::move(texture));
                 _uniformMap.emplace(normalPath, std::make_shared<UniformBufferTexture>(*_textures.back()));
             }
             if (!_uniformMap.contains(metallicRoughnessPath)) {
                 ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(metallicRoughnessPath));
-                ASSIGN_OR_RETURN(auto texture, TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
+                ASSIGN_OR_RETURN(auto texture, TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, *imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
                 _textures.push_back(std::move(texture));
                 _uniformMap.emplace(metallicRoughnessPath, std::make_shared<UniformBufferTexture>(*_textures.back()));
             }
@@ -145,9 +147,9 @@ lib::Status SingleApp::loadObjects() {
             _objects.emplace_back("Object", e);
             const AssetManager::VertexData& vData = _assetManager->getVertexData(std::to_string(i));
             MeshComponent msh;
-            ASSIGN_OR_RETURN(msh.vertexBuffer, VertexBuffer::create(*_logicalDevice, commandBuffer, vData.vertexBuffer.value()));
-            ASSIGN_OR_RETURN(msh.indexBuffer, IndexBuffer::create(*_logicalDevice, commandBuffer, vData.indexBuffer, vData.indexType));
-            ASSIGN_OR_RETURN(msh.vertexBufferPrimitive, VertexBuffer::create(*_logicalDevice, commandBuffer, vData.vertexBufferPrimitives));
+            ASSIGN_OR_RETURN(msh.vertexBuffer, VertexBuffer::create(*_logicalDevice, commandBuffer, *vData.vertexBuffer));
+            ASSIGN_OR_RETURN(msh.indexBuffer, IndexBuffer::create(*_logicalDevice, commandBuffer, *vData.indexBuffer, vData.indexType));
+            ASSIGN_OR_RETURN(msh.vertexBufferPrimitive, VertexBuffer::create(*_logicalDevice, commandBuffer, *vData.vertexBufferPrimitives));
             msh.aabb = createAABBfromVertices(std::vector<glm::vec3>(sceneData[i].positions.cbegin(), sceneData[i].positions.cend()), sceneData[i].model);
             _registry.addComponent<MeshComponent>(e, std::move(msh));
 
@@ -185,13 +187,13 @@ lib::Status SingleApp::createDescriptorSets() {
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
 
         ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(TEXTURES_PATH "cubemap_yokohama_rgba.ktx"));
-        ASSIGN_OR_RETURN(_textureCubemap, TextureFactory::createTextureCubemap(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
+        ASSIGN_OR_RETURN(_textureCubemap, TextureFactory::createTextureCubemap(*_logicalDevice, commandBuffer, *imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
         ASSIGN_OR_RETURN(_shadowMap, TextureFactory::create2DShadowmap(*_logicalDevice, commandBuffer, 1024 * 2, 1024 * 2, VK_FORMAT_D32_SFLOAT));
     }
 
-    _uniformBuffersObjects = std::make_unique<UniformBufferData<UniformBufferObject>>(*_logicalDevice, 200);
-    _uniformBuffersLight = std::make_unique<UniformBufferData<UniformBufferLight>>(*_logicalDevice);
-    _dynamicUniformBuffersCamera = std::make_unique<UniformBufferData<UniformBufferCamera>>(*_logicalDevice, MAX_FRAMES_IN_FLIGHT);
+    ASSIGN_OR_RETURN(_uniformBuffersObjects, UniformBufferData<UniformBufferObject>::create(*_logicalDevice, 200));
+    ASSIGN_OR_RETURN(_uniformBuffersLight, UniformBufferData<UniformBufferLight>::create(*_logicalDevice));
+    ASSIGN_OR_RETURN(_dynamicUniformBuffersCamera, UniformBufferData<UniformBufferCamera>::create(*_logicalDevice, MAX_FRAMES_IN_FLIGHT));
 
     _skyboxTextureUniform = std::make_unique<UniformBufferTexture>(*_textureCubemap);
     _shadowTextureUniform = std::make_unique<UniformBufferTexture>(*_shadowMap);
