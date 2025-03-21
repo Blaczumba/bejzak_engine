@@ -58,8 +58,8 @@ public:
 	void loadImage2DAsync(const std::string& filePath);
 	void loadImageCubemapAsync(const std::string& filePath);
 
-	template<typename VertexType, typename PrimitivesType>
-	lib::Status loadVertexData(std::string_view key, const lib::Buffer<VertexType>& vertices, const lib::Buffer<PrimitivesType>& primitives, const lib::Buffer<uint8_t>& indices, uint8_t indexSize) {
+	template<BufferLike IndexBuffer, BufferLike FirstBuffer, BufferLike SecondBuffer>
+	lib::Status loadVertexData(std::string_view key, const IndexBuffer& indices, uint8_t indexSize, const FirstBuffer& vertices, const SecondBuffer& primitives) {
 		ASSIGN_OR_RETURN(auto indexBuffer, StagingBuffer::create(_memoryAllocator, indices));
 		ASSIGN_OR_RETURN(auto vertexBuffer, StagingBuffer::create(_memoryAllocator, vertices));
 		ASSIGN_OR_RETURN(auto primitivesVertexBuffer, StagingBuffer::create(_memoryAllocator, primitives));
@@ -77,8 +77,8 @@ public:
 		return lib::StatusOk();
 	}
 
-	template<typename VertexType>
-	lib::Status loadVertexData(std::string_view key, const lib::Buffer<VertexType>& vertices, const lib::Buffer<uint8_t>& indices, uint8_t indexSize) {
+	template<BufferLike IndexBuffer, BufferLike Buffer>
+	lib::Status loadVertexData(std::string_view key, const IndexBuffer& indices, uint8_t indexSize, const Buffer& vertices) {
 		ASSIGN_OR_RETURN(auto vertexBuffer, StagingBuffer::create(_memoryAllocator, vertices));
 		ASSIGN_OR_RETURN(auto indexBuffer, StagingBuffer::create(_memoryAllocator, indices));
 		_vertexDataResources.emplace(
