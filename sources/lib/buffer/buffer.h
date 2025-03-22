@@ -82,6 +82,9 @@ public:
     const T* cend() const { return std::next(_buffer.get(), _size); }
 
 	size_t size() const { return _size; }
+
+    template<typename U>
+    friend class SharedBuffer;
 };
 
 } // lib
