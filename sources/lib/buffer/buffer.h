@@ -1,5 +1,7 @@
 #pragma once
 
+#include "lib/buffer/buffer_like_concept.h"
+
 #include <algorithm>
 #include <memory>
 

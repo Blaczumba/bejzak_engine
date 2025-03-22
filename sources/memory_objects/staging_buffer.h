@@ -12,12 +12,6 @@
 #include <variant>
 #include <vector>
 
-template <typename T>
-concept BufferLike = requires(T t) {
-    { t.data() } -> std::convertible_to<const void*>;
-    { t.size() } -> std::convertible_to<std::size_t>;
-};
-
 class StagingBuffer {
     StagingBuffer(const VkBuffer buffer, const Allocation allocation, uint32_t size, MemoryAllocator& memoryAllocator);
 

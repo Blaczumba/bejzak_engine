@@ -1,6 +1,6 @@
 #pragma once
 
-#include "lib/buffer/buffer.h"
+#include "lib/buffer/shared_buffer.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -35,11 +35,11 @@ std::enable_if_t<std::is_unsigned<IndexT>::value> processIndices(uint8_t* dstInd
 }
 
 struct VertexData {
-	std::vector<glm::vec3> positions;
-	std::vector<glm::vec2> textureCoordinates;
-	std::vector<glm::vec3> normals;
-	std::vector<glm::vec3> tangents;
-	lib::Buffer<uint8_t> indices;
+	lib::SharedBuffer<glm::vec3> positions;
+	lib::SharedBuffer<glm::vec2> textureCoordinates;
+	lib::SharedBuffer<glm::vec3> normals;
+	lib::SharedBuffer<glm::vec3> tangents;
+	lib::SharedBuffer<uint8_t> indices;
 	IndexType indexType;
 
 	glm::mat4 model;

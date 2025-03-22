@@ -45,8 +45,7 @@ SingleApp::SingleApp()
 
 lib::Status SingleApp::loadCubemap() {
     ASSIGN_OR_RETURN(const VertexData vertexDataCube, loadObj(MODELS_PATH "cube.obj"));
-    ASSIGN_OR_RETURN(const lib::Buffer<VertexP> vertices, buildInterleavingVertexData(vertexDataCube.positions));
-    RETURN_IF_ERROR(_assetManager->loadVertexData("cube.obj", vertexDataCube.indices, static_cast<uint8_t>(vertexDataCube.indexType), vertices));
+    RETURN_IF_ERROR(_assetManager->loadVertexData("cube.obj", vertexDataCube.indices, static_cast<uint8_t>(vertexDataCube.indexType), vertexDataCube.positions));
     {
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
@@ -69,7 +68,7 @@ lib::Status SingleApp::loadObject() {
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
 
         ASSIGN_OR_RETURN(const VertexData vertexData, loadObj(MODELS_PATH "cylinder8.obj"));
-        ASSIGN_OR_RETURN(const lib::Buffer<VertexPTN> vertices, buildInterleavingVertexData(vertexData.positions, vertexData.textureCoordinates, vertexData.normals));
+        const lib::Buffer<VertexPTN> vertices = buildInterleavingVertexData(vertexData.positions.data(), vertexData.textureCoordinates.data(), vertexData.normals.data(), vertexData.positions.size());
         RETURN_IF_ERROR(_assetManager->loadVertexData("cube_normal.obj", vertexData.indices, static_cast<uint8_t>(vertexData.indexType), vertices, vertexData.positions));
         const AssetManager::VertexData& vData = _assetManager->getVertexData("cube_normal.obj");
         ASSIGN_OR_RETURN(_vertexBufferObject, VertexBuffer::create(*_logicalDevice, commandBuffer, *vData.vertexBuffer));
@@ -104,7 +103,7 @@ lib::Status SingleApp::loadObjects() {
         _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + sceneData[i].diffuseTexture);
         _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + sceneData[i].metallicRoughnessTexture);
         _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + sceneData[i].normalTexture);
-        ASSIGN_OR_RETURN(const auto vertices, buildInterleavingVertexData(sceneData[i].positions, sceneData[i].textureCoordinates, sceneData[i].normals, sceneData[i].tangents));
+        const auto vertices = buildInterleavingVertexData(sceneData[i].positions.data(), sceneData[i].textureCoordinates.data(), sceneData[i].normals.data(), sceneData[i].tangents.data(), sceneData[i].positions.size());
         _assetManager->loadVertexData(std::to_string(i), sceneData[i].indices, static_cast<uint8_t>(sceneData[i].indexType), vertices, sceneData[i].positions);
     }
     const auto& propertyManager = _physicalDevice->getPropertyManager();

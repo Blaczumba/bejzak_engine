@@ -1,5 +1,5 @@
 #include "obj_loader.h"
-#include "lib/buffer/buffer.h"
+#include "lib/buffer/shared_buffer.h"
 #include "model_loader/model_loader.h"
 #include "primitives/primitives.h"
 
@@ -67,15 +67,12 @@ lib::ErrorOr<VertexData> loadObj(const std::string& filePath) {
         }
     }
     IndexType indexType = getMatchingIndexType(indices.size());
-    lib::Buffer<uint8_t> indicesBuffer(indices.size() * static_cast<size_t>(indexType));
+    lib::SharedBuffer<uint8_t> indicesBuffer(indices.size() * static_cast<size_t>(indexType));
     processIndices(indicesBuffer.data(), indices.data(), indices.size(), indexType);
-    positions.shrink_to_fit();
-    texCoords.shrink_to_fit();
-    normals.shrink_to_fit();
     return VertexData{
-        .positions = std::move(positions),
-        .textureCoordinates = std::move(texCoords),
-        .normals = std::move(normals),
+        .positions = lib::SharedBuffer<glm::vec3>(positions.data(), positions.size()),
+        .textureCoordinates = lib::SharedBuffer<glm::vec2>(texCoords.data(), texCoords.size()),
+        .normals = lib::SharedBuffer<glm::vec3>(normals.data(), normals.size()),
         .indices = std::move(indicesBuffer),
         .indexType = indexType
     };

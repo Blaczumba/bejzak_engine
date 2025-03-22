@@ -1,6 +1,7 @@
 #include "tiny_gltf_loader.h"
 
 #include "lib/status/status.h"
+#include "lib/buffer/shared_buffer.h"
 #include "model_loader/model_loader.h"
 #include "primitives/primitives.h"
 
@@ -46,8 +47,8 @@ std::span<const unsigned char> processAttribute(const tinygltf::Model& model, st
     return std::span<const unsigned char>(&buffer.data[accessor.byteOffset + bufferView.byteOffset], accessor.count);
 }
 
-template<typename IndexType>
-std::enable_if_t<std::is_unsigned<IndexType>::value> processTangents(IndexType* indices, size_t size, const std::vector<glm::vec3>& positions, const std::vector<glm::vec2>& texCoords, std::vector<glm::vec3>& tangents) {
+template<typename IndexType, BufferLike Vec3Buffer, BufferLike Vec2Buffer>
+std::enable_if_t<std::is_unsigned<IndexType>::value> processTangents(IndexType* indices, size_t size, const Vec3Buffer& positions, const Vec2Buffer& texCoords, Vec3Buffer& tangents) {
     for (size_t i = 0; i < size; i += 3) {
         const glm::vec3& pos0 = positions[indices[i]];
         const glm::vec3& pos1 = positions[indices[i + 1]];
@@ -93,32 +94,32 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
     for (const auto& primitive : mesh.primitives) {
         const auto& attributes = primitive.attributes;
 
-        std::vector<glm::vec3> positions;
-        std::vector<glm::vec2> texCoords;
-        std::vector<glm::vec3> normals;
-        std::vector<glm::vec3> tangents;
-        std::vector<glm::vec3> bitangents;
+        lib::SharedBuffer<glm::vec3> positions;
+        lib::SharedBuffer<glm::vec2> texCoords;
+        lib::SharedBuffer<glm::vec3> normals;
+        lib::SharedBuffer<glm::vec3> tangents;
+        lib::SharedBuffer<glm::vec3> bitangents;
 
-        lib::Buffer<uint8_t> indices;
+        lib::SharedBuffer<uint8_t> indices;
         uint32_t indicesCount;
         IndexType indexType;
 
         auto positionsData = processAttribute(model, attributes, "POSITION");
         if (positionsData.data()) {
             const glm::vec3* data = reinterpret_cast<const glm::vec3*>(positionsData.data());
-            positions = std::vector<glm::vec3>(data, data + positionsData.size());
+            positions = lib::SharedBuffer<glm::vec3>(data, data + positionsData.size());
         }
 
         auto textureCoordsData = processAttribute(model, attributes, "TEXCOORD_0");
         if (textureCoordsData.data()) {
             const glm::vec2* data = reinterpret_cast<const glm::vec2*>(textureCoordsData.data());
-            texCoords = std::vector<glm::vec2>(data, data + textureCoordsData.size());
+            texCoords = lib::SharedBuffer<glm::vec2>(data, data + textureCoordsData.size());
         }
 
         auto normalsData = processAttribute(model, attributes, "NORMAL");
         if (normalsData.data()) {
             const glm::vec3* data = reinterpret_cast<const glm::vec3*>(normalsData.data());
-            normals = std::vector<glm::vec3>(data, data + normalsData.size());
+            normals = lib::SharedBuffer<glm::vec3>(data, data + normalsData.size());
         }
 
         // Load indices
@@ -129,7 +130,7 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
 
             indicesCount = accessor.count;
             indexType = getMatchingIndexType(indicesCount);
-            indices = lib::Buffer<uint8_t>(indicesCount * static_cast<size_t>(indexType));
+            indices = lib::SharedBuffer<uint8_t>(indicesCount * static_cast<size_t>(indexType));
 
             // Determine the component type and process
             if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
@@ -146,7 +147,7 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
             }
         }
 
-        tangents.resize(normals.size());
+        tangents = lib::SharedBuffer<glm::vec3>(normals.size());
         switch (indexType) {
         case IndexType::UINT8:
             processTangents(reinterpret_cast<uint8_t*>(indices.data()), static_cast<size_t>(indicesCount), positions, texCoords, tangents);
