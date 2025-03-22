@@ -1,13 +1,14 @@
 #include "asset_manager.h"
 
+#include "chrono"
+
 using ImageData = AssetManager::ImageData;
 using VertexData = AssetManager::VertexData;
 
 AssetManager::AssetManager(MemoryAllocator& memoryAllocator) : _memoryAllocator(memoryAllocator) {}
 
 void AssetManager::loadImageAsync(const std::string& filePath, std::function<lib::ErrorOr<ImageResource>(std::string_view)>&& loadingFunction) {
-    auto it = _awaitingImageResources.find(filePath);
-    if (it != _awaitingImageResources.end()) {
+    if (_awaitingImageResources.contains(filePath)) {
         return;
     }
 

@@ -71,7 +71,6 @@ lib::ErrorOr<std::unique_ptr<Swapchain>> Swapchain::create(const LogicalDevice& 
     VkSwapchainCreateInfoKHR createInfo = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .surface = window.getVkSurfaceKHR(),
-
         .minImageCount = imageCount,
         .imageFormat = surfaceFormat.format,
         .imageColorSpace = surfaceFormat.colorSpace,
@@ -160,12 +159,9 @@ VkExtent2D chooseSwapExtent(VkExtent2D actualWindowExtent, const VkSurfaceCapabi
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
         return capabilities.currentExtent;
     }
-    else {
-        actualWindowExtent.width = std::clamp(actualWindowExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-        actualWindowExtent.height = std::clamp(actualWindowExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
-
-        return actualWindowExtent;
-    }
+    actualWindowExtent.width = std::clamp(actualWindowExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
+    actualWindowExtent.height = std::clamp(actualWindowExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+    return actualWindowExtent;
 }
 
 }   // namespace

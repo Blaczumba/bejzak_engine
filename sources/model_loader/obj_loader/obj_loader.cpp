@@ -69,6 +69,9 @@ lib::ErrorOr<VertexData> loadObj(const std::string& filePath) {
     IndexType indexType = getMatchingIndexType(indices.size());
     lib::Buffer<uint8_t> indicesBuffer(indices.size() * static_cast<size_t>(indexType));
     processIndices(indicesBuffer.data(), indices.data(), indices.size(), indexType);
+    positions.shrink_to_fit();
+    texCoords.shrink_to_fit();
+    normals.shrink_to_fit();
     return VertexData{
         .positions = std::move(positions),
         .textureCoordinates = std::move(texCoords),

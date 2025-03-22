@@ -18,14 +18,17 @@ public:
         // TODO if sizes are equal then do not allocate memory
 		std::copy(other._buffer.get(), other._buffer.get() + _size, _buffer.get());
 	}
+
     template<typename Iterator>
     Buffer(Iterator begin, Iterator end) : Buffer(std::distance(begin, end)) {
         std::copy(begin, end, _buffer.get());
     }
+
     template<typename Iterator>
     Buffer(Iterator begin, size_t n) : Buffer(n) {
         std::copy(begin, std::next(begin, n), _buffer.get());
     }
+
     Buffer(std::initializer_list<T> init) : Buffer(init.size()) {
         std::copy(init.begin(), init.end(), _buffer.get());
     }

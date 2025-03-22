@@ -1,6 +1,7 @@
 #include "double_screenshot_application.h"
 
 #include "lib/status/status.h"
+#include "lib/buffer/shared_buffer.h"
 #include "memory_objects/texture/texture_factory.h"
 #include "model_loader/tiny_gltf_loader/tiny_gltf_loader.h"
 #include "entity_component_system/system/movement_system.h"

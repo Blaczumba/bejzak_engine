@@ -40,6 +40,8 @@ else()
     add_definitions(-DVALIDATION_LAYERS_ENABLED)
 endif()
 
+add_definitions(-DGLM_FORCE_NO_CTOR_INIT)
+
 add_subdirectory(${CMAKE_SOURCE_DIR}/external/glfw)
 add_subdirectory(${CMAKE_SOURCE_DIR}/external/tinyobjloader)
 add_subdirectory(${CMAKE_SOURCE_DIR}/external/googletest)
