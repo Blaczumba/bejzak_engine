@@ -20,7 +20,7 @@
 #include "render_pass/render_pass.h"
 #include "resource_manager/asset_manager.h"
 #include "resource_manager/resource_manager.h"
-#include "scene/octree/octree.h"
+#include "scene/octree.h"
 #include "screenshot/screenshot.h"
 #include "thread_pool/thread_pool.h"
 #include "pipeline/graphics_pipeline.h"

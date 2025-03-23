@@ -1,6 +1,5 @@
 #pragma once
 
-#include "lib/buffer/buffer.h"
 #include "lib/buffer/shared_buffer.h"
 #include "lib/status/status.h"
 #include "logical_device/logical_device.h"
