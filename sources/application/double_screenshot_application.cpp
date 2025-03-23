@@ -45,13 +45,13 @@ SingleApp::SingleApp()
 
 lib::Status SingleApp::loadCubemap() {
     ASSIGN_OR_RETURN(VertexData vertexDataCube, loadObj(MODELS_PATH "cube.obj"));
-    RETURN_IF_ERROR(_assetManager->loadVertexData("cube.obj", vertexDataCube.indices, static_cast<uint8_t>(vertexDataCube.indexType), vertexDataCube.positions));
+    _assetManager->loadVertexData("cube.obj", vertexDataCube.indices, static_cast<uint8_t>(vertexDataCube.indexType), vertexDataCube.positions);
     {
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
-        const AssetManager::VertexData& vData = _assetManager->getVertexData("cube.obj");
-        ASSIGN_OR_RETURN(_vertexBufferCube, VertexBuffer::create(*_logicalDevice, commandBuffer, *vData.vertexBufferPrimitives));
-        ASSIGN_OR_RETURN(_indexBufferCube, IndexBuffer::create(*_logicalDevice, commandBuffer, *vData.indexBuffer, vData.indexType));
+        ASSIGN_OR_RETURN(auto vData, _assetManager->getVertexData("cube.obj"));
+        ASSIGN_OR_RETURN(_vertexBufferCube, VertexBuffer::create(*_logicalDevice, commandBuffer, *vData->vertexBufferPrimitives));
+        ASSIGN_OR_RETURN(_indexBufferCube, IndexBuffer::create(*_logicalDevice, commandBuffer, *vData->indexBuffer, vData->indexType));
     }
     return lib::StatusOk();
 }
@@ -69,11 +69,11 @@ lib::Status SingleApp::loadObject() {
 
         ASSIGN_OR_RETURN(VertexData vertexData, loadObj(MODELS_PATH "cylinder8.obj"));
         lib::SharedBuffer<VertexPTN> vertices = buildInterleavingVertexData(vertexData.positions.data(), vertexData.textureCoordinates.data(), vertexData.normals.data(), vertexData.positions.size());
-        RETURN_IF_ERROR(_assetManager->loadVertexData("cube_normal.obj", vertexData.indices, static_cast<uint8_t>(vertexData.indexType), vertices, vertexData.positions));
-        const AssetManager::VertexData& vData = _assetManager->getVertexData("cube_normal.obj");
-        ASSIGN_OR_RETURN(_vertexBufferObject, VertexBuffer::create(*_logicalDevice, commandBuffer, *vData.vertexBuffer));
-        ASSIGN_OR_RETURN(_vertexBufferPrimitiveObject, VertexBuffer::create(*_logicalDevice, commandBuffer, *vData.vertexBufferPrimitives));
-        ASSIGN_OR_RETURN(_indexBufferObject, IndexBuffer::create(*_logicalDevice, commandBuffer, *vData.indexBuffer, vData.indexType));
+        _assetManager->loadVertexData("cube_normal.obj", vertexData.indices, static_cast<uint8_t>(vertexData.indexType), vertices, vertexData.positions);
+        ASSIGN_OR_RETURN(auto vData, _assetManager->getVertexData("cube_normal.obj"));
+        ASSIGN_OR_RETURN(_vertexBufferObject, VertexBuffer::create(*_logicalDevice, commandBuffer, *vData->vertexBuffer));
+        ASSIGN_OR_RETURN(_vertexBufferPrimitiveObject, VertexBuffer::create(*_logicalDevice, commandBuffer, *vData->vertexBufferPrimitives));
+        ASSIGN_OR_RETURN(_indexBufferObject, IndexBuffer::create(*_logicalDevice, commandBuffer, *vData->indexBuffer, vData->indexType));
 
         ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(drakanTexturePath));
         ASSIGN_OR_RETURN(auto texture, TextureFactory::create2DTextureImage(*_logicalDevice, commandBuffer, *imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
@@ -104,7 +104,7 @@ lib::Status SingleApp::loadObjects() {
         _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + sceneData[i].metallicRoughnessTexture);
         _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + sceneData[i].normalTexture);
         lib::SharedBuffer vertices = buildInterleavingVertexData(sceneData[i].positions.data(), sceneData[i].textureCoordinates.data(), sceneData[i].normals.data(), sceneData[i].tangents.data(), sceneData[i].positions.size());
-        RETURN_IF_ERROR(_assetManager->loadVertexData(std::to_string(i), sceneData[i].indices, static_cast<uint8_t>(sceneData[i].indexType), vertices, sceneData[i].positions));
+        _assetManager->loadVertexData(std::to_string(i), sceneData[i].indices, static_cast<uint8_t>(sceneData[i].indexType), vertices, sceneData[i].positions);
     }
     const auto& propertyManager = _physicalDevice->getPropertyManager();
     float maxSamplerAnisotropy = propertyManager.getMaxSamplerAnisotropy();
@@ -143,11 +143,11 @@ lib::Status SingleApp::loadObjects() {
             descriptorSet->updateDescriptorSet({ _dynamicUniformBuffersCamera.get(), _uniformBuffersLight.get(), _uniformBuffersObjects.get(), _uniformMap[diffusePath].get(), _shadowTextureUniform.get(), _uniformMap[normalPath].get(), _uniformMap[metallicRoughnessPath].get() });;
 
             _objects.emplace_back("Object", e);
-            const AssetManager::VertexData& vData = _assetManager->getVertexData(std::to_string(i));
+            ASSIGN_OR_RETURN(auto vData, _assetManager->getVertexData(std::to_string(i)));
             MeshComponent msh;
-            ASSIGN_OR_RETURN(msh.vertexBuffer, VertexBuffer::create(*_logicalDevice, commandBuffer, *vData.vertexBuffer));
-            ASSIGN_OR_RETURN(msh.indexBuffer, IndexBuffer::create(*_logicalDevice, commandBuffer, *vData.indexBuffer, vData.indexType));
-            ASSIGN_OR_RETURN(msh.vertexBufferPrimitive, VertexBuffer::create(*_logicalDevice, commandBuffer, *vData.vertexBufferPrimitives));
+            ASSIGN_OR_RETURN(msh.vertexBuffer, VertexBuffer::create(*_logicalDevice, commandBuffer, *vData->vertexBuffer));
+            ASSIGN_OR_RETURN(msh.indexBuffer, IndexBuffer::create(*_logicalDevice, commandBuffer, *vData->indexBuffer, vData->indexType));
+            ASSIGN_OR_RETURN(msh.vertexBufferPrimitive, VertexBuffer::create(*_logicalDevice, commandBuffer, *vData->vertexBufferPrimitives));
             msh.aabb = createAABBfromVertices(std::vector<glm::vec3>(sceneData[i].positions.cbegin(), sceneData[i].positions.cend()), sceneData[i].model);
             _registry.addComponent<MeshComponent>(e, std::move(msh));
 

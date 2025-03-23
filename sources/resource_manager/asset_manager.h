@@ -11,10 +11,6 @@
 #include "thread_pool/thread_pool.h"
 
 #include <algorithm>
-#include <atomic>
-#include <condition_variable>
-#include <iterator>
-#include <mutex>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -52,7 +48,7 @@ public:
 		std::unique_ptr<StagingBuffer> vertexBuffer;
 		std::unique_ptr<StagingBuffer> indexBuffer;
 		VkIndexType indexType;
-		std::unique_ptr<StagingBuffer> vertexBufferPrimitives;	// VertexP/glm::vec3 buffer.
+		std::unique_ptr<StagingBuffer> vertexBufferPrimitives;
 		AABB aabb;
 	};
 
@@ -60,49 +56,13 @@ public:
 	void loadImageCubemapAsync(const std::string& filePath);
 
 	template<typename VertexType, typename PrimitiveType>
-	lib::Status loadVertexData(const std::string& key, lib::SharedBuffer<uint8_t> indices, uint8_t indexSize, lib::SharedBuffer<VertexType> vertices, lib::SharedBuffer<PrimitiveType> primitives) {
-		ASSIGN_OR_RETURN(auto indexBuffer, StagingBuffer::create(_memoryAllocator, indices));
-		ASSIGN_OR_RETURN(auto vertexBuffer, StagingBuffer::create(_memoryAllocator, vertices));
-		ASSIGN_OR_RETURN(auto primitivesVertexBuffer, StagingBuffer::create(_memoryAllocator, primitives));
-		_vertexDataResources.emplace(
-			std::piecewise_construct,
-			std::forward_as_tuple(key),
-			std::forward_as_tuple(
-				std::move(vertexBuffer),
-				std::move(indexBuffer),
-				getIndexType(indexSize),
-				std::move(primitivesVertexBuffer),
-				AABB{}
-			)
-		);
-		return lib::StatusOk();
-	}
+	void loadVertexData(const std::string& filePath, lib::SharedBuffer<uint8_t>& indices, uint8_t indexSize, lib::SharedBuffer<VertexType>& vertices, lib::SharedBuffer<PrimitiveType>& primitives);
 
 	template<typename VertexType>
-	lib::Status loadVertexData(const std::string& key, lib::SharedBuffer<uint8_t> indices, uint8_t indexSize, lib::SharedBuffer<VertexType> vertices) {
-		ASSIGN_OR_RETURN(auto vertexBuffer, StagingBuffer::create(_memoryAllocator, vertices));
-		ASSIGN_OR_RETURN(auto indexBuffer, StagingBuffer::create(_memoryAllocator, indices));
-		_vertexDataResources.emplace(
-			std::piecewise_construct,
-			std::forward_as_tuple(key),
-			std::forward_as_tuple(
-				nullptr,
-				std::move(indexBuffer),
-				getIndexType(indexSize),
-				std::move(vertexBuffer),
-				AABB{}
-			)
-		);
-		return lib::StatusOk();
-	}
+	void loadVertexData(const std::string& filePath, lib::SharedBuffer<uint8_t>& indices, uint8_t indexSize, lib::SharedBuffer<VertexType>& vertices);
 
 	lib::ErrorOr<const ImageData*> getImageData(const std::string& filePath);
-	void deleteImage(std::string_view filePath);
-
-	const VertexData& getVertexData(std::string_view key) const {
-		auto ptr = _vertexDataResources.find(std::string{ key });
-		return ptr->second; // TODO if not found branch
-	}
+	lib::ErrorOr<const VertexData*> getVertexData(const std::string& filePath);
 
 private:
 	void loadImageAsync(const std::string& filePath, std::function<lib::ErrorOr<ImageResource>(std::string_view)>&& loadingFunction);
@@ -110,8 +70,50 @@ private:
 	MemoryAllocator& _memoryAllocator;
 
 	std::unordered_map<std::string, VertexData> _vertexDataResources;
-	std::unordered_map<std::string, std::future<std::unique_ptr<VertexData>>> _awaitingVertexDataResources;
+	std::unordered_map<std::string, std::future<lib::ErrorOr<VertexData>>> _awaitingVertexDataResources;
 
 	std::unordered_map<std::string, ImageData> _imageResources;
 	std::unordered_map<std::string, std::future<lib::ErrorOr<ImageData>>> _awaitingImageResources;
 };
+
+template<typename VertexType, typename PrimitiveType>
+void AssetManager::loadVertexData(const std::string& filePath, lib::SharedBuffer<uint8_t>& indices, uint8_t indexSize, lib::SharedBuffer<VertexType>& vertices, lib::SharedBuffer<PrimitiveType>& primitives) {
+	if (_awaitingVertexDataResources.contains(filePath)) {
+		return;
+	}
+	auto future = std::async(std::launch::async, ([this, indices, indexSize, vertices, primitives]() {
+		auto vertexBuffer = StagingBuffer::create(_memoryAllocator, vertices);
+		if (!vertexBuffer.has_value()) [[unlikely]] {
+			return lib::ErrorOr<VertexData>(lib::Error(vertexBuffer.error()));
+		}
+		auto vertexBufferPrimitives = StagingBuffer::create(_memoryAllocator, primitives);
+		if (!vertexBufferPrimitives.has_value()) [[unlikely]] {
+			return lib::ErrorOr<VertexData>(lib::Error(vertexBufferPrimitives.error()));
+		}
+		auto indexBuffer = StagingBuffer::create(_memoryAllocator, indices);
+		if (!indexBuffer.has_value()) [[unlikely]] {
+			return lib::ErrorOr<VertexData>(lib::Error(indexBuffer.error()));
+		}
+		return lib::ErrorOr<VertexData>(VertexData(std::move(vertexBuffer.value()), std::move(indexBuffer.value()), getIndexType(indexSize), std::move(vertexBufferPrimitives.value()), AABB{}));
+	}));
+	_awaitingVertexDataResources.emplace(filePath, std::move(future));
+}
+
+template<typename VertexType>
+void AssetManager::loadVertexData(const std::string& filePath, lib::SharedBuffer<uint8_t>& indices, uint8_t indexSize, lib::SharedBuffer<VertexType>& vertices) {
+	if (_awaitingVertexDataResources.contains(filePath)) {
+		return;
+	}
+	auto future = std::async(std::launch::async, ([this, indices, indexSize, vertices]() {
+		auto vertexBuffer = StagingBuffer::create(_memoryAllocator, vertices);
+		if (!vertexBuffer.has_value()) [[unlikely]] {
+			return lib::ErrorOr<VertexData>(lib::Error(vertexBuffer.error()));
+		}
+		auto indexBuffer = StagingBuffer::create(_memoryAllocator, indices);
+		if (!indexBuffer.has_value()) [[unlikely]] {
+			return lib::ErrorOr<VertexData>(lib::Error(indexBuffer.error()));
+		}
+		return lib::ErrorOr<VertexData>(VertexData(nullptr, std::move(indexBuffer.value()), getIndexType(indexSize), std::move(vertexBuffer.value()), AABB{}));
+	}));
+	_awaitingVertexDataResources.emplace(filePath, std::move(future));
+}

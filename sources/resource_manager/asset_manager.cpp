@@ -11,7 +11,6 @@ void AssetManager::loadImageAsync(const std::string& filePath, std::function<lib
     if (_awaitingImageResources.contains(filePath)) {
         return;
     }
-
     auto future = std::async(std::launch::async, ([this, filePath, loadingFunction = std::move(loadingFunction)]() {
         lib::ErrorOr<ImageResource> resource = loadingFunction(filePath);
         if (!resource.has_value()) [[unlikely]]
@@ -45,10 +44,20 @@ lib::ErrorOr<const ImageData*> AssetManager::getImageData(const std::string& fil
         _awaitingImageResources.erase(it);
 		return &ptr.first->second;
     }
-    return lib::Error("Image data not found");
+    return lib::Error("Image data not found.");
 }
 
-void AssetManager::deleteImage(std::string_view filePath) {
-
-	return;
+lib::ErrorOr<const VertexData*> AssetManager::getVertexData(const std::string& filePath) {
+    auto vertexIt = _vertexDataResources.find(filePath);
+    if (vertexIt != _vertexDataResources.cend()) {
+        return &vertexIt->second;
+    }
+    auto it = _awaitingVertexDataResources.find(filePath);
+    if (it != _awaitingVertexDataResources.cend()) {
+        ASSIGN_OR_RETURN(auto vertexData, it->second.get());
+        auto ptr = _vertexDataResources.emplace(filePath, std::move(vertexData));
+        _awaitingVertexDataResources.erase(it);
+        return &ptr.first->second;
+    }
+    return lib::Error("Vertex data not found.");
 }
