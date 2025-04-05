@@ -24,8 +24,6 @@
 #include "screenshot/screenshot.h"
 #include "thread_pool/thread_pool.h"
 #include "pipeline/graphics_pipeline.h"
-#include "window/callback_manager/fps_callback_manager.h"
-
 #include <unordered_map>
 
 class SingleApp : public ApplicationBase {
@@ -90,7 +88,6 @@ class SingleApp : public ApplicationBase {
     std::unique_ptr<DescriptorSet> _descriptorSetShadow;
     // std::unique_ptr<Screenshot> _screenshot;
 
-    std::unique_ptr<CallbackManager> _callbackManager;
     std::unique_ptr<FPSCamera> _camera;
 
     std::vector<std::unique_ptr<CommandPool>> _commandPool;

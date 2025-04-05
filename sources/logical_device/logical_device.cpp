@@ -11,7 +11,7 @@
 
 LogicalDevice::LogicalDevice(const VkDevice logicalDevice, const PhysicalDevice& physicalDevice, const VkQueue graphicsQueue, const VkQueue presentQueue, const VkQueue computeQueue, const VkQueue transferQueue)
     : _device(logicalDevice), _physicalDevice(physicalDevice),
-    _memoryAllocator(std::in_place_type<VmaWrapper>, logicalDevice, physicalDevice.getVkPhysicalDevice(), _physicalDevice.getWindow().getInstance().getVkInstance()),
+    _memoryAllocator(std::in_place_type<VmaWrapper>, logicalDevice, physicalDevice.getVkPhysicalDevice(), _physicalDevice.getSurface().getInstance().getVkInstance()),
     _graphicsQueue(graphicsQueue), _presentQueue(presentQueue), _computeQueue(computeQueue), _transferQueue(transferQueue){
 }
 

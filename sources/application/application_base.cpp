@@ -1,17 +1,10 @@
 #include "application_base.h"
 
-#include <GLFW/glfw3.h>
-
-#include "window/window/window_glfw.h"
+#include "window/window_glfw.h"
 
 ApplicationBase::ApplicationBase() {
-	glfwInit();
-	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-
-	uint32_t glfwExtensionCount = 0;
-	const char** glfwExtensions;
-	glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-	std::vector<const char*>requiredExtensions(glfwExtensions, glfwExtensions + glfwExtensionCount);
+	_window = std::make_unique<WindowGLFW>("Bejzak Engine", 1920, 1080);
+	std::vector<const char*>requiredExtensions = _window->getExtensions();
 #ifdef VALIDATION_LAYERS_ENABLED
 	requiredExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif // VALIDATION_LAYERS_ENABLED
@@ -22,14 +15,10 @@ ApplicationBase::ApplicationBase() {
 	_debugMessenger = std::make_unique<DebugMessenger>(*_instance);
 #endif // VALIDATION_LAYERS_ENABLED
 
-	_window = std::make_unique<WindowGLFW>(*_instance, "Bejzak Engine", 1920, 1080);
-	_physicalDevice = PhysicalDevice::create(*_window).value();
+	_surface = _window->createSurface(*_instance).value();
+	_physicalDevice = PhysicalDevice::create(*_surface).value();
 	_logicalDevice = LogicalDevice::create(*_physicalDevice).value();
 	_swapchain = Swapchain::create(*_logicalDevice).value();
 
 	_singleTimeCommandPool = std::make_unique<CommandPool>(*_logicalDevice);
-}
-
-ApplicationBase::~ApplicationBase() {
-	glfwTerminate();
 }

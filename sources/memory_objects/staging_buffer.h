@@ -16,8 +16,11 @@ class StagingBuffer {
     StagingBuffer(const VkBuffer buffer, const Allocation allocation, uint32_t size, MemoryAllocator& memoryAllocator);
 
 public:
-    template <BufferLike Type>
-    static lib::ErrorOr<std::unique_ptr<StagingBuffer>> create(MemoryAllocator& memoryAllocator, const Type& buffer);
+    template <BufferLike Buffer>
+    static lib::ErrorOr<std::unique_ptr<StagingBuffer>> create(MemoryAllocator& memoryAllocator, const Buffer& buffer);
+
+    template <BufferLike... Buffer>
+    static lib::ErrorOr<std::unique_ptr<StagingBuffer>> createCombine(MemoryAllocator& memoryAllocator, const Buffer&... buffer);
 
     ~StagingBuffer();
 
@@ -47,8 +50,8 @@ private:
     };
 };
 
-template <BufferLike Type>
-static lib::ErrorOr<std::unique_ptr<StagingBuffer>> StagingBuffer::create(MemoryAllocator& memoryAllocator, const Type& buffer) {
+template <BufferLike Buffer>
+static lib::ErrorOr<std::unique_ptr<StagingBuffer>> StagingBuffer::create(MemoryAllocator& memoryAllocator, const Buffer& buffer) {
     const uint32_t size = buffer.size() * sizeof(std::decay_t<decltype(*buffer.data())>);
     Allocation allocation;
     ASSIGN_OR_RETURN(const std::pair bufferData, std::visit(Allocator{ allocation, size }, memoryAllocator));
@@ -56,4 +59,23 @@ static lib::ErrorOr<std::unique_ptr<StagingBuffer>> StagingBuffer::create(Memory
     return std::unique_ptr<StagingBuffer>(new StagingBuffer(bufferData.first, allocation, size, memoryAllocator));
 }
 
+template <BufferLike... Buffer>
+static lib::ErrorOr<std::unique_ptr<StagingBuffer>> StagingBuffer::createCombine(MemoryAllocator& memoryAllocator, const Buffer&... buffers) {
+    const size_t firstSize = std::get<0>(std::tuple{ buffers.size()... });
+    if (!((buffers.size() == firstSize) && ...)) {
+        return lib::Error("All buffers must have the same size.");
+    }
 
+    constexpr size_t perVertexSize = (sizeof(std::decay_t<decltype(*buffers.data())>) + ...);
+    const uint32_t totalSize = firstSize * perVertexSize;
+
+    Allocation allocation;
+    ASSIGN_OR_RETURN(const std::pair bufferData, std::visit(Allocator{ allocation, totalSize }, memoryAllocator));
+
+    std::byte* dst = static_cast<std::byte*>(bufferData.second);
+    // TODO use already existing function
+    ((std::memcpy(dst, buffers.data(), firstSize * sizeof(std::decay_t<decltype(*buffers.data())>)),
+        dst += firstSize * sizeof(std::decay_t<decltype(*buffers.data())>)), ...);
+
+    return std::unique_ptr<StagingBuffer>(new StagingBuffer(bufferData.first, allocation, totalSize, memoryAllocator));
+}

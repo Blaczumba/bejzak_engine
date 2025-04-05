@@ -32,13 +32,8 @@ SingleApp::SingleApp()
     createShadowResources();
 
     createCommandBuffers();
-    //_screenshot = std::make_unique<Screenshot>(*_logicalDevice);
-    //_screenshot->addImageToObserved(_framebufferTextures[1]->getImage(), "hig_res_screenshot.ppm");
-    _camera = std::make_unique<FPSCamera>(glm::radians(45.0f), 1920.0f / 1080.0f, 0.01f, 100.0f);
 
-    _callbackManager = std::make_unique<FPSCallbackManager>(_window.get());
-    _callbackManager->attach(_camera.get());
-    //_callbackManager->attach(_screenshot.get());
+    _camera = std::make_unique<FPSCamera>(glm::radians(45.0f), 1920.0f / 1080.0f, 0.01f, 100.0f);
 
     createSyncObjects();
 }
@@ -318,9 +313,12 @@ void SingleApp::run() {
     for (auto& object : _objects) {
         _registry.getComponent<MeshComponent>(object.getEntity()).vertexBufferPrimitive.reset();
     }
-
+    std::chrono::steady_clock::time_point previous;
     while (_window->open()) {
-        _callbackManager->pollEvents();
+        // _callbackManager->pollEvents();
+        float deltaTime = std::chrono::duration<float>(std::chrono::high_resolution_clock::now() - previous).count();
+        previous = std::chrono::high_resolution_clock::now();
+        _window->pollEvents();
         draw();
     }
     vkDeviceWaitIdle(_logicalDevice->getVkDevice());

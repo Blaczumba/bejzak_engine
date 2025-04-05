@@ -1,22 +1,31 @@
 #pragma once
 
 #include <vulkan/vulkan.h>
+#include "lib/status/status.h"
 
 #include <string>
 
 class LogicalDevice;
 
 class Shader {
-	VkShaderModule _shaderModule;
-	const VkShaderStageFlagBits _shaderStage;
-	const std::string_view _name;
+    VkShaderModule _shaderModule;
+    VkShaderStageFlagBits _shaderStage;
+    std::string _name;
+    const LogicalDevice* _logicalDevice;
 
-	const LogicalDevice& _logicalDevice;
+    Shader(VkShaderModule shaderModule, const LogicalDevice& logicalDevice, VkShaderStageFlagBits shaderStage);
 
 public:
-	Shader(const LogicalDevice& logicalDevice, const std::string& shaderPath, const VkShaderStageFlagBits shaderStage);
-	~Shader();
+    static lib::ErrorOr<Shader> create(const LogicalDevice& logicalDevice, const std::string& shaderPath, VkShaderStageFlagBits shaderStage);
 
-	VkPipelineShaderStageCreateInfo getVkPipelineStageCreateInfo() const;
-	VkShaderStageFlagBits getVkShaderStageFlagBits() const;
+    ~Shader();
+
+    Shader(Shader&& other) noexcept;
+    Shader& operator=(Shader&& other) noexcept;
+
+    Shader(const Shader&) = delete;
+    Shader& operator=(const Shader&) = delete;
+
+    VkPipelineShaderStageCreateInfo getVkPipelineStageCreateInfo() const;
+    VkShaderStageFlagBits getVkShaderStageFlagBits() const;
 };

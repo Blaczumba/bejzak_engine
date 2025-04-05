@@ -37,6 +37,11 @@ public:
 
     SharedBuffer(Buffer<T>&& other) noexcept : _buffer(std::move(other._buffer)), _size(std::exchange(other._size, 0)) {}
 
+    template<typename... Args>
+    void emplace(size_t index, Args&&... args) {
+        new(&_buffer[index]) T(std::forward<Args>(args)...);
+    }
+
     SharedBuffer& operator=(SharedBuffer& other) {
         if (this == &other) {
             return *this;

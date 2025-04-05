@@ -2,13 +2,13 @@
 
 #include "camera.h"
 
-#include "window/callback_observer/callback_observer.h"
+#include "window/window.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-class FPSCamera : public Camera, public CallbackObserver {
+class FPSCamera : public Camera {
     glm::vec3 _position = glm::vec3(0.0f, 0.0f, 0.0f);
     glm::vec3 _worldUp = glm::vec3(0.0f, 1.0f, 0.0f);
     glm::vec3 _up = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -29,7 +29,7 @@ class FPSCamera : public Camera, public CallbackObserver {
 public:
     FPSCamera(float fovyRadians, float aspectRatio, float zNear, float zFar);
 
-    void updateInput(const CallbackData& cbData) override;
+    void updateInput(const MouseKeyboard& inputManager, float deltaTime);
 
     void setAspectRatio(float aspectRatio);
     void setFovy(float fovyRadians);

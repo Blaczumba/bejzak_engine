@@ -3,7 +3,7 @@
 #include "logical_device/logical_device.h"
 #include "memory_objects/texture/texture.h"
 #include "physical_device/physical_device.h"
-#include "window/window/window.h"
+#include "window/window.h"
 
 #include <algorithm>
 #include <iterator>
@@ -58,7 +58,8 @@ lib::ErrorOr<std::unique_ptr<Swapchain>> Swapchain::create(const LogicalDevice& 
     const SwapChainSupportDetails swapChainSupport = propertyManager.getSwapChainSupportDetails();
     const VkDevice device = logicalDevice.getVkDevice();
     const VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes, VK_PRESENT_MODE_MAILBOX_KHR);
-    const Window& window = logicalDevice.getPhysicalDevice().getWindow();
+    const Surface& surface = logicalDevice.getPhysicalDevice().getSurface();
+    const Window& window = surface.getWindow();
 
     const VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats, VK_FORMAT_B8G8R8A8_SRGB);
     const VkExtent2D extent = chooseSwapExtent(window.getFramebufferSize(), swapChainSupport.capabilities);
@@ -70,7 +71,7 @@ lib::ErrorOr<std::unique_ptr<Swapchain>> Swapchain::create(const LogicalDevice& 
 
     VkSwapchainCreateInfoKHR createInfo = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-        .surface = window.getVkSurfaceKHR(),
+        .surface = surface.getVkSurface(),
         .minImageCount = imageCount,
         .imageFormat = surfaceFormat.format,
         .imageColorSpace = surfaceFormat.colorSpace,

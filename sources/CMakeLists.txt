@@ -9,6 +9,7 @@ add_subdirectory(lib)
 
 add_subdirectory(window)
 add_subdirectory(instance)
+add_subdirectory(surface)
 add_subdirectory(debug_messenger)
 add_subdirectory(physical_device)
 add_subdirectory(logical_device)

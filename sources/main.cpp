@@ -1,4 +1,3 @@
-// #include <application/offscreen_rendering_application.h>
 #include <application/double_screenshot_application.h>
 
 int main() {

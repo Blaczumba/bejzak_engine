@@ -2,7 +2,6 @@
 
 #include "config/config.h"
 #include "debug_messenger/debug_messenger_utils.h"
-#include "window/window/window.h"
 
 #include <algorithm>
 #include <cstring>
