@@ -48,18 +48,40 @@ enum class Key : uint16_t {
     Menu
 };
 
+using Callback = std::function<void(Key key, int action)>;
+
+}
+
+namespace Mouse {
+    
+enum class Button : uint8_t {
+    None,
+
+    Button1,
+    Button2,
+    Button3,
+    Button4,
+    Button5,
+    Button6,
+    Button7
+};
+
+using MoveCallback = std::function<void(float xPos, float yPos)>;
+using ButtonCallback = std::function<void(Button button, int action)>;
+using ScrollCallback = std::function<void(Button button, int action)>;
+
 }
 
 class InputDevice {
 
 };
 
-using InputCallback = std::function<void(Keyboard::Key key, int action)>;
 
 class MouseKeyboard : public InputDevice {
 public:
 	virtual bool isPressed(Keyboard::Key key) const = 0;
-	virtual void setInputCallback(InputCallback callback) const = 0;
-    // virtual void setMouseCallback(MouseCallback callback)
-    virtual std::pair<float, float> getMouseOffsets() const = 0;
+	virtual void setKeyboardCallback(Keyboard::Callback callback) const = 0;
+    // virtual bool isPressed(Mouse::Button button) const = 0;
+    virtual void setMouseMoveCallback(Mouse::MoveCallback callback) const = 0;
+    // virtual void setMouseScrollCallback(MouseCallback callback)
 };

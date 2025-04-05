@@ -3,7 +3,7 @@
 #include "window/window_glfw.h"
 
 ApplicationBase::ApplicationBase() {
-	_window = std::make_unique<WindowGLFW>("Bejzak Engine", 1920, 1080);
+	_window = std::make_unique<WindowGlfw>("Bejzak Engine", 1920, 1080);
 	std::vector<const char*>requiredExtensions = _window->getExtensions();
 #ifdef VALIDATION_LAYERS_ENABLED
 	requiredExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);

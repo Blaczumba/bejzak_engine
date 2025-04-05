@@ -22,6 +22,7 @@
 
 SingleApp::SingleApp()
     : ApplicationBase() {
+    
     _assetManager = std::make_unique<AssetManager>(_logicalDevice->getMemoryAllocator());
 
     createDescriptorSets();
@@ -34,8 +35,37 @@ SingleApp::SingleApp()
     createCommandBuffers();
 
     _camera = std::make_unique<FPSCamera>(glm::radians(45.0f), 1920.0f / 1080.0f, 0.01f, 100.0f);
+    setInput();
 
     createSyncObjects();
+}
+
+void SingleApp::setInput() {
+    _window->absorbCursor();
+
+    if (MouseKeyboard* manager = _window->getMouseKeyboard(); manager) {
+        manager->setKeyboardCallback([&](Keyboard::Key key, int action) {
+            switch (key) {
+            case Keyboard::Key::Escape:
+                _window->close();
+                break;
+            }
+        });
+
+        manager->setMouseMoveCallback([&](float xPosIn, float yPosIn) {
+            float xpos = static_cast<float>(xPosIn);
+            float ypos = static_cast<float>(yPosIn);
+
+            static float lastX = xPosIn;
+            static float lastY = yPosIn;
+
+            _mouseXOffset = xpos - lastX;
+            _mouseYOffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
+
+            lastX = xpos;
+            lastY = ypos;
+        });
+    }
 }
 
 lib::Status SingleApp::loadCubemap() {
@@ -265,6 +295,7 @@ lib::Status SingleApp::createPresentResources() {
         };
         _graphicsPipelineNormal = std::make_unique<GraphicsPipeline>(*_renderPass, *_normalShaderProgram, parameters);
     }
+    return lib::StatusOk();
 }
 
 lib::Status SingleApp::createShadowResources() {
@@ -319,6 +350,8 @@ void SingleApp::run() {
         float deltaTime = std::chrono::duration<float>(std::chrono::high_resolution_clock::now() - previous).count();
         previous = std::chrono::high_resolution_clock::now();
         _window->pollEvents();
+        _camera->updateInput(*_window->getMouseKeyboard(), _mouseXOffset, _mouseYOffset, deltaTime);
+        _mouseXOffset = _mouseYOffset = 0.0f;
         draw();
     }
     vkDeviceWaitIdle(_logicalDevice->getVkDevice());
@@ -385,8 +418,8 @@ void SingleApp::draw() {
 
 VkFormat SingleApp::findDepthFormat() const {
     const std::array<VkFormat, 3> depthFormats = {
-        VK_FORMAT_D32_SFLOAT,
         VK_FORMAT_D24_UNORM_S8_UINT,
+        VK_FORMAT_D32_SFLOAT,
         VK_FORMAT_D32_SFLOAT_S8_UINT,
     };
 

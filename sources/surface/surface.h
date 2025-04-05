@@ -23,5 +23,5 @@ private:
 	const Window& _window;
 
 	// TODO remove
-	friend class WindowGLFW;
+	friend class WindowGlfw;
 };

@@ -58,18 +58,21 @@ bool MouseKeyboardGlfw::isPressed(Keyboard::Key key) const {
     return glfwGetKey(_window, Keyboard::fromKeyToGlfw[static_cast<uint16_t>(key)]) == GLFW_PRESS;
 }
 
-void MouseKeyboardGlfw::setInputCallback(InputCallback callback) const {
-    static InputCallback mouseKeyboardCallback = callback;
+void MouseKeyboardGlfw::setKeyboardCallback(Keyboard::Callback callback) const {
+    static Keyboard::Callback keyCallback = callback;
     glfwSetKeyCallback(_window, [](GLFWwindow* win, int key, int scancode, int action, int mods) {
-        mouseKeyboardCallback(Keyboard::fromGlfwToKey[key], action);
+        keyCallback(Keyboard::fromGlfwToKey[key], action);
     });
 }
 
-std::pair<float, float> MouseKeyboardGlfw::getMouseOffsets() const {
-    return {};
+void MouseKeyboardGlfw::setMouseMoveCallback(Mouse::MoveCallback callback) const {
+    static Mouse::MoveCallback mouseCallback = callback;
+    glfwSetCursorPosCallback(_window, [](GLFWwindow* win, double xPos, double yPos) {
+        mouseCallback(xPos, yPos);
+    });
 }
 
-WindowGLFW::WindowGLFW(std::string_view windowName, uint32_t width, uint32_t height) {
+WindowGlfw::WindowGlfw(std::string_view windowName, uint32_t width, uint32_t height) {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     _window = glfwCreateWindow(width, height, windowName.data(), nullptr, nullptr);
@@ -78,40 +81,52 @@ WindowGLFW::WindowGLFW(std::string_view windowName, uint32_t width, uint32_t hei
     glfwSetWindowUserPointer(_window, this);
 }
 
-WindowGLFW::~WindowGLFW() {
+WindowGlfw::~WindowGlfw() {
     glfwDestroyWindow(_window);
     glfwTerminate();
 }
 
-GLFWwindow* WindowGLFW::getGlfwWindow() {
+GLFWwindow* WindowGlfw::getGlfwWindow() {
     return _window;
 }
 
-bool WindowGLFW::open() const {
+bool WindowGlfw::open() const {
     return !glfwWindowShouldClose(_window);
 }
 
-void WindowGLFW::pollEvents() {
+void WindowGlfw::close() const {
+    glfwSetWindowShouldClose(_window, true);
+}
+
+void WindowGlfw::absorbCursor() const {
+    glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+}
+
+void WindowGlfw::freeCursor() const {
+    glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+}
+
+void WindowGlfw::pollEvents() {
     glfwPollEvents();
 }
 
-void WindowGLFW::setWindowSize(int width, int height) {
+void WindowGlfw::setWindowSize(int width, int height) {
     glfwSetWindowSize(_window, width, height);
 }
 
-VkExtent2D WindowGLFW::getFramebufferSize() const {
+VkExtent2D WindowGlfw::getFramebufferSize() const {
     int width, height;
     glfwGetFramebufferSize(_window, &width, &height);
     return { static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
 }
 
-std::vector<const char*> WindowGLFW::getExtensions() const {
+std::vector<const char*> WindowGlfw::getExtensions() const {
     uint32_t glfwExtensionCount;
     const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
     return std::vector<const char*>(glfwExtensions, glfwExtensions + glfwExtensionCount);
 }
 
-lib::ErrorOr<std::unique_ptr<Surface>> WindowGLFW::createSurface(const Instance& instance) const {
+lib::ErrorOr<std::unique_ptr<Surface>> WindowGlfw::createSurface(const Instance& instance) const {
     VkSurfaceKHR surface;
     if (glfwCreateWindowSurface(instance.getVkInstance(), _window, nullptr, &surface) != VK_SUCCESS) {
         return lib::Error("Failed to create window surface.");
@@ -119,6 +134,6 @@ lib::ErrorOr<std::unique_ptr<Surface>> WindowGLFW::createSurface(const Instance&
     return std::unique_ptr<Surface>(new Surface(surface, instance, *this));
 }
 
-MouseKeyboard* WindowGLFW::getMouseKeyboard() {
+MouseKeyboard* WindowGlfw::getMouseKeyboard() {
     return _mouseKeyboard.get();
 }

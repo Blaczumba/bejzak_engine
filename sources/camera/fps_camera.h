@@ -29,7 +29,7 @@ class FPSCamera : public Camera {
 public:
     FPSCamera(float fovyRadians, float aspectRatio, float zNear, float zFar);
 
-    void updateInput(const MouseKeyboard& inputManager, float deltaTime);
+    void updateInput(const MouseKeyboard& inputManager, float xOffset, float yOffset, float deltaTime);
 
     void setAspectRatio(float aspectRatio);
     void setFovy(float fovyRadians);

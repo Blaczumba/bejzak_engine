@@ -1,4 +1,4 @@
-add_library(WindowGLFW window_glfw.cpp)
+add_library(WindowGLFW window_glfw.cpp window.cpp)
 
 target_link_libraries(WindowGLFW PUBLIC glfw Surface)
 

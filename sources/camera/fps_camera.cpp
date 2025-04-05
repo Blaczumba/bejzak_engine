@@ -11,7 +11,7 @@ FPSCamera::FPSCamera(float fovyRadians, float aspectRatio, float zNear, float zF
     rotate(_yaw, _pitch);
 }
 
-void FPSCamera::updateInput(const MouseKeyboard& inputManager, float deltaTime) {
+void FPSCamera::updateInput(const MouseKeyboard& inputManager, float xOffset, float yOffset, float deltaTime) {
     if (inputManager.isPressed(Keyboard::Key::W)) {
         move(deltaTime * _front);
     }
@@ -25,12 +25,10 @@ void FPSCamera::updateInput(const MouseKeyboard& inputManager, float deltaTime) 
         move(deltaTime * _right);
     }
 
-    //if (cbData.mouseAction) {
-    //    _yaw += cbData.xoffset * _mouseSensitivity;
-    //    _pitch += cbData.yoffset * _mouseSensitivity;
-    //    _pitch = std::fminf(_pitch, glm::half_pi<float>() - glm::epsilon<float>()); // constrain pitch
-    //    rotate(_yaw, _pitch);
-    //}
+    _yaw += xOffset * _mouseSensitivity;
+    _pitch += yOffset * _mouseSensitivity;
+    _pitch = std::fminf(_pitch, glm::half_pi<float>() - glm::epsilon<float>()); // constrain pitch
+    rotate(_yaw, _pitch);
 }
 
 glm::mat4 FPSCamera::getViewMatrix() const {

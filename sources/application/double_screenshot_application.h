@@ -104,6 +104,9 @@ class SingleApp : public ApplicationBase {
     static constexpr uint32_t MAX_FRAMES_IN_FLIGHT = 3;
     static constexpr uint32_t MAX_THREADS_IN_POOL = 2;
 
+    float _mouseXOffset;
+    float _mouseYOffset;
+
 public:
     SingleApp();
     ~SingleApp();
@@ -115,6 +118,7 @@ public:
 
     void run() override;
 private:
+    void setInput();
     void draw();
     VkFormat findDepthFormat() const;
     void createCommandBuffers();
