@@ -2,6 +2,7 @@
 
 #include "entity_component_system/entity/entity.h"
 
+#include <array>
 #include <optional>
 #include <unordered_map>
 #include <set>

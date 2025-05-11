@@ -11,7 +11,7 @@ FPSCamera::FPSCamera(float fovyRadians, float aspectRatio, float zNear, float zF
     rotate(_yaw, _pitch);
 }
 
-void FPSCamera::updateInput(const MouseKeyboard& inputManager, float xOffset, float yOffset, float deltaTime) {
+void FPSCamera::updateInput(const MouseKeyboardManager& inputManager, float xOffset, float yOffset, float deltaTime) {
     if (inputManager.isPressed(Keyboard::Key::W)) {
         move(deltaTime * _front);
     }

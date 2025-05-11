@@ -8,6 +8,7 @@
 #include "vulkan/vulkan.h"
 
 #include <functional>
+#include <memory>
 #include <vector>
 
 class Surface;
@@ -25,8 +26,6 @@ public:
 
 	virtual bool open() const = 0;
 	virtual void close() const = 0;
-	virtual void absorbCursor() const = 0;
-	virtual void freeCursor() const = 0;
 
 	virtual void pollEvents() = 0;
 
@@ -35,5 +34,5 @@ public:
 
 	virtual std::vector<const char*> getExtensions() const = 0;
 	virtual lib::ErrorOr<std::unique_ptr<Surface>> createSurface(const Instance& instance) const = 0;
-	virtual MouseKeyboard* getMouseKeyboard() = 0;
+	virtual MouseKeyboardManager* getMouseKeyboardManager() = 0;
 };

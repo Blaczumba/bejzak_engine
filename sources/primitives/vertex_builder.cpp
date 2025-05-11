@@ -30,10 +30,10 @@ lib::Buffer<VertexPTNT> buildInterleavingVertexData(const glm::vec3* positions, 
 	return vertices;
 }
 
-template <BufferLike... Buffer>
-void buildInterleavingVertexDataAsBytes(void* destinationBuffer, const Buffer&... buffers, size_t size) {
-	std::byte* dst = static_cast<std::byte*>(destinationBuffer);
-	for (size_t i = 0; i < size; ++i) {
-		((std::memcpy(dst, &buffers[i], sizeof(buffers[i])), dst += sizeof(buffers[i])), ...);
-	}
-}
+//template <BufferLike... Buffer>
+//void buildInterleavingVertexDataAsBytes(void* destinationBuffer, const Buffer&... buffers, size_t size) {
+//	std::byte* dst = static_cast<std::byte*>(destinationBuffer);
+//	for (size_t i = 0; i < size; ++i) {
+//		((std::memcpy(dst, &buffers[i], sizeof(buffers[i])), dst += sizeof(buffers[i])), ...);
+//	}
+//}

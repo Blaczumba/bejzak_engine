@@ -27,10 +27,9 @@ IndexBuffer::IndexBuffer(const VkBuffer indexBuffer, const Allocation allocation
 }
 
 lib::ErrorOr<std::unique_ptr<IndexBuffer>> IndexBuffer::create(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer, VkIndexType indexType) {
-    Allocation allocation;
-    ASSIGN_OR_RETURN(VkBuffer indexBuffer, std::visit(Allocator{ allocation, stagingBuffer.getSize() }, logicalDevice.getMemoryAllocator()));
-    copyBufferToBuffer(commandBuffer, stagingBuffer.getVkBuffer(), indexBuffer, stagingBuffer.getSize());
-    return std::unique_ptr<IndexBuffer>(new IndexBuffer(indexBuffer, allocation, logicalDevice, indexType, stagingBuffer.getSize() / getIndexSize(indexType)));
+    ASSIGN_OR_RETURN(const auto bufferInfo, std::visit(Allocator{ stagingBuffer.getSize() }, logicalDevice.getMemoryAllocator()));
+    copyBufferToBuffer(commandBuffer, stagingBuffer.getVkBuffer(), bufferInfo.first, stagingBuffer.getSize());
+    return std::unique_ptr<IndexBuffer>(new IndexBuffer(bufferInfo.first, bufferInfo.second, logicalDevice, indexType, stagingBuffer.getSize() / getIndexSize(indexType)));
 }
 
 IndexBuffer::~IndexBuffer() {

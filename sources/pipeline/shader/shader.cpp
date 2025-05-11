@@ -53,17 +53,13 @@ Shader::Shader(Shader&& other) noexcept
 }
 
 Shader& Shader::operator=(Shader&& other) noexcept {
-    if (this != &other) {
-        if (_shaderModule != VK_NULL_HANDLE) {
-            vkDestroyShaderModule(_logicalDevice->getVkDevice(), _shaderModule, nullptr);
-        }
-
-        _shaderModule = std::exchange(other._shaderModule, VK_NULL_HANDLE);
-        _logicalDevice = other._logicalDevice;
-        _shaderStage = other._shaderStage;
-        _name = std::move(other._name);
+    if (this == &other) {
+        return *this;
     }
-    return *this;
+    _shaderModule = std::exchange(other._shaderModule, VK_NULL_HANDLE);
+    _logicalDevice = other._logicalDevice;
+    _shaderStage = other._shaderStage;
+    _name = std::move(other._name);
 }
 
 Shader::~Shader() {

@@ -42,7 +42,7 @@ constexpr std::array<int16_t, 121> fromKeyToGlfw = {
 };
 
 constexpr std::array<Key, 349> fromGlfwToKey = [] {
-    std::array<Key, GLFW_KEY_MENU + 1> mapping{};
+    std::array<Key, 349> mapping{};
     for (uint16_t i = 1; i < fromKeyToGlfw.size(); ++i) {
         mapping[fromKeyToGlfw[i]] = static_cast<Key>(i);
     }
@@ -52,31 +52,39 @@ constexpr std::array<Key, 349> fromGlfwToKey = [] {
 } // namespace
 } // namespace Keyboard
 
-MouseKeyboardGlfw::MouseKeyboardGlfw(GLFWwindow* window) : _window(window) { }
+MouseKeyboardManagerGlfw::MouseKeyboardManagerGlfw(GLFWwindow* window) : _window(window) { }
 
-bool MouseKeyboardGlfw::isPressed(Keyboard::Key key) const {
+bool MouseKeyboardManagerGlfw::isPressed(Keyboard::Key key) const {
     return glfwGetKey(_window, Keyboard::fromKeyToGlfw[static_cast<uint16_t>(key)]) == GLFW_PRESS;
 }
 
-void MouseKeyboardGlfw::setKeyboardCallback(Keyboard::Callback callback) const {
+void MouseKeyboardManagerGlfw::setKeyboardCallback(Keyboard::Callback callback) const {
     static Keyboard::Callback keyCallback = callback;
     glfwSetKeyCallback(_window, [](GLFWwindow* win, int key, int scancode, int action, int mods) {
         keyCallback(Keyboard::fromGlfwToKey[key], action);
     });
 }
 
-void MouseKeyboardGlfw::setMouseMoveCallback(Mouse::MoveCallback callback) const {
+void MouseKeyboardManagerGlfw::setMouseMoveCallback(Mouse::MoveCallback callback) const {
     static Mouse::MoveCallback mouseCallback = callback;
     glfwSetCursorPosCallback(_window, [](GLFWwindow* win, double xPos, double yPos) {
         mouseCallback(xPos, yPos);
     });
 }
 
+void MouseKeyboardManagerGlfw::absorbCursor() const {
+    glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+}
+
+void MouseKeyboardManagerGlfw::freeCursor() const {
+    glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+}
+
 WindowGlfw::WindowGlfw(std::string_view windowName, uint32_t width, uint32_t height) {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    _window = glfwCreateWindow(width, height, windowName.data(), nullptr, nullptr);
-    _mouseKeyboard = std::make_unique<MouseKeyboardGlfw>(_window);
+    _window = glfwCreateWindow(width, height, windowName.data(), /*glfwGetPrimaryMonitor()*/ nullptr, nullptr);
+    _mouseKeyboard = std::make_unique<MouseKeyboardManagerGlfw>(_window);
 
     glfwSetWindowUserPointer(_window, this);
 }
@@ -98,14 +106,6 @@ void WindowGlfw::close() const {
     glfwSetWindowShouldClose(_window, true);
 }
 
-void WindowGlfw::absorbCursor() const {
-    glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-}
-
-void WindowGlfw::freeCursor() const {
-    glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
-}
-
 void WindowGlfw::pollEvents() {
     glfwPollEvents();
 }
@@ -116,6 +116,7 @@ void WindowGlfw::setWindowSize(int width, int height) {
 
 VkExtent2D WindowGlfw::getFramebufferSize() const {
     int width, height;
+    glfwWaitEvents();
     glfwGetFramebufferSize(_window, &width, &height);
     return { static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
 }
@@ -134,6 +135,6 @@ lib::ErrorOr<std::unique_ptr<Surface>> WindowGlfw::createSurface(const Instance&
     return std::unique_ptr<Surface>(new Surface(surface, instance, *this));
 }
 
-MouseKeyboard* WindowGlfw::getMouseKeyboard() {
+MouseKeyboardManager* WindowGlfw::getMouseKeyboardManager() {
     return _mouseKeyboard.get();
 }

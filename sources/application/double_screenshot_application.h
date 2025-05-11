@@ -110,7 +110,6 @@ class SingleApp : public ApplicationBase {
 public:
     SingleApp();
     ~SingleApp();
-    static SingleApp& getInstance();
 
     SingleApp(const SingleApp&) = delete;
     SingleApp(SingleApp&&) = delete;

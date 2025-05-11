@@ -8,10 +8,9 @@ VertexBuffer::~VertexBuffer() {
 }
 
 lib::ErrorOr<std::unique_ptr<VertexBuffer>> VertexBuffer::create(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer) {
-    Allocation allocation;
-    ASSIGN_OR_RETURN(const VkBuffer vertexBuffer, std::visit(Allocator{ allocation, stagingBuffer.getSize() }, logicalDevice.getMemoryAllocator()));
-    copyBufferToBuffer(commandBuffer, stagingBuffer.getVkBuffer(), vertexBuffer, stagingBuffer.getSize());
-    return std::unique_ptr<VertexBuffer>(new VertexBuffer(vertexBuffer, allocation, logicalDevice));
+    ASSIGN_OR_RETURN(const auto bufferInfo, std::visit(Allocator{ stagingBuffer.getSize() }, logicalDevice.getMemoryAllocator()));
+    copyBufferToBuffer(commandBuffer, stagingBuffer.getVkBuffer(), bufferInfo.first, stagingBuffer.getSize());
+    return std::unique_ptr<VertexBuffer>(new VertexBuffer(bufferInfo.first, bufferInfo.second, logicalDevice));
 }
 
 const VkBuffer VertexBuffer::getVkBuffer() const {

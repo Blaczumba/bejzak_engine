@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include <functional>
 
 namespace Keyboard {
@@ -72,16 +73,19 @@ using ScrollCallback = std::function<void(Button button, int action)>;
 
 }
 
-class InputDevice {
-
+class InputManager {
+public:
+    virtual ~InputManager() = default;
 };
 
 
-class MouseKeyboard : public InputDevice {
+class MouseKeyboardManager : public InputManager {
 public:
 	virtual bool isPressed(Keyboard::Key key) const = 0;
 	virtual void setKeyboardCallback(Keyboard::Callback callback) const = 0;
     // virtual bool isPressed(Mouse::Button button) const = 0;
     virtual void setMouseMoveCallback(Mouse::MoveCallback callback) const = 0;
+    virtual void absorbCursor() const = 0;
+    virtual void freeCursor() const = 0;
     // virtual void setMouseScrollCallback(MouseCallback callback)
 };

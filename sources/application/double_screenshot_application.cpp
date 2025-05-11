@@ -41,9 +41,9 @@ SingleApp::SingleApp()
 }
 
 void SingleApp::setInput() {
-    _window->absorbCursor();
+    if (MouseKeyboardManager* manager = _window->getMouseKeyboardManager(); manager != nullptr) {
+        // manager->absorbCursor();
 
-    if (MouseKeyboard* manager = _window->getMouseKeyboard(); manager) {
         manager->setKeyboardCallback([&](Keyboard::Key key, int action) {
             switch (key) {
             case Keyboard::Key::Escape:
@@ -165,7 +165,7 @@ lib::Status SingleApp::loadObjects() {
             }
 
             ASSIGN_OR_RETURN(auto descriptorSet, _descriptorPool->createDesriptorSet());
-            descriptorSet->updateDescriptorSet({ _dynamicUniformBuffersCamera.get(), _uniformBuffersLight.get(), _uniformBuffersObjects.get(), _uniformMap[diffusePath].get(), _shadowTextureUniform.get(), _uniformMap[normalPath].get(), _uniformMap[metallicRoughnessPath].get() });;
+            descriptorSet->updateDescriptorSet({ _dynamicUniformBuffersCamera.get(), _uniformMap[diffusePath].get(), _uniformBuffersLight.get(), _uniformBuffersObjects.get(), _shadowTextureUniform.get(), _uniformMap[normalPath].get(), _uniformMap[metallicRoughnessPath].get() });;
 
             _objects.emplace_back("Object", e);
             ASSIGN_OR_RETURN(auto vData, _assetManager->getVertexData(std::to_string(i)));
@@ -221,7 +221,7 @@ lib::Status SingleApp::createDescriptorSets() {
     _skyboxTextureUniform = std::make_unique<UniformBufferTexture>(*_textureCubemap);
     _shadowTextureUniform = std::make_unique<UniformBufferTexture>(*_shadowMap);
 
-    _pbrShaderProgram = ShaderProgramFactory::createShaderProgram(ShaderProgramType::PBR_TESSELLATION, *_logicalDevice);
+    _pbrShaderProgram = ShaderProgramFactory::createShaderProgram(ShaderProgramType::PBR, *_logicalDevice);
     _normalShaderProgram = ShaderProgramFactory::createShaderProgram(ShaderProgramType::NORMAL, *_logicalDevice);
     _skyboxShaderProgram = ShaderProgramFactory::createShaderProgram(ShaderProgramType::SKYBOX, *_logicalDevice);
     _shadowShaderProgram = ShaderProgramFactory::createShaderProgram(ShaderProgramType::SHADOW, *_logicalDevice);
@@ -277,7 +277,7 @@ lib::Status SingleApp::createPresentResources() {
     {
         const GraphicsPipelineParameters parameters = {
             .msaaSamples = msaaSamples,
-            .patchControlPoints = 3,
+            // .patchControlPoints = 3,
         };
         _graphicsPipeline = std::make_unique<GraphicsPipeline>(*_renderPass, *_pbrShaderProgram, parameters);
     }
@@ -316,6 +316,7 @@ lib::Status SingleApp::createShadowResources() {
         .depthBiasSlopeFactor = 2.0f,
     };
     _shadowPipeline = std::make_unique<GraphicsPipeline>(*_shadowRenderPass, *_shadowShaderProgram, parameters);
+    return lib::StatusOk();
 }
 
 SingleApp::~SingleApp() {
@@ -326,11 +327,6 @@ SingleApp::~SingleApp() {
         vkDestroySemaphore(device, _imageAvailableSemaphores[i], nullptr);
         vkDestroyFence(device, _inFlightFences[i], nullptr);
     }
-}
-
-SingleApp& SingleApp::getInstance() {
-    static SingleApp application;
-    return application;
 }
 
 void SingleApp::run() {
@@ -346,11 +342,11 @@ void SingleApp::run() {
     }
     std::chrono::steady_clock::time_point previous;
     while (_window->open()) {
-        // _callbackManager->pollEvents();
-        float deltaTime = std::chrono::duration<float>(std::chrono::high_resolution_clock::now() - previous).count();
-        previous = std::chrono::high_resolution_clock::now();
+        float deltaTime = std::chrono::duration<float>(std::chrono::steady_clock::now() - previous).count();
+        std::cout << 1.0f / deltaTime << std::endl;
+        previous = std::chrono::steady_clock::now();
         _window->pollEvents();
-        _camera->updateInput(*_window->getMouseKeyboard(), _mouseXOffset, _mouseYOffset, deltaTime);
+        _camera->updateInput(*_window->getMouseKeyboardManager(), _mouseXOffset, _mouseYOffset, deltaTime);
         _mouseXOffset = _mouseYOffset = 0.0f;
         draw();
     }
@@ -577,11 +573,11 @@ void SingleApp::recordCommandBuffer(uint32_t imageIndex) {
         vkCmdDrawIndexed(commandBuffer, _indexBufferCube->getIndexCount(), 1, 0, 0, 0);
 
         // Object
-        vkCmdBindPipeline(commandBuffer, _graphicsPipelineNormal->getVkPipelineBindPoint(), _graphicsPipelineNormal->getVkPipeline());
-        _vertexBufferObject->bind(commandBuffer);
-        _indexBufferObject->bind(commandBuffer);
-        _entitytoDescriptorSet[_objectEntity]->bind(commandBuffer, *_graphicsPipelineNormal, { _currentFrame });
-        vkCmdDrawIndexed(commandBuffer, _indexBufferObject->getIndexCount(), 1, 0, 0, 0);
+        //vkCmdBindPipeline(commandBuffer, _graphicsPipelineNormal->getVkPipelineBindPoint(), _graphicsPipelineNormal->getVkPipeline());
+        //_vertexBufferObject->bind(commandBuffer);
+        //_indexBufferObject->bind(commandBuffer);
+        //_entitytoDescriptorSet[_objectEntity]->bind(commandBuffer, *_graphicsPipelineNormal, { _currentFrame });
+        //vkCmdDrawIndexed(commandBuffer, _indexBufferObject->getIndexCount(), 1, 0, 0, 0);
 
         vkEndCommandBuffer(commandBuffer);
         });
@@ -645,10 +641,10 @@ void SingleApp::recordShadowCommandBuffer(VkCommandBuffer commandBuffer, uint32_
         vkCmdDrawIndexed(commandBuffer, indexBuffer->getIndexCount(), 1, 0, 0, 0);
     }
 
-    _vertexBufferPrimitiveObject->bind(commandBuffer);
-    _indexBufferObject->bind(commandBuffer);
-    _descriptorSetShadow->bind(commandBuffer, *_shadowPipeline, { index });
-    vkCmdDrawIndexed(commandBuffer, _indexBufferObject->getIndexCount(), 1, 0, 0, 0);
+    //_vertexBufferPrimitiveObject->bind(commandBuffer);
+    //_indexBufferObject->bind(commandBuffer);
+    //_descriptorSetShadow->bind(commandBuffer, *_shadowPipeline, { index });
+    //vkCmdDrawIndexed(commandBuffer, _indexBufferObject->getIndexCount(), 1, 0, 0, 0);
 
     vkCmdEndRenderPass(commandBuffer);
     //if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
@@ -660,7 +656,6 @@ lib::Status SingleApp::recreateSwapChain() {
     VkExtent2D extent{};
     while (extent.width == 0 || extent.height == 0) {
         extent = _window->getFramebufferSize();
-        //glfwWaitEvents();
     }
 
     _camera->setAspectRatio(static_cast<float>(extent.width) / extent.height);
