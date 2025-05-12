@@ -16,16 +16,25 @@ class VertexBuffer {
     VkBuffer _vertexBuffer;
     Allocation _allocation;
 
-	const LogicalDevice& _logicalDevice;
+	LogicalDevice* _logicalDevice;
 
-	VertexBuffer(const VkBuffer vertexBuffer, const Allocation allocation, const LogicalDevice& logicalDevice);
+	VertexBuffer(const VkBuffer vertexBuffer, const Allocation allocation, LogicalDevice& logicalDevice);
 
 public:
+    VertexBuffer();
+
+    VertexBuffer(VertexBuffer&& vertexBuffer) noexcept;
+
+    VertexBuffer& operator=(VertexBuffer&& vertexBuffer) noexcept;
+
     ~VertexBuffer();
 
-    static lib::ErrorOr<std::unique_ptr<VertexBuffer>> create(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer);
+    static lib::ErrorOr<VertexBuffer> create(LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer);
+
+    static lib::ErrorOr<std::unique_ptr<VertexBuffer>> createPtr(LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer);
 
     const VkBuffer getVkBuffer() const;
+
     void bind(const VkCommandBuffer commandBuffer) const;
 
 private:

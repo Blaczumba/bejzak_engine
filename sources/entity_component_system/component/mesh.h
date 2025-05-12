@@ -11,9 +11,9 @@ class MeshComponent {
 	static constexpr ComponentType componentID = 2;
 
 public:
-	std::shared_ptr<VertexBuffer> vertexBuffer;
-	std::shared_ptr<IndexBuffer> indexBuffer;
-	std::shared_ptr<VertexBuffer> vertexBufferPrimitive;
+	VertexBuffer vertexBuffer;
+	IndexBuffer indexBuffer;
+	VertexBuffer vertexBufferPrimitive;
 	AABB aabb;
 
 	static constexpr std::enable_if_t<componentID < MAX_COMPONENTS, ComponentType> getComponentID() { return componentID; }

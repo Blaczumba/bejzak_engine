@@ -30,8 +30,8 @@ class SingleApp : public ApplicationBase {
     uint32_t index = 0;
     std::vector<std::unique_ptr<Texture>> _textures;
     std::unordered_map<std::string, std::shared_ptr<UniformBufferTexture>> _uniformMap;
-    std::unordered_map<std::string, std::shared_ptr<VertexBuffer>> _vertexBufferMap;
-    std::unordered_map<std::string, std::shared_ptr<IndexBuffer>> _indexBufferMap;
+    std::unordered_map<std::string, VertexBuffer> _vertexBufferMap;
+    std::unordered_map<std::string, IndexBuffer> _indexBufferMap;
     std::unordered_map<Entity, uint32_t> _entityToIndex;
     std::unordered_map<Entity, std::unique_ptr<DescriptorSet>> _entitytoDescriptorSet;
     std::vector<Object> _objects;
@@ -51,15 +51,15 @@ class SingleApp : public ApplicationBase {
     std::shared_ptr<Texture> _shadowMap;
     std::unique_ptr<GraphicsPipeline> _shadowPipeline;
 
-    std::unique_ptr<VertexBuffer> _vertexBufferObject;
-    std::unique_ptr<VertexBuffer> _vertexBufferPrimitiveObject;
-    std::unique_ptr<IndexBuffer> _indexBufferObject;
+    VertexBuffer _vertexBufferObject;
+    VertexBuffer _vertexBufferPrimitiveObject;
+    IndexBuffer _indexBufferObject;
     std::unique_ptr<DescriptorSet> _objectDescriptorSet;
     std::unique_ptr<UniformBufferData<UniformBufferObject>> _objectUniform;
     Entity _objectEntity;
 
-    std::unique_ptr<VertexBuffer> _vertexBufferCube;
-    std::unique_ptr<IndexBuffer> _indexBufferCube;
+    VertexBuffer _vertexBufferCube;
+    IndexBuffer _indexBufferCube;
 
     std::vector<Object> objects;
     UniformBufferCamera _ubCamera;

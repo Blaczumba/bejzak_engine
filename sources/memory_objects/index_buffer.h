@@ -18,18 +18,29 @@ class IndexBuffer {
     VkIndexType _indexType;
     uint32_t _indexCount;
 
-    const LogicalDevice& _logicalDevice;
+    LogicalDevice* _logicalDevice;
 
-    IndexBuffer(const VkBuffer indexBuffer, const Allocation allocation, const LogicalDevice& logicalDevice, VkIndexType indexType, uint32_t indexCount);
+    IndexBuffer(const VkBuffer indexBuffer, const Allocation allocation, LogicalDevice& logicalDevice, VkIndexType indexType, uint32_t indexCount);
 
 public:
+    IndexBuffer();
+
+    IndexBuffer(IndexBuffer&& indexBuffer) noexcept;
+
+    IndexBuffer& operator=(IndexBuffer&& indexBuffer) noexcept;
+
     ~IndexBuffer();
 
-    static lib::ErrorOr<std::unique_ptr<IndexBuffer>> create(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer, VkIndexType indexType);
+    static lib::ErrorOr<IndexBuffer> create(LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer, VkIndexType indexType);
+
+    static lib::ErrorOr<std::unique_ptr<IndexBuffer>> createPtr(LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer, VkIndexType indexType);
 
     VkIndexType getIndexType() const;
+
     const VkBuffer getVkBuffer() const;
+
     uint32_t getIndexCount() const;
+
     void bind(const VkCommandBuffer commandBuffer) const;
 
 private:

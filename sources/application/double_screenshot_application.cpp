@@ -338,7 +338,7 @@ void SingleApp::run() {
     }
 
     for (auto& object : _objects) {
-        _registry.getComponent<MeshComponent>(object.getEntity()).vertexBufferPrimitive.reset();
+        // _registry.getComponent<MeshComponent>(object.getEntity()).vertexBufferPrimitive.reset();
     }
     std::chrono::steady_clock::time_point previous;
     while (_window->open()) {
@@ -501,8 +501,8 @@ void SingleApp::recordOctreeSecondaryCommandBuffer(const VkCommandBuffer command
 
         for (const Object* object : node->getObjects()) {
             const auto& meshComponent = _registry.getComponent<MeshComponent>(object->getEntity());
-            const IndexBuffer& indexBuffer = *meshComponent.indexBuffer;
-            const VertexBuffer& vertexBuffer = *meshComponent.vertexBuffer;
+            const IndexBuffer& indexBuffer = meshComponent.indexBuffer;
+            const VertexBuffer& vertexBuffer = meshComponent.vertexBuffer;
             vertexBuffer.bind(commandBuffer);
             indexBuffer.bind(commandBuffer);
             _entitytoDescriptorSet[object->getEntity()]->bind(commandBuffer, *_graphicsPipeline, { _currentFrame, _entityToIndex[object->getEntity()] });
@@ -567,10 +567,10 @@ void SingleApp::recordCommandBuffer(uint32_t imageIndex) {
         const VkCommandBuffer commandBuffer = _commandBuffers[_currentFrame][1]->getVkCommandBuffer();
 
         vkCmdBindPipeline(commandBuffer, _graphicsPipelineSkybox->getVkPipelineBindPoint(), _graphicsPipelineSkybox->getVkPipeline());
-        _vertexBufferCube->bind(commandBuffer);
-        _indexBufferCube->bind(commandBuffer);
+        _vertexBufferCube.bind(commandBuffer);
+        _indexBufferCube.bind(commandBuffer);
         _descriptorSetSkybox->bind(commandBuffer, *_graphicsPipelineSkybox, { _currentFrame });
-        vkCmdDrawIndexed(commandBuffer, _indexBufferCube->getIndexCount(), 1, 0, 0, 0);
+        vkCmdDrawIndexed(commandBuffer, _indexBufferCube.getIndexCount(), 1, 0, 0, 0);
 
         // Object
         //vkCmdBindPipeline(commandBuffer, _graphicsPipelineNormal->getVkPipelineBindPoint(), _graphicsPipelineNormal->getVkPipeline());
@@ -633,12 +633,12 @@ void SingleApp::recordShadowCommandBuffer(VkCommandBuffer commandBuffer, uint32_
 
     for (const auto& object : _objects) {
         const auto& meshComponent = _registry.getComponent<MeshComponent>(object.getEntity());
-        VkBuffer vertexBuffers[] = { meshComponent.vertexBufferPrimitive->getVkBuffer() };
-        const IndexBuffer* indexBuffer = meshComponent.indexBuffer.get();
+        VkBuffer vertexBuffers[] = { meshComponent.vertexBufferPrimitive.getVkBuffer() };
+        const IndexBuffer& indexBuffer = meshComponent.indexBuffer;
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
         _descriptorSetShadow->bind(commandBuffer, *_shadowPipeline, { _entityToIndex[object.getEntity()] });
-        vkCmdBindIndexBuffer(commandBuffer, indexBuffer->getVkBuffer(), 0, indexBuffer->getIndexType());
-        vkCmdDrawIndexed(commandBuffer, indexBuffer->getIndexCount(), 1, 0, 0, 0);
+        vkCmdBindIndexBuffer(commandBuffer, indexBuffer.getVkBuffer(), 0, indexBuffer.getIndexType());
+        vkCmdDrawIndexed(commandBuffer, indexBuffer.getIndexCount(), 1, 0, 0, 0);
     }
 
     //_vertexBufferPrimitiveObject->bind(commandBuffer);

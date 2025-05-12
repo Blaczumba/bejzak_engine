@@ -26,7 +26,7 @@ public:
 
 	void addComponent(Entity entity, Component&& component) {
 		_entities[entity] = _components.size();
-		_components.emplace_back(entity, component);
+		_components.emplace_back(entity, std::move(component));
 	}
 
 	void destroyEntity(Entity entity) override {
