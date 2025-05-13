@@ -2,7 +2,6 @@
 
 #include "lib/status/status.h"
 #include "logical_device/logical_device.h"
-#include "memory_objects/texture/texture_factory.h"
 #include "render_pass/attachment/attachment_layout.h"
 
 #include <memory>

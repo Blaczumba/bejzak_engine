@@ -1,4 +1,4 @@
-add_library(Texture texture.cpp texture_factory.cpp)
+add_library(Texture texture.cpp)
 
 target_link_libraries(Texture PUBLIC Vulkan::Vulkan)
 target_link_libraries(Texture PUBLIC LogicalDevice Buffers StagignBuffer ImageLoader)

@@ -2,7 +2,6 @@
 
 #include "lib/status/status.h"
 #include "lib/buffer/buffer.h"
-#include "memory_objects/texture/texture_factory.h"
 #include "render_pass/render_pass.h"
 
 #include <vulkan/vulkan.h>

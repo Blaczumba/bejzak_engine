@@ -1,7 +1,5 @@
 #include "asset_manager.h"
 
-#include "chrono"
-
 using ImageData = AssetManager::ImageData;
 using VertexData = AssetManager::VertexData;
 

@@ -14,6 +14,7 @@ VertexBuffer& VertexBuffer::operator=(VertexBuffer&& vertexBuffer) noexcept {
     if (this == &vertexBuffer) {
         return *this;
     }
+    // TODO what if _vertexBuffer != VK_NULL_HANDLE
     _vertexBuffer = std::exchange(vertexBuffer._vertexBuffer, VK_NULL_HANDLE);
     _allocation = vertexBuffer._allocation;
     _logicalDevice = vertexBuffer._logicalDevice;

@@ -35,7 +35,7 @@ lib::ErrorOr<std::unique_ptr<DescriptorSet>> DescriptorSet::create(const std::sh
     return std::unique_ptr<DescriptorSet>(new DescriptorSet(descriptorSet, descriptorPool));
 }
 
-void DescriptorSet::updateDescriptorSet(std::initializer_list<UniformBuffer*> uniformBuffers) {
+void DescriptorSet::writeDescriptorSet(std::initializer_list<UniformBuffer*> uniformBuffers) {
     lib::Buffer<VkWriteDescriptorSet> descriptorWrites(uniformBuffers.size());
     for (size_t i = 0; i < uniformBuffers.size(); ++i) {
         const UniformBuffer* uniformBuffer = *(uniformBuffers.begin() + i);

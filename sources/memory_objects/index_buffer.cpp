@@ -39,6 +39,7 @@ IndexBuffer& IndexBuffer::operator=(IndexBuffer&& indexBuffer) noexcept {
     if (this == &indexBuffer) {
         return *this;
     }
+    // TODO what if _indexBuffer != VK_NULL_HANDLE
     _indexBuffer = std::exchange(indexBuffer._indexBuffer, VK_NULL_HANDLE); 
     _allocation = indexBuffer._allocation;
     _indexType = indexBuffer._indexType;

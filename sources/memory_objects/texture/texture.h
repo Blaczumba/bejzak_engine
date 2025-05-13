@@ -14,6 +14,7 @@
 #include <variant>
 
 class LogicalDevice;
+class StagingBuffer;
 
 struct Texture {
 public:
@@ -26,22 +27,35 @@ public:
 	};
 
 	~Texture();
-
-	static std::unique_ptr<Texture> create(const LogicalDevice& logicalDevice, Texture::Type type, const VkImage image, const Allocation allocation, const ImageParameters& imageParameters, const VkImageView view = VK_NULL_HANDLE, const VkSampler sampler = VK_NULL_HANDLE, const SamplerParameters& samplerParameters = {});
+	
+	static lib::ErrorOr<std::unique_ptr<Texture>> create2DImage(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer, const ImageDimensions& dimensions, VkFormat format, float samplerAnisotropy);
+	
+	static lib::ErrorOr<std::unique_ptr<Texture>> create2DShadowmap(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, uint32_t width, uint32_t height, VkFormat format);
+	
+	static lib::ErrorOr<std::unique_ptr<Texture>> createCubemap(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer, const ImageDimensions& dimensions, VkFormat format, float samplerAnisotropy);
+	
+	static lib::ErrorOr<std::unique_ptr<Texture>> createColorAttachment(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkFormat format, VkSampleCountFlagBits samples, VkExtent2D extent);
+	
+	static lib::ErrorOr<std::unique_ptr<Texture>> createDepthAttachment(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkFormat format, VkSampleCountFlagBits samples, VkExtent2D extent);
 
 	void transitionLayout(VkCommandBuffer commandBuffer, VkImageLayout newLayout);
 
 	const VkImage getVkImage() const;
+
 	const VkImageView getVkImageView() const;
+
 	const VkSampler getVkSampler() const;
+
 	const ImageParameters& getImageParameters() const;
+
 	const SamplerParameters& getSamplerParameters() const;
+
 	VkExtent2D getVkExtent2D() const;
 
 private:
-	Texture(const LogicalDevice& logicalDevice, Texture::Type type, const VkImage image, const Allocation allocation, const ImageParameters& imageParameters, const VkImageView view, const VkSampler sampler, const SamplerParameters& samplerParameters);
+	Texture(const LogicalDevice& logicalDevice, Texture::Type type, const VkImage image, const Allocation allocation, const ImageParameters& imageParameters, const VkImageView view = VK_NULL_HANDLE, const VkSampler sampler = VK_NULL_HANDLE, const SamplerParameters& samplerParameters = {});
 	
-	const Type _type;
+	Type _type;
 
 	Allocation _allocation;
 	VkImage _image;
@@ -54,6 +68,15 @@ private:
 	const LogicalDevice& _logicalDevice;
 
 	void generateMipmaps(VkCommandBuffer commandBuffer);
+
+	// Helper functions.
+	static lib::ErrorOr<std::unique_ptr<Texture>> createImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkImageLayout dstLayout, Texture::Type type, ImageParameters&& imageParams);
+
+	static lib::ErrorOr<std::unique_ptr<Texture>> createImageSampler(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkImageLayout dstLayout, Texture::Type type, ImageParameters& imageParams, const SamplerParameters& samplerParams);
+
+	static lib::ErrorOr<std::unique_ptr<Texture>> createMipmapImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, ImageParameters& imageParams, const SamplerParameters& samplerParams);
+
+	static lib::ErrorOr<std::unique_ptr<Texture>> createImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, Texture::Type type, const VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, ImageParameters& imageParams, const SamplerParameters& samplerParams);
 };
 
 namespace {
