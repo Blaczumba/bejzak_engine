@@ -111,7 +111,7 @@ lib::Status SingleApp::loadObject() {
     ASSIGN_OR_RETURN(_objectUniform, UniformBufferData<UniformBufferObject>::create(*_logicalDevice));
     _objectUniform->updateUniformBuffer(object);
     ASSIGN_OR_RETURN(auto descriptorSet, _descriptorPoolNormal->createDesriptorSet());
-    descriptorSet->writeDescriptorSet({ _dynamicUniformBuffersCamera.get(), _uniformBuffersLight.get(), _objectUniform.get(), _uniformMap[drakanTexturePath].get(), _shadowTextureUniform.get() });
+    descriptorSet.writeDescriptorSet({ _dynamicUniformBuffersCamera.get(), _uniformBuffersLight.get(), _objectUniform.get(), _uniformMap[drakanTexturePath].get(), _shadowTextureUniform.get() });
     _objectEntity = _registry.createEntity();
     _entitytoDescriptorSet.emplace(_objectEntity, std::move(descriptorSet));
 
@@ -134,6 +134,7 @@ lib::Status SingleApp::loadObjects() {
     float maxSamplerAnisotropy = propertyManager.getMaxSamplerAnisotropy();
     _objects.reserve(sceneData.size());
     {
+        ASSIGN_OR_RETURN(std::vector<DescriptorSet> descriptorSets, _descriptorPool->createDesriptorSets(sceneData.size()));
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
         for (uint32_t i = 0; i < sceneData.size(); i++) {
@@ -162,9 +163,8 @@ lib::Status SingleApp::loadObjects() {
                 _textures.push_back(std::move(texture));
                 _uniformMap.emplace(metallicRoughnessPath, std::make_shared<UniformBufferTexture>(*_textures.back()));
             }
-
-            ASSIGN_OR_RETURN(auto descriptorSet, _descriptorPool->createDesriptorSet());
-            descriptorSet->writeDescriptorSet({ _dynamicUniformBuffersCamera.get(), _uniformMap[diffusePath].get(), _uniformBuffersLight.get(), _uniformBuffersObjects.get(), _shadowTextureUniform.get(), _uniformMap[normalPath].get(), _uniformMap[metallicRoughnessPath].get() });;
+            // ASSIGN_OR_RETURN(auto descriptorSet, _descriptorPool->createDesriptorSet());
+            descriptorSets[i].writeDescriptorSet({_dynamicUniformBuffersCamera.get(), _uniformMap[diffusePath].get(), _uniformBuffersLight.get(), _uniformBuffersObjects.get(), _shadowTextureUniform.get(), _uniformMap[normalPath].get(), _uniformMap[metallicRoughnessPath].get()});;
 
             _objects.emplace_back("Object", e);
             ASSIGN_OR_RETURN(auto vData, _assetManager->getVertexData(std::to_string(i)));
@@ -180,7 +180,7 @@ lib::Status SingleApp::loadObjects() {
             _registry.addComponent<TransformComponent>(e, std::move(trsf));
 
             _entityToIndex.emplace(e, index);
-            _entitytoDescriptorSet.emplace(e, std::move(descriptorSet));
+            _entitytoDescriptorSet.emplace(e, std::move(descriptorSets[i]));
         
             _ubObject.model = sceneData[i].model;
             _uniformBuffersObjects->updateUniformBuffer(_ubObject, index++);
@@ -232,8 +232,8 @@ lib::Status SingleApp::createDescriptorSets() {
     ASSIGN_OR_RETURN(_descriptorSetSkybox, _descriptorPoolSkybox->createDesriptorSet());
     ASSIGN_OR_RETURN(_descriptorSetShadow, _descriptorPoolShadow->createDesriptorSet());
 
-    _descriptorSetSkybox->writeDescriptorSet({ _dynamicUniformBuffersCamera.get(), _skyboxTextureUniform.get() });
-    _descriptorSetShadow->writeDescriptorSet({ _uniformBuffersLight.get(),  _uniformBuffersObjects.get() });
+    _descriptorSetSkybox.writeDescriptorSet({ _dynamicUniformBuffersCamera.get(), _skyboxTextureUniform.get() });
+    _descriptorSetShadow.writeDescriptorSet({ _uniformBuffersLight.get(),  _uniformBuffersObjects.get() });
 
     _ubLight.pos = glm::vec3(15.1891f, 2.66408f, -0.841221f);
     _ubLight.projView = glm::perspective(glm::radians(120.0f), 1.0f, 0.01f, 40.0f);
@@ -503,7 +503,7 @@ void SingleApp::recordOctreeSecondaryCommandBuffer(const VkCommandBuffer command
             const VertexBuffer& vertexBuffer = meshComponent.vertexBuffer;
             vertexBuffer.bind(commandBuffer);
             indexBuffer.bind(commandBuffer);
-            _entitytoDescriptorSet[object->getEntity()]->bind(commandBuffer, *_graphicsPipeline, { _currentFrame, _entityToIndex[object->getEntity()] });
+            _entitytoDescriptorSet[object->getEntity()].bind(commandBuffer, *_graphicsPipeline, { _currentFrame, _entityToIndex[object->getEntity()] });
             vkCmdDrawIndexed(commandBuffer, indexBuffer.getIndexCount(), 1, 0, 0, 0);
         }
 
@@ -565,7 +565,7 @@ void SingleApp::recordCommandBuffer(uint32_t imageIndex) {
         vkCmdBindPipeline(commandBuffer, _graphicsPipelineSkybox->getVkPipelineBindPoint(), _graphicsPipelineSkybox->getVkPipeline());
         _vertexBufferCube.bind(commandBuffer);
         _indexBufferCube.bind(commandBuffer);
-        _descriptorSetSkybox->bind(commandBuffer, *_graphicsPipelineSkybox, { _currentFrame });
+        _descriptorSetSkybox.bind(commandBuffer, *_graphicsPipelineSkybox, { _currentFrame });
         vkCmdDrawIndexed(commandBuffer, _indexBufferCube.getIndexCount(), 1, 0, 0, 0);
 
         // Object
@@ -632,7 +632,7 @@ void SingleApp::recordShadowCommandBuffer(VkCommandBuffer commandBuffer, uint32_
         VkBuffer vertexBuffers[] = { meshComponent.vertexBufferPrimitive.getVkBuffer() };
         const IndexBuffer& indexBuffer = meshComponent.indexBuffer;
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-        _descriptorSetShadow->bind(commandBuffer, *_shadowPipeline, { _entityToIndex[object.getEntity()] });
+        _descriptorSetShadow.bind(commandBuffer, *_shadowPipeline, { _entityToIndex[object.getEntity()] });
         vkCmdBindIndexBuffer(commandBuffer, indexBuffer.getVkBuffer(), 0, indexBuffer.getIndexType());
         vkCmdDrawIndexed(commandBuffer, indexBuffer.getIndexCount(), 1, 0, 0, 0);
     }

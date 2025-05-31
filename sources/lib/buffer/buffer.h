@@ -3,6 +3,7 @@
 #include "lib/buffer/buffer_like_concept.h"
 
 #include <algorithm>
+#include <span>
 #include <utility>
 #include <memory>
 
@@ -69,6 +70,10 @@ public:
 
     const T& operator[](size_t index) const {
         return _buffer[index];
+    }
+
+    operator std::span<T>() {
+        return std::span<T>(_buffer.get(), _size);
     }
 
     bool empty() const {

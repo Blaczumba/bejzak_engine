@@ -11,7 +11,7 @@ target_link_libraries(StagignBuffer PUBLIC LogicalDevice MemoryAllocator)
 add_subdirectory(texture)
 add_subdirectory(uniform_buffer)
 
-add_library(VertexBuffer vertex_buffer.cpp)
+add_library(VertexBuffer vertex_buffer.cpp buffer.cpp)
 
 target_link_libraries(VertexBuffer PUBLIC Vulkan::Vulkan)
 target_link_libraries(VertexBuffer PUBLIC LogicalDevice CommandBuffer StagignBuffer)

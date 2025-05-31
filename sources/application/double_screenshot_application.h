@@ -33,7 +33,7 @@ class SingleApp : public ApplicationBase {
     std::unordered_map<std::string, VertexBuffer> _vertexBufferMap;
     std::unordered_map<std::string, IndexBuffer> _indexBufferMap;
     std::unordered_map<Entity, uint32_t> _entityToIndex;
-    std::unordered_map<Entity, std::unique_ptr<DescriptorSet>> _entitytoDescriptorSet;
+    std::unordered_map<Entity, DescriptorSet> _entitytoDescriptorSet;
     std::vector<Object> _objects;
     std::unique_ptr<Octree> _octree;
     Registry _registry;
@@ -54,7 +54,7 @@ class SingleApp : public ApplicationBase {
     VertexBuffer _vertexBufferObject;
     VertexBuffer _vertexBufferPrimitiveObject;
     IndexBuffer _indexBufferObject;
-    std::unique_ptr<DescriptorSet> _objectDescriptorSet;
+    DescriptorSet _objectDescriptorSet;
     std::unique_ptr<UniformBufferData<UniformBufferObject>> _objectUniform;
     Entity _objectEntity;
 
@@ -84,8 +84,8 @@ class SingleApp : public ApplicationBase {
 
     std::unique_ptr<Texture> _textureCubemap;
 
-    std::unique_ptr<DescriptorSet> _descriptorSetSkybox;
-    std::unique_ptr<DescriptorSet> _descriptorSetShadow;
+    DescriptorSet _descriptorSetSkybox;
+    DescriptorSet _descriptorSetShadow;
     // std::unique_ptr<Screenshot> _screenshot;
 
     std::unique_ptr<FPSCamera> _camera;

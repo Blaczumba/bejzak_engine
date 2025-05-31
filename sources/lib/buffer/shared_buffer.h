@@ -79,6 +79,10 @@ public:
         return _buffer[index];
     }
 
+    operator std::span<T>() {
+        return std::span<T>(_buffer.get(), _size);
+    }
+
     bool empty() const {
         return _size == 0;
     }

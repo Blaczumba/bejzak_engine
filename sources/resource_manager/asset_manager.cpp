@@ -37,7 +37,7 @@ lib::ErrorOr<const ImageData*> AssetManager::getImageData(const std::string& fil
     }
 	auto it = _awaitingImageResources.find(filePath);
     if (it != _awaitingImageResources.cend()) {
-        ASSIGN_OR_RETURN(auto imageData, it->second.get());
+        ASSIGN_OR_RETURN(ImageData imageData, it->second.get());
         auto ptr = _imageResources.emplace(filePath, std::move(imageData));
         _awaitingImageResources.erase(it);
 		return &ptr.first->second;

@@ -39,9 +39,22 @@ const DescriptorSetLayout& DescriptorPool::getDescriptorSetLayout() const {
 	return _descriptorSetLayout;
 }
 
-lib::ErrorOr<std::unique_ptr<DescriptorSet>> DescriptorPool::createDesriptorSet() const {
+lib::ErrorOr<DescriptorSet> DescriptorPool::createDesriptorSet() const {
 	++_allocatedSets;
+	if (_allocatedSets > _maxNumSets) {
+		--_allocatedSets;
+		return lib::Error("Exceeded the maximum number of allocated sets.");
+	}
 	return DescriptorSet::create(shared_from_this());
+}
+
+lib::ErrorOr<std::vector<DescriptorSet>> DescriptorPool::createDesriptorSets(uint32_t numSets) const {
+	_allocatedSets += numSets;
+	if (_allocatedSets > _maxNumSets) {
+		_allocatedSets -= numSets;
+		return lib::Error("Exceeded the maximum number of allocated sets.");
+	}
+	return DescriptorSet::create(shared_from_this(), numSets);
 }
 
 bool DescriptorPool::maxSetsReached() const {
