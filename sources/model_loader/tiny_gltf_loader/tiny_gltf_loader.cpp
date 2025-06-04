@@ -47,9 +47,9 @@ std::span<const unsigned char> processAttribute(const tinygltf::Model& model, st
     return std::span<const unsigned char>(&buffer.data[accessor.byteOffset + bufferView.byteOffset], accessor.count);
 }
 
-template<typename IndexType, BufferLike Vec3Buffer, BufferLike Vec2Buffer>
-std::enable_if_t<std::is_unsigned<IndexType>::value> processTangents(IndexType* indices, size_t size, const Vec3Buffer& positions, const Vec2Buffer& texCoords, Vec3Buffer& tangents) {
-    for (size_t i = 0; i < size; i += 3) {
+template<typename IndexType>
+std::enable_if_t<std::is_unsigned<IndexType>::value> processTangents(std::span<const IndexType> indices, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<glm::vec3> tangents) {
+    for (size_t i = 0; i < indices.size(); i += 3) {
         const glm::vec3& pos0 = positions[indices[i]];
         const glm::vec3& pos1 = positions[indices[i + 1]];
         const glm::vec3& pos2 = positions[indices[i + 2]];
@@ -150,13 +150,13 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
         tangents = lib::SharedBuffer<glm::vec3>(normals.size());
         switch (indexType) {
         case IndexType::UINT8:
-            processTangents(reinterpret_cast<uint8_t*>(indices.data()), static_cast<size_t>(indicesCount), positions, texCoords, tangents);
+            processTangents(std::span<const uint8_t>(indices), positions, texCoords, tangents);
             break;
         case IndexType::UINT16:
-            processTangents(reinterpret_cast<uint16_t*>(indices.data()), static_cast<size_t>(indicesCount), positions, texCoords, tangents);
+            processTangents(std::span(reinterpret_cast<const uint16_t*>(indices.data()), indicesCount), positions, texCoords, tangents);
             break;
         case IndexType::UINT32:
-            processTangents(reinterpret_cast<uint32_t*>(indices.data()), static_cast<size_t>(indicesCount), positions, texCoords, tangents);
+            processTangents(std::span(reinterpret_cast<const uint32_t*>(indices.data()), indicesCount), positions, texCoords, tangents);
         }
 
         // Load textures

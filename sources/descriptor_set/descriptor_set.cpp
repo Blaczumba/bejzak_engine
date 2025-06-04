@@ -76,13 +76,22 @@ lib::ErrorOr<std::vector<DescriptorSet>> DescriptorSet::create(const std::shared
 }
 
 void DescriptorSet::writeDescriptorSet(std::initializer_list<UniformBuffer*> uniformBuffers) {
+    writeDescriptorSetImpl(uniformBuffers);
+}
+
+void DescriptorSet::writeDescriptorSet(std::span<const UniformBuffer*> uniformBuffers) {
+    writeDescriptorSetImpl(uniformBuffers);
+}
+
+void DescriptorSet::writeDescriptorSetImpl(std::span<const UniformBuffer* const> uniformBuffers) {
     lib::Buffer<VkWriteDescriptorSet> descriptorWrites(uniformBuffers.size());
-    for (size_t i = 0; i < uniformBuffers.size(); ++i) {
-        const UniformBuffer* uniformBuffer = *(uniformBuffers.begin() + i);
-        descriptorWrites[i] = uniformBuffer->getVkWriteDescriptorSet(_descriptorSet, i);
+    uint32_t bindingIndex = 0;
+    for (const UniformBuffer* uniformBuffer : uniformBuffers) {
+        descriptorWrites[bindingIndex] = uniformBuffer->getVkWriteDescriptorSet(_descriptorSet, bindingIndex);
         if (uniformBuffer->getVkDescriptorType() == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
             _dynamicBuffersBaseSizes.emplace_back(uniformBuffer->getSize());
         }
+        ++bindingIndex;
     }
     vkUpdateDescriptorSets(_descriptorPool->getLogicalDevice().getVkDevice(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 }

@@ -2,32 +2,50 @@
 
 #include "lib/status/status.h"
 
-lib::Buffer<VertexPT> buildInterleavingVertexData(const glm::vec3* positions, const glm::vec2* texCoords, size_t size) {
-	lib::Buffer<VertexPT> vertices(size);
-	std::transform(positions, positions + size, texCoords, vertices.begin(),
-		[](const glm::vec3& pos, const glm::vec2& texCoord) { return VertexPT{ pos, texCoord }; });
-	return vertices;
+// Function to build interleaved vertex data for position and texture coordinates
+lib::ErrorOr<lib::Buffer<VertexPT>> buildInterleavingVertexData(std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords) {
+    if (positions.size() != texCoords.size()) {
+        return lib::Error("Mismatched sizes for positions and texCoords spans.");
+    }
+
+    lib::Buffer<VertexPT> vertices(positions.size());
+    std::transform(positions.cbegin(), positions.cend(), texCoords.cbegin(), vertices.begin(),
+        [](const glm::vec3& pos, const glm::vec2& texCoord) {
+        return VertexPT{ pos, texCoord };
+    });
+
+    return vertices;
 }
 
-lib::Buffer<VertexPTN> buildInterleavingVertexData(const glm::vec3* positions, const glm::vec2* texCoords, const glm::vec3* normals, size_t size) {
-	lib::Buffer<VertexPTN> vertices(size);
-	for (size_t i = 0; i < vertices.size(); i++) {
-		vertices[i].pos = positions[i];
-		vertices[i].texCoord = texCoords[i];
-		vertices[i].normal = normals[i];
-	}
-	return vertices;
+// Function to build interleaved vertex data for position, texture coordinates, and normals
+lib::ErrorOr<lib::Buffer<VertexPTN>> buildInterleavingVertexData(std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<const glm::vec3> normals) {
+    if (positions.size() != texCoords.size() || positions.size() != normals.size()) {
+        throw lib::Error("Mismatched sizes for positions, texCoords, and normals spans.");
+    }
+
+    lib::Buffer<VertexPTN> vertices(positions.size());
+    for (size_t i = 0; i < vertices.size(); ++i) {
+        vertices[i].pos = positions[i];
+        vertices[i].texCoord = texCoords[i];
+        vertices[i].normal = normals[i];
+    }
+    return vertices;
 }
 
-lib::Buffer<VertexPTNT> buildInterleavingVertexData(const glm::vec3* positions, const glm::vec2* texCoords, const glm::vec3* normals, const glm::vec3* tangents, size_t size) {
-	lib::Buffer<VertexPTNT> vertices(size);
-	for (size_t i = 0; i < vertices.size(); i++) {
-		vertices[i].pos = positions[i];
-		vertices[i].texCoord = texCoords[i];
-		vertices[i].normal = normals[i];
-		vertices[i].tangent = tangents[i];
-	}
-	return vertices;
+// Function to build interleaved vertex data for position, texture coordinates, normals, and tangents
+lib::ErrorOr<lib::Buffer<VertexPTNT>> buildInterleavingVertexData(std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents) {
+    if (positions.size() != texCoords.size() || positions.size() != normals.size() || positions.size() != tangents.size()) {
+        throw lib::Error("Mismatched sizes for positions, texCoords, normals, and tangents spans.");
+    }
+
+    lib::Buffer<VertexPTNT> vertices(positions.size());
+    for (size_t i = 0; i < vertices.size(); ++i) {
+        vertices[i].pos = positions[i];
+        vertices[i].texCoord = texCoords[i];
+        vertices[i].normal = normals[i];
+        vertices[i].tangent = tangents[i];
+    }
+    return vertices;
 }
 
 //template <BufferLike... Buffer>

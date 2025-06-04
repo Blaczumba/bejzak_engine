@@ -1,9 +1,9 @@
 #include "buffer.h"
 
-Buffer::Buffer() : _type(Buffer::Type::NONE), _buffer(VK_NULL_HANDLE), _size(0) {};
+Buffer::Buffer() : _usage(0), _buffer(VK_NULL_HANDLE), _size(0) {};
 
-Buffer::Buffer(Type type, const VkBuffer buffer, const Allocation allocation, LogicalDevice& logicalDevice, uint32_t size, void* mappedMemory)
-    : _type(type), _buffer(buffer), _allocation(allocation), _logicalDevice(&logicalDevice), _size(size), _mappedMemory(mappedMemory) {
+Buffer::Buffer(LogicalDevice& logicalDevice, const Allocation allocation, const VkBuffer buffer, VkBufferUsageFlags usage, uint32_t size, void* mappedData)
+    : _logicalDevice(&logicalDevice), _allocation(allocation), _buffer(buffer), _usage(usage), _size(size), _mappedMemory(mappedData) {
 }
 
 Buffer::Buffer(Buffer&& buffer) noexcept
@@ -27,8 +27,8 @@ Buffer::~Buffer() {
     }
 }
 
-Buffer::Type Buffer::getType() const {
-    return _type;
+VkBufferUsageFlags Buffer::getUsage() const {
+    return _usage;
 }
 
 uint32_t Buffer::getSize() const {

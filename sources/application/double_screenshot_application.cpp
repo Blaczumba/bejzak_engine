@@ -92,7 +92,7 @@ lib::Status SingleApp::loadObject() {
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
 
         ASSIGN_OR_RETURN(VertexData vertexData, loadObj(MODELS_PATH "cylinder8.obj"));
-        lib::SharedBuffer<VertexPTN> vertices = buildInterleavingVertexData(vertexData.positions.data(), vertexData.textureCoordinates.data(), vertexData.normals.data(), vertexData.positions.size());
+        ASSIGN_OR_RETURN(lib::SharedBuffer<VertexPTN> vertices, buildInterleavingVertexData(vertexData.positions, vertexData.textureCoordinates, vertexData.normals));
         _assetManager->loadVertexData("cube_normal.obj", vertexData.indices, static_cast<uint8_t>(vertexData.indexType), vertices, vertexData.positions);
         ASSIGN_OR_RETURN(auto vData, _assetManager->getVertexData("cube_normal.obj"));
         ASSIGN_OR_RETURN(_vertexBufferObject, VertexBuffer::create(*_logicalDevice, commandBuffer, *vData->vertexBuffer));
@@ -127,7 +127,7 @@ lib::Status SingleApp::loadObjects() {
         _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + sceneData[i].diffuseTexture);
         _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + sceneData[i].metallicRoughnessTexture);
         _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + sceneData[i].normalTexture);
-        lib::SharedBuffer vertices = buildInterleavingVertexData(sceneData[i].positions.data(), sceneData[i].textureCoordinates.data(), sceneData[i].normals.data(), sceneData[i].tangents.data(), sceneData[i].positions.size());
+        ASSIGN_OR_RETURN(lib::SharedBuffer vertices, buildInterleavingVertexData(sceneData[i].positions, sceneData[i].textureCoordinates, sceneData[i].normals, sceneData[i].tangents));
         _assetManager->loadVertexData(std::to_string(i), sceneData[i].indices, static_cast<uint8_t>(sceneData[i].indexType), vertices, sceneData[i].positions);
     }
     const auto& propertyManager = _physicalDevice->getPropertyManager();
@@ -164,8 +164,7 @@ lib::Status SingleApp::loadObjects() {
                 _uniformMap.emplace(metallicRoughnessPath, std::make_shared<UniformBufferTexture>(*_textures.back()));
             }
             // ASSIGN_OR_RETURN(auto descriptorSet, _descriptorPool->createDesriptorSet());
-            descriptorSets[i].writeDescriptorSet({_dynamicUniformBuffersCamera.get(), _uniformMap[diffusePath].get(), _uniformBuffersLight.get(), _uniformBuffersObjects.get(), _shadowTextureUniform.get(), _uniformMap[normalPath].get(), _uniformMap[metallicRoughnessPath].get()});;
-
+            descriptorSets[i].writeDescriptorSet({_dynamicUniformBuffersCamera.get(), _uniformMap[diffusePath].get(), _uniformBuffersLight.get(), _uniformBuffersObjects.get(), _shadowTextureUniform.get(), _uniformMap[normalPath].get(), _uniformMap[metallicRoughnessPath].get()});
             _objects.emplace_back("Object", e);
             ASSIGN_OR_RETURN(auto vData, _assetManager->getVertexData(std::to_string(i)));
             MeshComponent msh;

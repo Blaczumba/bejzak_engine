@@ -1,7 +1,5 @@
 #pragma once
 
-#include "lib/buffer/buffer_like_concept.h"
-
 #include <algorithm>
 #include <span>
 #include <utility>
@@ -74,6 +72,10 @@ public:
 
     operator std::span<T>() {
         return std::span<T>(_buffer.get(), _size);
+    }
+
+    operator std::span<const T>() const {
+        return std::span<const T>(_buffer.get(), _size);
     }
 
     bool empty() const {

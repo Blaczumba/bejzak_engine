@@ -36,8 +36,13 @@ public:
 	static lib::ErrorOr<std::vector<DescriptorSet>> create(const std::shared_ptr<const DescriptorPool>& descriptorPool, uint32_t numSets);
 
 	void writeDescriptorSet(std::initializer_list<UniformBuffer*> uniformBuffers);
+
+	void writeDescriptorSet(std::span<const UniformBuffer*> uniformBuffers);
+
 	void bind(const VkCommandBuffer commandBuffer, const Pipeline& pipeline, std::initializer_list<uint32_t> dynamicOffsetStrides = {});
 
 	const VkDescriptorSet getVkDescriptorSet(size_t i) const;
 
+private:
+	void writeDescriptorSetImpl(std::span<const UniformBuffer* const> uniformBuffers);
 };

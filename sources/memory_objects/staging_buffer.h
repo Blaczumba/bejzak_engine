@@ -4,6 +4,7 @@
 #include "memory_objects/buffer_deallocator.h"
 #include "logical_device/logical_device.h"
 #include "lib/buffer/buffer.h"
+#include "lib/buffer/buffer_like_concept.h"
 #include "lib/status/status.h"
 
 #include <vulkan/vulkan.h>
