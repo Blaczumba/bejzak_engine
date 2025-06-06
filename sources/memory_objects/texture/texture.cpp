@@ -1,8 +1,8 @@
 #include "texture.h"
 
 #include "logical_device/logical_device.h"
+#include "memory_objects/buffer.h"
 #include "memory_objects/buffers.h"
-#include "memory_objects/staging_buffer.h"
 #include "memory_allocator/memory_allocator.h"
 
 #include <vma/vk_mem_alloc.h>
@@ -33,7 +33,7 @@ lib::ErrorOr<std::unique_ptr<Texture>> Texture::create2DShadowmap(const LogicalD
     return createImageSampler(logicalDevice, commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, Texture::Type::SHADOWMAP, imageParams, samplerParams);
 }
 
-lib::ErrorOr<std::unique_ptr<Texture>> Texture::create2DImage(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer, const ImageDimensions& dimensions, VkFormat format, float samplerAnisotropy) {
+lib::ErrorOr<std::unique_ptr<Texture>> Texture::create2DImage(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, const Buffer& stagingBuffer, const ImageDimensions& dimensions, VkFormat format, float samplerAnisotropy) {
     ImageParameters imageParams = {
         .format = format,
         .width = dimensions.width,
@@ -50,7 +50,7 @@ lib::ErrorOr<std::unique_ptr<Texture>> Texture::create2DImage(const LogicalDevic
     return createMipmapImage(logicalDevice, commandBuffer, stagingBuffer.getVkBuffer(), dimensions.copyRegions, imageParams, samplerParams);
 }
 
-lib::ErrorOr<std::unique_ptr<Texture>> Texture::createCubemap(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer, const ImageDimensions& dimensions, VkFormat format, float samplerAnisotropy) {
+lib::ErrorOr<std::unique_ptr<Texture>> Texture::createCubemap(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, const Buffer& stagingBuffer, const ImageDimensions& dimensions, VkFormat format, float samplerAnisotropy) {
     ImageParameters imageParams = {
         .format = format,
         .width = dimensions.width,

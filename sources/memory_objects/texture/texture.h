@@ -14,7 +14,7 @@
 #include <variant>
 
 class LogicalDevice;
-class StagingBuffer;
+class Buffer;
 
 struct Texture {
 public:
@@ -28,11 +28,11 @@ public:
 
 	~Texture();
 	
-	static lib::ErrorOr<std::unique_ptr<Texture>> create2DImage(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer, const ImageDimensions& dimensions, VkFormat format, float samplerAnisotropy);
+	static lib::ErrorOr<std::unique_ptr<Texture>> create2DImage(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, const Buffer& stagingBuffer, const ImageDimensions& dimensions, VkFormat format, float samplerAnisotropy);
 	
 	static lib::ErrorOr<std::unique_ptr<Texture>> create2DShadowmap(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, uint32_t width, uint32_t height, VkFormat format);
 	
-	static lib::ErrorOr<std::unique_ptr<Texture>> createCubemap(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, const StagingBuffer& stagingBuffer, const ImageDimensions& dimensions, VkFormat format, float samplerAnisotropy);
+	static lib::ErrorOr<std::unique_ptr<Texture>> createCubemap(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, const Buffer& stagingBuffer, const ImageDimensions& dimensions, VkFormat format, float samplerAnisotropy);
 	
 	static lib::ErrorOr<std::unique_ptr<Texture>> createColorAttachment(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkFormat format, VkSampleCountFlagBits samples, VkExtent2D extent);
 	

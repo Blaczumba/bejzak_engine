@@ -3,7 +3,7 @@
 using ImageData = AssetManager::ImageData;
 using VertexData = AssetManager::VertexData;
 
-AssetManager::AssetManager(MemoryAllocator& memoryAllocator) : _memoryAllocator(memoryAllocator) {}
+AssetManager::AssetManager(LogicalDevice& logicalDevice) : _logicalDevice(logicalDevice) {}
 
 void AssetManager::loadImageAsync(const std::string& filePath, std::function<lib::ErrorOr<ImageResource>(std::string_view)>&& loadingFunction) {
     if (_awaitingImageResources.contains(filePath)) {
@@ -13,11 +13,11 @@ void AssetManager::loadImageAsync(const std::string& filePath, std::function<lib
         lib::ErrorOr<ImageResource> resource = loadingFunction(filePath);
         if (!resource.has_value()) [[unlikely]]
             return lib::ErrorOr<ImageData>(lib::Error(resource.error()));
-        auto stagingBuffer = StagingBuffer::create(_memoryAllocator, std::span(static_cast<uint8_t*>(resource->data), resource->size));
+        auto stagingBuffer = Buffer::create(_logicalDevice, std::span(static_cast<const uint8_t*>(resource->data), resource->size));
         if (!stagingBuffer.has_value()) [[unlikely]]
             return lib::ErrorOr<ImageData>(lib::Error(stagingBuffer.error()));
         ImageLoader::deallocateResources(*resource);
-        return lib::ErrorOr<ImageData>(ImageData(std::move(stagingBuffer.value()), std::move(resource->dimensions)));
+        return lib::ErrorOr<ImageData>(ImageData(std::move(*stagingBuffer), std::move(resource->dimensions)));
     }));
     _awaitingImageResources.emplace(filePath, std::move(future));
 }

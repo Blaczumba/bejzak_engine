@@ -9,11 +9,10 @@
 #include "descriptor_set/descriptor_set_layout.h"
 #include "entity_component_system/system/movement_system.h"
 #include "lib/status/status.h"
-#include "memory_objects/index_buffer.h"
+#include "memory_objects/buffer.h"
 #include "memory_objects/texture/texture.h"
 #include "memory_objects/uniform_buffer/push_constants.h"
 #include "memory_objects/uniform_buffer/uniform_buffer.h"
-#include "memory_objects/vertex_buffer.h"
 #include "model_loader/obj_loader/obj_loader.h"
 #include "object/object.h"
 #include "framebuffer/framebuffer.h"
@@ -24,14 +23,15 @@
 #include "screenshot/screenshot.h"
 #include "thread_pool/thread_pool.h"
 #include "pipeline/graphics_pipeline.h"
+
 #include <unordered_map>
 
 class SingleApp : public ApplicationBase {
     uint32_t index = 0;
     std::vector<std::unique_ptr<Texture>> _textures;
     std::unordered_map<std::string, std::shared_ptr<UniformBufferTexture>> _uniformMap;
-    std::unordered_map<std::string, VertexBuffer> _vertexBufferMap;
-    std::unordered_map<std::string, IndexBuffer> _indexBufferMap;
+    std::unordered_map<std::string, Buffer> _vertexBufferMap;
+    std::unordered_map<std::string, Buffer> _indexBufferMap;
     std::unordered_map<Entity, uint32_t> _entityToIndex;
     std::unordered_map<Entity, DescriptorSet> _entitytoDescriptorSet;
     std::vector<Object> _objects;
@@ -51,15 +51,15 @@ class SingleApp : public ApplicationBase {
     std::shared_ptr<Texture> _shadowMap;
     std::unique_ptr<GraphicsPipeline> _shadowPipeline;
 
-    VertexBuffer _vertexBufferObject;
-    VertexBuffer _vertexBufferPrimitiveObject;
-    IndexBuffer _indexBufferObject;
+    Buffer _vertexBufferObject;
+    Buffer _vertexBufferPrimitiveObject;
+    Buffer _indexBufferObject;
     DescriptorSet _objectDescriptorSet;
     std::unique_ptr<UniformBufferData<UniformBufferObject>> _objectUniform;
     Entity _objectEntity;
 
-    VertexBuffer _vertexBufferCube;
-    IndexBuffer _indexBufferCube;
+    Buffer _vertexBufferCube;
+    Buffer _indexBufferCube;
 
     std::vector<Object> objects;
     UniformBufferCamera _ubCamera;

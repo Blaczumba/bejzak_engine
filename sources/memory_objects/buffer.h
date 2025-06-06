@@ -7,6 +7,7 @@
 
 #include <vulkan/vulkan.h>
 
+#include <array>
 #include <cstring>
 #include <memory>
 #include <span>
@@ -16,9 +17,9 @@ class Buffer {
 public:
     Buffer();
 
-    Buffer(Buffer&& vertexBuffer) noexcept;
+    Buffer(Buffer&& Buffer) noexcept;
 
-    Buffer& operator=(Buffer&& vertexBuffer) noexcept;
+    Buffer& operator=(Buffer&& Buffer) noexcept;
 
     ~Buffer();
 
@@ -32,13 +33,15 @@ public:
 
     // Creates Buffer (staging buffer) and copies data to it.
     template<typename T>
-    static lib::ErrorOr<Buffer> create(LogicalDevice& logicalDevice, std::span<const T> data, std::span<const std::pair<VkDeviceSize, uint32_t>> offsetStrides = { {0, sizeof(T)} });
+    static lib::ErrorOr<Buffer> create(LogicalDevice& logicalDevice, std::span<const T> data, std::span<const std::pair<VkDeviceSize, uint32_t>> offsetStrides = {});
 
     VkBufferUsageFlags getUsage() const;
 
     uint32_t getSize() const;
 
     void* getMappedMemory() const;
+
+    const VkBuffer& getVkBuffer() const;
 
     std::span<const std::pair<VkDeviceSize, uint32_t>> getOffsetStrides() const;
 
@@ -121,7 +124,7 @@ struct UniformBufferAllocator {
 template<typename Allocator>
 static lib::ErrorOr<Buffer> Buffer::create(LogicalDevice& logicalDevice, uint32_t size, std::span<const std::pair<VkDeviceSize, uint32_t>> offsetStrides) {
     ASSIGN_OR_RETURN(const BufferData bufferData, std::visit(Allocator{ size }, logicalDevice.getMemoryAllocator()));
-    return Buffer(bufferData.type, bufferData.buffer, bufferData.allocation, logicalDevice, offsetStrides, size);
+    return Buffer(logicalDevice, bufferData.allocation, bufferData.buffer, bufferData.usage, size, offsetStrides);
 }
 
 template<typename Allocator>
@@ -131,7 +134,7 @@ static lib::ErrorOr<Buffer> Buffer::create(LogicalDevice& logicalDevice, const V
     }
     ASSIGN_OR_RETURN(const BufferData bufferData, std::visit(Allocator{ copyBuffer._size }, logicalDevice.getMemoryAllocator()));
     copyBufferToBuffer(commandBuffer, copyBuffer._buffer, bufferData.buffer, copyBuffer._size);
-    return Buffer(bufferData.type, bufferData.buffer, bufferData.allocation, logicalDevice, copyBuffer._size, copyBuffer._offsetStrides);
+    return Buffer(logicalDevice, bufferData.allocation, bufferData.buffer, bufferData.usage, copyBuffer._size, copyBuffer._offsetStrides);
 }
 
 template<typename T>
@@ -139,5 +142,5 @@ static lib::ErrorOr<Buffer> Buffer::create(LogicalDevice& logicalDevice, std::sp
     const uint32_t size = data.size() * sizeof(T);
     ASSIGN_OR_RETURN(const BufferData bufferData, std::visit(StagingBufferAllocator{ size }, logicalDevice.getMemoryAllocator()));
     std::memcpy(bufferData.mappedMemory, data.data(), size);
-    return Buffer(bufferData.type, bufferData.buffer, bufferData.allocation, logicalDevice, size, offsetStrides, bufferData.mappedMemory);
+    return Buffer(logicalDevice, bufferData.allocation, bufferData.buffer, bufferData.usage, size, offsetStrides, bufferData.mappedMemory);
 }

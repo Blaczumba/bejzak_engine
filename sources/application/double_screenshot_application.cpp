@@ -13,7 +13,6 @@
 #include "primitives/vertex_builder.h"
 #include "render_pass/attachment/attachment_layout.h"
 #include "thread_pool/thread_pool.h"
-#include "memory_objects/staging_buffer.h"
 
 #include <algorithm>
 #include <array>
@@ -22,7 +21,7 @@
 SingleApp::SingleApp()
     : ApplicationBase() {
     
-    _assetManager = std::make_unique<AssetManager>(_logicalDevice->getMemoryAllocator());
+    _assetManager = std::make_unique<AssetManager>(*_logicalDevice);
 
     createDescriptorSets();
     loadObjects();
@@ -37,6 +36,18 @@ SingleApp::SingleApp()
     setInput();
 
     createSyncObjects();
+}
+
+VkIndexType getIndexType(uint32_t stride) {
+    switch (stride) {
+    case 1:
+        return VK_INDEX_TYPE_UINT8_EXT;
+    case 2:
+        return VK_INDEX_TYPE_UINT16;
+    case 4:
+        return VK_INDEX_TYPE_UINT32;
+    }
+    return VK_INDEX_TYPE_NONE_KHR;
 }
 
 void SingleApp::setInput() {
@@ -74,8 +85,8 @@ lib::Status SingleApp::loadCubemap() {
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
         ASSIGN_OR_RETURN(auto vData, _assetManager->getVertexData("cube.obj"));
-        ASSIGN_OR_RETURN(_vertexBufferCube, VertexBuffer::create(*_logicalDevice, commandBuffer, *vData->vertexBufferPrimitives));
-        ASSIGN_OR_RETURN(_indexBufferCube, IndexBuffer::create(*_logicalDevice, commandBuffer, *vData->indexBuffer, vData->indexType));
+        ASSIGN_OR_RETURN(_vertexBufferCube, Buffer::create<VertexBufferAllocator>(*_logicalDevice, commandBuffer, vData->vertexBufferPrimitives));
+        ASSIGN_OR_RETURN(_indexBufferCube, Buffer::create<IndexBufferAllocator>(*_logicalDevice, commandBuffer, vData->indexBuffer));
     }
     return lib::StatusOk();
 }
@@ -95,12 +106,12 @@ lib::Status SingleApp::loadObject() {
         ASSIGN_OR_RETURN(lib::SharedBuffer<VertexPTN> vertices, buildInterleavingVertexData(vertexData.positions, vertexData.textureCoordinates, vertexData.normals));
         _assetManager->loadVertexData("cube_normal.obj", vertexData.indices, static_cast<uint8_t>(vertexData.indexType), vertices, vertexData.positions);
         ASSIGN_OR_RETURN(auto vData, _assetManager->getVertexData("cube_normal.obj"));
-        ASSIGN_OR_RETURN(_vertexBufferObject, VertexBuffer::create(*_logicalDevice, commandBuffer, *vData->vertexBuffer));
-        ASSIGN_OR_RETURN(_vertexBufferPrimitiveObject, VertexBuffer::create(*_logicalDevice, commandBuffer, *vData->vertexBufferPrimitives));
-        ASSIGN_OR_RETURN(_indexBufferObject, IndexBuffer::create(*_logicalDevice, commandBuffer, *vData->indexBuffer, vData->indexType));
+        ASSIGN_OR_RETURN(_vertexBufferObject, Buffer::create<VertexBufferAllocator>(*_logicalDevice, commandBuffer, vData->vertexBuffer));
+        ASSIGN_OR_RETURN(_vertexBufferPrimitiveObject, Buffer::create<VertexBufferAllocator>(*_logicalDevice, commandBuffer, vData->vertexBufferPrimitives));
+        ASSIGN_OR_RETURN(_indexBufferObject, Buffer::create<IndexBufferAllocator>(*_logicalDevice, commandBuffer, vData->indexBuffer));
 
         ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(drakanTexturePath));
-        ASSIGN_OR_RETURN(auto texture, Texture::create2DImage(*_logicalDevice, commandBuffer, *imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
+        ASSIGN_OR_RETURN(auto texture, Texture::create2DImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
         _textures.emplace_back(std::move(texture));
     }
 
@@ -147,19 +158,19 @@ lib::Status SingleApp::loadObjects() {
 
             if (!_uniformMap.contains(diffusePath)) {
                 ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(diffusePath));
-                ASSIGN_OR_RETURN(auto texture, Texture::create2DImage(*_logicalDevice, commandBuffer, *imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
+                ASSIGN_OR_RETURN(auto texture, Texture::create2DImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
                 _textures.push_back(std::move(texture));
                 _uniformMap.emplace(diffusePath, std::make_shared<UniformBufferTexture>(*_textures.back()));
             }
             if (!_uniformMap.contains(normalPath)) {
                 ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(normalPath));
-                ASSIGN_OR_RETURN(auto texture, Texture::create2DImage(*_logicalDevice, commandBuffer, *imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
+                ASSIGN_OR_RETURN(auto texture, Texture::create2DImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
                 _textures.push_back(std::move(texture));
                 _uniformMap.emplace(normalPath, std::make_shared<UniformBufferTexture>(*_textures.back()));
             }
             if (!_uniformMap.contains(metallicRoughnessPath)) {
                 ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(metallicRoughnessPath));
-                ASSIGN_OR_RETURN(auto texture, Texture::create2DImage(*_logicalDevice, commandBuffer, *imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
+                ASSIGN_OR_RETURN(auto texture, Texture::create2DImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
                 _textures.push_back(std::move(texture));
                 _uniformMap.emplace(metallicRoughnessPath, std::make_shared<UniformBufferTexture>(*_textures.back()));
             }
@@ -168,9 +179,9 @@ lib::Status SingleApp::loadObjects() {
             _objects.emplace_back("Object", e);
             ASSIGN_OR_RETURN(auto vData, _assetManager->getVertexData(std::to_string(i)));
             MeshComponent msh;
-            ASSIGN_OR_RETURN(msh.vertexBuffer, VertexBuffer::create(*_logicalDevice, commandBuffer, *vData->vertexBuffer));
-            ASSIGN_OR_RETURN(msh.indexBuffer, IndexBuffer::create(*_logicalDevice, commandBuffer, *vData->indexBuffer, vData->indexType));
-            ASSIGN_OR_RETURN(msh.vertexBufferPrimitive, VertexBuffer::create(*_logicalDevice, commandBuffer, *vData->vertexBufferPrimitives));
+            ASSIGN_OR_RETURN(msh.vertexBuffer, Buffer::create<VertexBufferAllocator>(*_logicalDevice, commandBuffer, vData->vertexBuffer));
+            ASSIGN_OR_RETURN(msh.indexBuffer, Buffer::create<IndexBufferAllocator>(*_logicalDevice, commandBuffer, vData->indexBuffer));
+            ASSIGN_OR_RETURN(msh.vertexBufferPrimitive, Buffer::create<VertexBufferAllocator>(*_logicalDevice, commandBuffer, vData->vertexBufferPrimitives));
             msh.aabb = createAABBfromVertices(std::vector<glm::vec3>(sceneData[i].positions.cbegin(), sceneData[i].positions.cend()), sceneData[i].model);
             _registry.addComponent<MeshComponent>(e, std::move(msh));
 
@@ -207,7 +218,7 @@ lib::Status SingleApp::createDescriptorSets() {
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
         ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(TEXTURES_PATH "cubemap_yokohama_rgba.ktx"));
-        ASSIGN_OR_RETURN(_textureCubemap, Texture::createCubemap(*_logicalDevice, commandBuffer, *imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
+        ASSIGN_OR_RETURN(_textureCubemap, Texture::createCubemap(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
         ASSIGN_OR_RETURN(_shadowMap, Texture::create2DShadowmap(*_logicalDevice, commandBuffer, 1024 * 2, 1024 * 2, VK_FORMAT_D32_SFLOAT));
     }
 
@@ -498,12 +509,14 @@ void SingleApp::recordOctreeSecondaryCommandBuffer(const VkCommandBuffer command
 
         for (const Object* object : node->getObjects()) {
             const auto& meshComponent = _registry.getComponent<MeshComponent>(object->getEntity());
-            const IndexBuffer& indexBuffer = meshComponent.indexBuffer;
-            const VertexBuffer& vertexBuffer = meshComponent.vertexBuffer;
-            vertexBuffer.bind(commandBuffer);
-            indexBuffer.bind(commandBuffer);
+            const Buffer& indexBuffer = meshComponent.indexBuffer;
+            const Buffer& vertexBuffer = meshComponent.vertexBuffer;
+
+            static constexpr VkDeviceSize offsets[] = { 0 };
+            vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer.getVkBuffer(), offsets);
+            vkCmdBindIndexBuffer(commandBuffer, indexBuffer.getVkBuffer(), 0, getIndexType(indexBuffer.getOffsetStrides()[0].second));
             _entitytoDescriptorSet[object->getEntity()].bind(commandBuffer, *_graphicsPipeline, { _currentFrame, _entityToIndex[object->getEntity()] });
-            vkCmdDrawIndexed(commandBuffer, indexBuffer.getIndexCount(), 1, 0, 0, 0);
+            vkCmdDrawIndexed(commandBuffer, indexBuffer.getSize() / indexBuffer.getOffsetStrides()[0].second, 1, 0, 0, 0);
         }
 
         for (auto option : options) {
@@ -562,10 +575,13 @@ void SingleApp::recordCommandBuffer(uint32_t imageIndex) {
         const VkCommandBuffer commandBuffer = _commandBuffers[_currentFrame][1]->getVkCommandBuffer();
 
         vkCmdBindPipeline(commandBuffer, _graphicsPipelineSkybox->getVkPipelineBindPoint(), _graphicsPipelineSkybox->getVkPipeline());
-        _vertexBufferCube.bind(commandBuffer);
-        _indexBufferCube.bind(commandBuffer);
+        static constexpr VkDeviceSize offsets[] = { 0 };
+        vkCmdBindVertexBuffers(commandBuffer, 0, 1, &_vertexBufferCube.getVkBuffer(), offsets);
+        vkCmdBindIndexBuffer(commandBuffer, _indexBufferCube.getVkBuffer(), 0, getIndexType(_indexBufferCube.getOffsetStrides()[0].second));
+        //_vertexBufferCube.bind(commandBuffer);
+        //_indexBufferCube.bind(commandBuffer);
         _descriptorSetSkybox.bind(commandBuffer, *_graphicsPipelineSkybox, { _currentFrame });
-        vkCmdDrawIndexed(commandBuffer, _indexBufferCube.getIndexCount(), 1, 0, 0, 0);
+        vkCmdDrawIndexed(commandBuffer, _indexBufferCube.getSize() / _indexBufferCube.getOffsetStrides()[0].second, 1, 0, 0, 0);
 
         // Object
         //vkCmdBindPipeline(commandBuffer, _graphicsPipelineNormal->getVkPipelineBindPoint(), _graphicsPipelineNormal->getVkPipeline());
@@ -629,11 +645,11 @@ void SingleApp::recordShadowCommandBuffer(VkCommandBuffer commandBuffer, uint32_
     for (const auto& object : _objects) {
         const auto& meshComponent = _registry.getComponent<MeshComponent>(object.getEntity());
         VkBuffer vertexBuffers[] = { meshComponent.vertexBufferPrimitive.getVkBuffer() };
-        const IndexBuffer& indexBuffer = meshComponent.indexBuffer;
+        const Buffer& indexBuffer = meshComponent.indexBuffer;
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
         _descriptorSetShadow.bind(commandBuffer, *_shadowPipeline, { _entityToIndex[object.getEntity()] });
-        vkCmdBindIndexBuffer(commandBuffer, indexBuffer.getVkBuffer(), 0, indexBuffer.getIndexType());
-        vkCmdDrawIndexed(commandBuffer, indexBuffer.getIndexCount(), 1, 0, 0, 0);
+        vkCmdBindIndexBuffer(commandBuffer, indexBuffer.getVkBuffer(), 0, getIndexType(indexBuffer.getOffsetStrides()[0].second));
+        vkCmdDrawIndexed(commandBuffer, indexBuffer.getSize() / indexBuffer.getOffsetStrides()[0].second, 1, 0, 0, 0);
     }
 
     //_vertexBufferPrimitiveObject->bind(commandBuffer);

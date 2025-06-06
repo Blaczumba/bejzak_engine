@@ -19,7 +19,12 @@ Buffer& Buffer::operator=(Buffer&& buffer) noexcept {
     // TODO what if _vertexBuffer != VK_NULL_HANDLE
     _buffer = std::exchange(buffer._buffer, VK_NULL_HANDLE);
     _allocation = buffer._allocation;
+    _size = buffer._size;
+    _usage = buffer._usage;
+    _offsetStrides = std::move(buffer._offsetStrides);
+    _mappedMemory = buffer._mappedMemory;
     _logicalDevice = buffer._logicalDevice;
+    return *this;
 }
 
 Buffer::~Buffer() {
@@ -38,6 +43,10 @@ uint32_t Buffer::getSize() const {
 
 void* Buffer::getMappedMemory() const {
     return _mappedMemory;
+}
+
+const VkBuffer& Buffer::getVkBuffer() const {
+    return _buffer;
 }
 
 std::span<const std::pair<VkDeviceSize, uint32_t>> Buffer::getOffsetStrides() const {
