@@ -10,6 +10,7 @@
 #include <array>
 #include <cstring>
 #include <memory>
+#include <optional>
 #include <span>
 #include <vector>
 
@@ -23,17 +24,18 @@ public:
 
     ~Buffer();
 
-    // Creates Buffer of any type with given size.
-    template<typename Allocator>
-    static lib::ErrorOr<Buffer> create(LogicalDevice& logicalDevice, uint32_t size, std::span<const std::pair<VkDeviceSize, uint32_t>> offsetStrides);
+    static lib::ErrorOr<Buffer> createVertexBuffer(LogicalDevice& logicalDevice, uint32_t size);
 
-    // Creates Buffer and copies data from stagingBuffer.
-    template<typename Allocator>
-    static lib::ErrorOr<Buffer> create(LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const Buffer& copyBuffer);
+    static lib::ErrorOr<Buffer> createIndexBuffer(LogicalDevice& logicalDevice, uint32_t size);
 
-    // Creates Buffer (staging buffer) and copies data to it.
+    static lib::ErrorOr<Buffer> createStagingBuffer(LogicalDevice& logicalDevice, uint32_t size);
+
+    static lib::ErrorOr<Buffer> createUniformBuffer(LogicalDevice& logicalDevice, uint32_t size);
+
+    lib::Status copyBuffer(const VkCommandBuffer commandBuffer, const Buffer& srcBuffer, std::optional<VkDeviceSize> size = std::nullopt, VkDeviceSize srcOffset = 0, VkDeviceSize dstOffset = 0);
+
     template<typename T>
-    static lib::ErrorOr<Buffer> create(LogicalDevice& logicalDevice, std::span<const T> data, std::span<const std::pair<VkDeviceSize, uint32_t>> offsetStrides = {});
+    lib::Status copyData(std::span<const T> data);
 
     VkBufferUsageFlags getUsage() const;
 
@@ -43,19 +45,16 @@ public:
 
     const VkBuffer& getVkBuffer() const;
 
-    std::span<const std::pair<VkDeviceSize, uint32_t>> getOffsetStrides() const;
-
 private:
     VkBuffer _buffer;
     Allocation _allocation;
-    uint32_t _size;
+    VkDeviceSize _size;
     VkBufferUsageFlags _usage;
-    std::vector<std::pair<VkDeviceSize, uint32_t>> _offsetStrides;
     void* _mappedMemory;
 
     LogicalDevice* _logicalDevice;
 
-    Buffer(LogicalDevice& logicalDevice, const Allocation allocation, const VkBuffer vertexBuffer, VkBufferUsageFlags usage, uint32_t size, std::span<const std::pair<VkDeviceSize, uint32_t>> offsetStrides, void* mappedData = nullptr);
+    Buffer(LogicalDevice& logicalDevice, const Allocation allocation, const VkBuffer vertexBuffer, VkBufferUsageFlags usage, uint32_t size, void* mappedData = nullptr);
 };
 
 struct BufferData {
@@ -64,6 +63,8 @@ struct BufferData {
     VkBufferUsageFlags usage;
     void* mappedMemory;
 };
+
+namespace {
 
 struct VertexBufferAllocator {
     const size_t size;
@@ -99,7 +100,7 @@ struct StagingBufferAllocator {
     lib::ErrorOr<BufferData> operator()(VmaWrapper& wrapper) {
         VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
         ASSIGN_OR_RETURN(const VmaWrapper::Buffer buffer, wrapper.createVkBuffer(size, usage, VMA_MEMORY_USAGE_CPU_ONLY, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT));
-        return BufferData{  buffer.buffer, buffer.allocation, usage, buffer.mappedData };
+        return BufferData{ buffer.buffer, buffer.allocation, usage, buffer.mappedData };
     }
 
     lib::ErrorOr<BufferData> operator()(auto&&) {
@@ -121,26 +122,17 @@ struct UniformBufferAllocator {
     }
 };
 
-template<typename Allocator>
-static lib::ErrorOr<Buffer> Buffer::create(LogicalDevice& logicalDevice, uint32_t size, std::span<const std::pair<VkDeviceSize, uint32_t>> offsetStrides) {
-    ASSIGN_OR_RETURN(const BufferData bufferData, std::visit(Allocator{ size }, logicalDevice.getMemoryAllocator()));
-    return Buffer(logicalDevice, bufferData.allocation, bufferData.buffer, bufferData.usage, size, offsetStrides);
-}
-
-template<typename Allocator>
-static lib::ErrorOr<Buffer> Buffer::create(LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const Buffer& copyBuffer) {
-    if ((copyBuffer._usage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT) == 0) {
-        return lib::Error("Copy buffer was not created with VK_BUFFER_USAGE_TRANSFER_SRC_BIT flag!");
-    }
-    ASSIGN_OR_RETURN(const BufferData bufferData, std::visit(Allocator{ copyBuffer._size }, logicalDevice.getMemoryAllocator()));
-    copyBufferToBuffer(commandBuffer, copyBuffer._buffer, bufferData.buffer, copyBuffer._size);
-    return Buffer(logicalDevice, bufferData.allocation, bufferData.buffer, bufferData.usage, copyBuffer._size, copyBuffer._offsetStrides);
-}
+} // namespace
 
 template<typename T>
-static lib::ErrorOr<Buffer> Buffer::create(LogicalDevice& logicalDevice, std::span<const T> data, std::span<const std::pair<VkDeviceSize, uint32_t>> offsetStrides) {
+lib::Status Buffer::copyData(std::span<const T> data) {
+    if (!_mappedMemory) [[unlikely]] {
+        return lib::Error("The memory is not mapped!");
+    }
     const uint32_t size = data.size() * sizeof(T);
-    ASSIGN_OR_RETURN(const BufferData bufferData, std::visit(StagingBufferAllocator{ size }, logicalDevice.getMemoryAllocator()));
-    std::memcpy(bufferData.mappedMemory, data.data(), size);
-    return Buffer(logicalDevice, bufferData.allocation, bufferData.buffer, bufferData.usage, size, offsetStrides, bufferData.mappedMemory);
+    if (size > _size) [[unlikely]] {
+        return lib::Error("Out of bounds while copying data to buffer!");
+    }
+    std::memcpy(_mappedMemory, data.data(), size);
+    return lib::StatusOk();
 }

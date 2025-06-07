@@ -14,6 +14,7 @@ public:
 	Buffer indexBuffer;
 	Buffer vertexBufferPrimitive;
 	AABB aabb;
+	VkIndexType indexType;
 
 	static constexpr std::enable_if_t<componentID < MAX_COMPONENTS, ComponentType> getComponentID() { return componentID; }
 };

@@ -13,9 +13,10 @@ void AssetManager::loadImageAsync(const std::string& filePath, std::function<lib
         lib::ErrorOr<ImageResource> resource = loadingFunction(filePath);
         if (!resource.has_value()) [[unlikely]]
             return lib::ErrorOr<ImageData>(lib::Error(resource.error()));
-        auto stagingBuffer = Buffer::create(_logicalDevice, std::span(static_cast<const uint8_t*>(resource->data), resource->size));
+        auto stagingBuffer = Buffer::createStagingBuffer(_logicalDevice, resource->size);
         if (!stagingBuffer.has_value()) [[unlikely]]
             return lib::ErrorOr<ImageData>(lib::Error(stagingBuffer.error()));
+        stagingBuffer->copyData(std::span(static_cast<const uint8_t*>(resource->data), resource->size));
         ImageLoader::deallocateResources(*resource);
         return lib::ErrorOr<ImageData>(ImageData(std::move(*stagingBuffer), std::move(resource->dimensions)));
     }));

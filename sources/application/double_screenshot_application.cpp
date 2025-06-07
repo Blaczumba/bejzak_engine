@@ -50,6 +50,18 @@ VkIndexType getIndexType(uint32_t stride) {
     return VK_INDEX_TYPE_NONE_KHR;
 }
 
+uint32_t getIndexSize(VkIndexType type) {
+    switch (type) {
+    case VK_INDEX_TYPE_UINT8_EXT:
+        return 1;
+    case VK_INDEX_TYPE_UINT16:
+        return 2;
+    case VK_INDEX_TYPE_UINT32:
+        return 4;
+    }
+    return 0;
+}
+
 void SingleApp::setInput() {
     if (MouseKeyboardManager* manager = _window->getMouseKeyboardManager(); manager != nullptr) {
         // manager->absorbCursor();
@@ -85,8 +97,11 @@ lib::Status SingleApp::loadCubemap() {
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
         ASSIGN_OR_RETURN(auto vData, _assetManager->getVertexData("cube.obj"));
-        ASSIGN_OR_RETURN(_vertexBufferCube, Buffer::create<VertexBufferAllocator>(*_logicalDevice, commandBuffer, vData->vertexBufferPrimitives));
-        ASSIGN_OR_RETURN(_indexBufferCube, Buffer::create<IndexBufferAllocator>(*_logicalDevice, commandBuffer, vData->indexBuffer));
+        ASSIGN_OR_RETURN(_vertexBufferCube, Buffer::createVertexBuffer(*_logicalDevice, vData->vertexBufferPrimitives.getSize()));
+        RETURN_IF_ERROR(_vertexBufferCube.copyBuffer(commandBuffer, vData->vertexBufferPrimitives));
+        ASSIGN_OR_RETURN(_indexBufferCube, Buffer::createIndexBuffer(*_logicalDevice, vData->indexBuffer.getSize()));
+        RETURN_IF_ERROR(_indexBufferCube.copyBuffer(commandBuffer, vData->indexBuffer));
+        _indexBufferCubeType = vData->indexType;
     }
     return lib::StatusOk();
 }
@@ -106,10 +121,13 @@ lib::Status SingleApp::loadObject() {
         ASSIGN_OR_RETURN(lib::SharedBuffer<VertexPTN> vertices, buildInterleavingVertexData(vertexData.positions, vertexData.textureCoordinates, vertexData.normals));
         _assetManager->loadVertexData("cube_normal.obj", vertexData.indices, static_cast<uint8_t>(vertexData.indexType), vertices, vertexData.positions);
         ASSIGN_OR_RETURN(auto vData, _assetManager->getVertexData("cube_normal.obj"));
-        ASSIGN_OR_RETURN(_vertexBufferObject, Buffer::create<VertexBufferAllocator>(*_logicalDevice, commandBuffer, vData->vertexBuffer));
-        ASSIGN_OR_RETURN(_vertexBufferPrimitiveObject, Buffer::create<VertexBufferAllocator>(*_logicalDevice, commandBuffer, vData->vertexBufferPrimitives));
-        ASSIGN_OR_RETURN(_indexBufferObject, Buffer::create<IndexBufferAllocator>(*_logicalDevice, commandBuffer, vData->indexBuffer));
-
+        ASSIGN_OR_RETURN(_vertexBufferObject, Buffer::createVertexBuffer(*_logicalDevice, vData->vertexBuffer.getSize()));
+        RETURN_IF_ERROR(_vertexBufferObject.copyBuffer(commandBuffer, vData->vertexBuffer));
+        ASSIGN_OR_RETURN(_vertexBufferPrimitiveObject, Buffer::createVertexBuffer(*_logicalDevice, vData->vertexBufferPrimitives.getSize()));
+        RETURN_IF_ERROR(_vertexBufferPrimitiveObject.copyBuffer(commandBuffer, vData->vertexBufferPrimitives));
+        ASSIGN_OR_RETURN(_indexBufferObject, Buffer::createIndexBuffer(*_logicalDevice, vData->indexBuffer.getSize()));
+        RETURN_IF_ERROR(_indexBufferObject.copyBuffer(commandBuffer, vData->indexBuffer));
+        _indexBufferObjectType = vData->indexType;
         ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(drakanTexturePath));
         ASSIGN_OR_RETURN(auto texture, Texture::create2DImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
         _textures.emplace_back(std::move(texture));
@@ -179,9 +197,13 @@ lib::Status SingleApp::loadObjects() {
             _objects.emplace_back("Object", e);
             ASSIGN_OR_RETURN(auto vData, _assetManager->getVertexData(std::to_string(i)));
             MeshComponent msh;
-            ASSIGN_OR_RETURN(msh.vertexBuffer, Buffer::create<VertexBufferAllocator>(*_logicalDevice, commandBuffer, vData->vertexBuffer));
-            ASSIGN_OR_RETURN(msh.indexBuffer, Buffer::create<IndexBufferAllocator>(*_logicalDevice, commandBuffer, vData->indexBuffer));
-            ASSIGN_OR_RETURN(msh.vertexBufferPrimitive, Buffer::create<VertexBufferAllocator>(*_logicalDevice, commandBuffer, vData->vertexBufferPrimitives));
+            ASSIGN_OR_RETURN(msh.vertexBuffer, Buffer::createVertexBuffer(*_logicalDevice, vData->vertexBuffer.getSize()));
+            RETURN_IF_ERROR(msh.vertexBuffer.copyBuffer(commandBuffer, vData->vertexBuffer));
+            ASSIGN_OR_RETURN(msh.indexBuffer, Buffer::createIndexBuffer(*_logicalDevice, vData->indexBuffer.getSize()));
+            RETURN_IF_ERROR(msh.indexBuffer.copyBuffer(commandBuffer, vData->indexBuffer));
+            ASSIGN_OR_RETURN(msh.vertexBufferPrimitive, Buffer::createVertexBuffer(*_logicalDevice, vData->vertexBufferPrimitives.getSize()));
+            RETURN_IF_ERROR(msh.vertexBufferPrimitive.copyBuffer(commandBuffer, vData->vertexBufferPrimitives));
+            msh.indexType = vData->indexType;
             msh.aabb = createAABBfromVertices(std::vector<glm::vec3>(sceneData[i].positions.cbegin(), sceneData[i].positions.cend()), sceneData[i].model);
             _registry.addComponent<MeshComponent>(e, std::move(msh));
 
@@ -514,9 +536,9 @@ void SingleApp::recordOctreeSecondaryCommandBuffer(const VkCommandBuffer command
 
             static constexpr VkDeviceSize offsets[] = { 0 };
             vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer.getVkBuffer(), offsets);
-            vkCmdBindIndexBuffer(commandBuffer, indexBuffer.getVkBuffer(), 0, getIndexType(indexBuffer.getOffsetStrides()[0].second));
+            vkCmdBindIndexBuffer(commandBuffer, indexBuffer.getVkBuffer(), 0, meshComponent.indexType);
             _entitytoDescriptorSet[object->getEntity()].bind(commandBuffer, *_graphicsPipeline, { _currentFrame, _entityToIndex[object->getEntity()] });
-            vkCmdDrawIndexed(commandBuffer, indexBuffer.getSize() / indexBuffer.getOffsetStrides()[0].second, 1, 0, 0, 0);
+            vkCmdDrawIndexed(commandBuffer, indexBuffer.getSize() / getIndexSize(meshComponent.indexType), 1, 0, 0, 0);
         }
 
         for (auto option : options) {
@@ -577,11 +599,11 @@ void SingleApp::recordCommandBuffer(uint32_t imageIndex) {
         vkCmdBindPipeline(commandBuffer, _graphicsPipelineSkybox->getVkPipelineBindPoint(), _graphicsPipelineSkybox->getVkPipeline());
         static constexpr VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, &_vertexBufferCube.getVkBuffer(), offsets);
-        vkCmdBindIndexBuffer(commandBuffer, _indexBufferCube.getVkBuffer(), 0, getIndexType(_indexBufferCube.getOffsetStrides()[0].second));
+        vkCmdBindIndexBuffer(commandBuffer, _indexBufferCube.getVkBuffer(), 0, _indexBufferCubeType);
         //_vertexBufferCube.bind(commandBuffer);
         //_indexBufferCube.bind(commandBuffer);
         _descriptorSetSkybox.bind(commandBuffer, *_graphicsPipelineSkybox, { _currentFrame });
-        vkCmdDrawIndexed(commandBuffer, _indexBufferCube.getSize() / _indexBufferCube.getOffsetStrides()[0].second, 1, 0, 0, 0);
+        vkCmdDrawIndexed(commandBuffer, _indexBufferCube.getSize() / getIndexSize(_indexBufferCubeType), 1, 0, 0, 0);
 
         // Object
         //vkCmdBindPipeline(commandBuffer, _graphicsPipelineNormal->getVkPipelineBindPoint(), _graphicsPipelineNormal->getVkPipeline());
@@ -648,8 +670,8 @@ void SingleApp::recordShadowCommandBuffer(VkCommandBuffer commandBuffer, uint32_
         const Buffer& indexBuffer = meshComponent.indexBuffer;
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
         _descriptorSetShadow.bind(commandBuffer, *_shadowPipeline, { _entityToIndex[object.getEntity()] });
-        vkCmdBindIndexBuffer(commandBuffer, indexBuffer.getVkBuffer(), 0, getIndexType(indexBuffer.getOffsetStrides()[0].second));
-        vkCmdDrawIndexed(commandBuffer, indexBuffer.getSize() / indexBuffer.getOffsetStrides()[0].second, 1, 0, 0, 0);
+        vkCmdBindIndexBuffer(commandBuffer, indexBuffer.getVkBuffer(), 0, meshComponent.indexType);
+        vkCmdDrawIndexed(commandBuffer, indexBuffer.getSize() / getIndexSize(meshComponent.indexType), 1, 0, 0, 0);
     }
 
     //_vertexBufferPrimitiveObject->bind(commandBuffer);

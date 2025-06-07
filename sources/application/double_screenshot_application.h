@@ -54,12 +54,14 @@ class SingleApp : public ApplicationBase {
     Buffer _vertexBufferObject;
     Buffer _vertexBufferPrimitiveObject;
     Buffer _indexBufferObject;
+    VkIndexType _indexBufferObjectType;
     DescriptorSet _objectDescriptorSet;
     std::unique_ptr<UniformBufferData<UniformBufferObject>> _objectUniform;
     Entity _objectEntity;
 
     Buffer _vertexBufferCube;
     Buffer _indexBufferCube;
+    VkIndexType _indexBufferCubeType;
 
     std::vector<Object> objects;
     UniformBufferCamera _ubCamera;

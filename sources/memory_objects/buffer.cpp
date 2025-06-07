@@ -1,14 +1,16 @@
 #include "buffer.h"
 
-Buffer::Buffer() : _usage(0), _buffer(VK_NULL_HANDLE), _size(0) {};
+#include <iostream>
 
-Buffer::Buffer(LogicalDevice& logicalDevice, const Allocation allocation, const VkBuffer buffer, VkBufferUsageFlags usage, uint32_t size, std::span<const std::pair<VkDeviceSize, uint32_t>> offsetStrides, void* mappedData)
-    : _logicalDevice(&logicalDevice), _allocation(allocation), _buffer(buffer), _usage(usage), _size(size), _offsetStrides(offsetStrides.cbegin(), offsetStrides.cend()), _mappedMemory(mappedData) {
+Buffer::Buffer() : _usage(0), _buffer(VK_NULL_HANDLE), _size(0), _mappedMemory(nullptr) {};
+
+Buffer::Buffer(LogicalDevice& logicalDevice, const Allocation allocation, const VkBuffer buffer, VkBufferUsageFlags usage, uint32_t size, void* mappedData)
+    : _logicalDevice(&logicalDevice), _allocation(allocation), _buffer(buffer), _usage(usage), _size(size), _mappedMemory(mappedData) {
 }
 
 Buffer::Buffer(Buffer&& buffer) noexcept
     : _buffer(std::exchange(buffer._buffer, VK_NULL_HANDLE)), _allocation(buffer._allocation), _logicalDevice(buffer._logicalDevice),
-    _usage(buffer._usage), _size(buffer._size), _offsetStrides(std::move(buffer._offsetStrides)), _mappedMemory(buffer._mappedMemory) {
+    _usage(buffer._usage), _size(buffer._size), _mappedMemory(buffer._mappedMemory) {
 
 }
 
@@ -21,7 +23,6 @@ Buffer& Buffer::operator=(Buffer&& buffer) noexcept {
     _allocation = buffer._allocation;
     _size = buffer._size;
     _usage = buffer._usage;
-    _offsetStrides = std::move(buffer._offsetStrides);
     _mappedMemory = buffer._mappedMemory;
     _logicalDevice = buffer._logicalDevice;
     return *this;
@@ -31,6 +32,44 @@ Buffer::~Buffer() {
     if (_buffer != VK_NULL_HANDLE) {
         std::visit(BufferDeallocator{ _buffer }, _logicalDevice->getMemoryAllocator(), _allocation);
     }
+}
+
+lib::ErrorOr<Buffer> Buffer::createVertexBuffer(LogicalDevice& logicalDevice, uint32_t size) {
+    ASSIGN_OR_RETURN(const BufferData bufferData, std::visit(VertexBufferAllocator{ size }, logicalDevice.getMemoryAllocator()));
+    return Buffer(logicalDevice, bufferData.allocation, bufferData.buffer, bufferData.usage, size, bufferData.mappedMemory);
+}
+
+lib::ErrorOr<Buffer> Buffer::createIndexBuffer(LogicalDevice& logicalDevice, uint32_t size) {
+    ASSIGN_OR_RETURN(const BufferData bufferData, std::visit(IndexBufferAllocator{ size }, logicalDevice.getMemoryAllocator()));
+    return Buffer(logicalDevice, bufferData.allocation, bufferData.buffer, bufferData.usage, size, bufferData.mappedMemory);
+}
+
+lib::ErrorOr<Buffer> Buffer::createStagingBuffer(LogicalDevice& logicalDevice, uint32_t size) {
+    ASSIGN_OR_RETURN(const BufferData bufferData, std::visit(StagingBufferAllocator{ size }, logicalDevice.getMemoryAllocator()));
+    return Buffer(logicalDevice, bufferData.allocation, bufferData.buffer, bufferData.usage, size, bufferData.mappedMemory);
+}
+
+lib::ErrorOr<Buffer> Buffer::createUniformBuffer(LogicalDevice& logicalDevice, uint32_t size) {
+    ASSIGN_OR_RETURN(const BufferData bufferData, std::visit(UniformBufferAllocator{ size }, logicalDevice.getMemoryAllocator()));
+    return Buffer(logicalDevice, bufferData.allocation, bufferData.buffer, bufferData.usage, size, bufferData.mappedMemory);
+}
+
+lib::Status Buffer::copyBuffer(const VkCommandBuffer commandBuffer, const Buffer& srcBuffer, std::optional<VkDeviceSize> srcSize, VkDeviceSize srcOffset, VkDeviceSize dstOffset) {
+    if ((_usage & VK_BUFFER_USAGE_TRANSFER_DST_BIT) == 0) [[unlikely]] {
+        return lib::Error("Buffer does not have VK_BUFFER_USAGE_TRANSFER_DST_BIT specified.");
+    }
+    if ((srcBuffer._usage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT) == 0) [[unlikely]] {
+        return lib::Error("Source Buffer does not have VK_BUFFER_USAGE_TRANSFER_SRC_BIT specified.");
+    }
+    const VkDeviceSize size = srcSize.value_or(srcBuffer._size);
+    if (srcOffset + size > srcBuffer._size) [[unlikely]] {
+        return lib::Error("Out of bounds while copying from srcBuffer.");
+    }
+    if (dstOffset + size > _size) [[unlikely]] {
+        return lib::Error("Out of bounds while copying to the buffer.");
+    }
+    copyBufferToBuffer(commandBuffer, srcBuffer._buffer, _buffer, srcOffset, size, dstOffset);
+    return lib::StatusOk();
 }
 
 VkBufferUsageFlags Buffer::getUsage() const {
@@ -47,8 +86,4 @@ void* Buffer::getMappedMemory() const {
 
 const VkBuffer& Buffer::getVkBuffer() const {
     return _buffer;
-}
-
-std::span<const std::pair<VkDeviceSize, uint32_t>> Buffer::getOffsetStrides() const {
-    return _offsetStrides;
 }
