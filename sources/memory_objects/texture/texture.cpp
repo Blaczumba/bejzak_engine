@@ -127,13 +127,13 @@ lib::ErrorOr<std::unique_ptr<Texture>> Texture::createDepthAttachment(const Logi
 
 Texture::~Texture() {
     const VkDevice device = _logicalDevice.getVkDevice();
-    if (_sampler) {
+    if (_sampler != VK_NULL_HANDLE) {
         vkDestroySampler(device, _sampler, nullptr);
     }
-    if (_view) {
+    if (_view != VK_NULL_HANDLE) {
         vkDestroyImageView(device, _view, nullptr);
     }
-    if(_image) {
+    if(_image != VK_NULL_HANDLE) {
         std::visit(ImageDeleter{ _image }, _logicalDevice.getMemoryAllocator(), _allocation);
     }
 }

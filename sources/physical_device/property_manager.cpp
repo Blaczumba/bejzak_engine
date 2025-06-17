@@ -37,7 +37,7 @@ QueueFamilyIndices PhysicalDevicePropertyManager::findQueueFamilyIncides() const
     const lib::Buffer<VkQueueFamilyProperties>& queueFamilies = getQueueFamilyProperties();
 
     for (uint32_t i = 0; i < queueFamilies.size() && !indices.isComplete(); i++) {
-        VkBool32 presentSupport = false;
+        VkBool32 presentSupport = VK_FALSE;
         vkGetPhysicalDeviceSurfaceSupportKHR(_physicalDevice, i, _surface, &presentSupport);
 
         if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
@@ -142,10 +142,10 @@ bool PhysicalDevicePropertyManager::isDiscreteGPU() const {
 bool PhysicalDevicePropertyManager::checkBlittingSupport(VkFormat format) const {
     VkFormatProperties formatProps;
     vkGetPhysicalDeviceFormatProperties(_physicalDevice, format, &formatProps);
-    if (!(formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT)) {
-        return false;
+    if (formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT) {
+        return true;
     }
-    return true;
+    return false;
 }
 
 bool PhysicalDevicePropertyManager::checkTextureFormatSupport(VkFormat format, VkImageTiling tiling, VkFormatFeatureFlags features) const {
@@ -155,7 +155,8 @@ bool PhysicalDevicePropertyManager::checkTextureFormatSupport(VkFormat format, V
     if (tiling == VK_IMAGE_TILING_LINEAR && (properties.linearTilingFeatures & features) == features) {
         return true;
     }
-    else if (tiling == VK_IMAGE_TILING_OPTIMAL && (properties.optimalTilingFeatures & features) == features) {
+
+    if (tiling == VK_IMAGE_TILING_OPTIMAL && (properties.optimalTilingFeatures & features) == features) {
         return true;
     }
 

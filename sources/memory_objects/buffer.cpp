@@ -10,7 +10,7 @@ Buffer::Buffer(LogicalDevice& logicalDevice, const Allocation allocation, const 
 
 Buffer::Buffer(Buffer&& buffer) noexcept
     : _buffer(std::exchange(buffer._buffer, VK_NULL_HANDLE)), _allocation(buffer._allocation), _logicalDevice(buffer._logicalDevice),
-    _usage(buffer._usage), _size(buffer._size), _mappedMemory(buffer._mappedMemory) {
+    _usage(buffer._usage), _size(buffer._size), _mappedMemory(std::exchange(buffer._mappedMemory, nullptr)) {
 
 }
 
@@ -23,7 +23,7 @@ Buffer& Buffer::operator=(Buffer&& buffer) noexcept {
     _allocation = buffer._allocation;
     _size = buffer._size;
     _usage = buffer._usage;
-    _mappedMemory = buffer._mappedMemory;
+    _mappedMemory = std::exchange(buffer._mappedMemory, nullptr);
     _logicalDevice = buffer._logicalDevice;
     return *this;
 }
@@ -33,6 +33,73 @@ Buffer::~Buffer() {
         std::visit(BufferDeallocator{ _buffer }, _logicalDevice->getMemoryAllocator(), _allocation);
     }
 }
+
+namespace {
+
+struct BufferData {
+    VkBuffer buffer;
+    Allocation allocation;
+    VkBufferUsageFlags usage;
+    void* mappedMemory;
+};
+
+struct VertexBufferAllocator {
+    const size_t size;
+
+    lib::ErrorOr<BufferData> operator()(VmaWrapper& allocator) {
+        VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+        ASSIGN_OR_RETURN(const VmaWrapper::Buffer buffer, allocator.createVkBuffer(size, usage, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE));
+        return BufferData{ buffer.buffer, buffer.allocation, usage };
+    }
+
+    lib::ErrorOr<BufferData> operator()(auto&&) {
+        return lib::Error("Unrecognized allocator in VertexBuffer creation");
+    }
+};
+
+struct IndexBufferAllocator {
+    const size_t size;
+
+    lib::ErrorOr<BufferData> operator()(VmaWrapper& allocator) {
+        VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+        ASSIGN_OR_RETURN(const VmaWrapper::Buffer buffer, allocator.createVkBuffer(size, usage, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE));
+        return BufferData{ buffer.buffer, buffer.allocation, usage };
+    }
+
+    lib::ErrorOr<BufferData> operator()(auto&&) {
+        return lib::Error("Unrecognized allocator in IndexBuffer creation");
+    }
+};
+
+struct StagingBufferAllocator {
+    const size_t size;
+
+    lib::ErrorOr<BufferData> operator()(VmaWrapper& wrapper) {
+        VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+        ASSIGN_OR_RETURN(const VmaWrapper::Buffer buffer, wrapper.createVkBuffer(size, usage, VMA_MEMORY_USAGE_CPU_ONLY, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT));
+        return BufferData{ buffer.buffer, buffer.allocation, usage, buffer.mappedData };
+    }
+
+    lib::ErrorOr<BufferData> operator()(auto&&) {
+        return lib::Error("Unrecognized allocator during StagingBuffer creation");
+    }
+};
+
+struct UniformBufferAllocator {
+    const size_t size;
+
+    lib::ErrorOr<BufferData> operator()(VmaWrapper& allocator) {
+        VkBufferUsageFlags usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+        ASSIGN_OR_RETURN(const VmaWrapper::Buffer buffer, allocator.createVkBuffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_ONLY, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT));
+        return BufferData{ buffer.buffer, buffer.allocation, usage, buffer.mappedData };
+    }
+
+    lib::ErrorOr<BufferData> operator()(auto&&) {
+        return lib::Error("Not recognized allocator for UniformBufferData creation");
+    }
+};
+
+} // namespace
 
 lib::ErrorOr<Buffer> Buffer::createVertexBuffer(LogicalDevice& logicalDevice, uint32_t size) {
     ASSIGN_OR_RETURN(const BufferData bufferData, std::visit(VertexBufferAllocator{ size }, logicalDevice.getMemoryAllocator()));
@@ -68,7 +135,7 @@ lib::Status Buffer::copyBuffer(const VkCommandBuffer commandBuffer, const Buffer
     if (dstOffset + size > _size) [[unlikely]] {
         return lib::Error("Out of bounds while copying to the buffer.");
     }
-    copyBufferToBuffer(commandBuffer, srcBuffer._buffer, _buffer, srcOffset, size, dstOffset);
+    copyBufferToBuffer(commandBuffer, srcBuffer._buffer, _buffer, srcOffset, dstOffset, size);
     return lib::StatusOk();
 }
 

@@ -87,7 +87,7 @@ void transitionImageLayout(VkCommandBuffer commandBuffer, VkImage image, VkImage
     );
 }
 
-void copyBufferToBuffer(VkCommandBuffer commandBuffer, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize srcOffset, VkDeviceSize size, VkDeviceSize dstOffset) {
+void copyBufferToBuffer(VkCommandBuffer commandBuffer, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize srcOffset, VkDeviceSize dstOffset, VkDeviceSize size) {
     const VkBufferCopy copyRegion = {
         .srcOffset = srcOffset,
         .dstOffset = dstOffset,

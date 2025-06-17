@@ -101,7 +101,3 @@ void DescriptorSet::bind(const VkCommandBuffer commandBuffer, const Pipeline& pi
     std::transform(dynamicOffsetStrides.begin(), dynamicOffsetStrides.end(), _dynamicBuffersBaseSizes.cbegin(), sizes.begin(), std::multiplies<uint32_t>());
     vkCmdBindDescriptorSets(commandBuffer, pipeline.getVkPipelineBindPoint(), pipeline.getVkPipelineLayout(), 0, 1, &_descriptorSet, dynamicOffsetStrides.size(), sizes.data());
 }
-
-const VkDescriptorSet DescriptorSet::getVkDescriptorSet(size_t i) const {
-    return _descriptorSet;
-}
