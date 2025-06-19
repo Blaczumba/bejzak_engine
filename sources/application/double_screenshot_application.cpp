@@ -573,9 +573,14 @@ void SingleApp::recordCommandBuffer(uint32_t imageIndex) {
     futures[0] = std::async(std::launch::async, [&]() {
         const VkCommandBuffer commandBuffer = _commandBuffers[_currentFrame][0]->getVkCommandBuffer();
 
-        _commandBuffers[_currentFrame][0]->begin(framebuffer, viewportScissorInheritance ? &scissorViewportInheritance : nullptr);
-        vkCmdSetViewport(commandBuffer, 0, 1, &framebuffer.getViewport());
-        vkCmdSetScissor(commandBuffer, 0, 1, &framebuffer.getScissor());
+        if (viewportScissorInheritance) [[likely]] {
+            _commandBuffers[_currentFrame][0]->begin(framebuffer, &scissorViewportInheritance);
+        }
+        else {
+            _commandBuffers[_currentFrame][0]->begin(framebuffer, nullptr);
+            vkCmdSetViewport(commandBuffer, 0, 1, &framebuffer.getViewport());
+            vkCmdSetScissor(commandBuffer, 0, 1, &framebuffer.getScissor());
+        }
         vkCmdBindPipeline(commandBuffer, _graphicsPipeline->getVkPipelineBindPoint(), _graphicsPipeline->getVkPipeline());
 
         const OctreeNode* root = _octree->getRoot();
@@ -587,10 +592,16 @@ void SingleApp::recordCommandBuffer(uint32_t imageIndex) {
 
     futures[1] = std::async(std::launch::async, [&]() {
         // Skybox
-        _commandBuffers[_currentFrame][1]->begin(framebuffer, viewportScissorInheritance ? &scissorViewportInheritance : nullptr);
         const VkCommandBuffer commandBuffer = _commandBuffers[_currentFrame][1]->getVkCommandBuffer();
-        vkCmdSetViewport(commandBuffer, 0, 1, &framebuffer.getViewport());
-        vkCmdSetScissor(commandBuffer, 0, 1, &framebuffer.getScissor());
+
+        if (viewportScissorInheritance) [[likely]] {
+            _commandBuffers[_currentFrame][1]->begin(framebuffer, &scissorViewportInheritance);
+        }
+        else {
+            _commandBuffers[_currentFrame][1]->begin(framebuffer, nullptr);
+            vkCmdSetViewport(commandBuffer, 0, 1, &framebuffer.getViewport());
+            vkCmdSetScissor(commandBuffer, 0, 1, &framebuffer.getScissor());
+        }
         vkCmdBindPipeline(commandBuffer, _graphicsPipelineSkybox->getVkPipelineBindPoint(), _graphicsPipelineSkybox->getVkPipeline());
         
         static constexpr VkDeviceSize offsets[] = { 0 };
