@@ -9,8 +9,8 @@
 
 #include <vulkan/vulkan.hpp>
 
-PhysicalDevice::PhysicalDevice(const VkPhysicalDevice physicalDevice, const Surface& surface, PhysicalDevicePropertyManager&& propertManager)
-	: _device(physicalDevice), _surface(surface), _propertyManager(std::move(propertManager)) { }
+PhysicalDevice::PhysicalDevice(const VkPhysicalDevice physicalDevice, const Surface& surface, std::unordered_set<std::string_view>&& availableRequestedExtensions, PhysicalDevicePropertyManager&& propertManager)
+	: _device(physicalDevice), _surface(surface), _availableRequestedExtensions(std::move(availableRequestedExtensions)), _propertyManager(std::move(propertManager)) { }
 
 lib::ErrorOr<std::unique_ptr<PhysicalDevice>> PhysicalDevice::create(const Surface& surface) {
     const VkSurfaceKHR surf = surface.getVkSurface();
@@ -19,13 +19,10 @@ lib::ErrorOr<std::unique_ptr<PhysicalDevice>> PhysicalDevice::create(const Surfa
     for (const auto device : devices) {
         PhysicalDevicePropertyManager propertyManager(device, surf);
         const QueueFamilyIndices& indices = propertyManager.getQueueFamilyIndices();
-        const bool extensionsSupported = propertyManager.checkDeviceExtensionSupport();
 
         bool swapChainAdequate = false;
-        if (extensionsSupported) {
-            const SwapChainSupportDetails swapChainSupport = propertyManager.getSwapChainSupportDetails();
-            swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
-        }
+        const SwapChainSupportDetails swapChainSupport = propertyManager.getSwapChainSupportDetails();
+        swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
 
         VkPhysicalDeviceFeatures supportedFeatures;
         vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
@@ -34,14 +31,13 @@ lib::ErrorOr<std::unique_ptr<PhysicalDevice>> PhysicalDevice::create(const Surfa
 
         const std::array conditions = {
             indices.isComplete(),
-            extensionsSupported,
             swapChainAdequate,
             static_cast<bool>(supportedFeatures.samplerAnisotropy),
-            discreteGPU
+            // discreteGPU
         };
 
         if (std::all_of(conditions.cbegin(), conditions.cend(), [](bool condition) { return condition; })) {
-            return std::unique_ptr<PhysicalDevice>(new PhysicalDevice(device, surface, std::move(propertyManager)));
+            return std::unique_ptr<PhysicalDevice>(new PhysicalDevice(device, surface, propertyManager.checkDeviceExtensionSupport(), std::move(propertyManager)));
         }
     }
     return lib::Error("failed to find a suitable GPU!");
@@ -57,4 +53,8 @@ const Surface& PhysicalDevice::getSurface() const {
 
 const PhysicalDevicePropertyManager& PhysicalDevice::getPropertyManager() const {
     return _propertyManager;
+}
+
+const std::unordered_set<std::string_view>& PhysicalDevice::getAvailableRequestedExtensions() const {
+    return _availableRequestedExtensions;
 }

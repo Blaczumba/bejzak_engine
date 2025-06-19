@@ -5,6 +5,8 @@
 #include <vulkan/vulkan.h>
 
 #include <optional>
+#include <string_view>
+#include <unordered_set>
 #include <vector>
 
 struct QueueFamilyIndices {
@@ -51,7 +53,7 @@ public:
     const lib::Buffer<VkExtensionProperties>& getAvailableExtensionProperties() const;
 
     bool isDiscreteGPU() const;
-    bool checkDeviceExtensionSupport() const;
+    std::unordered_set<std::string_view> checkDeviceExtensionSupport() const;
 
     bool checkBlittingSupport(VkFormat format) const;
     bool checkTextureFormatSupport(VkFormat format, VkImageTiling tiling, VkFormatFeatureFlags features) const;

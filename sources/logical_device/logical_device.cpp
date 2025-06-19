@@ -22,6 +22,14 @@ LogicalDevice::~LogicalDevice() {
     vkDestroyDevice(_device, nullptr);
 }
 
+template<typename T> 
+void chainExtensionFeature(void** next, T& feature, std::string_view extension, const std::unordered_set<std::string_view>& availableExtensions) {
+    if (availableExtensions.contains(extension)) {
+        feature.pNext = *next;
+        *next = (void*)&feature;
+    }
+}
+
 lib::ErrorOr<std::unique_ptr<LogicalDevice>> LogicalDevice::create(const PhysicalDevice& physicalDevice) {
     const QueueFamilyIndices& indices = physicalDevice.getPropertyManager().getQueueFamilyIndices();
 
@@ -39,34 +47,44 @@ lib::ErrorOr<std::unique_ptr<LogicalDevice>> LogicalDevice::create(const Physica
         }
     );
 
-    const VkPhysicalDeviceIndexTypeUint8FeaturesEXT uint8IndexFeatures = {
+    void* next = nullptr;
+    const std::unordered_set<std::string_view>& availableExtensions = physicalDevice.getAvailableRequestedExtensions();
+
+    VkPhysicalDeviceIndexTypeUint8FeaturesEXT uint8IndexFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INDEX_TYPE_UINT8_FEATURES_EXT,
         .indexTypeUint8 = VK_TRUE
     };
 
-    const VkPhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeatures = {
+    chainExtensionFeature(&next, uint8IndexFeatures, VK_EXT_INDEX_TYPE_UINT8_EXTENSION_NAME, availableExtensions);
+
+    VkPhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
-        .pNext = (void*)&uint8IndexFeatures,
         .bufferDeviceAddress = VK_TRUE
     };
 
-    const VkPhysicalDeviceInheritedViewportScissorFeaturesNV viewportScissorsFeatures = {
+    chainExtensionFeature(&next, bufferDeviceAddressFeatures, VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME, availableExtensions);
+
+    VkPhysicalDeviceInheritedViewportScissorFeaturesNV viewportScissorsFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INHERITED_VIEWPORT_SCISSOR_FEATURES_NV,
-        .pNext = (void*)&bufferDeviceAddressFeatures,
-        .inheritedViewportScissor2D = VK_TRUE
+        .inheritedViewportScissor2D = VK_FALSE,
     };
+
+    chainExtensionFeature(&next, viewportScissorsFeatures, VK_NV_INHERITED_VIEWPORT_SCISSOR_EXTENSION_NAME, availableExtensions);
 
     const VkPhysicalDeviceFeatures2 deviceFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-        .pNext = (void*)&viewportScissorsFeatures,
+        .pNext = next,
         .features = {
             .geometryShader = VK_TRUE,
             .tessellationShader = VK_TRUE,
             .sampleRateShading = VK_TRUE,
             .depthClamp = VK_TRUE,
-            .samplerAnisotropy = VK_TRUE
+            .samplerAnisotropy = VK_TRUE,
         }
     };
+
+    lib::Buffer<const char*> extensions(availableExtensions.size());
+    std::transform(availableExtensions.cbegin(), availableExtensions.cend(), extensions.begin(), [](std::string_view ext) { return ext.data(); });
 
     const VkDeviceCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -79,8 +97,8 @@ lib::ErrorOr<std::unique_ptr<LogicalDevice>> LogicalDevice::create(const Physica
     #else
         .enabledLayerCount = 0,
     #endif  // VALIDATION_LAYERS_ENABLED
-        .enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
-        .ppEnabledExtensionNames = deviceExtensions.data(),
+        .enabledExtensionCount = static_cast<uint32_t>(extensions.size()),
+        .ppEnabledExtensionNames = extensions.data(),
     };
 
     VkDevice logicalDevice;

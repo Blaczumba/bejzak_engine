@@ -1,5 +1,6 @@
 #include "double_screenshot_application.h"
 
+#include "config/config.h"
 #include "lib/status/status.h"
 #include "lib/buffer/shared_buffer.h"
 #include "model_loader/tiny_gltf_loader/tiny_gltf_loader.h"
@@ -556,32 +557,25 @@ void SingleApp::recordCommandBuffer(uint32_t imageIndex) {
     primaryCommandBuffer.begin();
     primaryCommandBuffer.beginRenderPass(framebuffer);
 
-    //const VkExtent2D framebufferExtent = framebuffer.getVkExtent();
-    //const VkViewport viewport = {
-    //    .x = 0.0f,
-    //    .y = 0.0f,
-    //    .width = (float)framebufferExtent.width,
-    //    .height = (float)framebufferExtent.height,
-    //    .minDepth = 0.0f,
-    //    .maxDepth = 1.0f
-    //};
-    //const VkRect2D scissor = {
-    //    .offset = { 0, 0 },
-    //    .extent = framebufferExtent
-    //};
-
-    const VkCommandBufferInheritanceViewportScissorInfoNV scissorViewportInheritance = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_VIEWPORT_SCISSOR_INFO_NV,
-        .viewportScissor2D = VK_TRUE,
-        .viewportDepthCount = 1,
-        .pViewportDepths = &framebuffer.getViewport(),
-    };
+    static const bool viewportScissorInheritance = (std::find(_physicalDevice->getAvailableRequestedExtensions().cbegin(), _physicalDevice->getAvailableRequestedExtensions().cend(), VK_NV_INHERITED_VIEWPORT_SCISSOR_EXTENSION_NAME) != _physicalDevice->getAvailableRequestedExtensions().cend());
+    VkCommandBufferInheritanceViewportScissorInfoNV scissorViewportInheritance;
+    if (viewportScissorInheritance) {
+        scissorViewportInheritance = VkCommandBufferInheritanceViewportScissorInfoNV{
+            .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_VIEWPORT_SCISSOR_INFO_NV,
+            .viewportScissor2D = VK_TRUE,
+            .viewportDepthCount = 1,
+            .pViewportDepths = &framebuffer.getViewport(),
+        };
+    }
 
     std::array<std::future<void>, MAX_THREADS_IN_POOL> futures;
 
     futures[0] = std::async(std::launch::async, [&]() {
-        _commandBuffers[_currentFrame][0]->begin(framebuffer, &scissorViewportInheritance);
         const VkCommandBuffer commandBuffer = _commandBuffers[_currentFrame][0]->getVkCommandBuffer();
+
+        _commandBuffers[_currentFrame][0]->begin(framebuffer, viewportScissorInheritance ? &scissorViewportInheritance : nullptr);
+        vkCmdSetViewport(commandBuffer, 0, 1, &framebuffer.getViewport());
+        vkCmdSetScissor(commandBuffer, 0, 1, &framebuffer.getScissor());
         vkCmdBindPipeline(commandBuffer, _graphicsPipeline->getVkPipelineBindPoint(), _graphicsPipeline->getVkPipeline());
 
         const OctreeNode* root = _octree->getRoot();
@@ -593,10 +587,12 @@ void SingleApp::recordCommandBuffer(uint32_t imageIndex) {
 
     futures[1] = std::async(std::launch::async, [&]() {
         // Skybox
-        _commandBuffers[_currentFrame][1]->begin(framebuffer, &scissorViewportInheritance);
+        _commandBuffers[_currentFrame][1]->begin(framebuffer, viewportScissorInheritance ? &scissorViewportInheritance : nullptr);
         const VkCommandBuffer commandBuffer = _commandBuffers[_currentFrame][1]->getVkCommandBuffer();
-
+        vkCmdSetViewport(commandBuffer, 0, 1, &framebuffer.getViewport());
+        vkCmdSetScissor(commandBuffer, 0, 1, &framebuffer.getScissor());
         vkCmdBindPipeline(commandBuffer, _graphicsPipelineSkybox->getVkPipelineBindPoint(), _graphicsPipelineSkybox->getVkPipeline());
+        
         static constexpr VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, &_vertexBufferCube.getVkBuffer(), offsets);
         vkCmdBindIndexBuffer(commandBuffer, _indexBufferCube.getVkBuffer(), 0, _indexBufferCubeType);
@@ -618,7 +614,7 @@ void SingleApp::recordCommandBuffer(uint32_t imageIndex) {
     futures[0].wait();
     futures[1].wait();
 
-    primaryCommandBuffer.executeSecondaryCommandBuffers({ _commandBuffers[_currentFrame][0]->getVkCommandBuffer(), _commandBuffers[_currentFrame][1]->getVkCommandBuffer() });
+    primaryCommandBuffer.executeSecondaryCommandBuffers({ _commandBuffers[_currentFrame][0]->getVkCommandBuffer(), _commandBuffers[_currentFrame][1]->getVkCommandBuffer()});
     primaryCommandBuffer.endRenderPass();
 
     if (primaryCommandBuffer.end() != VK_SUCCESS) {

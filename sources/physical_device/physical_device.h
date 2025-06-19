@@ -6,7 +6,8 @@
 
 #include <memory>
 #include <optional>
-#include <vector>
+#include <string_view>
+#include <unordered_set>
 
 class LogicalDevice;
 
@@ -15,8 +16,9 @@ class PhysicalDevice {
     const Surface& _surface;
 
     const PhysicalDevicePropertyManager _propertyManager;
+    const std::unordered_set<std::string_view> _availableRequestedExtensions;
 
-	PhysicalDevice(const VkPhysicalDevice physicalDevice, const Surface& surface, PhysicalDevicePropertyManager&& propertManager);
+	PhysicalDevice(const VkPhysicalDevice physicalDevice, const Surface& surface, std::unordered_set<std::string_view>&& availableRequestedExtensions, PhysicalDevicePropertyManager&& propertManager);
 
 public:
     ~PhysicalDevice() = default;
@@ -26,4 +28,5 @@ public:
     const VkPhysicalDevice getVkPhysicalDevice() const;
     const Surface& getSurface() const;
     const PhysicalDevicePropertyManager& getPropertyManager() const;
+    const std::unordered_set<std::string_view>& getAvailableRequestedExtensions() const;
 };

@@ -7,6 +7,7 @@
 #include <array>
 #include <cstring>
 #include <stdexcept>
+#include <unordered_set>
 
 PhysicalDevicePropertyManager::PhysicalDevicePropertyManager(const VkPhysicalDevice physicalDevice, const VkSurfaceKHR surface) {
     _physicalDevice = physicalDevice;
@@ -124,15 +125,18 @@ const lib::Buffer<VkExtensionProperties>& PhysicalDevicePropertyManager::getAvai
     return _availableExtensions;
 }
 
-bool PhysicalDevicePropertyManager::checkDeviceExtensionSupport() const {
+std::unordered_set<std::string_view> PhysicalDevicePropertyManager::checkDeviceExtensionSupport() const {
     const lib::Buffer<VkExtensionProperties>& availableExtensions = getAvailableExtensionProperties();
-
-    // Check if all deviceExtensions are in availableExtensions.
-    return std::all_of(deviceExtensions.cbegin(), deviceExtensions.cend(), [&](const char* extension) {
-        return std::find_if(availableExtensions.cbegin(), availableExtensions.cend(), [&](const VkExtensionProperties& properties) {
-            return std::strcmp(properties.extensionName, extension) == 0;
-            }) != availableExtensions.cend();
-        });
+    std::unordered_set<std::string_view> availableRequestedExtensions;
+    for (const char* extension : deviceExtensions) {
+        if (std::find_if(availableExtensions.cbegin(), availableExtensions.cend(),
+            [&](const VkExtensionProperties& properties) {
+                return std::strcmp(properties.extensionName, extension) == 0;
+            }) != availableExtensions.cend()) {
+            availableRequestedExtensions.emplace(extension);
+        }
+    }
+    return availableRequestedExtensions;
 }
 
 bool PhysicalDevicePropertyManager::isDiscreteGPU() const {

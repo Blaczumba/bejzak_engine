@@ -15,7 +15,7 @@ DescriptorPool::~DescriptorPool() {
 lib::ErrorOr<std::unique_ptr<DescriptorPool>> DescriptorPool::create(const LogicalDevice& logicalDevice, const DescriptorSetLayout& descriptorSetLayout, uint32_t maxNumSets) {
 	const auto& descriptorDict = descriptorSetLayout.getDescriptorTypeCounter();
 	lib::Buffer<VkDescriptorPoolSize> poolSizes(descriptorDict.size());
-	std::transform(descriptorDict.cbegin(), descriptorDict.cend(), poolSizes.begin(), [](std::pair<VkDescriptorType, uint32_t> count) { return VkDescriptorPoolSize{ count.first, count.second }; });
+	std::transform(descriptorDict.cbegin(), descriptorDict.cend(), poolSizes.begin(), [maxNumSets](std::pair<VkDescriptorType, uint32_t> count) { return VkDescriptorPoolSize{ count.first, maxNumSets * count.second }; });
 
 	const VkDescriptorPoolCreateInfo poolInfo = {
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
