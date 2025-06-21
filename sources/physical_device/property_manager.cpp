@@ -8,6 +8,7 @@
 #include <cstring>
 #include <stdexcept>
 #include <unordered_set>
+#include <iostream>
 
 PhysicalDevicePropertyManager::PhysicalDevicePropertyManager(const VkPhysicalDevice physicalDevice, const VkSurfaceKHR surface) {
     _physicalDevice = physicalDevice;

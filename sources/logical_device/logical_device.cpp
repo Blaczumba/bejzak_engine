@@ -71,6 +71,18 @@ lib::ErrorOr<std::unique_ptr<LogicalDevice>> LogicalDevice::create(const Physica
 
     chainExtensionFeature(&next, viewportScissorsFeatures, VK_NV_INHERITED_VIEWPORT_SCISSOR_EXTENSION_NAME, availableExtensions);
 
+    VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
+        .shaderUniformBufferArrayNonUniformIndexing = VK_TRUE,
+        .shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
+        .shaderStorageBufferArrayNonUniformIndexing = VK_TRUE,
+        .descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE,
+        .descriptorBindingSampledImageUpdateAfterBind = VK_TRUE,
+        .descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE
+    };
+
+    chainExtensionFeature(&next, descriptorIndexingFeatures, VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME, availableExtensions);
+
     const VkPhysicalDeviceFeatures2 deviceFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
         .pNext = next,
