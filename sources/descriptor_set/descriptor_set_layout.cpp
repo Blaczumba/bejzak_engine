@@ -38,7 +38,7 @@ lib::Status DescriptorSetLayout::build() {
     return lib::StatusOk();
 }
 
-const VkDescriptorSetLayout DescriptorSetLayout::getVkDescriptorSetLayout() const {
+const VkDescriptorSetLayout& DescriptorSetLayout::getVkDescriptorSetLayout() const {
     return _descriptorSetLayout;
 }
 

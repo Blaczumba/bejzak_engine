@@ -31,6 +31,7 @@ public:
 
 	void addLayoutBinding(VkDescriptorType descriptorType, VkShaderStageFlags stageFlags, uint32_t descriptorCount = 1, const VkSampler* pImmutableSamplers = nullptr);
 
-	const VkDescriptorSetLayout getVkDescriptorSetLayout() const;
+	const VkDescriptorSetLayout& getVkDescriptorSetLayout() const;
+
 	const DescriptorTypeCounterDict& getDescriptorTypeCounter() const;
 };

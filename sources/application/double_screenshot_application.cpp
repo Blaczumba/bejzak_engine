@@ -140,7 +140,7 @@ lib::Status SingleApp::loadObject() {
     };
     ASSIGN_OR_RETURN(_objectUniform, UniformBufferData<UniformBufferObject>::create(*_logicalDevice));
     _objectUniform->updateUniformBuffer(object);
-    ASSIGN_OR_RETURN(auto descriptorSet, _descriptorPoolNormal->createDesriptorSet());
+    ASSIGN_OR_RETURN(auto descriptorSet, _descriptorPoolNormal->createDesriptorSet(_normalShaderProgram->getDescriptorSetLayout()));
     descriptorSet.writeDescriptorSet({ _dynamicUniformBuffersCamera.get(), _uniformBuffersLight.get(), _objectUniform.get(), _uniformMap[drakanTexturePath].get(), _shadowTextureUniform.get() });
     _objectEntity = _registry.createEntity();
     _entitytoDescriptorSet.emplace(_objectEntity, std::move(descriptorSet));
@@ -164,7 +164,7 @@ lib::Status SingleApp::loadObjects() {
     float maxSamplerAnisotropy = propertyManager.getMaxSamplerAnisotropy();
     _objects.reserve(sceneData.size());
     {
-        ASSIGN_OR_RETURN(std::vector<DescriptorSet> descriptorSets, _descriptorPool->createDesriptorSets(sceneData.size()));
+        ASSIGN_OR_RETURN(std::vector<DescriptorSet> descriptorSets, _descriptorPool->createDesriptorSets(_pbrShaderProgram->getDescriptorSetLayout(), sceneData.size()));
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
         for (uint32_t i = 0; i < sceneData.size(); i++) {
@@ -257,13 +257,13 @@ lib::Status SingleApp::createDescriptorSets() {
     _skyboxShaderProgram = ShaderProgramFactory::createShaderProgram(ShaderProgramType::SKYBOX, *_logicalDevice);
     _shadowShaderProgram = ShaderProgramFactory::createShaderProgram(ShaderProgramType::SHADOW, *_logicalDevice);
 
-    ASSIGN_OR_RETURN(_descriptorPool, DescriptorPool::create(*_logicalDevice, _pbrShaderProgram->getDescriptorSetLayout(), 150));
-    ASSIGN_OR_RETURN(_descriptorPoolNormal, DescriptorPool::create(*_logicalDevice, _normalShaderProgram->getDescriptorSetLayout(), 1));
-    ASSIGN_OR_RETURN(_descriptorPoolSkybox, DescriptorPool::create(*_logicalDevice, _skyboxShaderProgram->getDescriptorSetLayout(), 1));
-    ASSIGN_OR_RETURN(_descriptorPoolShadow, DescriptorPool::create(*_logicalDevice, _shadowShaderProgram->getDescriptorSetLayout(), 2));
+    ASSIGN_OR_RETURN(_descriptorPool, DescriptorPool::create(*_logicalDevice, 150));
+    ASSIGN_OR_RETURN(_descriptorPoolNormal, DescriptorPool::create(*_logicalDevice, 1));
+    ASSIGN_OR_RETURN(_descriptorPoolSkybox, DescriptorPool::create(*_logicalDevice, 1));
+    ASSIGN_OR_RETURN(_descriptorPoolShadow, DescriptorPool::create(*_logicalDevice, 2));
 
-    ASSIGN_OR_RETURN(_descriptorSetSkybox, _descriptorPoolSkybox->createDesriptorSet());
-    ASSIGN_OR_RETURN(_descriptorSetShadow, _descriptorPoolShadow->createDesriptorSet());
+    ASSIGN_OR_RETURN(_descriptorSetSkybox, _descriptorPoolSkybox->createDesriptorSet(_skyboxShaderProgram->getDescriptorSetLayout()));
+    ASSIGN_OR_RETURN(_descriptorSetShadow, _descriptorPoolShadow->createDesriptorSet(_shadowShaderProgram->getDescriptorSetLayout()));
 
     _descriptorSetSkybox.writeDescriptorSet({ _dynamicUniformBuffersCamera.get(), _skyboxTextureUniform.get() });
     _descriptorSetShadow.writeDescriptorSet({ _uniformBuffersLight.get(),  _uniformBuffersObjects.get() });

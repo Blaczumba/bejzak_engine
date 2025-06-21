@@ -15,15 +15,15 @@
 #include <string>
 #include <unordered_map>
 
-DescriptorSet::DescriptorSet(const VkDescriptorSet descriptorSet, const std::shared_ptr<const DescriptorPool>& descriptorPool)
-	: _descriptorSet(descriptorSet), _descriptorPool(descriptorPool) {}
+DescriptorSet::DescriptorSet(const VkDescriptorSet descriptorSet, const std::shared_ptr<const DescriptorPool>& descriptorPool, const DescriptorSetLayout& layout)
+	: _descriptorSet(descriptorSet), _descriptorPool(descriptorPool), _layout(&layout) {}
 
 DescriptorSet::DescriptorSet() : _descriptorSet(VK_NULL_HANDLE) {
 
 }
 
 DescriptorSet::DescriptorSet(DescriptorSet&& descriptorSet) noexcept
-    : _descriptorSet(descriptorSet._descriptorSet), _dynamicBuffersBaseSizes(std::move(descriptorSet._dynamicBuffersBaseSizes)), _descriptorPool(std::move(descriptorSet._descriptorPool)) {
+    : _descriptorSet(descriptorSet._descriptorSet), _dynamicBuffersBaseSizes(std::move(descriptorSet._dynamicBuffersBaseSizes)), _descriptorPool(std::move(descriptorSet._descriptorPool)), _layout(descriptorSet._layout) {
 
 }
 
@@ -38,25 +38,23 @@ DescriptorSet& DescriptorSet::operator=(DescriptorSet&& descriptorSet) noexcept 
     return *this;
 }
 
-lib::ErrorOr<DescriptorSet> DescriptorSet::create(const std::shared_ptr<const DescriptorPool>& descriptorPool) {
-    const VkDescriptorSetLayout layout = descriptorPool->getDescriptorSetLayout().getVkDescriptorSetLayout();
-
+lib::ErrorOr<DescriptorSet> DescriptorSet::create(const std::shared_ptr<const DescriptorPool>& descriptorPool, const DescriptorSetLayout& layout) {
     const VkDescriptorSetAllocateInfo allocInfo = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
         .descriptorPool = descriptorPool->getVkDescriptorPool(),
         .descriptorSetCount = 1,
-        .pSetLayouts = &layout
+        .pSetLayouts = &layout.getVkDescriptorSetLayout(),
     };
 
     VkDescriptorSet descriptorSet;
     if (vkAllocateDescriptorSets(descriptorPool->getLogicalDevice().getVkDevice(), &allocInfo, &descriptorSet) != VK_SUCCESS) {
         return lib::Error("failed to allocate descriptor sets!");
     }
-    return DescriptorSet(descriptorSet, descriptorPool);
+    return DescriptorSet(descriptorSet, descriptorPool, layout);
 }
 
-lib::ErrorOr<std::vector<DescriptorSet>> DescriptorSet::create(const std::shared_ptr<const DescriptorPool>& descriptorPool, uint32_t numSets) {
-    const std::vector<VkDescriptorSetLayout> layouts(numSets, descriptorPool->getDescriptorSetLayout().getVkDescriptorSetLayout());
+lib::ErrorOr<std::vector<DescriptorSet>> DescriptorSet::create(const std::shared_ptr<const DescriptorPool>& descriptorPool, const DescriptorSetLayout& layout, uint32_t numSets) {
+    const std::vector<VkDescriptorSetLayout> layouts(numSets, layout.getVkDescriptorSetLayout());
     const VkDescriptorSetAllocateInfo allocInfo = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
         .descriptorPool = descriptorPool->getVkDescriptorPool(),
@@ -71,7 +69,7 @@ lib::ErrorOr<std::vector<DescriptorSet>> DescriptorSet::create(const std::shared
 
     std::vector<DescriptorSet> descSets;
     descSets.reserve(descriptorSets.size());
-    std::transform(descriptorSets.cbegin(), descriptorSets.cend(), std::back_inserter(descSets), [&](const VkDescriptorSet descriptorSet) { return DescriptorSet(descriptorSet, descriptorPool); });
+    std::transform(descriptorSets.cbegin(), descriptorSets.cend(), std::back_inserter(descSets), [&](const VkDescriptorSet descriptorSet) { return DescriptorSet(descriptorSet, descriptorPool, layout); });
     return descSets;
 }
 
@@ -100,4 +98,12 @@ void DescriptorSet::bind(const VkCommandBuffer commandBuffer, const Pipeline& pi
     std::array<uint32_t, 4> sizes;
     std::transform(dynamicOffsetStrides.begin(), dynamicOffsetStrides.end(), _dynamicBuffersBaseSizes.cbegin(), sizes.begin(), std::multiplies<uint32_t>());
     vkCmdBindDescriptorSets(commandBuffer, pipeline.getVkPipelineBindPoint(), pipeline.getVkPipelineLayout(), 0, 1, &_descriptorSet, dynamicOffsetStrides.size(), sizes.data());
+}
+
+const VkDescriptorSet DescriptorSet::getVkDescriptorSet() const {
+    return _descriptorSet;
+}
+
+const DescriptorPool& DescriptorSet::getDescriptorPool() const {
+    return *_descriptorPool;
 }

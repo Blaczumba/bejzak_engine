@@ -20,26 +20,21 @@ class DescriptorPool : public std::enable_shared_from_this<const DescriptorPool>
 	mutable uint32_t _allocatedSets;
 
 	const LogicalDevice& _logicalDevice;
-	const DescriptorSetLayout& _descriptorSetLayout;
 
-	DescriptorPool(const VkDescriptorPool descriptorPool, const LogicalDevice& logicalDevice, const DescriptorSetLayout& descriptorSetLayout, uint32_t maxNumSets);
+	DescriptorPool(const VkDescriptorPool descriptorPool, const LogicalDevice& logicalDevice, uint32_t maxNumSets);
 
 public:
 	~DescriptorPool();
 
-	static lib::ErrorOr<std::unique_ptr<DescriptorPool>> create(const LogicalDevice& logicalDevice, const DescriptorSetLayout& descriptorSetLayout, uint32_t maxNumSets);
+	static lib::ErrorOr<std::unique_ptr<DescriptorPool>> create(const LogicalDevice& logicalDevice, uint32_t maxNumSets);
 
 	const VkDescriptorPool getVkDescriptorPool() const;
 
-	const DescriptorSetLayout& getDescriptorSetLayout() const;
+	lib::ErrorOr<DescriptorSet> createDesriptorSet(const DescriptorSetLayout& layout) const;
 
-	lib::ErrorOr<DescriptorSet> createDesriptorSet() const;
-
-	lib::ErrorOr<std::vector<DescriptorSet>> createDesriptorSets(uint32_t numSets) const;
+	lib::ErrorOr<std::vector<DescriptorSet>> createDesriptorSets(const DescriptorSetLayout& layout, uint32_t numSets) const;
 
 	bool maxSetsReached() const;
 
-private:
 	const LogicalDevice& getLogicalDevice() const;
-	friend class DescriptorSet;
 };

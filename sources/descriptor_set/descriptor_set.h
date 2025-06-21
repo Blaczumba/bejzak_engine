@@ -1,5 +1,6 @@
 #pragma once
 
+#include "descriptor_set/descriptor_set_layout.h"
 #include "lib/buffer/buffer.h"
 #include "lib/status/status.h"
 
@@ -19,8 +20,9 @@ class DescriptorSet {
 
 	std::vector<uint32_t> _dynamicBuffersBaseSizes;
 	std::shared_ptr<const DescriptorPool> _descriptorPool;
+	const DescriptorSetLayout* _layout;
 
-	DescriptorSet(const VkDescriptorSet descriptorSet, const std::shared_ptr<const DescriptorPool>& descriptorPool);
+	DescriptorSet(const VkDescriptorSet descriptorSet, const std::shared_ptr<const DescriptorPool>& descriptorPool, const DescriptorSetLayout& layout);
 
 public:
 	DescriptorSet();
@@ -31,15 +33,19 @@ public:
 
 	~DescriptorSet() = default;
 
-	static lib::ErrorOr<DescriptorSet> create(const std::shared_ptr<const DescriptorPool>& descriptorPool);
+	static lib::ErrorOr<DescriptorSet> create(const std::shared_ptr<const DescriptorPool>& descriptorPool, const DescriptorSetLayout& layout);
 
-	static lib::ErrorOr<std::vector<DescriptorSet>> create(const std::shared_ptr<const DescriptorPool>& descriptorPool, uint32_t numSets);
+	static lib::ErrorOr<std::vector<DescriptorSet>> create(const std::shared_ptr<const DescriptorPool>& descriptorPool, const DescriptorSetLayout& layout, uint32_t numSets);
 
 	void writeDescriptorSet(std::initializer_list<UniformBuffer*> uniformBuffers);
 
 	void writeDescriptorSet(std::span<const UniformBuffer*> uniformBuffers);
 
 	void bind(const VkCommandBuffer commandBuffer, const Pipeline& pipeline, std::initializer_list<uint32_t> dynamicOffsetStrides = {});
+
+	const VkDescriptorSet getVkDescriptorSet() const;
+
+	const DescriptorPool& getDescriptorPool() const;
 
 private:
 	void writeDescriptorSetImpl(std::span<const UniformBuffer* const> uniformBuffers);
