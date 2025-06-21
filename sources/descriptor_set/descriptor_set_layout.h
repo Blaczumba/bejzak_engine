@@ -15,6 +15,7 @@ class LogicalDevice;
 class DescriptorSetLayout {
 	VkDescriptorSetLayout _descriptorSetLayout = VK_NULL_HANDLE;
 	std::vector<VkDescriptorSetLayoutBinding> _bindings;
+	std::vector<VkDescriptorBindingFlags> _bindingFlags;
 	DescriptorTypeCounterDict _descriptorTypeOccurances;
 	uint32_t _binding;
 
@@ -27,9 +28,9 @@ public:
 
 	static std::unique_ptr<DescriptorSetLayout> create(const LogicalDevice& logicalDevice);
 
-	lib::Status build();
+	lib::Status build(VkDescriptorSetLayoutCreateFlags flags = {});
 
-	void addLayoutBinding(VkDescriptorType descriptorType, VkShaderStageFlags stageFlags, uint32_t descriptorCount = 1, const VkSampler* pImmutableSamplers = nullptr);
+	void addLayoutBinding(VkDescriptorType descriptorType, VkShaderStageFlags stageFlags, uint32_t descriptorCount = 1, VkDescriptorBindingFlags bindingFlags = {}, const VkSampler* pImmutableSamplers = nullptr);
 
 	const VkDescriptorSetLayout& getVkDescriptorSetLayout() const;
 

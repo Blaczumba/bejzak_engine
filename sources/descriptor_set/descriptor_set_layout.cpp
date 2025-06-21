@@ -12,8 +12,9 @@ DescriptorSetLayout::~DescriptorSetLayout() {
     vkDestroyDescriptorSetLayout(_logicalDevice.getVkDevice(), _descriptorSetLayout, nullptr);
 }
 
-void DescriptorSetLayout::addLayoutBinding(VkDescriptorType descriptorType, VkShaderStageFlags stageFlags, uint32_t descriptorCount, const VkSampler* pImmutableSamplers) {
+void DescriptorSetLayout::addLayoutBinding(VkDescriptorType descriptorType, VkShaderStageFlags stageFlags, uint32_t descriptorCount, VkDescriptorBindingFlags bindingFlags, const VkSampler* pImmutableSamplers) {
 	_bindings.emplace_back(_binding++, descriptorType, descriptorCount, stageFlags, pImmutableSamplers);
+    _bindingFlags.push_back(bindingFlags);
     ++_descriptorTypeOccurances[descriptorType];
 }
 
@@ -21,13 +22,21 @@ std::unique_ptr<DescriptorSetLayout> DescriptorSetLayout::create(const LogicalDe
     return std::unique_ptr<DescriptorSetLayout>(new DescriptorSetLayout(logicalDevice));
 }
 
-lib::Status DescriptorSetLayout::build() {
+lib::Status DescriptorSetLayout::build(VkDescriptorSetLayoutCreateFlags flags) {
     if (_descriptorSetLayout != VK_NULL_HANDLE) {
         vkDestroyDescriptorSetLayout(_logicalDevice.getVkDevice(), _descriptorSetLayout, nullptr);
     }
 
+    VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlags = {
+        .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
+        .bindingCount = static_cast<uint32_t>(_bindingFlags.size()),
+    };
+    bindingFlags.pBindingFlags = _bindingFlags.empty() ? nullptr : _bindingFlags.data();
+
     const VkDescriptorSetLayoutCreateInfo layoutInfo = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
+        .pNext = &bindingFlags,
+        .flags = flags,
         .bindingCount = static_cast<uint32_t>(_bindings.size()),
         .pBindings = _bindings.data()
     };

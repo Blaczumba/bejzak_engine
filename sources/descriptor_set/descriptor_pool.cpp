@@ -12,7 +12,7 @@ DescriptorPool::~DescriptorPool() {
 	vkDestroyDescriptorPool(_logicalDevice.getVkDevice(), _descriptorPool, nullptr);
 }
 
-lib::ErrorOr<std::unique_ptr<DescriptorPool>> DescriptorPool::create(const LogicalDevice& logicalDevice, uint32_t maxNumSets) {
+lib::ErrorOr<std::unique_ptr<DescriptorPool>> DescriptorPool::create(const LogicalDevice& logicalDevice, uint32_t maxNumSets, VkDescriptorPoolCreateFlags flags) {
 	static constexpr VkDescriptorPoolSize poolSizes[] = {
 		{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
 		{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
@@ -21,6 +21,7 @@ lib::ErrorOr<std::unique_ptr<DescriptorPool>> DescriptorPool::create(const Logic
 
 	const VkDescriptorPoolCreateInfo poolInfo = {
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
+		.flags = flags,
 		.maxSets = maxNumSets,
 		.poolSizeCount = static_cast<uint32_t>(std::size(poolSizes)),
 		.pPoolSizes = poolSizes

@@ -26,7 +26,7 @@ class DescriptorPool : public std::enable_shared_from_this<const DescriptorPool>
 public:
 	~DescriptorPool();
 
-	static lib::ErrorOr<std::unique_ptr<DescriptorPool>> create(const LogicalDevice& logicalDevice, uint32_t maxNumSets);
+	static lib::ErrorOr<std::unique_ptr<DescriptorPool>> create(const LogicalDevice& logicalDevice, uint32_t maxNumSets, VkDescriptorPoolCreateFlags flags = {});
 
 	const VkDescriptorPool getVkDescriptorPool() const;
 
