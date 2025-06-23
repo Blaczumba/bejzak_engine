@@ -257,7 +257,14 @@ lib::Status SingleApp::createDescriptorSets() {
     _skyboxShaderProgram = ShaderProgramFactory::createShaderProgram(ShaderProgramType::SKYBOX, *_logicalDevice);
     _shadowShaderProgram = ShaderProgramFactory::createShaderProgram(ShaderProgramType::SHADOW, *_logicalDevice);
 
-    ASSIGN_OR_RETURN(_descriptorPool, DescriptorPool::create(*_logicalDevice, 150));
+    pbrDescriptorSetLayout1 = DescriptorSetLayout::create(*_logicalDevice);
+    VkDescriptorBindingFlags flags{ VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT };
+    // descriptorSetLayout->addLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, {});
+    pbrDescriptorSetLayout1->addLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL, 200, flags);
+    pbrDescriptorSetLayout1->addLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_ALL, 200, flags);
+    pbrDescriptorSetLayout1->build(VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT);
+
+    ASSIGN_OR_RETURN(_descriptorPool, DescriptorPool::create(*_logicalDevice, 150, VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT));
     ASSIGN_OR_RETURN(_descriptorPoolNormal, DescriptorPool::create(*_logicalDevice, 1));
     ASSIGN_OR_RETURN(_descriptorPoolSkybox, DescriptorPool::create(*_logicalDevice, 1));
     ASSIGN_OR_RETURN(_descriptorPoolShadow, DescriptorPool::create(*_logicalDevice, 2));

@@ -74,6 +74,9 @@ class SingleApp : public ApplicationBase {
     std::unique_ptr<UniformBufferTexture> _skyboxTextureUniform;
     std::unique_ptr<UniformBufferTexture> _shadowTextureUniform;
 
+    std::unique_ptr<DescriptorSetLayout> pbrDescriptorSetLayout1;
+    std::unique_ptr<DescriptorSetLayout> pbrDescriptorSetLayout2;
+
     std::shared_ptr<DescriptorPool> _descriptorPool;
     std::shared_ptr<DescriptorPool> _descriptorPoolNormal;
     std::shared_ptr<DescriptorPool> _descriptorPoolSkybox;

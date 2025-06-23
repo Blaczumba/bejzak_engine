@@ -1,4 +1,4 @@
-#include "descriptor_binding_manager.h"
+#include "bindless_descriptor_writer.h"
 
 #include "descriptor_set/descriptor_pool.h"
 
@@ -51,11 +51,11 @@ BufferHandle DescriptorBindingManager::storeBuffer(const Buffer& buffer) {
 		.range = buffer.getSize()
 	};
 
-	VkWriteDescriptorSet write = {
+	const VkWriteDescriptorSet write = {
 		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 		.dstSet = _descriptorSet.getVkDescriptorSet(),
 		.dstBinding = UNIFORM_BINDING,
-		.dstArrayElement = handle,
+		.dstArrayElement = static_cast<uint32_t>(handle),
 		.descriptorCount = 1,
 		.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 		.pBufferInfo = &bufferInfo
