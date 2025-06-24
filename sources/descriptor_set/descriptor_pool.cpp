@@ -4,6 +4,7 @@
 #include "logical_device/logical_device.h"
 #include "descriptor_set.h"
 #include "descriptor_set_layout.h"
+#include "status/status.h"
 
 DescriptorPool::DescriptorPool(const VkDescriptorPool descriptorPool, const LogicalDevice& logicalDevice, uint32_t maxNumSets)
 	: _descriptorPool(descriptorPool), _logicalDevice(logicalDevice), _maxNumSets(maxNumSets), _allocatedSets(0) {}
@@ -12,7 +13,7 @@ DescriptorPool::~DescriptorPool() {
 	vkDestroyDescriptorPool(_logicalDevice.getVkDevice(), _descriptorPool, nullptr);
 }
 
-lib::ErrorOr<std::unique_ptr<DescriptorPool>> DescriptorPool::create(const LogicalDevice& logicalDevice, uint32_t maxNumSets, VkDescriptorPoolCreateFlags flags) {
+ErrorOr<std::unique_ptr<DescriptorPool>> DescriptorPool::create(const LogicalDevice& logicalDevice, uint32_t maxNumSets, VkDescriptorPoolCreateFlags flags) {
 	static constexpr VkDescriptorPoolSize poolSizes[] = {
 		{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
 		{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
@@ -28,8 +29,8 @@ lib::ErrorOr<std::unique_ptr<DescriptorPool>> DescriptorPool::create(const Logic
 	};
 
 	VkDescriptorPool descriptorPool;
-	if (vkCreateDescriptorPool(logicalDevice.getVkDevice(), &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS) {
-		return lib::Error("Failed to create descriptor pool.");
+	if (VkResult result = vkCreateDescriptorPool(logicalDevice.getVkDevice(), &poolInfo, nullptr, &descriptorPool); result != VK_SUCCESS) {
+		return Error(result);
 	}
 	return std::unique_ptr<DescriptorPool>(new DescriptorPool(descriptorPool, logicalDevice, maxNumSets));
 }
@@ -38,20 +39,20 @@ const VkDescriptorPool DescriptorPool::getVkDescriptorPool() const {
 	return _descriptorPool;
 }
 
-lib::ErrorOr<DescriptorSet> DescriptorPool::createDesriptorSet(const DescriptorSetLayout& layout) const {
+ErrorOr<DescriptorSet> DescriptorPool::createDesriptorSet(const DescriptorSetLayout& layout) const {
 	++_allocatedSets;
 	if (_allocatedSets > _maxNumSets) {
 		--_allocatedSets;
-		return lib::Error("Exceeded the maximum number of allocated sets.");
+		return Error(EngineError::RESOURCE_EXHAUSTED);
 	}
 	return DescriptorSet::create(shared_from_this(), layout);
 }
 
-lib::ErrorOr<std::vector<DescriptorSet>> DescriptorPool::createDesriptorSets(const DescriptorSetLayout& layout, uint32_t numSets) const {
+ErrorOr<std::vector<DescriptorSet>> DescriptorPool::createDesriptorSets(const DescriptorSetLayout& layout, uint32_t numSets) const {
 	_allocatedSets += numSets;
 	if (_allocatedSets > _maxNumSets) {
 		_allocatedSets -= numSets;
-		return lib::Error("Exceeded the maximum number of allocated sets.");
+		return Error(EngineError::RESOURCE_EXHAUSTED);
 	}
 	return DescriptorSet::create(shared_from_this(), layout, numSets);
 }

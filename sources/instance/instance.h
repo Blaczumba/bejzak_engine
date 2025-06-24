@@ -1,7 +1,7 @@
 #pragma once
 
 #include "lib/buffer/buffer.h"
-#include "lib/status/status.h"
+#include "status/status.h"
 
 #include <vulkan/vulkan.h>
 
@@ -19,8 +19,8 @@ class Instance {
 public:
 	~Instance();
 
-	static lib::ErrorOr<std::unique_ptr<Instance>> create(std::string_view engineName, const std::vector<const char*>& requiredExtensions);
+	static ErrorOr<std::unique_ptr<Instance>> create(std::string_view engineName, const std::vector<const char*>& requiredExtensions);
 
 	const VkInstance getVkInstance() const;
-	lib::ErrorOr<lib::Buffer<VkPhysicalDevice>> getAvailablePhysicalDevices() const;
+	ErrorOr<lib::Buffer<VkPhysicalDevice>> getAvailablePhysicalDevices() const;
 };

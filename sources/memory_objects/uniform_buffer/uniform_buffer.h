@@ -3,6 +3,7 @@
 #include <logical_device/logical_device.h>
 #include <memory_objects/texture/texture.h>
 #include <memory_objects/buffer_deallocator.h>
+#include "status/status.h"
 
 #include <vulkan/vulkan.h>
 
@@ -76,7 +77,7 @@ class UniformBufferData : public UniformBuffer {
 	UniformBufferData(const LogicalDevice& logicalDevice, const VkBuffer uniformBuffer, VkDescriptorType type, const Allocation allocation, uint32_t count, uint32_t size, void* mappedBuffer);
 
 public:
-	static lib::ErrorOr<std::unique_ptr<UniformBufferData>> create(const LogicalDevice& logicalDevice, uint32_t count = 1);
+	static ErrorOr<std::unique_ptr<UniformBufferData>> create(const LogicalDevice& logicalDevice, uint32_t count = 1);
 
 	~UniformBufferData() override;
 
@@ -90,14 +91,14 @@ private:
 		Allocation& allocation;
 		const size_t size;
 
-		lib::ErrorOr<std::pair<VkBuffer, void*>> operator()(VmaWrapper& allocator) {
+		ErrorOr<std::pair<VkBuffer, void*>> operator()(VmaWrapper& allocator) {
 			ASSIGN_OR_RETURN(VmaWrapper::Buffer buffer, allocator.createVkBuffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_ONLY, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT));
 			allocation = buffer.allocation;
 			return std::make_pair(buffer.buffer, buffer.mappedData);
 		}
 
-		lib::ErrorOr<std::pair<VkBuffer, void*>> operator()(auto&&) {
-			return lib::Error("Not recognized allocator for UniformBufferData creation");
+		ErrorOr<std::pair<VkBuffer, void*>> operator()(auto&&) {
+			return Error(EngineError::NOT_RECOGNIZED_TYPE);
 		}
 	};
 };
@@ -108,7 +109,7 @@ UniformBufferData<UniformBufferType>::UniformBufferData(const LogicalDevice& log
 }
 
 template<typename UniformBufferType>
-lib::ErrorOr<std::unique_ptr<UniformBufferData<UniformBufferType>>> UniformBufferData<UniformBufferType>::create(const LogicalDevice& logicalDevice, uint32_t count) {
+ErrorOr<std::unique_ptr<UniformBufferData<UniformBufferType>>> UniformBufferData<UniformBufferType>::create(const LogicalDevice& logicalDevice, uint32_t count) {
 	const auto& limits = logicalDevice.getPhysicalDevice().getPropertyManager().getPhysicalDeviceLimits();
 	const uint32_t size = getMemoryAlignment(sizeof(UniformBufferType), limits.minUniformBufferOffsetAlignment);
 	Allocation allocation;

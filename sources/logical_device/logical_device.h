@@ -1,10 +1,10 @@
 #pragma once
 
-#include "lib/status/status.h"
-#include "physical_device/physical_device.h"
 #include "memory_allocator/allocation.h"
 #include "memory_allocator/memory_allocator.h"
 #include "memory_objects/texture/texture.h"
+#include "physical_device/physical_device.h"
+#include "status/status.h"
 
 #include <memory>
 #include <variant>
@@ -32,7 +32,7 @@ class LogicalDevice {
 public:
 	~LogicalDevice();
 
-	static lib::ErrorOr<std::unique_ptr<LogicalDevice>> create(const PhysicalDevice& physicalDevice);
+	static ErrorOr<std::unique_ptr<LogicalDevice>> create(const PhysicalDevice& physicalDevice);
 
 	const VkBuffer createBuffer(VkDeviceSize size, VkBufferUsageFlags usage) const;
 	const VkImage createImage(const ImageParameters& params) const;

@@ -1,7 +1,8 @@
 #pragma once
 
-#include "window.h"
 #include "input.h"
+#include "status/status.h"
+#include "window.h"
 
 #include <memory>
 #include <string_view>
@@ -41,6 +42,6 @@ public:
 	VkExtent2D getFramebufferSize() const override;
 
 	std::vector<const char*> getExtensions() const override;
-	lib::ErrorOr<std::unique_ptr<Surface>> createSurface(const Instance& instance) const override;
+	ErrorOr<std::unique_ptr<Surface>> createSurface(const Instance& instance) const override;
 	MouseKeyboardManager* getMouseKeyboardManager() override;
 };

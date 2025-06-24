@@ -1,7 +1,7 @@
 #pragma once
 
-#include "lib/status/status.h"
 #include "property_manager.h"
+#include "status/status.h"
 #include "surface/surface.h"
 
 #include <memory>
@@ -23,7 +23,7 @@ class PhysicalDevice {
 public:
     ~PhysicalDevice() = default;
 
-    static lib::ErrorOr<std::unique_ptr<PhysicalDevice>> create(const Surface& surface);
+    static ErrorOr<std::unique_ptr<PhysicalDevice>> create(const Surface& surface);
 
     const VkPhysicalDevice getVkPhysicalDevice() const;
     const Surface& getSurface() const;

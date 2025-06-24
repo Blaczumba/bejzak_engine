@@ -14,10 +14,10 @@ Instance::~Instance() {
     vkDestroyInstance(_instance, nullptr);
 }
 
-lib::ErrorOr<std::unique_ptr<Instance>> Instance::create(std::string_view engineName, const std::vector<const char*>& requiredExtensions) {
+ErrorOr<std::unique_ptr<Instance>> Instance::create(std::string_view engineName, const std::vector<const char*>& requiredExtensions) {
 #ifdef VALIDATION_LAYERS_ENABLED
     if (!checkValidationLayerSupport()) {
-        return lib::Error("validation layers requested, but not available!");
+        return Error(EngineError::NOT_SUPPORTED_VALIDATION_LAYERS);
     }
 #endif // VALIDATION_LAYERS_ENABLED
 
@@ -53,8 +53,8 @@ lib::ErrorOr<std::unique_ptr<Instance>> Instance::create(std::string_view engine
     };
 
     VkInstance instance;
-    if (vkCreateInstance(&createInfo, nullptr, &instance) != VK_SUCCESS) {
-        return lib::Error("Failed to create instance.");
+    if (VkResult result = vkCreateInstance(&createInfo, nullptr, &instance); result != VK_SUCCESS) {
+        return Error(result);
     }
 
     return std::unique_ptr<Instance>(new Instance(instance));
@@ -79,12 +79,12 @@ bool Instance::checkValidationLayerSupport() {
     });
 }
 
-lib::ErrorOr<lib::Buffer<VkPhysicalDevice>> Instance::getAvailablePhysicalDevices() const {
+ErrorOr<lib::Buffer<VkPhysicalDevice>> Instance::getAvailablePhysicalDevices() const {
     uint32_t deviceCount;
     vkEnumeratePhysicalDevices(_instance, &deviceCount, nullptr);
 
     if (deviceCount == 0) {
-        return lib::Error("failed to find GPUs with Vulkan support!");
+        return Error(EngineError::NOT_FOUND);
     }
 
     lib::Buffer<VkPhysicalDevice> devices(deviceCount);

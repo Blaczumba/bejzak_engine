@@ -8,7 +8,6 @@
 #include "descriptor_set/descriptor_set.h"
 #include "descriptor_set/descriptor_set_layout.h"
 #include "entity_component_system/system/movement_system.h"
-#include "lib/status/status.h"
 #include "memory_objects/buffer.h"
 #include "memory_objects/texture/texture.h"
 #include "memory_objects/uniform_buffer/push_constants.h"
@@ -21,6 +20,7 @@
 #include "resource_manager/resource_manager.h"
 #include "scene/octree.h"
 #include "screenshot/screenshot.h"
+#include "status/status.h"
 #include "thread_pool/thread_pool.h"
 #include "pipeline/graphics_pipeline.h"
 
@@ -131,13 +131,13 @@ private:
     void recordCommandBuffer(uint32_t imageIndex);
     void recordOctreeSecondaryCommandBuffer(const VkCommandBuffer commandBuffer, const OctreeNode* node, const std::array<glm::vec4, NUM_CUBE_FACES>& planes);
     void recordShadowCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex);
-    lib::Status recreateSwapChain();
+    Status recreateSwapChain();
 
-    lib::Status createDescriptorSets();
-    lib::Status createPresentResources();
-    lib::Status createShadowResources();
+    Status createDescriptorSets();
+    Status createPresentResources();
+    Status createShadowResources();
 
-    lib::Status loadObjects();
-    lib::Status loadObject();
-    lib::Status loadCubemap();
+    Status loadObjects();
+    Status loadObject();
+    Status loadCubemap();
 };

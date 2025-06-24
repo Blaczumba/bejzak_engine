@@ -15,7 +15,7 @@ Texture::Texture(const LogicalDevice& logicalDevice, Texture::Type type, const V
 
 }
 
-lib::ErrorOr<std::unique_ptr<Texture>> Texture::create2DShadowmap(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, uint32_t width, uint32_t height, VkFormat format) {
+ErrorOr<std::unique_ptr<Texture>> Texture::create2DShadowmap(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, uint32_t width, uint32_t height, VkFormat format) {
     ImageParameters imageParams = {
         .format = format,
         .width = width,
@@ -33,7 +33,7 @@ lib::ErrorOr<std::unique_ptr<Texture>> Texture::create2DShadowmap(const LogicalD
     return createImageSampler(logicalDevice, commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, Texture::Type::SHADOWMAP, imageParams, samplerParams);
 }
 
-lib::ErrorOr<std::unique_ptr<Texture>> Texture::create2DImage(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, const Buffer& stagingBuffer, const ImageDimensions& dimensions, VkFormat format, float samplerAnisotropy) {
+ErrorOr<std::unique_ptr<Texture>> Texture::create2DImage(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, const Buffer& stagingBuffer, const ImageDimensions& dimensions, VkFormat format, float samplerAnisotropy) {
     ImageParameters imageParams = {
         .format = format,
         .width = dimensions.width,
@@ -50,7 +50,7 @@ lib::ErrorOr<std::unique_ptr<Texture>> Texture::create2DImage(const LogicalDevic
     return createMipmapImage(logicalDevice, commandBuffer, stagingBuffer.getVkBuffer(), dimensions.copyRegions, imageParams, samplerParams);
 }
 
-lib::ErrorOr<std::unique_ptr<Texture>> Texture::createCubemap(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, const Buffer& stagingBuffer, const ImageDimensions& dimensions, VkFormat format, float samplerAnisotropy) {
+ErrorOr<std::unique_ptr<Texture>> Texture::createCubemap(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, const Buffer& stagingBuffer, const ImageDimensions& dimensions, VkFormat format, float samplerAnisotropy) {
     ImageParameters imageParams = {
         .format = format,
         .width = dimensions.width,
@@ -67,7 +67,7 @@ lib::ErrorOr<std::unique_ptr<Texture>> Texture::createCubemap(const LogicalDevic
     return createImage(logicalDevice, commandBuffer, Texture::Type::CUBEMAP, stagingBuffer.getVkBuffer(), dimensions.copyRegions, imageParams, samplerParams);
 }
 
-lib::ErrorOr<std::unique_ptr<Texture>> Texture::createColorAttachment(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkFormat format, VkSampleCountFlagBits samples, VkExtent2D extent) {
+ErrorOr<std::unique_ptr<Texture>> Texture::createColorAttachment(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkFormat format, VkSampleCountFlagBits samples, VkExtent2D extent) {
     return createImage(logicalDevice, commandBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, Texture::Type::COLOR_ATTACHMENT,
         ImageParameters{
             .format = format,
@@ -83,7 +83,7 @@ lib::ErrorOr<std::unique_ptr<Texture>> Texture::createColorAttachment(const Logi
 
 namespace {
 
-lib::ErrorOr<VkImage> allocate(Allocation& allocation, const ImageParameters& imageParameters, MemoryAllocator& memoryAllocator) {
+ErrorOr<VkImage> allocate(Allocation& allocation, const ImageParameters& imageParameters, MemoryAllocator& memoryAllocator) {
     return std::visit(ImageCreator{ allocation, imageParameters }, memoryAllocator);
 }
 
@@ -105,13 +105,13 @@ struct ImageDeleter {
     }
 
     void operator()(auto&&, auto&&) {
-        throw std::runtime_error("Invalid memory allocator or memory instance!");
+        // throw std::runtime_error(EngineError::NOT_RECOGNIZED_TYPE);
     }
 };
 
 }
 
-lib::ErrorOr<std::unique_ptr<Texture>> Texture::createDepthAttachment(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkFormat format, VkSampleCountFlagBits samples, VkExtent2D extent) {
+ErrorOr<std::unique_ptr<Texture>> Texture::createDepthAttachment(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkFormat format, VkSampleCountFlagBits samples, VkExtent2D extent) {
     const VkImageAspectFlags aspect = hasStencil(format) ? VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT : VK_IMAGE_ASPECT_DEPTH_BIT;
     return createImage(logicalDevice, commandBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, Texture::Type::DEPTH_ATTACHMENT,
         ImageParameters{
@@ -173,7 +173,7 @@ const SamplerParameters& Texture::getSamplerParameters() const {
     return _samplerParameters;
 }
 
-lib::ErrorOr<std::unique_ptr<Texture>> Texture::createImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkImageLayout dstLayout, Texture::Type type, ImageParameters&& imageParams) {
+ErrorOr<std::unique_ptr<Texture>> Texture::createImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkImageLayout dstLayout, Texture::Type type, ImageParameters&& imageParams) {
     Allocation allocation;
     ASSIGN_OR_RETURN(const VkImage image, allocate(allocation, imageParams, logicalDevice.getMemoryAllocator()));
     const VkImageView view = logicalDevice.createImageView(image, imageParams);
@@ -182,7 +182,7 @@ lib::ErrorOr<std::unique_ptr<Texture>> Texture::createImage(const LogicalDevice&
     return std::unique_ptr<Texture>(new Texture(logicalDevice, type, image, allocation, imageParams, view));
 }
 
-lib::ErrorOr<std::unique_ptr<Texture>> Texture::createImageSampler(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkImageLayout dstLayout, Texture::Type type, ImageParameters& imageParams, const SamplerParameters& samplerParams) {
+ErrorOr<std::unique_ptr<Texture>> Texture::createImageSampler(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkImageLayout dstLayout, Texture::Type type, ImageParameters& imageParams, const SamplerParameters& samplerParams) {
     const VkSampler sampler = logicalDevice.createSampler(samplerParams);
     Allocation allocation;
     ASSIGN_OR_RETURN(const VkImage image, allocate(allocation, imageParams, logicalDevice.getMemoryAllocator()));
@@ -192,7 +192,7 @@ lib::ErrorOr<std::unique_ptr<Texture>> Texture::createImageSampler(const Logical
     return std::unique_ptr<Texture>(new Texture(logicalDevice, type, image, allocation, imageParams, view, sampler, samplerParams));
 }
 
-lib::ErrorOr<std::unique_ptr<Texture>> Texture::createMipmapImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, ImageParameters& imageParams, const SamplerParameters& samplerParams) {
+ErrorOr<std::unique_ptr<Texture>> Texture::createMipmapImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, ImageParameters& imageParams, const SamplerParameters& samplerParams) {
     Allocation allocation;
     ASSIGN_OR_RETURN(const VkImage image, allocate(allocation, imageParams, logicalDevice.getMemoryAllocator()));
     const VkImageView view = logicalDevice.createImageView(image, imageParams);
@@ -204,7 +204,7 @@ lib::ErrorOr<std::unique_ptr<Texture>> Texture::createMipmapImage(const LogicalD
     return std::unique_ptr<Texture>(new Texture(logicalDevice, Texture::Type::IMAGE_2D, image, allocation, imageParams, view, sampler, samplerParams));
 }
 
-lib::ErrorOr<std::unique_ptr<Texture>> Texture::createImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, Texture::Type type, const VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, ImageParameters& imageParams, const SamplerParameters& samplerParams) {
+ErrorOr<std::unique_ptr<Texture>> Texture::createImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, Texture::Type type, const VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, ImageParameters& imageParams, const SamplerParameters& samplerParams) {
     Allocation allocation;
     ASSIGN_OR_RETURN(const VkImage image, allocate(allocation, imageParams, logicalDevice.getMemoryAllocator()));
     const VkImageView view = logicalDevice.createImageView(image, imageParams);

@@ -2,6 +2,7 @@
 
 #include "command_buffer/command_buffer.h"
 #include "lib/buffer/buffer.h"
+#include "lib/macros/status_macros.h"
 #include "logical_device/logical_device.h"
 #include "swapchain/swapchain.h"
 
@@ -10,9 +11,9 @@
 #include <optional>
 #include <stdexcept>
 
-lib::ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromSwapchain(const Renderpass& renderpass, const Swapchain& swapchain, const CommandPool& commandPool, uint8_t swapchainImageIndex) {
+ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromSwapchain(const Renderpass& renderpass, const Swapchain& swapchain, const CommandPool& commandPool, uint8_t swapchainImageIndex) {
     if (swapchain.getImagesCount() <= swapchainImageIndex) {
-        return lib::Error("SwapchainIndex does not fit in swapchain images count.");
+        return Error(EngineError::INDEX_OUT_OF_RANGE);
     }
     const VkExtent2D swapchainExtent = swapchain.getExtent();
     const VkViewport viewport = {
@@ -49,7 +50,7 @@ lib::ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromSwapchain(cons
             break;
         }
         default:
-            return lib::Error("Failed to recognize final layout in the framebuffer.");
+            return Error(EngineError::NOT_SUPPORTED_FRAMEBUFFER_IMAGE_LAYOUT);
         }
     }
 
@@ -64,13 +65,13 @@ lib::ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromSwapchain(cons
     };
 
     VkFramebuffer framebuffer;
-    if (vkCreateFramebuffer(renderpass.getLogicalDevice().getVkDevice(), &framebufferInfo, nullptr, &framebuffer) != VK_SUCCESS) {
-        return lib::Error("Failed to create framebuffer.");
+    if (VkResult result = vkCreateFramebuffer(renderpass.getLogicalDevice().getVkDevice(), &framebufferInfo, nullptr, &framebuffer); result != VK_SUCCESS) {
+        return Error(result);
     }
     return std::unique_ptr<Framebuffer>(new Framebuffer(framebuffer, renderpass, viewport, scissor, std::move(textureAttachments)));
 }
 
-lib::ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromTextures(const Renderpass& renderpass, lib::Buffer<std::shared_ptr<Texture>>&& textures) {
+ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromTextures(const Renderpass& renderpass, lib::Buffer<std::shared_ptr<Texture>>&& textures) {
     lib::Buffer<VkImageView> imageViews(textures.size());
     std::optional<VkExtent2D> extent;
     for (size_t i = 0; i < textures.size(); ++i) {
@@ -79,11 +80,11 @@ lib::ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromTextures(const
         if (!extent.has_value()) {
             extent = texture.getVkExtent2D();
         } else if (VkExtent2D tmpExtent = texture.getVkExtent2D(); extent->width != tmpExtent.width || extent->height != tmpExtent.height) {
-            return lib::Error("Framebuffer textures differ in extent.");
+            return Error(EngineError::SIZE_MISMATCH);
         }
     }
     if (!extent.has_value()) {
-        return lib::Error("Framebuffer has no textures specified.");
+        return Error(EngineError::EMPTY_COLLECTION);
     }
     const VkViewport viewport = {
         .width = static_cast<float>(extent->width),
@@ -106,8 +107,8 @@ lib::ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromTextures(const
     };
 
     VkFramebuffer framebuffer;
-    if (vkCreateFramebuffer(renderpass.getLogicalDevice().getVkDevice(), &framebufferInfo, nullptr, &framebuffer) != VK_SUCCESS) {
-        return lib::Error("Failed to create framebuffer.");
+    if (VkResult result = vkCreateFramebuffer(renderpass.getLogicalDevice().getVkDevice(), &framebufferInfo, nullptr, &framebuffer); result != VK_SUCCESS) {
+        return Error(result);
     }
     return std::unique_ptr<Framebuffer>(new Framebuffer(framebuffer, renderpass, viewport, scissor, std::move(textures)));
 }

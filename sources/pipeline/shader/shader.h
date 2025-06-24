@@ -1,7 +1,8 @@
 #pragma once
 
+#include "status/status.h"
+
 #include <vulkan/vulkan.h>
-#include "lib/status/status.h"
 
 #include <string>
 
@@ -16,7 +17,7 @@ class Shader {
     Shader(VkShaderModule shaderModule, const LogicalDevice& logicalDevice, VkShaderStageFlagBits shaderStage);
 
 public:
-    static lib::ErrorOr<Shader> create(const LogicalDevice& logicalDevice, const std::string& shaderPath, VkShaderStageFlagBits shaderStage);
+    static ErrorOr<Shader> create(const LogicalDevice& logicalDevice, const std::string& shaderPath, VkShaderStageFlagBits shaderStage);
 
     ~Shader();
 

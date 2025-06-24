@@ -5,20 +5,20 @@ using VertexData = AssetManager::VertexData;
 
 AssetManager::AssetManager(LogicalDevice& logicalDevice) : _logicalDevice(logicalDevice) {}
 
-void AssetManager::loadImageAsync(const std::string& filePath, std::function<lib::ErrorOr<ImageResource>(std::string_view)>&& loadingFunction) {
+void AssetManager::loadImageAsync(const std::string& filePath, std::function<ErrorOr<ImageResource>(std::string_view)>&& loadingFunction) {
     if (_awaitingImageResources.contains(filePath)) {
         return;
     }
     auto future = std::async(std::launch::async, ([this, filePath, loadingFunction = std::move(loadingFunction)]() {
-        lib::ErrorOr<ImageResource> resource = loadingFunction(filePath);
+        ErrorOr<ImageResource> resource = loadingFunction(filePath);
         if (!resource.has_value()) [[unlikely]]
-            return lib::ErrorOr<ImageData>(lib::Error(resource.error()));
+            return ErrorOr<ImageData>(Error(resource.error()));
         auto stagingBuffer = Buffer::createStagingBuffer(_logicalDevice, resource->size);
         if (!stagingBuffer.has_value()) [[unlikely]]
-            return lib::ErrorOr<ImageData>(lib::Error(stagingBuffer.error()));
+            return ErrorOr<ImageData>(Error(stagingBuffer.error()));
         stagingBuffer->copyData(std::span(static_cast<const uint8_t*>(resource->data), resource->size));
         ImageLoader::deallocateResources(*resource);
-        return lib::ErrorOr<ImageData>(ImageData(std::move(*stagingBuffer), std::move(resource->dimensions)));
+        return ErrorOr<ImageData>(ImageData(std::move(*stagingBuffer), std::move(resource->dimensions)));
     }));
     _awaitingImageResources.emplace(filePath, std::move(future));
 }
@@ -31,7 +31,7 @@ void AssetManager::loadImageCubemapAsync(const std::string& filePath) {
 	loadImageAsync(filePath, ImageLoader::loadCubemapImage);
 }
 
-lib::ErrorOr<const ImageData*> AssetManager::getImageData(const std::string& filePath) {
+ErrorOr<const ImageData*> AssetManager::getImageData(const std::string& filePath) {
     auto imageIt = _imageResources.find(filePath);
     if (imageIt != _imageResources.cend()) {
         return &imageIt->second;
@@ -43,10 +43,10 @@ lib::ErrorOr<const ImageData*> AssetManager::getImageData(const std::string& fil
         _awaitingImageResources.erase(it);
 		return &ptr.first->second;
     }
-    return lib::Error("Image data not found.");
+    return Error(EngineError::NOT_FOUND);
 }
 
-lib::ErrorOr<const VertexData*> AssetManager::getVertexData(const std::string& filePath) {
+ErrorOr<const VertexData*> AssetManager::getVertexData(const std::string& filePath) {
     auto vertexIt = _vertexDataResources.find(filePath);
     if (vertexIt != _vertexDataResources.cend()) {
         return &vertexIt->second;
@@ -58,5 +58,5 @@ lib::ErrorOr<const VertexData*> AssetManager::getVertexData(const std::string& f
         _awaitingVertexDataResources.erase(it);
         return &ptr.first->second;
     }
-    return lib::Error("Vertex data not found.");
+    return Error(EngineError::NOT_FOUND);
 }

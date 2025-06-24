@@ -2,7 +2,7 @@
 
 #include "descriptor_set/descriptor_set_layout.h"
 #include "lib/buffer/buffer.h"
-#include "lib/status/status.h"
+#include "status/status.h"
 
 #include <vulkan/vulkan.h>
 
@@ -33,9 +33,9 @@ public:
 
 	~DescriptorSet() = default;
 
-	static lib::ErrorOr<DescriptorSet> create(const std::shared_ptr<const DescriptorPool>& descriptorPool, const DescriptorSetLayout& layout);
+	static ErrorOr<DescriptorSet> create(const std::shared_ptr<const DescriptorPool>& descriptorPool, const DescriptorSetLayout& layout);
 
-	static lib::ErrorOr<std::vector<DescriptorSet>> create(const std::shared_ptr<const DescriptorPool>& descriptorPool, const DescriptorSetLayout& layout, uint32_t numSets);
+	static ErrorOr<std::vector<DescriptorSet>> create(const std::shared_ptr<const DescriptorPool>& descriptorPool, const DescriptorSetLayout& layout, uint32_t numSets);
 
 	void writeDescriptorSet(std::initializer_list<UniformBuffer*> uniformBuffers);
 

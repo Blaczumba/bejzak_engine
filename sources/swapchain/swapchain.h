@@ -1,8 +1,8 @@
 #pragma once
 
 #include "lib/buffer/buffer.h"
-#include "lib/status/status.h"
 #include "memory_objects/texture/texture.h"
+#include "status/status.h"
 
 #include <vulkan/vulkan.h>
 
@@ -27,7 +27,7 @@ class Swapchain {
 
 public:
 	// If we want to recreate the swapchain use this factory method and pass an old (currently existing) swapchain.
-	static lib::ErrorOr<std::unique_ptr<Swapchain>> create(const LogicalDevice& logicalDevice, const VkSwapchainKHR oldSwapchain = nullptr);
+	static ErrorOr<std::unique_ptr<Swapchain>> create(const LogicalDevice& logicalDevice, const VkSwapchainKHR oldSwapchain = nullptr);
 
 	~Swapchain();
 

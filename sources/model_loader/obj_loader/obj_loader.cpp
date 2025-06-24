@@ -31,7 +31,7 @@ struct Indices {
 };
 
 
-lib::ErrorOr<VertexData> loadObj(const std::string& filePath) {
+ErrorOr<VertexData> loadObj(const std::string& filePath) {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
@@ -43,7 +43,7 @@ lib::ErrorOr<VertexData> loadObj(const std::string& filePath) {
     std::vector<glm::vec3> normals;
 
     if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warning, &error, filePath.data())) {
-        return lib::Error("Failed to load obj file.");
+        return Error(EngineError::LOAD_FAILURE);
     }
 
     std::unordered_map<Indices, int, Indices::Hash> mp;

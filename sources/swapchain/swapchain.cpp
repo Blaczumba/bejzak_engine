@@ -53,7 +53,7 @@ const lib::Buffer<VkImageView>& Swapchain::getVkImageViews() const {
     return _views;
 }
 
-lib::ErrorOr<std::unique_ptr<Swapchain>> Swapchain::create(const LogicalDevice& logicalDevice, const VkSwapchainKHR oldSwapchain) {
+ErrorOr<std::unique_ptr<Swapchain>> Swapchain::create(const LogicalDevice& logicalDevice, const VkSwapchainKHR oldSwapchain) {
     const auto& propertyManager = logicalDevice.getPhysicalDevice().getPropertyManager();
 
     const SwapChainSupportDetails swapChainSupport = propertyManager.getSwapChainSupportDetails();
@@ -99,8 +99,8 @@ lib::ErrorOr<std::unique_ptr<Swapchain>> Swapchain::create(const LogicalDevice& 
     createInfo.oldSwapchain = oldSwapchain;
 
     VkSwapchainKHR swapchain;
-    if (vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapchain) != VK_SUCCESS) {
-        return lib::Error("Failed to create swap chain.");
+    if (VkResult result = vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapchain); result != VK_SUCCESS) {
+        return Error(result);
     }
 
     vkGetSwapchainImagesKHR(device, swapchain, &imageCount, nullptr);

@@ -7,10 +7,10 @@
 
 namespace {
 
-lib::ErrorOr<lib::Buffer<char>> readFile(const std::string& filename) {
+ErrorOr<lib::Buffer<char>> readFile(const std::string& filename) {
     std::ifstream file(filename, std::ios::ate | std::ios::binary);
     if (!file.is_open()) {
-        return lib::Error("Failed to open shader file.");
+        return Error(EngineError::LOAD_FAILURE);
     }
 
     size_t fileSize = static_cast<size_t>(file.tellg());
@@ -27,7 +27,7 @@ Shader::Shader(VkShaderModule shaderModule, const LogicalDevice& logicalDevice, 
     : _shaderModule(shaderModule), _logicalDevice(&logicalDevice), _shaderStage(shaderStage), _name("main") {
 }
 
-lib::ErrorOr<Shader> Shader::create(const LogicalDevice& logicalDevice, const std::string& shaderPath, VkShaderStageFlagBits shaderStage) {
+ErrorOr<Shader> Shader::create(const LogicalDevice& logicalDevice, const std::string& shaderPath, VkShaderStageFlagBits shaderStage) {
     ASSIGN_OR_RETURN(const lib::Buffer<char> shaderCode, readFile(shaderPath));
 
     VkShaderModuleCreateInfo createInfo{};
@@ -38,8 +38,8 @@ lib::ErrorOr<Shader> Shader::create(const LogicalDevice& logicalDevice, const st
     VkDevice device = logicalDevice.getVkDevice();
     VkShaderModule shaderModule;
 
-    if (vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS) {
-        return lib::Error("Failed to create shader module.");
+    if (VkResult result = vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule); result != VK_SUCCESS) {
+        return Error(result);
     }
 
     return Shader(shaderModule, logicalDevice, shaderStage);

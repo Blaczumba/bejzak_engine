@@ -3,10 +3,10 @@
 #include "descriptor_pool.h"
 #include "descriptor_set_layout.h"
 #include "lib/buffer/buffer.h"
-#include "lib/status/status.h"
 #include "logical_device/logical_device.h"
 #include "memory_objects/uniform_buffer/uniform_buffer.h"
 #include "pipeline/pipeline.h"
+#include "status/status.h"
 
 #include <algorithm>
 #include <array>
@@ -38,7 +38,7 @@ DescriptorSet& DescriptorSet::operator=(DescriptorSet&& descriptorSet) noexcept 
     return *this;
 }
 
-lib::ErrorOr<DescriptorSet> DescriptorSet::create(const std::shared_ptr<const DescriptorPool>& descriptorPool, const DescriptorSetLayout& layout) {
+ErrorOr<DescriptorSet> DescriptorSet::create(const std::shared_ptr<const DescriptorPool>& descriptorPool, const DescriptorSetLayout& layout) {
     const VkDescriptorSetAllocateInfo allocInfo = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
         .descriptorPool = descriptorPool->getVkDescriptorPool(),
@@ -47,13 +47,13 @@ lib::ErrorOr<DescriptorSet> DescriptorSet::create(const std::shared_ptr<const De
     };
 
     VkDescriptorSet descriptorSet;
-    if (vkAllocateDescriptorSets(descriptorPool->getLogicalDevice().getVkDevice(), &allocInfo, &descriptorSet) != VK_SUCCESS) {
-        return lib::Error("failed to allocate descriptor sets!");
+    if (VkResult result = vkAllocateDescriptorSets(descriptorPool->getLogicalDevice().getVkDevice(), &allocInfo, &descriptorSet); result != VK_SUCCESS) {
+        return Error(result);
     }
     return DescriptorSet(descriptorSet, descriptorPool, layout);
 }
 
-lib::ErrorOr<std::vector<DescriptorSet>> DescriptorSet::create(const std::shared_ptr<const DescriptorPool>& descriptorPool, const DescriptorSetLayout& layout, uint32_t numSets) {
+ErrorOr<std::vector<DescriptorSet>> DescriptorSet::create(const std::shared_ptr<const DescriptorPool>& descriptorPool, const DescriptorSetLayout& layout, uint32_t numSets) {
     const std::vector<VkDescriptorSetLayout> layouts(numSets, layout.getVkDescriptorSetLayout());
     const VkDescriptorSetAllocateInfo allocInfo = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -63,8 +63,8 @@ lib::ErrorOr<std::vector<DescriptorSet>> DescriptorSet::create(const std::shared
     };
 
     lib::Buffer<VkDescriptorSet> descriptorSets(numSets);
-    if (vkAllocateDescriptorSets(descriptorPool->getLogicalDevice().getVkDevice(), &allocInfo, descriptorSets.data()) != VK_SUCCESS) {
-        return lib::Error("failed to allocate descriptor sets!");
+    if (VkResult result = vkAllocateDescriptorSets(descriptorPool->getLogicalDevice().getVkDevice(), &allocInfo, descriptorSets.data()); result != VK_SUCCESS) {
+        return Error(result);
     }
 
     std::vector<DescriptorSet> descSets;

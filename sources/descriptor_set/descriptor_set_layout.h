@@ -1,6 +1,6 @@
 #pragma once
 
-#include "lib/status/status.h"
+#include "status/status.h"
 
 #include <vulkan/vulkan.h>
 
@@ -28,7 +28,7 @@ public:
 
 	static std::unique_ptr<DescriptorSetLayout> create(const LogicalDevice& logicalDevice);
 
-	lib::Status build(VkDescriptorSetLayoutCreateFlags flags = {});
+	Status build(VkDescriptorSetLayoutCreateFlags flags = {});
 
 	void addLayoutBinding(VkDescriptorType descriptorType, VkShaderStageFlags stageFlags, uint32_t descriptorCount = 1, VkDescriptorBindingFlags bindingFlags = {}, const VkSampler* pImmutableSamplers = nullptr);
 

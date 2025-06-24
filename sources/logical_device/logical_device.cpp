@@ -30,7 +30,7 @@ void chainExtensionFeature(void** next, T& feature, std::string_view extension, 
     }
 }
 
-lib::ErrorOr<std::unique_ptr<LogicalDevice>> LogicalDevice::create(const PhysicalDevice& physicalDevice) {
+ErrorOr<std::unique_ptr<LogicalDevice>> LogicalDevice::create(const PhysicalDevice& physicalDevice) {
     const QueueFamilyIndices& indices = physicalDevice.getPropertyManager().getQueueFamilyIndices();
 
     const std::set<uint32_t> uniqueQueueFamilies = {
@@ -115,8 +115,8 @@ lib::ErrorOr<std::unique_ptr<LogicalDevice>> LogicalDevice::create(const Physica
     };
 
     VkDevice logicalDevice;
-    if (vkCreateDevice(physicalDevice.getVkPhysicalDevice(), &createInfo, nullptr, &logicalDevice) != VK_SUCCESS) {
-        return lib::Error("failed to create logical device!");
+    if (VkResult result = vkCreateDevice(physicalDevice.getVkPhysicalDevice(), &createInfo, nullptr, &logicalDevice); result != VK_SUCCESS) {
+        return Error(result);
     }
 
     VkQueue graphicsQueue, presentQueue, computeQueue, transferQueue;

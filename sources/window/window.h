@@ -2,7 +2,7 @@
 #include "input.h"
 
 #include "instance/instance.h"
-#include "lib/status/status.h"
+#include "status/status.h"
 #include "surface/surface.h"
 
 #include "vulkan/vulkan.h"
@@ -20,7 +20,7 @@ enum class WindowType : uint8_t {
 
 class Window {
 public:
-	static lib::ErrorOr<std::unique_ptr<Window>> createWindow(std::string_view windowName, uint32_t width, uint32_t height, WindowType windowType = WindowType::Automatic);
+	static ErrorOr<std::unique_ptr<Window>> createWindow(std::string_view windowName, uint32_t width, uint32_t height, WindowType windowType = WindowType::Automatic);
 
 	virtual ~Window() = default;
 
@@ -33,6 +33,6 @@ public:
 	virtual VkExtent2D getFramebufferSize() const = 0;
 
 	virtual std::vector<const char*> getExtensions() const = 0;
-	virtual lib::ErrorOr<std::unique_ptr<Surface>> createSurface(const Instance& instance) const = 0;
+	virtual ErrorOr<std::unique_ptr<Surface>> createSurface(const Instance& instance) const = 0;
 	virtual MouseKeyboardManager* getMouseKeyboardManager() = 0;
 };

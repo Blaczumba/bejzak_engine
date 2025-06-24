@@ -12,7 +12,7 @@
 PhysicalDevice::PhysicalDevice(const VkPhysicalDevice physicalDevice, const Surface& surface, std::unordered_set<std::string_view>&& availableRequestedExtensions, PhysicalDevicePropertyManager&& propertManager)
 	: _device(physicalDevice), _surface(surface), _availableRequestedExtensions(std::move(availableRequestedExtensions)), _propertyManager(std::move(propertManager)) { }
 
-lib::ErrorOr<std::unique_ptr<PhysicalDevice>> PhysicalDevice::create(const Surface& surface) {
+ErrorOr<std::unique_ptr<PhysicalDevice>> PhysicalDevice::create(const Surface& surface) {
     const VkSurfaceKHR surf = surface.getVkSurface();
 
     ASSIGN_OR_RETURN(const lib::Buffer<VkPhysicalDevice> devices, surface.getInstance().getAvailablePhysicalDevices());
@@ -40,7 +40,7 @@ lib::ErrorOr<std::unique_ptr<PhysicalDevice>> PhysicalDevice::create(const Surfa
             return std::unique_ptr<PhysicalDevice>(new PhysicalDevice(device, surface, propertyManager.checkDeviceExtensionSupport(), std::move(propertyManager)));
         }
     }
-    return lib::Error("failed to find a suitable GPU!");
+    return Error(EngineError::NOT_FOUND);
 }
 
 const VkPhysicalDevice PhysicalDevice::getVkPhysicalDevice() const {

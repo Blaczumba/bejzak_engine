@@ -1,7 +1,6 @@
 #include "double_screenshot_application.h"
 
 #include "config/config.h"
-#include "lib/status/status.h"
 #include "lib/buffer/shared_buffer.h"
 #include "model_loader/tiny_gltf_loader/tiny_gltf_loader.h"
 #include "entity_component_system/system/movement_system.h"
@@ -13,6 +12,7 @@
 #include "pipeline/shader/shader_program.h"
 #include "primitives/vertex_builder.h"
 #include "render_pass/attachment/attachment_layout.h"
+#include "status/status.h"
 #include "thread_pool/thread_pool.h"
 
 #include <algorithm>
@@ -91,7 +91,7 @@ void SingleApp::setInput() {
     }
 }
 
-lib::Status SingleApp::loadCubemap() {
+Status SingleApp::loadCubemap() {
     ASSIGN_OR_RETURN(VertexData vertexDataCube, loadObj(MODELS_PATH "cube.obj"));
     _assetManager->loadVertexData("cube.obj", vertexDataCube.indices, static_cast<uint8_t>(vertexDataCube.indexType), vertexDataCube.positions);
     {
@@ -104,10 +104,10 @@ lib::Status SingleApp::loadCubemap() {
         RETURN_IF_ERROR(_indexBufferCube.copyBuffer(commandBuffer, vData->indexBuffer));
         _indexBufferCubeType = vData->indexType;
     }
-    return lib::StatusOk();
+    return StatusOk();
 }
 
-lib::Status SingleApp::loadObject() {
+Status SingleApp::loadObject() {
     const std::string drakanTexturePath = TEXTURES_PATH "drakan.jpg";
     _assetManager->loadImage2DAsync(drakanTexturePath);
 
@@ -145,10 +145,10 @@ lib::Status SingleApp::loadObject() {
     _objectEntity = _registry.createEntity();
     _entitytoDescriptorSet.emplace(_objectEntity, std::move(descriptorSet));
 
-    return lib::StatusOk();
+    return StatusOk();
 }
 
-lib::Status SingleApp::loadObjects() {
+Status SingleApp::loadObjects() {
     // TODO needs refactoring
     ASSIGN_OR_RETURN(auto sceneData, LoadGltf(MODELS_PATH "sponza/scene.gltf"));
     for (uint32_t i = 0; i < sceneData.size(); i++) {
@@ -230,10 +230,10 @@ lib::Status SingleApp::loadObjects() {
     for (const auto& object : _objects)
         _octree->addObject(&object, _registry.getComponent<MeshComponent>(object.getEntity()).aabb);
 
-    return lib::StatusOk();
+    return StatusOk();
 }
 
-lib::Status SingleApp::createDescriptorSets() {
+Status SingleApp::createDescriptorSets() {
     const auto& propertyManager = _physicalDevice->getPropertyManager();
     float maxSamplerAnisotropy = propertyManager.getMaxSamplerAnisotropy();
     _assetManager->loadImageCubemapAsync(TEXTURES_PATH "cubemap_yokohama_rgba.ktx");
@@ -281,10 +281,10 @@ lib::Status SingleApp::createDescriptorSets() {
     _ubLight.projView = _ubLight.projView * glm::lookAt(_ubLight.pos, glm::vec3(-3.82383f, 3.66503f, 1.30751f), glm::vec3(0.0f, 1.0f, 0.0f));
     _uniformBuffersLight->updateUniformBuffer(_ubLight);
 
-    return lib::StatusOk();
+    return StatusOk();
 }
 
-lib::Status SingleApp::createPresentResources() {
+Status SingleApp::createPresentResources() {
     const VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_4_BIT;
     const VkFormat swapchainImageFormat = _swapchain->getVkFormat();
     const VkExtent2D extent = _swapchain->getExtent();
@@ -333,10 +333,10 @@ lib::Status SingleApp::createPresentResources() {
         };
         _graphicsPipelineNormal = std::make_unique<GraphicsPipeline>(*_renderPass, *_normalShaderProgram, parameters);
     }
-    return lib::StatusOk();
+    return StatusOk();
 }
 
-lib::Status SingleApp::createShadowResources() {
+Status SingleApp::createShadowResources() {
     const VkFormat imageFormat = VK_FORMAT_D32_SFLOAT;
     const VkExtent2D extent = { 1024 * 2, 1024 * 2 };
     AttachmentLayout attachmentLayout;
@@ -354,7 +354,7 @@ lib::Status SingleApp::createShadowResources() {
         .depthBiasSlopeFactor = 2.0f,
     };
     _shadowPipeline = std::make_unique<GraphicsPipeline>(*_shadowRenderPass, *_shadowShaderProgram, parameters);
-    return lib::StatusOk();
+    return StatusOk();
 }
 
 SingleApp::~SingleApp() {
@@ -566,8 +566,8 @@ void SingleApp::recordCommandBuffer(uint32_t imageIndex) {
 
     static const bool viewportScissorInheritance = (std::find(_physicalDevice->getAvailableRequestedExtensions().cbegin(), _physicalDevice->getAvailableRequestedExtensions().cend(), VK_NV_INHERITED_VIEWPORT_SCISSOR_EXTENSION_NAME) != _physicalDevice->getAvailableRequestedExtensions().cend());
     VkCommandBufferInheritanceViewportScissorInfoNV scissorViewportInheritance;
-    if (viewportScissorInheritance) {
-        scissorViewportInheritance = VkCommandBufferInheritanceViewportScissorInfoNV{
+    if (viewportScissorInheritance) [[likely]] {
+        scissorViewportInheritance = VkCommandBufferInheritanceViewportScissorInfoNV {
             .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_VIEWPORT_SCISSOR_INFO_NV,
             .viewportScissor2D = VK_TRUE,
             .viewportDepthCount = 1,
@@ -614,8 +614,6 @@ void SingleApp::recordCommandBuffer(uint32_t imageIndex) {
         static constexpr VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, &_vertexBufferCube.getVkBuffer(), offsets);
         vkCmdBindIndexBuffer(commandBuffer, _indexBufferCube.getVkBuffer(), 0, _indexBufferCubeType);
-        //_vertexBufferCube.bind(commandBuffer);
-        //_indexBufferCube.bind(commandBuffer);
         _descriptorSetSkybox.bind(commandBuffer, *_graphicsPipelineSkybox, { _currentFrame });
         vkCmdDrawIndexed(commandBuffer, _indexBufferCube.getSize() / getIndexSize(_indexBufferCubeType), 1, 0, 0, 0);
 
@@ -699,7 +697,7 @@ void SingleApp::recordShadowCommandBuffer(VkCommandBuffer commandBuffer, uint32_
     //}
 }
 
-lib::Status SingleApp::recreateSwapChain() {
+Status SingleApp::recreateSwapChain() {
     VkExtent2D extent{};
     while (extent.width == 0 || extent.height == 0) {
         extent = _window->getFramebufferSize();
@@ -712,5 +710,5 @@ lib::Status SingleApp::recreateSwapChain() {
     for (uint8_t i = 0; i < _swapchain->getImagesCount(); ++i) {
         ASSIGN_OR_RETURN(_framebuffers[i], Framebuffer::createFromSwapchain(*_renderPass, *_swapchain, *_singleTimeCommandPool, i));
     }
-    return lib::StatusOk();
+    return StatusOk();
 }

@@ -1,8 +1,8 @@
 #pragma once
 
-#include "lib/status/status.h"
 #include "lib/buffer/buffer.h"
 #include "render_pass/render_pass.h"
+#include "status/status.h"
 
 #include <vulkan/vulkan.h>
 
@@ -26,8 +26,8 @@ class Framebuffer {
 	Framebuffer(const VkFramebuffer framebuffer, const Renderpass& renderpass, const VkViewport& viewport, const VkRect2D& scissor, lib::Buffer<std::shared_ptr<Texture>>&& textures);
 
 public:
-	static lib::ErrorOr<std::unique_ptr<Framebuffer>> createFromSwapchain(const Renderpass& renderpass, const Swapchain& swapchain, const CommandPool& commandPool, uint8_t swapchainImageIndex);
-	static lib::ErrorOr<std::unique_ptr<Framebuffer>> createFromTextures(const Renderpass& renderpass, lib::Buffer<std::shared_ptr<Texture>>&& textures);
+	static ErrorOr<std::unique_ptr<Framebuffer>> createFromSwapchain(const Renderpass& renderpass, const Swapchain& swapchain, const CommandPool& commandPool, uint8_t swapchainImageIndex);
+	static ErrorOr<std::unique_ptr<Framebuffer>> createFromTextures(const Renderpass& renderpass, lib::Buffer<std::shared_ptr<Texture>>&& textures);
 
 	~Framebuffer();
 

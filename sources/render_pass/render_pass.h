@@ -1,8 +1,8 @@
 #pragma once
 
-#include "lib/status/status.h"
 #include "logical_device/logical_device.h"
 #include "render_pass/attachment/attachment_layout.h"
+#include "status/status.h"
 
 #include <memory>
 #include <optional>
@@ -23,13 +23,18 @@ class Renderpass {
 
 		~Subpass() = default;
 
-		lib::Status addOutputAttachment(const AttachmentLayout& layout, uint32_t attachmentBinding);
-		lib::Status addInputAttachment(const AttachmentLayout& layout, uint32_t attachmentBinding, VkImageLayout imageLayout);
+		Status addOutputAttachment(const AttachmentLayout& layout, uint32_t attachmentBinding);
+
+		Status addInputAttachment(const AttachmentLayout& layout, uint32_t attachmentBinding, VkImageLayout imageLayout);
+
 		VkSubpassDescription getVkSubpassDescription() const;
 
 		const std::vector<VkAttachmentReference>& getInputAttachmentRefs() const { return _inputAttachmentRefs; }
+
 		const std::vector<VkAttachmentReference>& getColorAttachmentRefs() const { return _colorAttachmentRefs; }
+
 		const std::vector<VkAttachmentReference>& getDepthAttachmentRefs() const { return _depthAttachmentRefs; }
+
 		const std::vector<VkAttachmentReference>& getColorResolveAttachmentRefs() const { return _colorAttachmentResolveRefs; }
 	};
 
@@ -40,12 +45,14 @@ public:
 	~Renderpass();
 
 	// Aggregates subpasses and dependencies and creates VkRenderPass object.
-	lib::Status build();
+	Status build();
 
 	const VkRenderPass getVkRenderPass() const;
+
 	const AttachmentLayout& getAttachmentsLayout() const;
 
-	lib::Status addSubpass(std::initializer_list<uint8_t> outputAttachments, std::initializer_list<uint8_t> inputAttachments = {});
+	Status addSubpass(std::initializer_list<uint8_t> outputAttachments, std::initializer_list<uint8_t> inputAttachments = {});
+
 	void addDependency(uint32_t srcSubpassIndex, uint32_t dstSubpassIndex, VkPipelineStageFlags srcStageMask, VkAccessFlags srcAccessMask, VkPipelineStageFlags dstStageMask, VkAccessFlags dstAccessMask);
 
 	const LogicalDevice& getLogicalDevice() const;

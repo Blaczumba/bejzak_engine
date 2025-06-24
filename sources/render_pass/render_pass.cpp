@@ -1,14 +1,15 @@
 #include "render_pass.h"
 
+#include "lib/macros/status_macros.h"
 #include "render_pass/attachment/attachment_layout.h"
 
 #include <algorithm>
 #include <iterator>
 #include <stdexcept>
 
-lib::Status Renderpass::Subpass::addOutputAttachment(const AttachmentLayout& layout, uint32_t attachmentBinding) {
+Status Renderpass::Subpass::addOutputAttachment(const AttachmentLayout& layout, uint32_t attachmentBinding) {
     if (layout.getAttachmentsCount() <= attachmentBinding) {
-        return lib::Error("attachmentBinding is not a valid index in attachments vector!");
+        return Error(EngineError::INDEX_OUT_OF_RANGE);
     }
 
     switch (layout.getAttachmentsTypes()[attachmentBinding]) {
@@ -22,17 +23,17 @@ lib::Status Renderpass::Subpass::addOutputAttachment(const AttachmentLayout& lay
         _depthAttachmentRefs.emplace_back(attachmentBinding, layout.getVkSubpassLayouts()[attachmentBinding]);
         break;
     default:
-        return lib::Error("Unknown attachment type");
+        return Error(EngineError::NOT_RECOGNIZED_TYPE);
     }
-    return lib::StatusOk();
+    return StatusOk();
 }
 
-lib::Status Renderpass::Subpass::addInputAttachment(const AttachmentLayout& layout, uint32_t attachmentBinding, VkImageLayout imageLayout) {
+Status Renderpass::Subpass::addInputAttachment(const AttachmentLayout& layout, uint32_t attachmentBinding, VkImageLayout imageLayout) {
     if (layout.getAttachmentsCount() <= attachmentBinding) {
-        return lib::Error("attachmentBinding is not a valid index in attachments vector!");
+        return Error(EngineError::INDEX_OUT_OF_RANGE);
     }
     _inputAttachmentRefs.emplace_back(attachmentBinding, imageLayout);
-    return lib::StatusOk();
+    return StatusOk();
 }
 
 VkSubpassDescription Renderpass::Subpass::getVkSubpassDescription() const {
@@ -55,7 +56,7 @@ std::unique_ptr<Renderpass> Renderpass::create(const LogicalDevice& logicalDevic
     return std::unique_ptr<Renderpass>(new Renderpass(logicalDevice, layout));
 }
 
-lib::Status Renderpass::build() {
+Status Renderpass::build() {
     if (_renderpass != VK_NULL_HANDLE) {
         vkDestroyRenderPass(_logicalDevice.getVkDevice(), _renderpass, nullptr);
     }
@@ -74,11 +75,11 @@ lib::Status Renderpass::build() {
         .pDependencies = _subpassDepencies.data()
     };
 
-    if (vkCreateRenderPass(_logicalDevice.getVkDevice(), &renderPassInfo, nullptr, &_renderpass) != VK_SUCCESS) {
-        return lib::Error("failed to create render pass!");
+    if (VkResult result = vkCreateRenderPass(_logicalDevice.getVkDevice(), &renderPassInfo, nullptr, &_renderpass); result != VK_SUCCESS) {
+        return Error(result);
     }
 
-    return lib::StatusOk();
+    return StatusOk();
 }
 
 Renderpass::~Renderpass() {
@@ -93,7 +94,7 @@ const AttachmentLayout& Renderpass::getAttachmentsLayout() const {
     return _attachmentsLayout;
 }
 
-lib::Status Renderpass::addSubpass(std::initializer_list<uint8_t> outputAttachments, std::initializer_list<uint8_t> inputAttachments) {
+Status Renderpass::addSubpass(std::initializer_list<uint8_t> outputAttachments, std::initializer_list<uint8_t> inputAttachments) {
     Subpass subpass;
     for (uint8_t index : outputAttachments) {
         RETURN_IF_ERROR(subpass.addOutputAttachment(_attachmentsLayout, index));
@@ -103,7 +104,7 @@ lib::Status Renderpass::addSubpass(std::initializer_list<uint8_t> outputAttachme
         RETURN_IF_ERROR(subpass.addInputAttachment(_attachmentsLayout, index, VK_IMAGE_LAYOUT_GENERAL));
     }
     _subpasses.push_back(subpass);
-    return lib::StatusOk();
+    return StatusOk();
 }
 
 void Renderpass::addDependency(uint32_t srcSubpassIndex, uint32_t dstSubpassIndex, VkPipelineStageFlags srcStageMask, VkAccessFlags srcAccessMask, VkPipelineStageFlags dstStageMask, VkAccessFlags dstAccessMask) {

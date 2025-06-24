@@ -1,6 +1,7 @@
 #pragma once
 
 #include "memory_allocator/memory_allocator.h"
+#include "status/status.h"
 
 #include <vulkan/vulkan.h>
 
@@ -15,6 +16,6 @@ struct BufferDeallocator {
     }
 
     void operator()(auto&&, auto&&) {
-        throw std::runtime_error("BufferDeallocator does not support such MemoryAllocator type!");
+        // throw std::runtime_error(EngineError::NOT_RECOGNIZED_TYPE);
     }
 };

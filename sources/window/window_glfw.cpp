@@ -127,10 +127,10 @@ std::vector<const char*> WindowGlfw::getExtensions() const {
     return std::vector<const char*>(glfwExtensions, glfwExtensions + glfwExtensionCount);
 }
 
-lib::ErrorOr<std::unique_ptr<Surface>> WindowGlfw::createSurface(const Instance& instance) const {
+ErrorOr<std::unique_ptr<Surface>> WindowGlfw::createSurface(const Instance& instance) const {
     VkSurfaceKHR surface;
-    if (glfwCreateWindowSurface(instance.getVkInstance(), _window, nullptr, &surface) != VK_SUCCESS) {
-        return lib::Error("Failed to create window surface.");
+    if (VkResult result = glfwCreateWindowSurface(instance.getVkInstance(), _window, nullptr, &surface); result != VK_SUCCESS) {
+        return Error(result);
     }
     return std::unique_ptr<Surface>(new Surface(surface, instance, *this));
 }

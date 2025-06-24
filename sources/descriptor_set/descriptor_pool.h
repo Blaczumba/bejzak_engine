@@ -1,7 +1,7 @@
 #pragma once
 
 #include "lib/buffer/buffer.h"
-#include "lib/status/status.h"
+#include "status/status.h"
 
 #include <vulkan/vulkan.h>
 
@@ -26,13 +26,13 @@ class DescriptorPool : public std::enable_shared_from_this<const DescriptorPool>
 public:
 	~DescriptorPool();
 
-	static lib::ErrorOr<std::unique_ptr<DescriptorPool>> create(const LogicalDevice& logicalDevice, uint32_t maxNumSets, VkDescriptorPoolCreateFlags flags = {});
+	static ErrorOr<std::unique_ptr<DescriptorPool>> create(const LogicalDevice& logicalDevice, uint32_t maxNumSets, VkDescriptorPoolCreateFlags flags = {});
 
 	const VkDescriptorPool getVkDescriptorPool() const;
 
-	lib::ErrorOr<DescriptorSet> createDesriptorSet(const DescriptorSetLayout& layout) const;
+	ErrorOr<DescriptorSet> createDesriptorSet(const DescriptorSetLayout& layout) const;
 
-	lib::ErrorOr<std::vector<DescriptorSet>> createDesriptorSets(const DescriptorSetLayout& layout, uint32_t numSets) const;
+	ErrorOr<std::vector<DescriptorSet>> createDesriptorSets(const DescriptorSetLayout& layout, uint32_t numSets) const;
 
 	bool maxSetsReached() const;
 

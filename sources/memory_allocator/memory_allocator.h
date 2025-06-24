@@ -1,7 +1,7 @@
 #pragma once
 
-#include "lib/status/status.h"
 #include "memory_objects/texture/image.h"
+#include "status/status.h"
 
 #include <vulkan/vulkan.h>
 #include <vma/vk_mem_alloc.h>
@@ -29,10 +29,10 @@ public:
 		VmaAllocation allocation;
 	};
 
-	lib::ErrorOr<Buffer> createVkBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags = 0U);
+	ErrorOr<Buffer> createVkBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags = 0U);
 	void destroyVkBuffer(const VkBuffer buffer, const VmaAllocation allocation);
 	void sendDataToBufferMemory(const VkBuffer buffer, const VmaAllocation allocation, const void* data, size_t size);
-	lib::ErrorOr<Image> createVkImage(const ImageParameters& params, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags = 0U);
+	ErrorOr<Image> createVkImage(const ImageParameters& params, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags = 0U);
 	void destroyVkImage(const VkImage image, const VmaAllocation allocation);
 
 private:

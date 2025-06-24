@@ -1,7 +1,7 @@
 #pragma once
 
-#include "lib/status/status.h"
 #include "memory_objects/texture/image.h"
+#include "status/status.h"
 
 #include <ktx.h>
 #include <stb_image/stb_image.h>
@@ -21,7 +21,7 @@ struct ImageResource {
 
 class ImageLoader {
 public:
-	static lib::ErrorOr<ImageResource> loadCubemapImage(std::string_view imagePath);
-	static lib::ErrorOr<ImageResource> load2DImage(std::string_view imagePath);
+	static ErrorOr<ImageResource> loadCubemapImage(std::string_view imagePath);
+	static ErrorOr<ImageResource> load2DImage(std::string_view imagePath);
 	static void deallocateResources(ImageResource& resource);
 };

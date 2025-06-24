@@ -1,5 +1,7 @@
 #include "buffer.h"
 
+#include "lib/macros/status_macros.h"
+
 #include <iostream>
 
 Buffer::Buffer() : _usage(0), _buffer(VK_NULL_HANDLE), _size(0), _mappedMemory(nullptr) {};
@@ -46,97 +48,97 @@ struct BufferData {
 struct VertexBufferAllocator {
     const size_t size;
 
-    lib::ErrorOr<BufferData> operator()(VmaWrapper& allocator) {
+    ErrorOr<BufferData> operator()(VmaWrapper& allocator) {
         VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
         ASSIGN_OR_RETURN(const VmaWrapper::Buffer buffer, allocator.createVkBuffer(size, usage, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE));
         return BufferData{ buffer.buffer, buffer.allocation, usage };
     }
 
-    lib::ErrorOr<BufferData> operator()(auto&&) {
-        return lib::Error("Unrecognized allocator in VertexBuffer creation");
+    ErrorOr<BufferData> operator()(auto&&) {
+        return Error(EngineError::NOT_RECOGNIZED_TYPE);
     }
 };
 
 struct IndexBufferAllocator {
     const size_t size;
 
-    lib::ErrorOr<BufferData> operator()(VmaWrapper& allocator) {
+    ErrorOr<BufferData> operator()(VmaWrapper& allocator) {
         VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
         ASSIGN_OR_RETURN(const VmaWrapper::Buffer buffer, allocator.createVkBuffer(size, usage, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE));
         return BufferData{ buffer.buffer, buffer.allocation, usage };
     }
 
-    lib::ErrorOr<BufferData> operator()(auto&&) {
-        return lib::Error("Unrecognized allocator in IndexBuffer creation");
+    ErrorOr<BufferData> operator()(auto&&) {
+        return Error(EngineError::NOT_RECOGNIZED_TYPE);
     }
 };
 
 struct StagingBufferAllocator {
     const size_t size;
 
-    lib::ErrorOr<BufferData> operator()(VmaWrapper& wrapper) {
+    ErrorOr<BufferData> operator()(VmaWrapper& wrapper) {
         VkBufferUsageFlags usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
         ASSIGN_OR_RETURN(const VmaWrapper::Buffer buffer, wrapper.createVkBuffer(size, usage, VMA_MEMORY_USAGE_CPU_ONLY, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT));
         return BufferData{ buffer.buffer, buffer.allocation, usage, buffer.mappedData };
     }
 
-    lib::ErrorOr<BufferData> operator()(auto&&) {
-        return lib::Error("Unrecognized allocator during StagingBuffer creation");
+    ErrorOr<BufferData> operator()(auto&&) {
+        return Error(EngineError::NOT_RECOGNIZED_TYPE);
     }
 };
 
 struct UniformBufferAllocator {
     const size_t size;
 
-    lib::ErrorOr<BufferData> operator()(VmaWrapper& allocator) {
+    ErrorOr<BufferData> operator()(VmaWrapper& allocator) {
         VkBufferUsageFlags usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
         ASSIGN_OR_RETURN(const VmaWrapper::Buffer buffer, allocator.createVkBuffer(size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT, VMA_MEMORY_USAGE_CPU_ONLY, VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT));
         return BufferData{ buffer.buffer, buffer.allocation, usage, buffer.mappedData };
     }
 
-    lib::ErrorOr<BufferData> operator()(auto&&) {
-        return lib::Error("Not recognized allocator for UniformBufferData creation");
+    ErrorOr<BufferData> operator()(auto&&) {
+        return Error(EngineError::NOT_RECOGNIZED_TYPE);
     }
 };
 
 } // namespace
 
-lib::ErrorOr<Buffer> Buffer::createVertexBuffer(LogicalDevice& logicalDevice, uint32_t size) {
+ErrorOr<Buffer> Buffer::createVertexBuffer(LogicalDevice& logicalDevice, uint32_t size) {
     ASSIGN_OR_RETURN(const BufferData bufferData, std::visit(VertexBufferAllocator{ size }, logicalDevice.getMemoryAllocator()));
     return Buffer(logicalDevice, bufferData.allocation, bufferData.buffer, bufferData.usage, size, bufferData.mappedMemory);
 }
 
-lib::ErrorOr<Buffer> Buffer::createIndexBuffer(LogicalDevice& logicalDevice, uint32_t size) {
+ErrorOr<Buffer> Buffer::createIndexBuffer(LogicalDevice& logicalDevice, uint32_t size) {
     ASSIGN_OR_RETURN(const BufferData bufferData, std::visit(IndexBufferAllocator{ size }, logicalDevice.getMemoryAllocator()));
     return Buffer(logicalDevice, bufferData.allocation, bufferData.buffer, bufferData.usage, size, bufferData.mappedMemory);
 }
 
-lib::ErrorOr<Buffer> Buffer::createStagingBuffer(LogicalDevice& logicalDevice, uint32_t size) {
+ErrorOr<Buffer> Buffer::createStagingBuffer(LogicalDevice& logicalDevice, uint32_t size) {
     ASSIGN_OR_RETURN(const BufferData bufferData, std::visit(StagingBufferAllocator{ size }, logicalDevice.getMemoryAllocator()));
     return Buffer(logicalDevice, bufferData.allocation, bufferData.buffer, bufferData.usage, size, bufferData.mappedMemory);
 }
 
-lib::ErrorOr<Buffer> Buffer::createUniformBuffer(LogicalDevice& logicalDevice, uint32_t size) {
+ErrorOr<Buffer> Buffer::createUniformBuffer(LogicalDevice& logicalDevice, uint32_t size) {
     ASSIGN_OR_RETURN(const BufferData bufferData, std::visit(UniformBufferAllocator{ size }, logicalDevice.getMemoryAllocator()));
     return Buffer(logicalDevice, bufferData.allocation, bufferData.buffer, bufferData.usage, size, bufferData.mappedMemory);
 }
 
-lib::Status Buffer::copyBuffer(const VkCommandBuffer commandBuffer, const Buffer& srcBuffer, std::optional<VkDeviceSize> srcSize, VkDeviceSize srcOffset, VkDeviceSize dstOffset) {
+Status Buffer::copyBuffer(const VkCommandBuffer commandBuffer, const Buffer& srcBuffer, std::optional<VkDeviceSize> srcSize, VkDeviceSize srcOffset, VkDeviceSize dstOffset) {
     if ((_usage & VK_BUFFER_USAGE_TRANSFER_DST_BIT) == 0) [[unlikely]] {
-        return lib::Error("Buffer does not have VK_BUFFER_USAGE_TRANSFER_DST_BIT specified.");
+        return Error(EngineError::FLAG_NOT_SPECIFIED);
     }
     if ((srcBuffer._usage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT) == 0) [[unlikely]] {
-        return lib::Error("Source Buffer does not have VK_BUFFER_USAGE_TRANSFER_SRC_BIT specified.");
+        return Error(EngineError::FLAG_NOT_SPECIFIED);
     }
     const VkDeviceSize size = srcSize.value_or(srcBuffer._size);
     if (srcOffset + size > srcBuffer._size) [[unlikely]] {
-        return lib::Error("Out of bounds while copying from srcBuffer.");
+        return Error(EngineError::INDEX_OUT_OF_RANGE);
     }
     if (dstOffset + size > _size) [[unlikely]] {
-        return lib::Error("Out of bounds while copying to the buffer.");
+        return Error(EngineError::INDEX_OUT_OF_RANGE);
     }
     copyBufferToBuffer(commandBuffer, srcBuffer._buffer, _buffer, srcOffset, dstOffset, size);
-    return lib::StatusOk();
+    return StatusOk();
 }
 
 VkBufferUsageFlags Buffer::getUsage() const {

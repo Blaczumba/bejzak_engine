@@ -35,7 +35,7 @@ void VmaWrapper::destroy() {
 	_allocator = nullptr;
 }
 
-lib::ErrorOr<VmaWrapper::Buffer> VmaWrapper::createVkBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags) {
+ErrorOr<VmaWrapper::Buffer> VmaWrapper::createVkBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags) {
 	const VkBufferCreateInfo bufferInfo = {
 		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
 		.size = size,
@@ -51,8 +51,8 @@ lib::ErrorOr<VmaWrapper::Buffer> VmaWrapper::createVkBuffer(VkDeviceSize size, V
 	VkBuffer buffer;
 	VmaAllocation allocation;
 	VmaAllocationInfo allocationInfo;
-	if (vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo, &buffer, &allocation, &allocationInfo) != VK_SUCCESS) {
-		return lib::Error("failed to create buffer!");
+	if (VkResult result = vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo, &buffer, &allocation, &allocationInfo); result != VK_SUCCESS) {
+		return Error(result);
 		
 	};
 	return VmaWrapper::Buffer{ buffer, allocation, allocationInfo.pMappedData };
@@ -66,7 +66,7 @@ void VmaWrapper::sendDataToBufferMemory(const VkBuffer buffer, const VmaAllocati
 	vmaCopyMemoryToAllocation(_allocator, data, allocation, 0, size);
 }
 
-lib::ErrorOr<VmaWrapper::Image> VmaWrapper::createVkImage(const ImageParameters& params, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags) {
+ErrorOr<VmaWrapper::Image> VmaWrapper::createVkImage(const ImageParameters& params, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags) {
 	VkImageCreateInfo imageInfo = {
 		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 		.imageType = VK_IMAGE_TYPE_2D,
@@ -95,8 +95,8 @@ lib::ErrorOr<VmaWrapper::Image> VmaWrapper::createVkImage(const ImageParameters&
 
 	VmaAllocation allocation;
 	VkImage image;
-	if (vmaCreateImage(_allocator, &imageInfo, &vmaAllocInfo, &image, &allocation, nullptr) != VK_SUCCESS) {
-		return lib::Error("Failed to create Buffer.");
+	if (VkResult result = vmaCreateImage(_allocator, &imageInfo, &vmaAllocInfo, &image, &allocation, nullptr); result != VK_SUCCESS) {
+		return Error(result);
 	}
 	return VmaWrapper::Image{ image, allocation };
 }

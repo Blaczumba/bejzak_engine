@@ -22,7 +22,7 @@ std::unique_ptr<DescriptorSetLayout> DescriptorSetLayout::create(const LogicalDe
     return std::unique_ptr<DescriptorSetLayout>(new DescriptorSetLayout(logicalDevice));
 }
 
-lib::Status DescriptorSetLayout::build(VkDescriptorSetLayoutCreateFlags flags) {
+Status DescriptorSetLayout::build(VkDescriptorSetLayoutCreateFlags flags) {
     if (_descriptorSetLayout != VK_NULL_HANDLE) {
         vkDestroyDescriptorSetLayout(_logicalDevice.getVkDevice(), _descriptorSetLayout, nullptr);
     }
@@ -41,10 +41,10 @@ lib::Status DescriptorSetLayout::build(VkDescriptorSetLayoutCreateFlags flags) {
         .pBindings = _bindings.data()
     };
 
-    if (vkCreateDescriptorSetLayout(_logicalDevice.getVkDevice(), &layoutInfo, nullptr, &_descriptorSetLayout) != VK_SUCCESS) {
-        return lib::Error("failed to create descriptor set layout!");
+    if (VkResult result = vkCreateDescriptorSetLayout(_logicalDevice.getVkDevice(), &layoutInfo, nullptr, &_descriptorSetLayout); result != VK_SUCCESS) {
+        return Error(result);
     }
-    return lib::StatusOk();
+    return StatusOk();
 }
 
 const VkDescriptorSetLayout& DescriptorSetLayout::getVkDescriptorSetLayout() const {

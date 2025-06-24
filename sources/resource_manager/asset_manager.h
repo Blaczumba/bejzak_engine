@@ -1,12 +1,12 @@
 #pragma once
 
 #include "lib/buffer/shared_buffer.h"
-#include "lib/status/status.h"
 #include "logical_device/logical_device.h"
 #include "memory_objects/buffer.h"
 #include "model_loader/image_loader/image_loader.h"
 #include "primitives/geometry.h"
 #include "primitives/primitives.h"
+#include "status/status.h"
 #include "thread_pool/thread_pool.h"
 
 #include <algorithm>
@@ -60,19 +60,19 @@ public:
 	template<typename VertexType>
 	void loadVertexData(const std::string& filePath, lib::SharedBuffer<uint8_t>& indices, uint8_t indexSize, lib::SharedBuffer<VertexType>& vertices);
 
-	lib::ErrorOr<const ImageData*> getImageData(const std::string& filePath);
-	lib::ErrorOr<const VertexData*> getVertexData(const std::string& filePath);
+	ErrorOr<const ImageData*> getImageData(const std::string& filePath);
+	ErrorOr<const VertexData*> getVertexData(const std::string& filePath);
 
 private:
-	void loadImageAsync(const std::string& filePath, std::function<lib::ErrorOr<ImageResource>(std::string_view)>&& loadingFunction);
+	void loadImageAsync(const std::string& filePath, std::function<ErrorOr<ImageResource>(std::string_view)>&& loadingFunction);
 
 	LogicalDevice& _logicalDevice;
 
 	std::unordered_map<std::string, VertexData> _vertexDataResources;
-	std::unordered_map<std::string, std::future<lib::ErrorOr<VertexData>>> _awaitingVertexDataResources;
+	std::unordered_map<std::string, std::future<ErrorOr<VertexData>>> _awaitingVertexDataResources;
 
 	std::unordered_map<std::string, ImageData> _imageResources;
-	std::unordered_map<std::string, std::future<lib::ErrorOr<ImageData>>> _awaitingImageResources;
+	std::unordered_map<std::string, std::future<ErrorOr<ImageData>>> _awaitingImageResources;
 };
 
 template<typename VertexType, typename PrimitiveType>
@@ -83,20 +83,20 @@ void AssetManager::loadVertexData(const std::string& filePath, lib::SharedBuffer
 	auto future = std::async(std::launch::async, ([this, indices, indexSize, vertices, primitives]() {
 		auto vertexBuffer = Buffer::createStagingBuffer(_logicalDevice, vertices.size() * sizeof(VertexType));
 		if (!vertexBuffer.has_value()) [[unlikely]] {
-			return lib::ErrorOr<VertexData>(lib::Error(vertexBuffer.error()));
+			return ErrorOr<VertexData>(Error(vertexBuffer.error()));
 		}
 		vertexBuffer->copyData<VertexType>(vertices);
 		auto vertexBufferPrimitives = Buffer::createStagingBuffer(_logicalDevice, primitives.size() * sizeof(PrimitiveType));
 		if (!vertexBufferPrimitives.has_value()) [[unlikely]] {
-			return lib::ErrorOr<VertexData>(lib::Error(vertexBufferPrimitives.error()));
+			return ErrorOr<VertexData>(Error(vertexBufferPrimitives.error()));
 		}
 		vertexBufferPrimitives->copyData<PrimitiveType>(primitives);
 		auto indexBuffer = Buffer::createStagingBuffer(_logicalDevice, indices.size());
 		if (!indexBuffer.has_value()) [[unlikely]] {
-			return lib::ErrorOr<VertexData>(lib::Error(indexBuffer.error()));
+			return ErrorOr<VertexData>(Error(indexBuffer.error()));
 		}
 		indexBuffer->copyData<uint8_t>(indices);
-		return lib::ErrorOr<VertexData>(VertexData(std::move(vertexBuffer.value()), std::move(indexBuffer.value()), getIndexType(indexSize), std::move(vertexBufferPrimitives.value()), AABB{}));
+		return ErrorOr<VertexData>(VertexData(std::move(vertexBuffer.value()), std::move(indexBuffer.value()), getIndexType(indexSize), std::move(vertexBufferPrimitives.value()), AABB{}));
 	}));
 	 _awaitingVertexDataResources.emplace(filePath, std::move(future));
 }
@@ -109,15 +109,15 @@ void AssetManager::loadVertexData(const std::string& filePath, lib::SharedBuffer
 	auto future = std::async(std::launch::async, ([this, indices, indexSize, vertices]() {
 		auto vertexBuffer = Buffer::createStagingBuffer(_logicalDevice, vertices.size() * sizeof(VertexType));
 		if (!vertexBuffer.has_value()) [[unlikely]] {
-			return lib::ErrorOr<VertexData>(lib::Error(vertexBuffer.error()));
+			return ErrorOr<VertexData>(Error(vertexBuffer.error()));
 		}
 		vertexBuffer->copyData<VertexType>(vertices);
 		auto indexBuffer = Buffer::createStagingBuffer(_logicalDevice, indices.size());
 		if (!indexBuffer.has_value()) [[unlikely]] {
-			return lib::ErrorOr<VertexData>(lib::Error(indexBuffer.error()));
+			return ErrorOr<VertexData>(Error(indexBuffer.error()));
 		}
 		indexBuffer->copyData<uint8_t>(indices);
-		return lib::ErrorOr<VertexData>(VertexData{ Buffer(), std::move(indexBuffer.value()), getIndexType(indexSize), std::move(vertexBuffer.value()), AABB{} });
+		return ErrorOr<VertexData>(VertexData{ Buffer(), std::move(indexBuffer.value()), getIndexType(indexSize), std::move(vertexBuffer.value()), AABB{} });
 	}));
 	_awaitingVertexDataResources.emplace(filePath, std::move(future));
 }
