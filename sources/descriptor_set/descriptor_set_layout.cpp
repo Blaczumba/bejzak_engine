@@ -5,26 +5,42 @@
 #include <stdexcept>
 
 DescriptorSetLayout::DescriptorSetLayout(const LogicalDevice& logicalDevice) 
-	: _logicalDevice(logicalDevice), _binding(0) {
+	: _logicalDevice(&logicalDevice), _binding(0) {
+}
+
+DescriptorSetLayout::DescriptorSetLayout(DescriptorSetLayout&& layout) noexcept
+    : _descriptorSetLayout(std::exchange(layout._descriptorSetLayout, VK_NULL_HANDLE)), _bindings(std::move(layout._bindings)),
+      _bindingFlags(std::move(layout._bindingFlags)), _descriptorTypeOccurances(std::move(layout._descriptorTypeOccurances)),
+      _logicalDevice(layout._logicalDevice), _binding(0) {
+
+}
+
+DescriptorSetLayout& DescriptorSetLayout::operator=(DescriptorSetLayout&& layout) noexcept {
+    if (&layout == this) {
+        return *this;
+    }
+    _descriptorSetLayout = std::exchange(layout._descriptorSetLayout, VK_NULL_HANDLE);
+    _bindings = std::move(layout._bindings);
+    _bindingFlags = std::move(layout._bindingFlags);
+    _descriptorTypeOccurances = std::move(layout._descriptorTypeOccurances);
+    _logicalDevice = std::exchange(layout._logicalDevice, nullptr);
+    _binding = layout._binding;
+    return *this;
 }
 
 DescriptorSetLayout::~DescriptorSetLayout() {
-    vkDestroyDescriptorSetLayout(_logicalDevice.getVkDevice(), _descriptorSetLayout, nullptr);
+    vkDestroyDescriptorSetLayout(_logicalDevice->getVkDevice(), _descriptorSetLayout, nullptr);
 }
 
 void DescriptorSetLayout::addLayoutBinding(VkDescriptorType descriptorType, VkShaderStageFlags stageFlags, uint32_t descriptorCount, VkDescriptorBindingFlags bindingFlags, const VkSampler* pImmutableSamplers) {
-	_bindings.emplace_back(_binding++, descriptorType, descriptorCount, stageFlags, pImmutableSamplers);
+    _bindings.emplace_back(_binding++, descriptorType, descriptorCount, stageFlags, pImmutableSamplers);
     _bindingFlags.push_back(bindingFlags);
     ++_descriptorTypeOccurances[descriptorType];
 }
 
-std::unique_ptr<DescriptorSetLayout> DescriptorSetLayout::create(const LogicalDevice& logicalDevice) {
-    return std::unique_ptr<DescriptorSetLayout>(new DescriptorSetLayout(logicalDevice));
-}
-
 Status DescriptorSetLayout::build(VkDescriptorSetLayoutCreateFlags flags) {
     if (_descriptorSetLayout != VK_NULL_HANDLE) {
-        vkDestroyDescriptorSetLayout(_logicalDevice.getVkDevice(), _descriptorSetLayout, nullptr);
+        vkDestroyDescriptorSetLayout(_logicalDevice->getVkDevice(), _descriptorSetLayout, nullptr);
     }
 
     VkDescriptorSetLayoutBindingFlagsCreateInfo bindingFlags = {
@@ -41,7 +57,7 @@ Status DescriptorSetLayout::build(VkDescriptorSetLayoutCreateFlags flags) {
         .pBindings = _bindings.data()
     };
 
-    if (VkResult result = vkCreateDescriptorSetLayout(_logicalDevice.getVkDevice(), &layoutInfo, nullptr, &_descriptorSetLayout); result != VK_SUCCESS) {
+    if (VkResult result = vkCreateDescriptorSetLayout(_logicalDevice->getVkDevice(), &layoutInfo, nullptr, &_descriptorSetLayout); result != VK_SUCCESS) {
         return Error(result);
     }
     return StatusOk();

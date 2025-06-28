@@ -13,7 +13,7 @@ ErrorOr<lib::Buffer<char>> readFile(const std::string& filename) {
         return Error(EngineError::LOAD_FAILURE);
     }
 
-    size_t fileSize = static_cast<size_t>(file.tellg());
+    const size_t fileSize = static_cast<size_t>(file.tellg());
     lib::Buffer<char> buffer(fileSize);
 
     file.seekg(0);
@@ -30,18 +30,17 @@ Shader::Shader(VkShaderModule shaderModule, const LogicalDevice& logicalDevice, 
 ErrorOr<Shader> Shader::create(const LogicalDevice& logicalDevice, const std::string& shaderPath, VkShaderStageFlagBits shaderStage) {
     ASSIGN_OR_RETURN(const lib::Buffer<char> shaderCode, readFile(shaderPath));
 
-    VkShaderModuleCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-    createInfo.codeSize = shaderCode.size();
-    createInfo.pCode = reinterpret_cast<const uint32_t*>(shaderCode.data());
+    VkShaderModuleCreateInfo createInfo = {
+        .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
+        .codeSize = shaderCode.size(),
+        .pCode = reinterpret_cast<const uint32_t*>(shaderCode.data())
+    };
 
-    VkDevice device = logicalDevice.getVkDevice();
     VkShaderModule shaderModule;
 
-    if (VkResult result = vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule); result != VK_SUCCESS) {
+    if (VkResult result = vkCreateShaderModule(logicalDevice.getVkDevice(), &createInfo, nullptr, &shaderModule); result != VK_SUCCESS) {
         return Error(result);
     }
-
     return Shader(shaderModule, logicalDevice, shaderStage);
 }
 
@@ -73,7 +72,7 @@ VkPipelineShaderStageCreateInfo Shader::getVkPipelineStageCreateInfo() const {
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .stage = _shaderStage,
         .module = _shaderModule,
-        .pName = _name.c_str()
+        .pName = _name.data()
     };
 }
 

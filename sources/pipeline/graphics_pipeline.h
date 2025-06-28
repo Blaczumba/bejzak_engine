@@ -34,7 +34,7 @@ public:
     GraphicsPipeline(const Renderpass& renderpass, const GraphicsShaderProgram& shaderProgram, const GraphicsPipelineParameters& parameters)
         : Pipeline(VK_PIPELINE_BIND_POINT_GRAPHICS), _renderpass(renderpass), _shaderProgram(shaderProgram), _parameters(parameters) {
         const VkDevice device = _renderpass.getLogicalDevice().getVkDevice();
-        const auto& descriptorSetLayout = _shaderProgram.getDescriptorSetLayout();
+        std::span<const DescriptorSetLayout> descriptorSetLayouts = _shaderProgram.getDescriptorSetLayouts();
         const auto& shaderStages = _shaderProgram.getVkPipelineShaderStageCreateInfos();
 
         const VkPipelineVertexInputStateCreateInfo& vertexInputInfo = shaderProgram.getVkPipelineVertexInputStateCreateInfo();
@@ -105,12 +105,13 @@ public:
         dynamicState.pDynamicStates = dynamicStates.data();
 
         const auto& pushConstantsLayout = _shaderProgram.getPushConstants().getVkPushConstantRange();
-        VkDescriptorSetLayout vkDescriptorSetLayout = descriptorSetLayout.getVkDescriptorSetLayout();
+        lib::Buffer<VkDescriptorSetLayout> vkDescriptorSetLayouts(descriptorSetLayouts.size());
+        std::transform(descriptorSetLayouts.cbegin(), descriptorSetLayouts.cend(), vkDescriptorSetLayouts.begin(), [](const DescriptorSetLayout& layout) { return layout.getVkDescriptorSetLayout(); });
 
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = 1;
-        pipelineLayoutInfo.pSetLayouts = &vkDescriptorSetLayout;
+        pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(vkDescriptorSetLayouts.size());
+        pipelineLayoutInfo.pSetLayouts = vkDescriptorSetLayouts.data();
         if (!pushConstantsLayout.empty())
             pipelineLayoutInfo.pPushConstantRanges = pushConstantsLayout.data();
         pipelineLayoutInfo.pushConstantRangeCount = static_cast<uint32_t>(pushConstantsLayout.size());

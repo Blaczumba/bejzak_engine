@@ -9,14 +9,14 @@
 enum class TextureHandle : uint16_t { INVALID = std::numeric_limits<uint16_t>::max() };
 enum class BufferHandle : uint16_t { INVALID = std::numeric_limits<uint16_t>::max() };
 
-class DescriptorBindingManager {
-	std::vector<VkImageView> _textures;
-	std::vector<VkBuffer> _buffers;
+class BindlessDescriptorSetWriter {
+	std::vector<const Texture*> _textures;
+	std::vector<const Buffer*> _buffers;
 
 	const DescriptorSet& _descriptorSet;
 
 public:
-	DescriptorBindingManager(const DescriptorSet& descriptorSet);
+	BindlessDescriptorSetWriter(const DescriptorSet& descriptorSet);
 
 	TextureHandle storeTexture(const Texture& texture);
 

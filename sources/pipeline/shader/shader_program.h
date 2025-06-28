@@ -8,23 +8,24 @@
 #include <vulkan/vulkan.h>
 
 #include <memory>
+#include <span>
 #include <vector>
 
 class LogicalDevice;
 
 class ShaderProgram {
 protected:
-	std::unique_ptr<DescriptorSetLayout> _descriptorSetLayout;
+	std::vector<DescriptorSetLayout> _descriptorSetLayouts;
 	std::vector<Shader> _shaders;
 	
 	const LogicalDevice& _logicalDevice;
 	PushConstants _pushConstants;
 
 public:
-	ShaderProgram(const LogicalDevice& logicalDevice, std::vector<Shader>&& shaders, std::unique_ptr<DescriptorSetLayout>&& descriptorSetLayout);
+	ShaderProgram(const LogicalDevice& logicalDevice, std::vector<Shader>&& shaders, std::vector<DescriptorSetLayout>&& descriptorSetLayouts);
 	std::vector<VkPipelineShaderStageCreateInfo> getVkPipelineShaderStageCreateInfos() const;
 
-	const DescriptorSetLayout& getDescriptorSetLayout() const;
+    std::span<const DescriptorSetLayout> getDescriptorSetLayouts() const;
 	const PushConstants& getPushConstants() const;
 };
 
@@ -34,8 +35,8 @@ protected:
 
 public:
     template<typename VertexType>
-    GraphicsShaderProgram(const LogicalDevice& logicalDevice, std::vector<Shader>&& shaders, std::unique_ptr<DescriptorSetLayout>&& descriptorSetLayout, VertexType)
-        : ShaderProgram(logicalDevice, std::move(shaders), std::move(descriptorSetLayout)) {
+    GraphicsShaderProgram(const LogicalDevice& logicalDevice, std::vector<Shader>&& shaders, std::vector<DescriptorSetLayout>&& descriptorSetLayouts, VertexType)
+        : ShaderProgram(logicalDevice, std::move(shaders), std::move(descriptorSetLayouts)) {
         static constexpr VkVertexInputBindingDescription bindingDescription = getBindingDescription<VertexType>();
         static constexpr auto attributeDescriptions = getAttributeDescriptions<VertexType>();
         _vertexInputInfo = VkPipelineVertexInputStateCreateInfo{

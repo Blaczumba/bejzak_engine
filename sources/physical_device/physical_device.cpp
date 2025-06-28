@@ -1,5 +1,7 @@
 #include "physical_device.h"
 
+#include "lib/algorithm.h"
+#include "lib/macros/status_macros.h"
 #include "logical_device/logical_device.h"
 
 #include <algorithm>
@@ -19,24 +21,16 @@ ErrorOr<std::unique_ptr<PhysicalDevice>> PhysicalDevice::create(const Surface& s
     for (const auto device : devices) {
         PhysicalDevicePropertyManager propertyManager(device, surf);
         const QueueFamilyIndices& indices = propertyManager.getQueueFamilyIndices();
-
-        bool swapChainAdequate = false;
         const SwapChainSupportDetails swapChainSupport = propertyManager.getSwapChainSupportDetails();
-        swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
+
+        bool swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
 
         VkPhysicalDeviceFeatures supportedFeatures;
         vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
 
-        bool discreteGPU = propertyManager.isDiscreteGPU();
+        const bool discreteGPU = propertyManager.isDiscreteGPU();
 
-        const std::array conditions = {
-            indices.isComplete(),
-            swapChainAdequate,
-            static_cast<bool>(supportedFeatures.samplerAnisotropy),
-            // discreteGPU
-        };
-
-        if (std::all_of(conditions.cbegin(), conditions.cend(), [](bool condition) { return condition; })) {
+        if (lib::cont_all_of(std::initializer_list{ indices.isComplete(), swapChainAdequate, static_cast<bool>(supportedFeatures.samplerAnisotropy), discreteGPU }, [](bool condition) { return condition; })) {
             return std::unique_ptr<PhysicalDevice>(new PhysicalDevice(device, surface, propertyManager.checkDeviceExtensionSupport(), std::move(propertyManager)));
         }
     }

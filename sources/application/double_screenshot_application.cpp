@@ -140,7 +140,8 @@ Status SingleApp::loadObject() {
     };
     ASSIGN_OR_RETURN(_objectUniform, UniformBufferData<UniformBufferObject>::create(*_logicalDevice));
     _objectUniform->updateUniformBuffer(object);
-    ASSIGN_OR_RETURN(auto descriptorSet, _descriptorPoolNormal->createDesriptorSet(_normalShaderProgram->getDescriptorSetLayout()));
+    std::span<const DescriptorSetLayout> layouts = _normalShaderProgram->getDescriptorSetLayouts();
+    ASSIGN_OR_RETURN(auto descriptorSet, _descriptorPoolNormal->createDesriptorSet(layouts[0]));
     descriptorSet.writeDescriptorSet({ _dynamicUniformBuffersCamera.get(), _uniformBuffersLight.get(), _objectUniform.get(), _uniformMap[drakanTexturePath].get(), _shadowTextureUniform.get() });
     _objectEntity = _registry.createEntity();
     _entitytoDescriptorSet.emplace(_objectEntity, std::move(descriptorSet));
@@ -164,7 +165,8 @@ Status SingleApp::loadObjects() {
     float maxSamplerAnisotropy = propertyManager.getMaxSamplerAnisotropy();
     _objects.reserve(sceneData.size());
     {
-        ASSIGN_OR_RETURN(std::vector<DescriptorSet> descriptorSets, _descriptorPool->createDesriptorSets(_pbrShaderProgram->getDescriptorSetLayout(), sceneData.size()));
+        std::span<const DescriptorSetLayout> layouts = _pbrShaderProgram->getDescriptorSetLayouts();
+        ASSIGN_OR_RETURN(std::vector<DescriptorSet> descriptorSets, _descriptorPool->createDesriptorSets(layouts[0], sceneData.size()));
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
         for (uint32_t i = 0; i < sceneData.size(); i++) {
@@ -257,20 +259,15 @@ Status SingleApp::createDescriptorSets() {
     _skyboxShaderProgram = ShaderProgramFactory::createShaderProgram(ShaderProgramType::SKYBOX, *_logicalDevice);
     _shadowShaderProgram = ShaderProgramFactory::createShaderProgram(ShaderProgramType::SHADOW, *_logicalDevice);
 
-    pbrDescriptorSetLayout1 = DescriptorSetLayout::create(*_logicalDevice);
-    VkDescriptorBindingFlags flags{ VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT };
-    // descriptorSetLayout->addLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, {});
-    pbrDescriptorSetLayout1->addLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL, 200, flags);
-    pbrDescriptorSetLayout1->addLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_ALL, 200, flags);
-    pbrDescriptorSetLayout1->build(VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT);
-
     ASSIGN_OR_RETURN(_descriptorPool, DescriptorPool::create(*_logicalDevice, 150, VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT));
     ASSIGN_OR_RETURN(_descriptorPoolNormal, DescriptorPool::create(*_logicalDevice, 1));
     ASSIGN_OR_RETURN(_descriptorPoolSkybox, DescriptorPool::create(*_logicalDevice, 1));
     ASSIGN_OR_RETURN(_descriptorPoolShadow, DescriptorPool::create(*_logicalDevice, 2));
 
-    ASSIGN_OR_RETURN(_descriptorSetSkybox, _descriptorPoolSkybox->createDesriptorSet(_skyboxShaderProgram->getDescriptorSetLayout()));
-    ASSIGN_OR_RETURN(_descriptorSetShadow, _descriptorPoolShadow->createDesriptorSet(_shadowShaderProgram->getDescriptorSetLayout()));
+    std::span<const DescriptorSetLayout> layouts = _skyboxShaderProgram->getDescriptorSetLayouts();
+    ASSIGN_OR_RETURN(_descriptorSetSkybox, _descriptorPoolSkybox->createDesriptorSet(layouts[0]));
+    layouts = _shadowShaderProgram->getDescriptorSetLayouts();
+    ASSIGN_OR_RETURN(_descriptorSetShadow, _descriptorPoolShadow->createDesriptorSet(layouts[0]));
 
     _descriptorSetSkybox.writeDescriptorSet({ _dynamicUniformBuffersCamera.get(), _skyboxTextureUniform.get() });
     _descriptorSetShadow.writeDescriptorSet({ _uniformBuffersLight.get(),  _uniformBuffersObjects.get() });

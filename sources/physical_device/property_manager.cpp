@@ -66,7 +66,7 @@ VkSampleCountFlagBits PhysicalDevicePropertyManager::getMaxUsableSampleCount() c
     const VkSampleCountFlags counts = _properties.limits.framebufferColorSampleCounts & _properties.limits.framebufferDepthSampleCounts;
 
     // Sorted msaa samples.
-    const std::array<VkSampleCountFlagBits, 7> samples = {
+    static constexpr std::array samples = {
         VK_SAMPLE_COUNT_64_BIT,
         VK_SAMPLE_COUNT_32_BIT,
         VK_SAMPLE_COUNT_16_BIT,

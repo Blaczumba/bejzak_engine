@@ -1,4 +1,4 @@
-#include "bindless_descriptor_writer.h"
+#include "bindless_descriptor_set_writer.h"
 
 #include "descriptor_set/descriptor_pool.h"
 
@@ -8,19 +8,29 @@
 namespace {
 
 constexpr uint32_t UNIFORM_BINDING = 0;
-constexpr uint32_t DYNAMIC_UNIFORM_BINDING = 1;
-constexpr uint32_t STORAGE_BINDING = 2;
-constexpr uint32_t TEXTURE_BINDING = 3;
+constexpr uint32_t STORAGE_BINDING = 1;
+constexpr uint32_t TEXTURE_BINDING = 2;
+
+constexpr VkDescriptorType getDescriptorType(VkBufferUsageFlags usageFlags) {
+	switch (usageFlags) {
+	case VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT:
+		return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+	case VK_BUFFER_USAGE_STORAGE_BUFFER_BIT:
+		return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+	default:
+		return VK_DESCRIPTOR_TYPE_MAX_ENUM;
+	}
+}
 
 } //namespace
 
-DescriptorBindingManager::DescriptorBindingManager(const DescriptorSet& descriptorSet) :_descriptorSet(descriptorSet) {
+BindlessDescriptorSetWriter::BindlessDescriptorSetWriter(const DescriptorSet& descriptorSet) :_descriptorSet(descriptorSet) {
 
 }
 
-TextureHandle DescriptorBindingManager::storeTexture(const Texture& texture) {
+TextureHandle BindlessDescriptorSetWriter::storeTexture(const Texture& texture) {
 	const size_t handle = _textures.size();
-	_textures.push_back(texture.getVkImageView());
+	_textures.push_back(&texture);
 
 	const VkDescriptorImageInfo imageInfo = {
 		.sampler = texture.getVkSampler(),
@@ -42,9 +52,9 @@ TextureHandle DescriptorBindingManager::storeTexture(const Texture& texture) {
 	return static_cast<TextureHandle>(handle);
 }
 
-BufferHandle DescriptorBindingManager::storeBuffer(const Buffer& buffer) {
+BufferHandle BindlessDescriptorSetWriter::storeBuffer(const Buffer& buffer) {
 	const size_t handle = _buffers.size();
-	_buffers.push_back(buffer.getVkBuffer());
+	_buffers.push_back(&buffer);
 
 	const VkDescriptorBufferInfo bufferInfo = {
 		.buffer = buffer.getVkBuffer(),
@@ -57,7 +67,7 @@ BufferHandle DescriptorBindingManager::storeBuffer(const Buffer& buffer) {
 		.dstBinding = UNIFORM_BINDING,
 		.dstArrayElement = static_cast<uint32_t>(handle),
 		.descriptorCount = 1,
-		.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+		.descriptorType = getDescriptorType(buffer.getUsage()),
 		.pBufferInfo = &bufferInfo
 	};
 

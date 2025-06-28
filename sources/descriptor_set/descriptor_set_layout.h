@@ -17,16 +17,18 @@ class DescriptorSetLayout {
 	std::vector<VkDescriptorSetLayoutBinding> _bindings;
 	std::vector<VkDescriptorBindingFlags> _bindingFlags;
 	DescriptorTypeCounterDict _descriptorTypeOccurances;
-	uint32_t _binding;
+	uint8_t _binding;
 
-	const LogicalDevice& _logicalDevice;
-
-	DescriptorSetLayout(const LogicalDevice& logicalDevice);
+	const LogicalDevice* _logicalDevice;
 
 public:
-	~DescriptorSetLayout();
+	DescriptorSetLayout(const LogicalDevice& logicalDevice);
 
-	static std::unique_ptr<DescriptorSetLayout> create(const LogicalDevice& logicalDevice);
+	DescriptorSetLayout(DescriptorSetLayout&& layout) noexcept;
+
+	DescriptorSetLayout& operator=(DescriptorSetLayout&& layout) noexcept;
+
+	~DescriptorSetLayout();
 
 	Status build(VkDescriptorSetLayoutCreateFlags flags = {});
 
