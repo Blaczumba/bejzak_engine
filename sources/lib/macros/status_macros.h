@@ -16,4 +16,4 @@
 
 #define RETURN_IF_ERROR(status)                                                     \
     if (auto UNIQUE_NAME(_result_) = (status); !UNIQUE_NAME(_result_)) [[unlikely]] \
-        return UNIQUE_NAME(_result_)
+        return std::unexpected(UNIQUE_NAME(_result_).error())

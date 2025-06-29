@@ -1,5 +1,6 @@
 #pragma once
 
+#include "status/status.h"
 #include "descriptor_set/descriptor_set_layout.h"
 #include "memory_objects/uniform_buffer/push_constants.h"
 #include "primitives/vk_primitives.h"
@@ -32,36 +33,32 @@ public:
 };
 
 class GraphicsShaderProgram : public ShaderProgram {
-protected:
+private:
 	VkPipelineVertexInputStateCreateInfo _vertexInputInfo;
+
+    GraphicsShaderProgram(const LogicalDevice& logicalDevice, std::vector<Shader>&& shaders, std::vector<DescriptorSetLayout>&& descriptorSetLayouts, const VkPipelineVertexInputStateCreateInfo& vertexInputInfo, std::span<const VkPushConstantRange> pushConstantRange)
+        : ShaderProgram(logicalDevice, std::move(shaders), std::move(descriptorSetLayouts), pushConstantRange), _vertexInputInfo(vertexInputInfo) {
+    }
 
 public:
     template<typename VertexType>
-    GraphicsShaderProgram(const LogicalDevice& logicalDevice, std::vector<Shader>&& shaders, std::vector<DescriptorSetLayout>&& descriptorSetLayouts, VertexType, std::span<const VkPushConstantRange> pushConstantRange = {})
-        : ShaderProgram(logicalDevice, std::move(shaders), std::move(descriptorSetLayouts), pushConstantRange) {
+    static std::unique_ptr<GraphicsShaderProgram> create(const LogicalDevice& logicalDevice, std::vector<Shader>&& shaders, std::vector<DescriptorSetLayout>&& descriptorSetLayouts, std::span<const VkPushConstantRange> pushConstantRange = {}) {
         static constexpr VkVertexInputBindingDescription bindingDescription = getBindingDescription<VertexType>();
         static constexpr auto attributeDescriptions = getAttributeDescriptions<VertexType>();
-        _vertexInputInfo = VkPipelineVertexInputStateCreateInfo{
+        const VkPipelineVertexInputStateCreateInfo vertexInputInfo = VkPipelineVertexInputStateCreateInfo{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
             .vertexBindingDescriptionCount = 1,
             .pVertexBindingDescriptions = &bindingDescription,
             .vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size()),
             .pVertexAttributeDescriptions = attributeDescriptions.data()
         };
+        return std::unique_ptr<GraphicsShaderProgram>(new GraphicsShaderProgram(logicalDevice, std::move(shaders), std::move(descriptorSetLayouts), vertexInputInfo, pushConstantRange));
     }
+
+
 	const VkPipelineVertexInputStateCreateInfo& getVkPipelineVertexInputStateCreateInfo() const {
         return _vertexInputInfo;
 	}
-};
-
-enum class ShaderProgramType {
-    NORMAL,
-    PBR,
-    PBR_TESSELLATION,
-    SKYBOX,
-    SHADOW,
-    SKYBOX_OFFSCREEN,
-    PBR_OFFSCREEN
 };
 
 struct alignas(glm::vec4) PushConstantsPBR {
@@ -82,40 +79,11 @@ struct alignas(glm::vec4) PushConstantsShadow {
 
 class ShaderProgramFactory {
 public:
-    static std::unique_ptr<GraphicsShaderProgram> createShaderProgram(ShaderProgramType type, const LogicalDevice& logicalDevice) {
-        switch (type) {
-        case ShaderProgramType::NORMAL:
-            return createNormalMappingProgram(logicalDevice);
-            break;
-        case ShaderProgramType::PBR:
-            return createPBRProgram(logicalDevice);
-            break;
-        case ShaderProgramType::PBR_TESSELLATION:
-            return createPBRTesselationProgram(logicalDevice);
-            break;
-        case ShaderProgramType::SKYBOX:
-            return createSkyboxProgram(logicalDevice);
-            break;
-        case ShaderProgramType::SHADOW:
-            return createShadowProgram(logicalDevice);
-            break;
-        case ShaderProgramType::SKYBOX_OFFSCREEN:
-            return createSkyboxOffscreenProgram(logicalDevice);
-            break;
-        case ShaderProgramType::PBR_OFFSCREEN:
-            return createPBROffscreenProgram(logicalDevice);
-            break;
-        default:
-            throw std::invalid_argument("Unsupported ShaderProgramType");
-        }
-    }
-
-private:
-    static std::unique_ptr<GraphicsShaderProgram> createNormalMappingProgram(const LogicalDevice& logicalDevice);
-    static std::unique_ptr<GraphicsShaderProgram> createPBRProgram(const LogicalDevice& logicalDevice);
-    static std::unique_ptr<GraphicsShaderProgram> createPBRTesselationProgram(const LogicalDevice& logicalDevice);
-    static std::unique_ptr<GraphicsShaderProgram> createSkyboxProgram(const LogicalDevice& logicalDevice);
-    static std::unique_ptr<GraphicsShaderProgram> createShadowProgram(const LogicalDevice& logicalDevice);
-    static std::unique_ptr<GraphicsShaderProgram> createSkyboxOffscreenProgram(const LogicalDevice& logicalDevice);
-    static std::unique_ptr<GraphicsShaderProgram> createPBROffscreenProgram(const LogicalDevice& logicalDevice);
+    static ErrorOr<std::unique_ptr<GraphicsShaderProgram>> createNormalMappingProgram(const LogicalDevice& logicalDevice);
+    static ErrorOr<std::unique_ptr<GraphicsShaderProgram>> createPBRProgram(const LogicalDevice& logicalDevice);
+    static ErrorOr<std::unique_ptr<GraphicsShaderProgram>> createPBRTesselationProgram(const LogicalDevice& logicalDevice);
+    static ErrorOr<std::unique_ptr<GraphicsShaderProgram>> createSkyboxProgram(const LogicalDevice& logicalDevice);
+    static ErrorOr<std::unique_ptr<GraphicsShaderProgram>> createShadowProgram(const LogicalDevice& logicalDevice);
+    static ErrorOr<std::unique_ptr<GraphicsShaderProgram>> createSkyboxOffscreenProgram(const LogicalDevice& logicalDevice);
+    static ErrorOr<std::unique_ptr<GraphicsShaderProgram>> createPBROffscreenProgram(const LogicalDevice& logicalDevice);
 };
