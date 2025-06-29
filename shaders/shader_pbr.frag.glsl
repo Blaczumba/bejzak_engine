@@ -7,9 +7,20 @@ layout(binding=0) uniform CameraUniform {
 } camera;
 
 layout(binding = 1) uniform sampler2D texSampler;
-layout(binding = 4) uniform sampler2DShadow shadowMap;
-layout(binding = 5) uniform sampler2D normalMap;
-layout(binding = 6) uniform sampler2D metallicRoughnessMap;
+layout(binding = 3) uniform sampler2DShadow shadowMap;
+layout(binding = 4) uniform sampler2D normalMap;
+layout(binding = 5) uniform sampler2D metallicRoughnessMap;
+
+layout( push_constant ) uniform Constants {
+	uint camera;
+    uint light;
+    uint diffuse;
+    uint normal;
+    uint metallicRoughness;
+    uint shadow;
+    uint padding[2];
+    mat4 model;
+} pushConstants;
 
 layout(location = 0) in vec3 TBNfragPosition;
 layout(location = 1) in vec2 fragTexCoord;

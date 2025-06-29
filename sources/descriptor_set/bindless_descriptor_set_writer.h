@@ -21,5 +21,4 @@ public:
 	TextureHandle storeTexture(const Texture& texture);
 
 	BufferHandle storeBuffer(const Buffer& buffer);
-
 };

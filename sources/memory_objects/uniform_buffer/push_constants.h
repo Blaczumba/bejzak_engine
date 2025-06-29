@@ -1,6 +1,7 @@
 #pragma once
 
 #include "physical_device/physical_device.h"
+#include "status/status.h"
 
 #include <vulkan/vulkan.h>
 
@@ -10,18 +11,18 @@
 
 class PushConstants {
 	std::vector<VkPushConstantRange> _ranges;
-	uint32_t _count;
+	uint32_t cumulatedOffset;
 
 	uint32_t _maxSize;
 public:
-	PushConstants(const PhysicalDevice& physicalDevice) {
+	PushConstants(const PhysicalDevice& physicalDevice) : cumulatedOffset(0) {
 		const auto& limits = physicalDevice.getPropertyManager().getPhysicalDeviceLimits();
 		_maxSize = limits.maxPushConstantsSize;
 	}
 	PushConstants() = default;
 
 	template<typename StructObject>
-	void addPushConstant(VkShaderStageFlags shaderStages);
+	Status addPushConstant(VkShaderStageFlags shaderStages);
 
 	const std::vector<VkPushConstantRange>& getVkPushConstantRange() const {
 		return _ranges;
@@ -42,14 +43,15 @@ public:
 
 
 template<typename StructObject>
-void PushConstants::addPushConstant(VkShaderStageFlags shaderStages) {
-	static uint32_t cumulatedOffset = {};
-	uint32_t size = sizeof(StructObject);
+Status PushConstants::addPushConstant(VkShaderStageFlags shaderStages) {
+	static constexpr uint32_t size = sizeof(StructObject);
 
 	if (size + cumulatedOffset > _maxSize) {
-		throw std::runtime_error("Push constants size exceeds the limit of " + std::to_string(_maxSize) + " bytes in size!");
+		return Error(EngineError::RESOURCE_EXHAUSTED);
 	}
 
 	_ranges.emplace_back(shaderStages, cumulatedOffset, size);
 	cumulatedOffset += size;
+
+	return StatusOk();
 }

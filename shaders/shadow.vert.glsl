@@ -7,13 +7,12 @@ layout(binding = 0) uniform Light {
 
 } light;
 
-layout(binding = 1) uniform ObjectUniform {
+layout( push_constant ) uniform Constants {
     mat4 model;
-
-} object;
+} pushConstants;
 
 layout (location = 0) in vec3 inPosition;
 
 void main() {
-    gl_Position = light.projView * object.model * vec4(inPosition, 1.0);
+    gl_Position = light.projView * pushConstants.model * vec4(inPosition, 1.0);
 } 

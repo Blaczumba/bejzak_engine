@@ -66,7 +66,7 @@ ErrorOr<std::unique_ptr<LogicalDevice>> LogicalDevice::create(const PhysicalDevi
 
     VkPhysicalDeviceInheritedViewportScissorFeaturesNV viewportScissorsFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INHERITED_VIEWPORT_SCISSOR_FEATURES_NV,
-        .inheritedViewportScissor2D = VK_FALSE,
+        .inheritedViewportScissor2D = VK_TRUE,
     };
 
     chainExtensionFeature(&next, viewportScissorsFeatures, VK_NV_INHERITED_VIEWPORT_SCISSOR_EXTENSION_NAME, availableExtensions);

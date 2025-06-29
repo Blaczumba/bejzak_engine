@@ -8,10 +8,12 @@
 #include <vulkan/vulkan.h>
 
 #include <memory>
+#include <optional>
 #include <span>
 #include <vector>
 
 class LogicalDevice;
+class PushConstants;
 
 class ShaderProgram {
 protected:
@@ -19,14 +21,14 @@ protected:
 	std::vector<Shader> _shaders;
 	
 	const LogicalDevice& _logicalDevice;
-	PushConstants _pushConstants;
+	std::optional<VkPushConstantRange> _pushConstants;
 
 public:
-	ShaderProgram(const LogicalDevice& logicalDevice, std::vector<Shader>&& shaders, std::vector<DescriptorSetLayout>&& descriptorSetLayouts);
+	ShaderProgram(const LogicalDevice& logicalDevice, std::vector<Shader>&& shaders, std::vector<DescriptorSetLayout>&& descriptorSetLayouts, std::optional<VkPushConstantRange> pushConstantRange);
 	std::vector<VkPipelineShaderStageCreateInfo> getVkPipelineShaderStageCreateInfos() const;
 
     std::span<const DescriptorSetLayout> getDescriptorSetLayouts() const;
-	const PushConstants& getPushConstants() const;
+	const std::optional<VkPushConstantRange>& getPushConstants() const;
 };
 
 class GraphicsShaderProgram : public ShaderProgram {
@@ -35,8 +37,8 @@ protected:
 
 public:
     template<typename VertexType>
-    GraphicsShaderProgram(const LogicalDevice& logicalDevice, std::vector<Shader>&& shaders, std::vector<DescriptorSetLayout>&& descriptorSetLayouts, VertexType)
-        : ShaderProgram(logicalDevice, std::move(shaders), std::move(descriptorSetLayouts)) {
+    GraphicsShaderProgram(const LogicalDevice& logicalDevice, std::vector<Shader>&& shaders, std::vector<DescriptorSetLayout>&& descriptorSetLayouts, VertexType, std::optional<VkPushConstantRange> pushConstantRange = std::nullopt)
+        : ShaderProgram(logicalDevice, std::move(shaders), std::move(descriptorSetLayouts), pushConstantRange) {
         static constexpr VkVertexInputBindingDescription bindingDescription = getBindingDescription<VertexType>();
         static constexpr auto attributeDescriptions = getAttributeDescriptions<VertexType>();
         _vertexInputInfo = VkPipelineVertexInputStateCreateInfo{
@@ -61,6 +63,22 @@ enum class ShaderProgramType {
     SKYBOX_OFFSCREEN,
     PBR_OFFSCREEN
 };
+
+struct alignas(glm::vec4) PushConstantsPBR {
+    uint32_t camera;
+    uint32_t light;
+    uint32_t diffuse;
+    uint32_t normal;
+    uint32_t metallicRoughness;
+    uint32_t shadow;
+    uint32_t padding[2];
+    glm::mat4 model;
+};
+
+struct alignas(glm::vec4) PushConstantsShadow {
+    glm::mat4 model;
+};
+
 
 class ShaderProgramFactory {
 public:

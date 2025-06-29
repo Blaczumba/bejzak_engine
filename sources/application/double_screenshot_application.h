@@ -68,7 +68,6 @@ class SingleApp : public ApplicationBase {
     UniformBufferObject _ubObject;
     UniformBufferLight _ubLight;
 
-    std::unique_ptr<UniformBufferData<UniformBufferObject>> _uniformBuffersObjects;
     std::unique_ptr<UniformBufferData<UniformBufferLight>> _uniformBuffersLight;
     std::unique_ptr<UniformBufferData<UniformBufferCamera>> _dynamicUniformBuffersCamera;
     std::unique_ptr<UniformBufferTexture> _skyboxTextureUniform;

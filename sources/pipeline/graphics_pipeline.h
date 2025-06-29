@@ -104,7 +104,7 @@ public:
         dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
         dynamicState.pDynamicStates = dynamicStates.data();
 
-        const auto& pushConstantsLayout = _shaderProgram.getPushConstants().getVkPushConstantRange();
+        const auto& pushConstantsLayout = _shaderProgram.getPushConstants();
         lib::Buffer<VkDescriptorSetLayout> vkDescriptorSetLayouts(descriptorSetLayouts.size());
         std::transform(descriptorSetLayouts.cbegin(), descriptorSetLayouts.cend(), vkDescriptorSetLayouts.begin(), [](const DescriptorSetLayout& layout) { return layout.getVkDescriptorSetLayout(); });
 
@@ -112,9 +112,10 @@ public:
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(vkDescriptorSetLayouts.size());
         pipelineLayoutInfo.pSetLayouts = vkDescriptorSetLayouts.data();
-        if (!pushConstantsLayout.empty())
-            pipelineLayoutInfo.pPushConstantRanges = pushConstantsLayout.data();
-        pipelineLayoutInfo.pushConstantRangeCount = static_cast<uint32_t>(pushConstantsLayout.size());
+        if (pushConstantsLayout.has_value()) {
+            pipelineLayoutInfo.pPushConstantRanges = &pushConstantsLayout.value();
+            pipelineLayoutInfo.pushConstantRangeCount = 1;
+        }
 
         if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &_pipelineLayout) != VK_SUCCESS) {
             throw std::runtime_error("failed to create pipeline layout!");

@@ -196,7 +196,7 @@ Status SingleApp::loadObjects() {
                 _uniformMap.emplace(metallicRoughnessPath, std::make_shared<UniformBufferTexture>(*_textures.back()));
             }
             // ASSIGN_OR_RETURN(auto descriptorSet, _descriptorPool->createDesriptorSet());
-            descriptorSets[i].writeDescriptorSet({_dynamicUniformBuffersCamera.get(), _uniformMap[diffusePath].get(), _uniformBuffersLight.get(), _uniformBuffersObjects.get(), _shadowTextureUniform.get(), _uniformMap[normalPath].get(), _uniformMap[metallicRoughnessPath].get()});
+            descriptorSets[i].writeDescriptorSet({_dynamicUniformBuffersCamera.get(), _uniformMap[diffusePath].get(), _uniformBuffersLight.get(), _shadowTextureUniform.get(), _uniformMap[normalPath].get(), _uniformMap[metallicRoughnessPath].get()});
             _objects.emplace_back("Object", e);
             ASSIGN_OR_RETURN(auto vData, _assetManager->getVertexData(std::to_string(i)));
             MeshComponent msh;
@@ -216,12 +216,7 @@ Status SingleApp::loadObjects() {
 
             _entityToIndex.emplace(e, index);
             _entitytoDescriptorSet.emplace(e, std::move(descriptorSets[i]));
-        
-            _ubObject.model = sceneData[i].model;
-            _uniformBuffersObjects->updateUniformBuffer(_ubObject, index++);
         }
-        _ubObject.model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 2.0f, 0.0f));
-        _uniformBuffersObjects->updateUniformBuffer(_ubObject, index);
     }
     AABB sceneAABB = _registry.getComponent<MeshComponent>(_objects[0].getEntity()).aabb;
     for (int i = 1; i < _objects.size(); i++) {
@@ -247,7 +242,6 @@ Status SingleApp::createDescriptorSets() {
         ASSIGN_OR_RETURN(_shadowMap, Texture::create2DShadowmap(*_logicalDevice, commandBuffer, 1024 * 2, 1024 * 2, VK_FORMAT_D32_SFLOAT));
     }
 
-    ASSIGN_OR_RETURN(_uniformBuffersObjects, UniformBufferData<UniformBufferObject>::create(*_logicalDevice, 200));
     ASSIGN_OR_RETURN(_uniformBuffersLight, UniformBufferData<UniformBufferLight>::create(*_logicalDevice));
     ASSIGN_OR_RETURN(_dynamicUniformBuffersCamera, UniformBufferData<UniformBufferCamera>::create(*_logicalDevice, MAX_FRAMES_IN_FLIGHT));
 
@@ -270,7 +264,7 @@ Status SingleApp::createDescriptorSets() {
     ASSIGN_OR_RETURN(_descriptorSetShadow, _descriptorPoolShadow->createDesriptorSet(layouts[0]));
 
     _descriptorSetSkybox.writeDescriptorSet({ _dynamicUniformBuffersCamera.get(), _skyboxTextureUniform.get() });
-    _descriptorSetShadow.writeDescriptorSet({ _uniformBuffersLight.get(),  _uniformBuffersObjects.get() });
+    _descriptorSetShadow.writeDescriptorSet({ _uniformBuffersLight.get() });
 
     _ubLight.pos = glm::vec3(15.1891f, 2.66408f, -0.841221f);
     _ubLight.projView = glm::perspective(glm::radians(120.0f), 1.0f, 0.01f, 40.0f);
@@ -539,10 +533,17 @@ void SingleApp::recordOctreeSecondaryCommandBuffer(const VkCommandBuffer command
             const Buffer& indexBuffer = meshComponent.indexBuffer;
             const Buffer& vertexBuffer = meshComponent.vertexBuffer;
 
+            const auto& transformComponent = _registry.getComponent<TransformComponent>(object->getEntity());
+            const PushConstantsPBR pc = {
+                .model = transformComponent.model
+            };
+
+            vkCmdPushConstants(commandBuffer, _graphicsPipeline->getVkPipelineLayout(), VK_SHADER_STAGE_ALL, 0, sizeof(pc), &pc);
+
             static constexpr VkDeviceSize offsets[] = { 0 };
             vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer.getVkBuffer(), offsets);
             vkCmdBindIndexBuffer(commandBuffer, indexBuffer.getVkBuffer(), 0, meshComponent.indexType);
-            _entitytoDescriptorSet[object->getEntity()].bind(commandBuffer, *_graphicsPipeline, { _currentFrame, _entityToIndex[object->getEntity()] });
+            _entitytoDescriptorSet[object->getEntity()].bind(commandBuffer, *_graphicsPipeline, { _currentFrame });
             vkCmdDrawIndexed(commandBuffer, indexBuffer.getSize() / getIndexSize(meshComponent.indexType), 1, 0, 0, 0);
         }
 
@@ -675,10 +676,15 @@ void SingleApp::recordShadowCommandBuffer(VkCommandBuffer commandBuffer, uint32_
 
     for (const auto& object : _objects) {
         const auto& meshComponent = _registry.getComponent<MeshComponent>(object.getEntity());
+        const auto& transformComponent = _registry.getComponent<TransformComponent>(object.getEntity());
+        const PushConstantsShadow pc = {
+            .model = transformComponent.model
+        };
+        vkCmdPushConstants(commandBuffer, _shadowPipeline->getVkPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(pc), &pc);
         VkBuffer vertexBuffers[] = { meshComponent.vertexBufferPrimitive.getVkBuffer() };
         const Buffer& indexBuffer = meshComponent.indexBuffer;
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-        _descriptorSetShadow.bind(commandBuffer, *_shadowPipeline, { _entityToIndex[object.getEntity()] });
+        _descriptorSetShadow.bind(commandBuffer, *_shadowPipeline, {});
         vkCmdBindIndexBuffer(commandBuffer, indexBuffer.getVkBuffer(), 0, meshComponent.indexType);
         vkCmdDrawIndexed(commandBuffer, indexBuffer.getSize() / getIndexSize(meshComponent.indexType), 1, 0, 0, 0);
     }

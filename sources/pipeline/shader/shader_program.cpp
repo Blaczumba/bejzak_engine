@@ -1,6 +1,7 @@
 #include "shader_program.h"
 
 #include "descriptor_set/descriptor_set_layout.h"
+#include "logical_device/logical_device.h"
 #include "primitives/vk_primitives.h"
 #include "primitives/primitives.h"
 
@@ -8,14 +9,14 @@
 #include <iterator>
 #include <memory>
 
-ShaderProgram::ShaderProgram(const LogicalDevice& logicalDevice, std::vector<Shader>&& shaders, std::vector<DescriptorSetLayout>&& descriptorSetLayouts)
-    : _logicalDevice(logicalDevice), _shaders(std::move(shaders)), _descriptorSetLayouts(std::move(descriptorSetLayouts)) {}
+ShaderProgram::ShaderProgram(const LogicalDevice& logicalDevice, std::vector<Shader>&& shaders, std::vector<DescriptorSetLayout>&& descriptorSetLayouts, std::optional<VkPushConstantRange> pushConstantRange)
+    : _logicalDevice(logicalDevice), _shaders(std::move(shaders)), _descriptorSetLayouts(std::move(descriptorSetLayouts)), _pushConstants(pushConstantRange) {}
 
 std::span<const DescriptorSetLayout> ShaderProgram::getDescriptorSetLayouts() const {
     return _descriptorSetLayouts;
 }
 
-const PushConstants& ShaderProgram::getPushConstants() const {
+const std::optional<VkPushConstantRange>& ShaderProgram::getPushConstants() const {
     return _pushConstants;
 }
 
@@ -57,7 +58,6 @@ std::unique_ptr<GraphicsShaderProgram> ShaderProgramFactory::createPBRProgram(co
     descriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
     descriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
     descriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);
-    descriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT);
     descriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
     descriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
     descriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
@@ -72,7 +72,10 @@ std::unique_ptr<GraphicsShaderProgram> ShaderProgramFactory::createPBRProgram(co
     pbrDescriptorSetLayout1.addLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_ALL, 200, flags);
     pbrDescriptorSetLayout1.build(VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT);
 
-    return std::make_unique<GraphicsShaderProgram>(logicalDevice, std::move(shaders), std::move(v), VertexPTNT{});
+    PushConstants pushConstants(logicalDevice.getPhysicalDevice());
+    pushConstants.addPushConstant<PushConstantsPBR>(VK_SHADER_STAGE_ALL);
+
+    return std::make_unique<GraphicsShaderProgram>(logicalDevice, std::move(shaders), std::move(v), VertexPTNT{}, pushConstants.getVkPushConstantRange()[0]);
     //std::vector<Shader> shaders;
     //shaders.reserve(2);
     //shaders.push_back(Shader::create(logicalDevice, SHADERS_PATH "shader_pbr.vert.spv", VK_SHADER_STAGE_VERTEX_BIT).value());
@@ -132,11 +135,12 @@ std::unique_ptr<GraphicsShaderProgram> ShaderProgramFactory::createShadowProgram
 
     DescriptorSetLayout descriptorSetLayout(logicalDevice);
     descriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);
-    descriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT);
     descriptorSetLayout.build();
     std::vector<DescriptorSetLayout> v;
     v.push_back(std::move(descriptorSetLayout));
-    return std::make_unique<GraphicsShaderProgram>(logicalDevice, std::move(shaders), std::move(v), VertexP{});
+    PushConstants pushConstants(logicalDevice.getPhysicalDevice());
+    pushConstants.addPushConstant<PushConstantsShadow>(VK_SHADER_STAGE_VERTEX_BIT);
+    return std::make_unique<GraphicsShaderProgram>(logicalDevice, std::move(shaders), std::move(v), VertexP{}, pushConstants.getVkPushConstantRange()[0]);
 }
 
 std::unique_ptr<GraphicsShaderProgram> ShaderProgramFactory::createSkyboxOffscreenProgram(const LogicalDevice& logicalDevice) {

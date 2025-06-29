@@ -14,10 +14,16 @@ layout(binding = 2) uniform Light {
 
 } light;
 
-layout(binding = 3) uniform ObjectUniform {
+layout( push_constant ) uniform Constants {
+	uint camera;
+    uint light;
+    uint diffuse;
+    uint normal;
+    uint metallicRoughness;
+    uint shadow;
+    uint padding[2];
     mat4 model;
-
-} object;
+} pushConstants;
 
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec2 inTexCoord;
@@ -42,7 +48,7 @@ const mat4 BiasMat = mat4(
 
 
 void main() {
-    mat3 normalMatrix = transpose(inverse(mat3(object.model)));
+    mat3 normalMatrix = transpose(inverse(mat3(pushConstants.model)));
     vec3 normal = normalize(normalMatrix * inNormal);
     // vec3 tangent = normalize(normalMatrix * inTangent);
     // vec3 bitangent = normalize(normalMatrix * inBitangent);
@@ -50,7 +56,7 @@ void main() {
     vec3 bitangent = cross(normal, tangent);
     mat3 TBNMat = transpose(mat3(tangent, bitangent, normal));
 
-    gl_Position = object.model * vec4(inPosition, 1.0);
+    gl_Position = pushConstants.model * vec4(inPosition, 1.0);
     TBNfragPosition = TBNMat * gl_Position.xyz;
     TBNViewPos = TBNMat * camera.viewPos;
     TBNLightPos = TBNMat * light.pos;
