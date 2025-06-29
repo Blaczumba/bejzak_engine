@@ -276,7 +276,6 @@ Status SingleApp::createDescriptorSets() {
     _dynamicDescriptorSet.writeDescriptorSet({ _dynamicUniformBuffersCamera.get() });
 
     ASSIGN_OR_RETURN(_lightBuffer, Buffer::createUniformBuffer(*_logicalDevice, sizeof(_ubLight)));
-    _lightBuffer.copyData(_ubLight, 0);
     _lightHandle = _bindlessWriter->storeBuffer(_lightBuffer);
 
     _ubLight.pos = glm::vec3(15.1891f, 2.66408f, -0.841221f);
@@ -284,6 +283,7 @@ Status SingleApp::createDescriptorSets() {
     _ubLight.projView[1][1] = -_ubLight.projView[1][1];
     _ubLight.projView = _ubLight.projView * glm::lookAt(_ubLight.pos, glm::vec3(-3.82383f, 3.66503f, 1.30751f), glm::vec3(0.0f, 1.0f, 0.0f));
     _uniformBuffersLight->updateUniformBuffer(_ubLight);
+    _lightBuffer.copyData(_ubLight, 0);
 
     return StatusOk();
 }
