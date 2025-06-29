@@ -17,11 +17,8 @@ std::span<const DescriptorSetLayout> ShaderProgram::getDescriptorSetLayouts() co
     return _descriptorSetLayouts;
 }
 
-std::vector<VkPipelineShaderStageCreateInfo> ShaderProgram::getVkPipelineShaderStageCreateInfos() const {
-    std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
-    shaderStages.reserve(_shaders.size());
-    std::transform(_shaders.cbegin(), _shaders.cend(), std::back_inserter(shaderStages), [](const Shader& shader) { return shader.getVkPipelineStageCreateInfo(); });
-    return shaderStages;
+std::span<const Shader> ShaderProgram::getShaders() const {
+    return _shaders;
 }
 
 std::span<const VkPushConstantRange> ShaderProgram::getPushConstants() const {

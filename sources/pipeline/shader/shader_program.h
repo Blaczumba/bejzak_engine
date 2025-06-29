@@ -20,15 +20,17 @@ class ShaderProgram {
 protected:
 	std::vector<DescriptorSetLayout> _descriptorSetLayouts;
 	std::vector<Shader> _shaders;
-	
-	const LogicalDevice& _logicalDevice;
 	std::vector<VkPushConstantRange> _pushConstants;
+
+	const LogicalDevice& _logicalDevice;
 
 public:
 	ShaderProgram(const LogicalDevice& logicalDevice, std::vector<Shader>&& shaders, std::vector<DescriptorSetLayout>&& descriptorSetLayouts, std::span<const VkPushConstantRange> pushConstantRange);
-	std::vector<VkPipelineShaderStageCreateInfo> getVkPipelineShaderStageCreateInfos() const;
+
+    std::span<const Shader> getShaders() const;
 
     std::span<const DescriptorSetLayout> getDescriptorSetLayouts() const;
+
 	std::span<const VkPushConstantRange> getPushConstants() const;
 };
 
