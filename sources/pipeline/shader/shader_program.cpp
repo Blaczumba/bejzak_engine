@@ -57,23 +57,21 @@ ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramManager::createPBRP
     shaders.push_back(std::move(vertexShader));
     shaders.push_back(std::move(fragmentShader));
 
-    DescriptorSetLayout descriptorSetLayout(logicalDevice);
-    descriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
-    descriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
-    descriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);
-    descriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
-    descriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
-    descriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
-    RETURN_IF_ERROR(descriptorSetLayout.build());
-    std::vector<DescriptorSetLayout> v;
-    v.push_back(std::move(descriptorSetLayout));
-
-    DescriptorSetLayout pbrDescriptorSetLayout1(logicalDevice);
+    DescriptorSetLayout bindlessDescriptorSetLayout(logicalDevice);
     VkDescriptorBindingFlags flags{ VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT };
     // descriptorSetLayout->addLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, {});
-    pbrDescriptorSetLayout1.addLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL, 200, flags);
-    pbrDescriptorSetLayout1.addLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_ALL, 200, flags);
-    RETURN_IF_ERROR(pbrDescriptorSetLayout1.build(VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT));
+    bindlessDescriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL, 200, flags);
+    bindlessDescriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_ALL, 200, flags);
+    RETURN_IF_ERROR(bindlessDescriptorSetLayout.build(VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT));
+
+    DescriptorSetLayout descriptorSetLayout(logicalDevice);
+    descriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+    RETURN_IF_ERROR(descriptorSetLayout.build());
+
+    std::vector<DescriptorSetLayout> v;
+    v.reserve(2);
+    v.push_back(std::move(bindlessDescriptorSetLayout));
+    v.push_back(std::move(descriptorSetLayout));
 
     PushConstants pushConstants(logicalDevice.getPhysicalDevice());
     pushConstants.addPushConstant<PushConstantsPBR>(VK_SHADER_STAGE_ALL);

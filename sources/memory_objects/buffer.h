@@ -37,6 +37,9 @@ public:
     template<typename T>
     Status copyData(std::span<const T> data, VkDeviceSize offset = 0);
 
+    template<typename T>
+    Status copyData(const T& data, VkDeviceSize offset = 0);
+
     VkBufferUsageFlags getUsage() const;
 
     uint32_t getSize() const;
@@ -67,5 +70,17 @@ Status Buffer::copyData(std::span<const T> data, VkDeviceSize offset) {
         return Error(EngineError::INDEX_OUT_OF_RANGE);
     }
     std::memcpy(static_cast<uint8_t*>(_mappedMemory) + offset, data.data(), size);
+    return StatusOk();
+}
+
+template<typename T>
+Status Buffer::copyData(const T& data, VkDeviceSize offset) {
+    if (!_mappedMemory) [[unlikely]] {
+        return Error(EngineError::NOT_MAPPED);
+    }
+    if (offset + sizeof(T) > _size) [[unlikely]] {
+        return Error(EngineError::INDEX_OUT_OF_RANGE);
+    }
+    std::memcpy(static_cast<uint8_t*>(_mappedMemory) + offset, &data, sizeof(T));
     return StatusOk();
 }

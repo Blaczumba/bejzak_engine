@@ -94,10 +94,10 @@ void DescriptorSet::writeDescriptorSetImpl(std::span<const UniformBuffer* const>
     vkUpdateDescriptorSets(_descriptorPool->getLogicalDevice().getVkDevice(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 }
 
-void DescriptorSet::bind(const VkCommandBuffer commandBuffer, const Pipeline& pipeline, std::initializer_list<uint32_t> dynamicOffsetStrides) {
+void DescriptorSet::bind(const VkCommandBuffer commandBuffer, const Pipeline& pipeline, uint32_t firstSet, std::initializer_list<uint32_t> dynamicOffsetStrides) {
     std::array<uint32_t, 4> sizes;
     std::transform(dynamicOffsetStrides.begin(), dynamicOffsetStrides.end(), _dynamicBuffersBaseSizes.cbegin(), sizes.begin(), std::multiplies<uint32_t>());
-    vkCmdBindDescriptorSets(commandBuffer, pipeline.getVkPipelineBindPoint(), pipeline.getVkPipelineLayout(), 0, 1, &_descriptorSet, dynamicOffsetStrides.size(), sizes.data());
+    vkCmdBindDescriptorSets(commandBuffer, pipeline.getVkPipelineBindPoint(), pipeline.getVkPipelineLayout(), firstSet, 1, &_descriptorSet, dynamicOffsetStrides.size(), sizes.data());
 }
 
 const VkDescriptorSet DescriptorSet::getVkDescriptorSet() const {

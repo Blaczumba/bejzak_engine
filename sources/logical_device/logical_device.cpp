@@ -79,7 +79,8 @@ ErrorOr<std::unique_ptr<LogicalDevice>> LogicalDevice::create(const PhysicalDevi
         .descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE,
         .descriptorBindingSampledImageUpdateAfterBind = VK_TRUE,
         .descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE,
-        .descriptorBindingPartiallyBound = VK_TRUE
+        .descriptorBindingPartiallyBound = VK_TRUE,
+        .runtimeDescriptorArray = VK_TRUE,
     };
 
     chainExtensionFeature(&next, descriptorIndexingFeatures, VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME, availableExtensions);

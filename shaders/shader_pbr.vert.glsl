@@ -1,29 +1,28 @@
 #version 450
 
-layout(binding=0) uniform CameraUniform {
-    mat4 view;
-    mat4 proj;
-    vec3 viewPos;
+#include "bindless.glsl"
 
-} camera;
-
-layout(binding = 2) uniform Light {
-    mat4 projView;
-
-    vec3 pos;
-
-} light;
+RegisterUniform(Light, { \
+    mat4 projView; \
+    vec3 pos; \
+});
 
 layout( push_constant ) uniform Constants {
-	uint camera;
     uint light;
     uint diffuse;
     uint normal;
     uint metallicRoughness;
     uint shadow;
-    uint padding[2];
+    uint padding[3];
     mat4 model;
 } pushConstants;
+
+layout(set=1, binding=0) uniform CameraUniform {
+    mat4 view;
+    mat4 proj;
+    vec3 viewPos;
+
+} camera;
 
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec2 inTexCoord;
@@ -38,14 +37,12 @@ layout(location = 2) out vec4 lightFragPosition;
 layout(location = 3) out vec3 TBNLightPos;
 layout(location = 4) out vec3 TBNViewPos;
 
-
 const mat4 BiasMat = mat4(
 	0.5, 0, 0, 0,
 	0, 0.5, 0, 0,
 	0, 0, 1.0, 0,
 	0.5, 0.5, 0.0, 1.0
 );
-
 
 void main() {
     mat3 normalMatrix = transpose(inverse(mat3(pushConstants.model)));
@@ -59,8 +56,8 @@ void main() {
     gl_Position = pushConstants.model * vec4(inPosition, 1.0);
     TBNfragPosition = TBNMat * gl_Position.xyz;
     TBNViewPos = TBNMat * camera.viewPos;
-    TBNLightPos = TBNMat * light.pos;
-    lightFragPosition = BiasMat * light.projView * gl_Position;
+    TBNLightPos = TBNMat * GetResource(Light, pushConstants.light).pos;
+    lightFragPosition = BiasMat * GetResource(Light, pushConstants.light).projView * gl_Position;
 
     gl_Position = camera.proj * camera.view * gl_Position;
     

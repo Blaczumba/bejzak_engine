@@ -64,13 +64,12 @@ public:
 };
 
 struct alignas(glm::vec4) PushConstantsPBR {
-    uint32_t camera;
     uint32_t light;
     uint32_t diffuse;
     uint32_t normal;
     uint32_t metallicRoughness;
     uint32_t shadow;
-    uint32_t padding[2];
+    uint32_t padding[3];
     glm::mat4 model;
 };
 

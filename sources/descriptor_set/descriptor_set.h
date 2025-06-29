@@ -41,7 +41,7 @@ public:
 
 	void writeDescriptorSet(std::span<const UniformBuffer*> uniformBuffers);
 
-	void bind(const VkCommandBuffer commandBuffer, const Pipeline& pipeline, std::initializer_list<uint32_t> dynamicOffsetStrides = {});
+	void bind(const VkCommandBuffer commandBuffer, const Pipeline& pipeline, uint32_t firstSet = 0, std::initializer_list<uint32_t> dynamicOffsetStrides = {});
 
 	const VkDescriptorSet getVkDescriptorSet() const;
 

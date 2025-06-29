@@ -8,18 +8,15 @@
 namespace {
 
 constexpr uint32_t UNIFORM_BINDING = 0;
-constexpr uint32_t STORAGE_BINDING = 1;
-constexpr uint32_t TEXTURE_BINDING = 2;
+constexpr uint32_t TEXTURE_BINDING = 1;
+constexpr uint32_t STORAGE_BINDING = 2;
 
 constexpr VkDescriptorType getDescriptorType(VkBufferUsageFlags usageFlags) {
-	switch (usageFlags) {
-	case VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT:
+	if ((usageFlags & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT) == VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)
 		return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	case VK_BUFFER_USAGE_STORAGE_BUFFER_BIT:
+	if ((usageFlags & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT) == VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
 		return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	default:
-		return VK_DESCRIPTOR_TYPE_MAX_ENUM;
-	}
+	return VK_DESCRIPTOR_TYPE_MAX_ENUM;
 }
 
 } //namespace
@@ -39,6 +36,7 @@ TextureHandle BindlessDescriptorSetWriter::storeTexture(const Texture& texture) 
 	};
 
 	const VkWriteDescriptorSet write = {
+		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 		.dstSet = _descriptorSet.getVkDescriptorSet(),
 		.dstBinding = TEXTURE_BINDING,
 		.dstArrayElement = static_cast<uint32_t>(handle),

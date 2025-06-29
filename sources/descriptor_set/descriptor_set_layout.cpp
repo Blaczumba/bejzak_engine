@@ -47,7 +47,10 @@ Status DescriptorSetLayout::build(VkDescriptorSetLayoutCreateFlags flags) {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
         .bindingCount = static_cast<uint32_t>(_bindingFlags.size()),
     };
-    bindingFlags.pBindingFlags = _bindingFlags.empty() ? nullptr : _bindingFlags.data();
+
+    if (!_bindingFlags.empty()) {
+        bindingFlags.pBindingFlags = _bindingFlags.data();
+    }
 
     const VkDescriptorSetLayoutCreateInfo layoutInfo = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,

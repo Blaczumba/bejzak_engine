@@ -4,6 +4,7 @@
 
 #include "camera/fps_camera.h"
 #include "command_buffer/command_buffer.h"
+#include "descriptor_set/bindless_descriptor_set_writer.h"
 #include "descriptor_set/descriptor_pool.h"
 #include "descriptor_set/descriptor_set.h"
 #include "descriptor_set/descriptor_set_layout.h"
@@ -28,7 +29,7 @@
 
 class SingleApp : public ApplicationBase {
     uint32_t index = 0;
-    std::vector<std::unique_ptr<Texture>> _textures;
+    std::unordered_map<std::string, std::pair<TextureHandle, std::unique_ptr<Texture>>> _textures;
     std::unordered_map<std::string, std::shared_ptr<UniformBufferTexture>> _uniformMap;
     std::unordered_map<std::string, Buffer> _vertexBufferMap;
     std::unordered_map<std::string, Buffer> _indexBufferMap;
@@ -73,10 +74,9 @@ class SingleApp : public ApplicationBase {
     std::unique_ptr<UniformBufferTexture> _skyboxTextureUniform;
     std::unique_ptr<UniformBufferTexture> _shadowTextureUniform;
 
-    std::unique_ptr<DescriptorSetLayout> pbrDescriptorSetLayout1;
-    std::unique_ptr<DescriptorSetLayout> pbrDescriptorSetLayout2;
-
     std::shared_ptr<DescriptorPool> _descriptorPool;
+    std::shared_ptr<DescriptorPool> _dynamicDescriptorPool;
+
     std::shared_ptr<DescriptorPool> _descriptorPoolNormal;
     std::shared_ptr<DescriptorPool> _descriptorPoolSkybox;
     std::shared_ptr<DescriptorPool> _descriptorPoolShadow;
@@ -87,6 +87,14 @@ class SingleApp : public ApplicationBase {
     std::unique_ptr<GraphicsShaderProgram> _skyboxShaderProgram;
 
     std::unique_ptr<Texture> _textureCubemap;
+
+    std::unique_ptr<BindlessDescriptorSetWriter> _bindlessWriter;
+
+    DescriptorSet _bindlessDescriptorSet;
+    DescriptorSet _dynamicDescriptorSet;
+    Buffer _lightBuffer;
+    BufferHandle _lightHandle;
+    TextureHandle _shadowHandle;
 
     DescriptorSet _descriptorSetSkybox;
     DescriptorSet _descriptorSetShadow;
