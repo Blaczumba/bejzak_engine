@@ -5,6 +5,7 @@
 
 #include <vulkan/vulkan.h>
 
+#include <span>
 #include <stdexcept>
 #include <string>
 #include <vector>
@@ -24,7 +25,7 @@ public:
 	template<typename StructObject>
 	Status addPushConstant(VkShaderStageFlags shaderStages);
 
-	const std::vector<VkPushConstantRange>& getVkPushConstantRange() const {
+	std::span<const VkPushConstantRange> getVkPushConstantRange() const {
 		return _ranges;
 	}
 

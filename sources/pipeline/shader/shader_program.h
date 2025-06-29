@@ -21,14 +21,14 @@ protected:
 	std::vector<Shader> _shaders;
 	
 	const LogicalDevice& _logicalDevice;
-	std::optional<VkPushConstantRange> _pushConstants;
+	std::vector<VkPushConstantRange> _pushConstants;
 
 public:
-	ShaderProgram(const LogicalDevice& logicalDevice, std::vector<Shader>&& shaders, std::vector<DescriptorSetLayout>&& descriptorSetLayouts, std::optional<VkPushConstantRange> pushConstantRange);
+	ShaderProgram(const LogicalDevice& logicalDevice, std::vector<Shader>&& shaders, std::vector<DescriptorSetLayout>&& descriptorSetLayouts, std::span<const VkPushConstantRange> pushConstantRange);
 	std::vector<VkPipelineShaderStageCreateInfo> getVkPipelineShaderStageCreateInfos() const;
 
     std::span<const DescriptorSetLayout> getDescriptorSetLayouts() const;
-	const std::optional<VkPushConstantRange>& getPushConstants() const;
+	std::span<const VkPushConstantRange> getPushConstants() const;
 };
 
 class GraphicsShaderProgram : public ShaderProgram {
@@ -37,7 +37,7 @@ protected:
 
 public:
     template<typename VertexType>
-    GraphicsShaderProgram(const LogicalDevice& logicalDevice, std::vector<Shader>&& shaders, std::vector<DescriptorSetLayout>&& descriptorSetLayouts, VertexType, std::optional<VkPushConstantRange> pushConstantRange = std::nullopt)
+    GraphicsShaderProgram(const LogicalDevice& logicalDevice, std::vector<Shader>&& shaders, std::vector<DescriptorSetLayout>&& descriptorSetLayouts, VertexType, std::span<const VkPushConstantRange> pushConstantRange = {})
         : ShaderProgram(logicalDevice, std::move(shaders), std::move(descriptorSetLayouts), pushConstantRange) {
         static constexpr VkVertexInputBindingDescription bindingDescription = getBindingDescription<VertexType>();
         static constexpr auto attributeDescriptions = getAttributeDescriptions<VertexType>();

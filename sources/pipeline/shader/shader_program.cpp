@@ -9,14 +9,14 @@
 #include <iterator>
 #include <memory>
 
-ShaderProgram::ShaderProgram(const LogicalDevice& logicalDevice, std::vector<Shader>&& shaders, std::vector<DescriptorSetLayout>&& descriptorSetLayouts, std::optional<VkPushConstantRange> pushConstantRange)
-    : _logicalDevice(logicalDevice), _shaders(std::move(shaders)), _descriptorSetLayouts(std::move(descriptorSetLayouts)), _pushConstants(pushConstantRange) {}
+ShaderProgram::ShaderProgram(const LogicalDevice& logicalDevice, std::vector<Shader>&& shaders, std::vector<DescriptorSetLayout>&& descriptorSetLayouts, std::span<const VkPushConstantRange> pushConstantRange)
+    : _logicalDevice(logicalDevice), _shaders(std::move(shaders)), _descriptorSetLayouts(std::move(descriptorSetLayouts)), _pushConstants(pushConstantRange.cbegin(), pushConstantRange.cend()) {}
 
 std::span<const DescriptorSetLayout> ShaderProgram::getDescriptorSetLayouts() const {
     return _descriptorSetLayouts;
 }
 
-const std::optional<VkPushConstantRange>& ShaderProgram::getPushConstants() const {
+std::span<const VkPushConstantRange> ShaderProgram::getPushConstants() const {
     return _pushConstants;
 }
 
@@ -75,7 +75,7 @@ std::unique_ptr<GraphicsShaderProgram> ShaderProgramFactory::createPBRProgram(co
     PushConstants pushConstants(logicalDevice.getPhysicalDevice());
     pushConstants.addPushConstant<PushConstantsPBR>(VK_SHADER_STAGE_ALL);
 
-    return std::make_unique<GraphicsShaderProgram>(logicalDevice, std::move(shaders), std::move(v), VertexPTNT{}, pushConstants.getVkPushConstantRange()[0]);
+    return std::make_unique<GraphicsShaderProgram>(logicalDevice, std::move(shaders), std::move(v), VertexPTNT{}, pushConstants.getVkPushConstantRange());
     //std::vector<Shader> shaders;
     //shaders.reserve(2);
     //shaders.push_back(Shader::create(logicalDevice, SHADERS_PATH "shader_pbr.vert.spv", VK_SHADER_STAGE_VERTEX_BIT).value());
@@ -140,7 +140,7 @@ std::unique_ptr<GraphicsShaderProgram> ShaderProgramFactory::createShadowProgram
     v.push_back(std::move(descriptorSetLayout));
     PushConstants pushConstants(logicalDevice.getPhysicalDevice());
     pushConstants.addPushConstant<PushConstantsShadow>(VK_SHADER_STAGE_VERTEX_BIT);
-    return std::make_unique<GraphicsShaderProgram>(logicalDevice, std::move(shaders), std::move(v), VertexP{}, pushConstants.getVkPushConstantRange()[0]);
+    return std::make_unique<GraphicsShaderProgram>(logicalDevice, std::move(shaders), std::move(v), VertexP{}, pushConstants.getVkPushConstantRange());
 }
 
 std::unique_ptr<GraphicsShaderProgram> ShaderProgramFactory::createSkyboxOffscreenProgram(const LogicalDevice& logicalDevice) {
