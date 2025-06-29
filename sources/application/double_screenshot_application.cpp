@@ -248,10 +248,10 @@ Status SingleApp::createDescriptorSets() {
     _skyboxTextureUniform = std::make_unique<UniformBufferTexture>(*_textureCubemap);
     _shadowTextureUniform = std::make_unique<UniformBufferTexture>(*_shadowMap);
 
-    ASSIGN_OR_RETURN(_pbrShaderProgram, ShaderProgramFactory::createPBRProgram(*_logicalDevice));
-    ASSIGN_OR_RETURN(_normalShaderProgram, ShaderProgramFactory::createNormalMappingProgram(*_logicalDevice));
-    ASSIGN_OR_RETURN(_skyboxShaderProgram, ShaderProgramFactory::createSkyboxProgram(*_logicalDevice));
-    ASSIGN_OR_RETURN(_shadowShaderProgram, ShaderProgramFactory::createShadowProgram(*_logicalDevice));
+    ASSIGN_OR_RETURN(_pbrShaderProgram, ShaderProgramManager::createPBRProgram(*_logicalDevice));
+    ASSIGN_OR_RETURN(_normalShaderProgram, ShaderProgramManager::createNormalMappingProgram(*_logicalDevice));
+    ASSIGN_OR_RETURN(_skyboxShaderProgram, ShaderProgramManager::createSkyboxProgram(*_logicalDevice));
+    ASSIGN_OR_RETURN(_shadowShaderProgram, ShaderProgramManager::createShadowProgram(*_logicalDevice));
 
     ASSIGN_OR_RETURN(_descriptorPool, DescriptorPool::create(*_logicalDevice, 150, VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT));
     ASSIGN_OR_RETURN(_descriptorPoolNormal, DescriptorPool::create(*_logicalDevice, 1));

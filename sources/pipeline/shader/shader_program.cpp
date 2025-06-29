@@ -17,10 +17,6 @@ std::span<const DescriptorSetLayout> ShaderProgram::getDescriptorSetLayouts() co
     return _descriptorSetLayouts;
 }
 
-std::span<const VkPushConstantRange> ShaderProgram::getPushConstants() const {
-    return _pushConstants;
-}
-
 std::vector<VkPipelineShaderStageCreateInfo> ShaderProgram::getVkPipelineShaderStageCreateInfos() const {
     std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
     shaderStages.reserve(_shaders.size());
@@ -28,7 +24,11 @@ std::vector<VkPipelineShaderStageCreateInfo> ShaderProgram::getVkPipelineShaderS
     return shaderStages;
 }
 
-ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramFactory::createNormalMappingProgram(const LogicalDevice& logicalDevice) {
+std::span<const VkPushConstantRange> ShaderProgram::getPushConstants() const {
+    return _pushConstants;
+}
+
+ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramManager::createNormalMappingProgram(const LogicalDevice& logicalDevice) {
     ASSIGN_OR_RETURN(Shader vertexShader, Shader::create(logicalDevice, SHADERS_PATH "shader_blinn_phong.vert.spv", VK_SHADER_STAGE_VERTEX_BIT));
     ASSIGN_OR_RETURN(Shader tesselationControlShader, Shader::create(logicalDevice, SHADERS_PATH "shader_blinn_phong.tsc.spv", VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT));
     ASSIGN_OR_RETURN(Shader tesselationEvaluationShader, Shader::create(logicalDevice, SHADERS_PATH "shader_blinn_phong.tse.spv", VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT));
@@ -46,13 +46,13 @@ ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramFactory::createNorm
     descriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
     descriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
     descriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
-    descriptorSetLayout.build();   // TODO return error
+    descriptorSetLayout.build();
     std::vector<DescriptorSetLayout> v;
     v.push_back(std::move(descriptorSetLayout));
     return GraphicsShaderProgram::create<VertexPTN>(logicalDevice, std::move(shaders), std::move(v));
 }
 
-ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramFactory::createPBRProgram(const LogicalDevice& logicalDevice) {
+ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramManager::createPBRProgram(const LogicalDevice& logicalDevice) {
     ASSIGN_OR_RETURN(Shader vertexShader, Shader::create(logicalDevice, SHADERS_PATH "shader_pbr.vert.spv", VK_SHADER_STAGE_VERTEX_BIT));
     ASSIGN_OR_RETURN(Shader fragmentShader, Shader::create(logicalDevice, SHADERS_PATH "shader_pbr.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
     std::vector<Shader> shaders;
@@ -96,7 +96,7 @@ ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramFactory::createPBRP
     //return std::make_unique<GraphicsShaderProgram>(logicalDevice, std::move(shaders), std::move(descriptorSetLayout), VertexPTNT{});
 }
 
-ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramFactory::createPBRTesselationProgram(const LogicalDevice& logicalDevice) {
+ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramManager::createPBRTesselationProgram(const LogicalDevice& logicalDevice) {
     ASSIGN_OR_RETURN(Shader vertexShader, Shader::create(logicalDevice, SHADERS_PATH "shader_pbr_tesselation.vert.spv", VK_SHADER_STAGE_VERTEX_BIT));
     ASSIGN_OR_RETURN(Shader tesselationControlShader, Shader::create(logicalDevice, SHADERS_PATH "shader_pbr_tesselation.tsc.spv", VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT));
     ASSIGN_OR_RETURN(Shader tesselationEvaluationShader, Shader::create(logicalDevice, SHADERS_PATH "shader_pbr_tesselation.tse.spv", VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT));
@@ -122,7 +122,7 @@ ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramFactory::createPBRT
     return GraphicsShaderProgram::create<VertexPTNT>(logicalDevice, std::move(shaders), std::move(v));
 }
 
-ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramFactory::createSkyboxProgram(const LogicalDevice& logicalDevice) {
+ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramManager::createSkyboxProgram(const LogicalDevice& logicalDevice) {
     ASSIGN_OR_RETURN(Shader vertexShader, Shader::create(logicalDevice, SHADERS_PATH "skybox.vert.spv", VK_SHADER_STAGE_VERTEX_BIT));
     ASSIGN_OR_RETURN(Shader fragmentShader, Shader::create(logicalDevice, SHADERS_PATH "skybox.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
     std::vector<Shader> shaders;
@@ -139,7 +139,7 @@ ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramFactory::createSkyb
     return GraphicsShaderProgram::create<VertexP>(logicalDevice, std::move(shaders), std::move(v));
 }
 
-ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramFactory::createShadowProgram(const LogicalDevice& logicalDevice) {
+ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramManager::createShadowProgram(const LogicalDevice& logicalDevice) {
     ASSIGN_OR_RETURN(Shader vertexShader, Shader::create(logicalDevice, SHADERS_PATH "shadow.vert.spv", VK_SHADER_STAGE_VERTEX_BIT));
     ASSIGN_OR_RETURN(Shader fragmentShader, Shader::create(logicalDevice, SHADERS_PATH "shadow.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
     std::vector<Shader> shaders;
@@ -157,7 +157,7 @@ ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramFactory::createShad
     return GraphicsShaderProgram::create<VertexP>(logicalDevice, std::move(shaders), std::move(v), pushConstants.getVkPushConstantRange());
 }
 
-ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramFactory::createSkyboxOffscreenProgram(const LogicalDevice& logicalDevice) {
+ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramManager::createSkyboxOffscreenProgram(const LogicalDevice& logicalDevice) {
     ASSIGN_OR_RETURN(Shader vertexShader, Shader::create(logicalDevice, SHADERS_PATH "skybox.vert.spv", VK_SHADER_STAGE_VERTEX_BIT));
     ASSIGN_OR_RETURN(Shader fragmentShader, Shader::create(logicalDevice, SHADERS_PATH "skybox_offscreen.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
     std::vector<Shader> shaders;
@@ -179,7 +179,7 @@ ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramFactory::createSkyb
     return GraphicsShaderProgram::create<VertexPTNT>(logicalDevice, std::move(shaders), std::move(v));
 }
 
-ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramFactory::createPBROffscreenProgram(const LogicalDevice& logicalDevice) {
+ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramManager::createPBROffscreenProgram(const LogicalDevice& logicalDevice) {
     ASSIGN_OR_RETURN(Shader vertexShader, Shader::create(logicalDevice, SHADERS_PATH "shader_pbr.vert.spv", VK_SHADER_STAGE_VERTEX_BIT));
     ASSIGN_OR_RETURN(Shader fragmentShader, Shader::create(logicalDevice, SHADERS_PATH "offscreen_shader_pbr.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
     std::vector<Shader> shaders;

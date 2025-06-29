@@ -77,7 +77,7 @@ struct alignas(glm::vec4) PushConstantsShadow {
 };
 
 
-class ShaderProgramFactory {
+class ShaderProgramManager {
 public:
     static ErrorOr<std::unique_ptr<GraphicsShaderProgram>> createNormalMappingProgram(const LogicalDevice& logicalDevice);
     static ErrorOr<std::unique_ptr<GraphicsShaderProgram>> createPBRProgram(const LogicalDevice& logicalDevice);
