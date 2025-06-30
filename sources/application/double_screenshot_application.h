@@ -30,11 +30,9 @@
 class SingleApp : public ApplicationBase {
     uint32_t index = 0;
     std::unordered_map<std::string, std::pair<TextureHandle, std::unique_ptr<Texture>>> _textures;
-    std::unordered_map<std::string, std::shared_ptr<UniformBufferTexture>> _uniformMap;
     std::unordered_map<std::string, Buffer> _vertexBufferMap;
     std::unordered_map<std::string, Buffer> _indexBufferMap;
     std::unordered_map<Entity, uint32_t> _entityToIndex;
-    std::unordered_map<Entity, DescriptorSet> _entitytoDescriptorSet;
     std::vector<Object> _objects;
     std::unique_ptr<Octree> _octree;
     Registry _registry;
@@ -45,26 +43,23 @@ class SingleApp : public ApplicationBase {
     std::vector<std::unique_ptr<Framebuffer>> _framebuffers;
     std::unique_ptr<GraphicsPipeline> _graphicsPipeline;
     std::unique_ptr<GraphicsPipeline> _graphicsPipelineNormal;
-    std::unique_ptr<GraphicsPipeline> _graphicsPipelineSkybox;
 
+    // Shadowmap
     std::shared_ptr<Renderpass> _shadowRenderPass;
     std::unique_ptr<Framebuffer> _shadowFramebuffer;
     std::shared_ptr<Texture> _shadowMap;
     std::unique_ptr<GraphicsPipeline> _shadowPipeline;
 
-    Buffer _vertexBufferObject;
-    Buffer _vertexBufferPrimitiveObject;
-    Buffer _indexBufferObject;
-    VkIndexType _indexBufferObjectType;
-    DescriptorSet _objectDescriptorSet;
-    std::unique_ptr<UniformBufferData<UniformBufferObject>> _objectUniform;
-    Entity _objectEntity;
-
+    // Cubemap.
     Buffer _vertexBufferCube;
     Buffer _indexBufferCube;
     VkIndexType _indexBufferCubeType;
+    std::unique_ptr<GraphicsPipeline> _graphicsPipelineSkybox;
 
+    // PBR objects.
     std::vector<Object> objects;
+    std::shared_ptr<DescriptorPool> _descriptorPool;
+    std::shared_ptr<DescriptorPool> _dynamicDescriptorPool;
     UniformBufferCamera _ubCamera;
     UniformBufferObject _ubObject;
     UniformBufferLight _ubLight;
@@ -74,15 +69,10 @@ class SingleApp : public ApplicationBase {
     std::unique_ptr<UniformBufferTexture> _skyboxTextureUniform;
     std::unique_ptr<UniformBufferTexture> _shadowTextureUniform;
 
-    std::shared_ptr<DescriptorPool> _descriptorPool;
-    std::shared_ptr<DescriptorPool> _dynamicDescriptorPool;
-
-    std::shared_ptr<DescriptorPool> _descriptorPoolNormal;
     std::shared_ptr<DescriptorPool> _descriptorPoolSkybox;
     std::shared_ptr<DescriptorPool> _descriptorPoolShadow;
 
     std::unique_ptr<GraphicsShaderProgram> _shadowShaderProgram;
-    std::unique_ptr<GraphicsShaderProgram> _normalShaderProgram;
     std::unique_ptr<GraphicsShaderProgram> _pbrShaderProgram;
     std::unique_ptr<GraphicsShaderProgram> _skyboxShaderProgram;
 
@@ -98,7 +88,6 @@ class SingleApp : public ApplicationBase {
 
     DescriptorSet _descriptorSetSkybox;
     DescriptorSet _descriptorSetShadow;
-    // std::unique_ptr<Screenshot> _screenshot;
 
     std::unique_ptr<FPSCamera> _camera;
 

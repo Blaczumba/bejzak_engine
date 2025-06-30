@@ -19,6 +19,15 @@ constexpr VkDescriptorType getDescriptorType(VkBufferUsageFlags usageFlags) {
 	return VK_DESCRIPTOR_TYPE_MAX_ENUM;
 }
 
+uint32_t getNextHandle(uint32_t elementsCount, std::vector<uint32_t>& missingBindings) {
+	if (missingBindings.empty()) {
+		return elementsCount;
+	}
+	uint32_t it = missingBindings.back();
+	missingBindings.pop_back();
+	return it;
+}
+
 } //namespace
 
 BindlessDescriptorSetWriter::BindlessDescriptorSetWriter(const DescriptorSet& descriptorSet) :_descriptorSet(descriptorSet) {
@@ -26,8 +35,8 @@ BindlessDescriptorSetWriter::BindlessDescriptorSetWriter(const DescriptorSet& de
 }
 
 TextureHandle BindlessDescriptorSetWriter::storeTexture(const Texture& texture) {
-	const size_t handle = _textures.size();
-	_textures.push_back(&texture);
+	const uint32_t handle = getNextHandle(_texturesMap.size(), _missingTextures);
+	_texturesMap.emplace(handle, &texture);
 
 	const VkDescriptorImageInfo imageInfo = {
 		.sampler = texture.getVkSampler(),
@@ -39,20 +48,25 @@ TextureHandle BindlessDescriptorSetWriter::storeTexture(const Texture& texture) 
 		.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 		.dstSet = _descriptorSet.getVkDescriptorSet(),
 		.dstBinding = TEXTURE_BINDING,
-		.dstArrayElement = static_cast<uint32_t>(handle),
+		.dstArrayElement = handle,
 		.descriptorCount = 1,
 		.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 		.pImageInfo = &imageInfo
 	};
-
+	
 	vkUpdateDescriptorSets(_descriptorSet.getDescriptorPool().getLogicalDevice().getVkDevice(), 1, &write, 0, nullptr);
 
 	return static_cast<TextureHandle>(handle);
 }
 
+void BindlessDescriptorSetWriter::removeTexture(TextureHandle handle) {
+	_missingTextures.push_back(static_cast<uint32_t>(handle));
+	_texturesMap.erase(static_cast<uint32_t>(handle));
+}
+
 BufferHandle BindlessDescriptorSetWriter::storeBuffer(const Buffer& buffer) {
-	const size_t handle = _buffers.size();
-	_buffers.push_back(&buffer);
+	const size_t handle = getNextHandle(_buffersMap.size(), _missingBuffers);
+	_buffersMap.emplace(handle, &buffer);
 
 	const VkDescriptorBufferInfo bufferInfo = {
 		.buffer = buffer.getVkBuffer(),
@@ -72,4 +86,9 @@ BufferHandle BindlessDescriptorSetWriter::storeBuffer(const Buffer& buffer) {
 	vkUpdateDescriptorSets(_descriptorSet.getDescriptorPool().getLogicalDevice().getVkDevice(), 1, &write, 0, nullptr);
 
 	return static_cast<BufferHandle>(handle);
+}
+
+void BindlessDescriptorSetWriter::removeBuffer(BufferHandle handle) {
+	_missingBuffers.push_back(static_cast<uint32_t>(handle));
+	_buffersMap.erase(static_cast<uint32_t>(handle));
 }

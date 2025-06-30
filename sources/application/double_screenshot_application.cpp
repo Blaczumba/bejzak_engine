@@ -107,48 +107,6 @@ Status SingleApp::loadCubemap() {
     return StatusOk();
 }
 
-Status SingleApp::loadObject() {
-    const std::string drakanTexturePath = TEXTURES_PATH "drakan.jpg";
-    _assetManager->loadImage2DAsync(drakanTexturePath);
-
-    const auto& propertyManager = _physicalDevice->getPropertyManager();
-    float maxSamplerAnisotropy = propertyManager.getMaxSamplerAnisotropy();
-
-    {
-        SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
-        const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
-
-        ASSIGN_OR_RETURN(VertexData vertexData, loadObj(MODELS_PATH "cylinder8.obj"));
-        ASSIGN_OR_RETURN(lib::SharedBuffer<VertexPTN> vertices, buildInterleavingVertexData(vertexData.positions, vertexData.textureCoordinates, vertexData.normals));
-        _assetManager->loadVertexData("cube_normal.obj", vertexData.indices, static_cast<uint8_t>(vertexData.indexType), vertices, vertexData.positions);
-        ASSIGN_OR_RETURN(auto vData, _assetManager->getVertexData("cube_normal.obj"));
-        ASSIGN_OR_RETURN(_vertexBufferObject, Buffer::createVertexBuffer(*_logicalDevice, vData->vertexBuffer.getSize()));
-        RETURN_IF_ERROR(_vertexBufferObject.copyBuffer(commandBuffer, vData->vertexBuffer));
-        ASSIGN_OR_RETURN(_vertexBufferPrimitiveObject, Buffer::createVertexBuffer(*_logicalDevice, vData->vertexBufferPrimitives.getSize()));
-        RETURN_IF_ERROR(_vertexBufferPrimitiveObject.copyBuffer(commandBuffer, vData->vertexBufferPrimitives));
-        ASSIGN_OR_RETURN(_indexBufferObject, Buffer::createIndexBuffer(*_logicalDevice, vData->indexBuffer.getSize()));
-        RETURN_IF_ERROR(_indexBufferObject.copyBuffer(commandBuffer, vData->indexBuffer));
-        _indexBufferObjectType = vData->indexType;
-        ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(drakanTexturePath));
-        ASSIGN_OR_RETURN(auto texture, Texture::create2DImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
-        // _textures.emplace_back(std::move(texture)); #TODO
-    }
-
-    // _uniformMap.emplace(drakanTexturePath, std::make_shared<UniformBufferTexture>(*_textures.back())); #TODO
-    UniformBufferObject object = {
-        .model = glm::translate(glm::mat4(1.0f), glm::vec3(0.0f, 2.0f, 0.0f))
-    };
-    ASSIGN_OR_RETURN(_objectUniform, UniformBufferData<UniformBufferObject>::create(*_logicalDevice));
-    _objectUniform->updateUniformBuffer(object);
-    std::span<const DescriptorSetLayout> layouts = _normalShaderProgram->getDescriptorSetLayouts();
-    ASSIGN_OR_RETURN(auto descriptorSet, _descriptorPoolNormal->createDesriptorSet(layouts[0]));
-    // descriptorSet.writeDescriptorSet({ _dynamicUniformBuffersCamera.get(), _uniformBuffersLight.get(), _objectUniform.get(), _uniformMap[drakanTexturePath].get(), _shadowTextureUniform.get() });
-    _objectEntity = _registry.createEntity();
-    _entitytoDescriptorSet.emplace(_objectEntity, std::move(descriptorSet));
-
-    return StatusOk();
-}
-
 Status SingleApp::loadObjects() {
     // TODO needs refactoring
     ASSIGN_OR_RETURN(auto sceneData, LoadGltf(MODELS_PATH "sponza/scene.gltf"));
@@ -161,8 +119,7 @@ Status SingleApp::loadObjects() {
         ASSIGN_OR_RETURN(lib::SharedBuffer vertices, buildInterleavingVertexData(sceneData[i].positions, sceneData[i].textureCoordinates, sceneData[i].normals, sceneData[i].tangents));
         _assetManager->loadVertexData(std::to_string(i), sceneData[i].indices, static_cast<uint8_t>(sceneData[i].indexType), vertices, sceneData[i].positions);
     }
-    const auto& propertyManager = _physicalDevice->getPropertyManager();
-    float maxSamplerAnisotropy = propertyManager.getMaxSamplerAnisotropy();
+    float maxSamplerAnisotropy = _physicalDevice->getPropertyManager().getMaxSamplerAnisotropy();
     _objects.reserve(sceneData.size());
     {
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
@@ -192,8 +149,6 @@ Status SingleApp::loadObjects() {
                 TextureHandle handle = _bindlessWriter->storeTexture(*texture);
                 _textures.emplace(metallicRoughnessPath, std::make_pair(handle, std::move(texture)));
             }
-            // ASSIGN_OR_RETURN(auto descriptorSet, _descriptorPool->createDesriptorSet());
-            // descriptorSets[i].writeDescriptorSet({_dynamicUniformBuffersCamera.get(), _uniformMap[diffusePath].get(), _uniformBuffersLight.get(), _shadowTextureUniform.get(), _uniformMap[normalPath].get(), _uniformMap[metallicRoughnessPath].get()});
             _objects.emplace_back("Object", e);
             ASSIGN_OR_RETURN(auto vData, _assetManager->getVertexData(std::to_string(i)));
             MeshComponent msh;
@@ -215,7 +170,6 @@ Status SingleApp::loadObjects() {
             _registry.addComponent<TransformComponent>(e, std::move(trsf));
 
             _entityToIndex.emplace(e, index);
-            // _entitytoDescriptorSet.emplace(e, std::move(descriptorSets[i]));
         }
     }
     AABB sceneAABB = _registry.getComponent<MeshComponent>(_objects[0].getEntity()).aabb;
@@ -249,13 +203,11 @@ Status SingleApp::createDescriptorSets() {
     _shadowTextureUniform = std::make_unique<UniformBufferTexture>(*_shadowMap);
 
     ASSIGN_OR_RETURN(_pbrShaderProgram, ShaderProgramManager::createPBRProgram(*_logicalDevice));
-    ASSIGN_OR_RETURN(_normalShaderProgram, ShaderProgramManager::createNormalMappingProgram(*_logicalDevice));
     ASSIGN_OR_RETURN(_skyboxShaderProgram, ShaderProgramManager::createSkyboxProgram(*_logicalDevice));
     ASSIGN_OR_RETURN(_shadowShaderProgram, ShaderProgramManager::createShadowProgram(*_logicalDevice));
     
     ASSIGN_OR_RETURN(_descriptorPool, DescriptorPool::create(*_logicalDevice, 150, VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT));
     ASSIGN_OR_RETURN(_dynamicDescriptorPool, DescriptorPool::create(*_logicalDevice, 1));
-    ASSIGN_OR_RETURN(_descriptorPoolNormal, DescriptorPool::create(*_logicalDevice, 1));
     ASSIGN_OR_RETURN(_descriptorPoolSkybox, DescriptorPool::create(*_logicalDevice, 1));
     ASSIGN_OR_RETURN(_descriptorPoolShadow, DescriptorPool::create(*_logicalDevice, 2));
 
@@ -330,13 +282,6 @@ Status SingleApp::createPresentResources() {
         };
         _graphicsPipelineSkybox = std::make_unique<GraphicsPipeline>(*_renderPass, *_skyboxShaderProgram, parameters);
     }
-    {
-        const GraphicsPipelineParameters parameters = {
-            .msaaSamples = msaaSamples,
-            .patchControlPoints = 3
-        };
-        _graphicsPipelineNormal = std::make_unique<GraphicsPipeline>(*_renderPass, *_normalShaderProgram, parameters);
-    }
     return StatusOk();
 }
 
@@ -378,9 +323,6 @@ void SingleApp::run() {
         recordShadowCommandBuffer(commandBuffer, 0);
     }
 
-    for (auto& object : _objects) {
-        // _registry.getComponent<MeshComponent>(object.getEntity()).vertexBufferPrimitive.reset();
-    }
     std::chrono::steady_clock::time_point previous;
     while (_window->open()) {
         float deltaTime = std::chrono::duration<float>(std::chrono::steady_clock::now() - previous).count();
@@ -535,7 +477,7 @@ void SingleApp::recordOctreeSecondaryCommandBuffer(const VkCommandBuffer command
         OctreeNode::Subvolume::UPPER_LEFT_BACK, OctreeNode::Subvolume::UPPER_LEFT_FRONT,
         OctreeNode::Subvolume::UPPER_RIGHT_BACK, OctreeNode::Subvolume::UPPER_RIGHT_FRONT
     };
-    _bindlessDescriptorSet.bind(commandBuffer, *_graphicsPipeline);
+    _bindlessDescriptorSet.bind(commandBuffer, *_graphicsPipeline, 0);
     _dynamicDescriptorSet.bind(commandBuffer, *_graphicsPipeline, 1, { _currentFrame });
     while (!nodeQueue.empty()) {
         const OctreeNode* node = nodeQueue.front();
