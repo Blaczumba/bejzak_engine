@@ -15,9 +15,10 @@ layout( push_constant ) uniform Constants {
     uint shadow;
     uint padding[3];
     mat4 model;
+
 } pushConstants;
 
-layout(set=1, binding=0) uniform CameraUniform {
+layout(set=1, binding=0) uniform CameraUniform { // Dynamic uniform buffer which depends on frame in flight
     mat4 view;
     mat4 proj;
     vec3 viewPos;

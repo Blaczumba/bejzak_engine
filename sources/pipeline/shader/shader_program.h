@@ -75,6 +75,7 @@ struct alignas(glm::vec4) PushConstantsPBR {
 
 struct alignas(glm::vec4) PushConstantsShadow {
     glm::mat4 model;
+    glm::mat4 lightProjView;
 };
 
 

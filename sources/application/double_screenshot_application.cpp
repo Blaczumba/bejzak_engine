@@ -196,7 +196,6 @@ Status SingleApp::createDescriptorSets() {
         ASSIGN_OR_RETURN(_shadowMap, Texture::create2DShadowmap(*_logicalDevice, commandBuffer, 1024 * 2, 1024 * 2, VK_FORMAT_D32_SFLOAT));
     }
 
-    ASSIGN_OR_RETURN(_uniformBuffersLight, UniformBufferData<UniformBufferLight>::create(*_logicalDevice));
     ASSIGN_OR_RETURN(_dynamicUniformBuffersCamera, UniformBufferData<UniformBufferCamera>::create(*_logicalDevice, MAX_FRAMES_IN_FLIGHT));
 
     _skyboxTextureUniform = std::make_unique<UniformBufferTexture>(*_textureCubemap);
@@ -209,15 +208,12 @@ Status SingleApp::createDescriptorSets() {
     ASSIGN_OR_RETURN(_descriptorPool, DescriptorPool::create(*_logicalDevice, 150, VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT));
     ASSIGN_OR_RETURN(_dynamicDescriptorPool, DescriptorPool::create(*_logicalDevice, 1));
     ASSIGN_OR_RETURN(_descriptorPoolSkybox, DescriptorPool::create(*_logicalDevice, 1));
-    ASSIGN_OR_RETURN(_descriptorPoolShadow, DescriptorPool::create(*_logicalDevice, 2));
 
     std::span<const DescriptorSetLayout> layouts = _skyboxShaderProgram->getDescriptorSetLayouts();
     ASSIGN_OR_RETURN(_descriptorSetSkybox, _descriptorPoolSkybox->createDesriptorSet(layouts[0]));
     layouts = _shadowShaderProgram->getDescriptorSetLayouts();
-    ASSIGN_OR_RETURN(_descriptorSetShadow, _descriptorPoolShadow->createDesriptorSet(layouts[0]));
 
     _descriptorSetSkybox.writeDescriptorSet({ _dynamicUniformBuffersCamera.get(), _skyboxTextureUniform.get() });
-    _descriptorSetShadow.writeDescriptorSet({ _uniformBuffersLight.get() });
 
     std::span<const DescriptorSetLayout> pbrLayouts = _pbrShaderProgram->getDescriptorSetLayouts();
     ASSIGN_OR_RETURN(_bindlessDescriptorSet, _descriptorPool->createDesriptorSet(pbrLayouts[0]));
@@ -234,7 +230,6 @@ Status SingleApp::createDescriptorSets() {
     _ubLight.projView = glm::perspective(glm::radians(120.0f), 1.0f, 0.01f, 40.0f);
     _ubLight.projView[1][1] = -_ubLight.projView[1][1];
     _ubLight.projView = _ubLight.projView * glm::lookAt(_ubLight.pos, glm::vec3(-3.82383f, 3.66503f, 1.30751f), glm::vec3(0.0f, 1.0f, 0.0f));
-    _uniformBuffersLight->updateUniformBuffer(_ubLight);
     _lightBuffer.copyData(_ubLight, 0);
 
     return StatusOk();
@@ -633,17 +628,17 @@ void SingleApp::recordShadowCommandBuffer(VkCommandBuffer commandBuffer, uint32_
     VkDeviceSize offsets[] = { 0 };
     vkCmdBindPipeline(commandBuffer, _shadowPipeline->getVkPipelineBindPoint(), _shadowPipeline->getVkPipeline());
 
+    PushConstantsShadow pc = {
+        .lightProjView = _ubLight.projView
+    };
     for (const auto& object : _objects) {
         const auto& meshComponent = _registry.getComponent<MeshComponent>(object.getEntity());
         const auto& transformComponent = _registry.getComponent<TransformComponent>(object.getEntity());
-        const PushConstantsShadow pc = {
-            .model = transformComponent.model
-        };
+        pc.model = transformComponent.model;
         vkCmdPushConstants(commandBuffer, _shadowPipeline->getVkPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(pc), &pc);
         VkBuffer vertexBuffers[] = { meshComponent.vertexBufferPrimitive.getVkBuffer() };
         const Buffer& indexBuffer = meshComponent.indexBuffer;
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-        _descriptorSetShadow.bind(commandBuffer, *_shadowPipeline);
         vkCmdBindIndexBuffer(commandBuffer, indexBuffer.getVkBuffer(), 0, meshComponent.indexType);
         vkCmdDrawIndexed(commandBuffer, indexBuffer.getSize() / getIndexSize(meshComponent.indexType), 1, 0, 0, 0);
     }

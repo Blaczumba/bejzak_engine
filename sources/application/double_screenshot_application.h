@@ -49,45 +49,37 @@ class SingleApp : public ApplicationBase {
     std::unique_ptr<Framebuffer> _shadowFramebuffer;
     std::shared_ptr<Texture> _shadowMap;
     std::unique_ptr<GraphicsPipeline> _shadowPipeline;
+    TextureHandle _shadowHandle;
 
     // Cubemap.
     Buffer _vertexBufferCube;
     Buffer _indexBufferCube;
+    std::unique_ptr<Texture> _textureCubemap;
     VkIndexType _indexBufferCubeType;
     std::unique_ptr<GraphicsPipeline> _graphicsPipelineSkybox;
+    std::shared_ptr<DescriptorPool> _descriptorPoolSkybox;
+    DescriptorSet _descriptorSetSkybox;
+    std::unique_ptr<GraphicsShaderProgram> _skyboxShaderProgram;
 
     // PBR objects.
     std::vector<Object> objects;
     std::shared_ptr<DescriptorPool> _descriptorPool;
     std::shared_ptr<DescriptorPool> _dynamicDescriptorPool;
+    std::unique_ptr<GraphicsShaderProgram> _pbrShaderProgram;
     UniformBufferCamera _ubCamera;
     UniformBufferObject _ubObject;
     UniformBufferLight _ubLight;
 
-    std::unique_ptr<UniformBufferData<UniformBufferLight>> _uniformBuffersLight;
     std::unique_ptr<UniformBufferData<UniformBufferCamera>> _dynamicUniformBuffersCamera;
     std::unique_ptr<UniformBufferTexture> _skyboxTextureUniform;
     std::unique_ptr<UniformBufferTexture> _shadowTextureUniform;
-
-    std::shared_ptr<DescriptorPool> _descriptorPoolSkybox;
-    std::shared_ptr<DescriptorPool> _descriptorPoolShadow;
-
     std::unique_ptr<GraphicsShaderProgram> _shadowShaderProgram;
-    std::unique_ptr<GraphicsShaderProgram> _pbrShaderProgram;
-    std::unique_ptr<GraphicsShaderProgram> _skyboxShaderProgram;
-
-    std::unique_ptr<Texture> _textureCubemap;
-
     std::unique_ptr<BindlessDescriptorSetWriter> _bindlessWriter;
 
     DescriptorSet _bindlessDescriptorSet;
     DescriptorSet _dynamicDescriptorSet;
     Buffer _lightBuffer;
     BufferHandle _lightHandle;
-    TextureHandle _shadowHandle;
-
-    DescriptorSet _descriptorSetSkybox;
-    DescriptorSet _descriptorSetShadow;
 
     std::unique_ptr<FPSCamera> _camera;
 

@@ -142,14 +142,9 @@ ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramManager::createShad
     shaders.push_back(std::move(vertexShader));
     shaders.push_back(std::move(fragmentShader));
 
-    DescriptorSetLayout descriptorSetLayout(logicalDevice);
-    descriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_VERTEX_BIT);
-    RETURN_IF_ERROR(descriptorSetLayout.build());
-    std::vector<DescriptorSetLayout> v;
-    v.push_back(std::move(descriptorSetLayout));
     PushConstants pushConstants(logicalDevice.getPhysicalDevice());
     pushConstants.addPushConstant<PushConstantsShadow>(VK_SHADER_STAGE_VERTEX_BIT);
-    return GraphicsShaderProgram::create<VertexP>(logicalDevice, std::move(shaders), std::move(v), pushConstants.getVkPushConstantRange());
+    return GraphicsShaderProgram::create<VertexP>(logicalDevice, std::move(shaders), {}, pushConstants.getVkPushConstantRange());
 }
 
 ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramManager::createSkyboxOffscreenProgram(const LogicalDevice& logicalDevice) {
