@@ -125,13 +125,19 @@ ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramManager::createSkyb
     shaders.push_back(std::move(vertexShader));
     shaders.push_back(std::move(fragmentShader));
 
-    auto descriptorSetLayout = DescriptorSetLayout(logicalDevice);
-    descriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT);
-    descriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_FRAGMENT_BIT);
-    RETURN_IF_ERROR(descriptorSetLayout.build());
+    DescriptorSetLayout bindlessDescriptorSetLayout(logicalDevice);
+    VkDescriptorBindingFlags flags{ VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT };
+    // descriptorSetLayout->addLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, {});
+    bindlessDescriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL, 200, flags);
+    bindlessDescriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_ALL, 200, flags);
+    RETURN_IF_ERROR(bindlessDescriptorSetLayout.build(VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT));
+
     std::vector<DescriptorSetLayout> v;
-    v.push_back(std::move(descriptorSetLayout));
-    return GraphicsShaderProgram::create<VertexP>(logicalDevice, std::move(shaders), std::move(v));
+    v.push_back(std::move(bindlessDescriptorSetLayout));
+
+    PushConstants pushConstants(logicalDevice.getPhysicalDevice());
+    pushConstants.addPushConstant<PushConstantsSkybox>(VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
+    return GraphicsShaderProgram::create<VertexP>(logicalDevice, std::move(shaders), std::move(v), pushConstants.getVkPushConstantRange());
 }
 
 ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramManager::createShadowProgram(const LogicalDevice& logicalDevice) {

@@ -198,8 +198,6 @@ Status SingleApp::createDescriptorSets() {
 
     ASSIGN_OR_RETURN(_dynamicUniformBuffersCamera, UniformBufferData<UniformBufferCamera>::create(*_logicalDevice, MAX_FRAMES_IN_FLIGHT));
 
-    _skyboxTextureUniform = std::make_unique<UniformBufferTexture>(*_textureCubemap);
-
     ASSIGN_OR_RETURN(_pbrShaderProgram, ShaderProgramManager::createPBRProgram(*_logicalDevice));
     ASSIGN_OR_RETURN(_skyboxShaderProgram, ShaderProgramManager::createSkyboxProgram(*_logicalDevice));
     ASSIGN_OR_RETURN(_shadowShaderProgram, ShaderProgramManager::createShadowProgram(*_logicalDevice));
@@ -209,16 +207,14 @@ Status SingleApp::createDescriptorSets() {
     ASSIGN_OR_RETURN(_descriptorPoolSkybox, DescriptorPool::create(*_logicalDevice, 1));
 
     std::span<const DescriptorSetLayout> layouts = _skyboxShaderProgram->getDescriptorSetLayouts();
-    ASSIGN_OR_RETURN(_descriptorSetSkybox, _descriptorPoolSkybox->createDesriptorSet(layouts[0]));
     layouts = _shadowShaderProgram->getDescriptorSetLayouts();
-
-    _descriptorSetSkybox.writeDescriptorSet({ _dynamicUniformBuffersCamera.get(), _skyboxTextureUniform.get() });
 
     std::span<const DescriptorSetLayout> pbrLayouts = _pbrShaderProgram->getDescriptorSetLayouts();
     ASSIGN_OR_RETURN(_bindlessDescriptorSet, _descriptorPool->createDesriptorSet(pbrLayouts[0]));
     ASSIGN_OR_RETURN(_dynamicDescriptorSet, _dynamicDescriptorPool->createDesriptorSet(pbrLayouts[1]));
     _bindlessWriter = std::make_unique<BindlessDescriptorSetWriter>(_bindlessDescriptorSet);
     _shadowHandle = _bindlessWriter->storeTexture(*_shadowMap);
+    _skyboxHandle = _bindlessWriter->storeTexture(*_textureCubemap);
 
     _dynamicDescriptorSet.writeDescriptorSet({ _dynamicUniformBuffersCamera.get() });
 
@@ -565,7 +561,14 @@ void SingleApp::recordCommandBuffer(uint32_t imageIndex) {
         static constexpr VkDeviceSize offsets[] = { 0 };
         vkCmdBindVertexBuffers(commandBuffer, 0, 1, &_vertexBufferCube.getVkBuffer(), offsets);
         vkCmdBindIndexBuffer(commandBuffer, _indexBufferCube.getVkBuffer(), 0, _indexBufferCubeType);
-        _descriptorSetSkybox.bind(commandBuffer, *_graphicsPipelineSkybox, 0, { _currentFrame });
+
+        const PushConstantsSkybox pc = {
+                .proj = _camera->getProjectionMatrix(),
+                .view = _camera->getViewMatrix(),
+                .skyboxHandle = static_cast<uint32_t>(_skyboxHandle)
+        };
+        vkCmdPushConstants(commandBuffer, _graphicsPipelineSkybox->getVkPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(pc), &pc);
+        _bindlessDescriptorSet.bind(commandBuffer, *_graphicsPipelineSkybox);
         vkCmdDrawIndexed(commandBuffer, _indexBufferCube.getSize() / getIndexSize(_indexBufferCubeType), 1, 0, 0, 0);
 
         // Object

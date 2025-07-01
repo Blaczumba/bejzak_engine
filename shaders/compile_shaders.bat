@@ -8,7 +8,7 @@ glslc.exe -fshader-stage=fragment "%SCRIPT_DIR%\shader_blinn_phong.frag.glsl" -O
 glslc.exe -fshader-stage=fragment "%SCRIPT_DIR%\offscreen.frag.glsl" -O -o "%SCRIPT_DIR%\off.frag.spv"
 
 glslc.exe -fshader-stage=vertex "%SCRIPT_DIR%\skybox.vert.glsl" -O -o "%SCRIPT_DIR%\skybox.vert.spv"
-glslc.exe -fshader-stage=fragment "%SCRIPT_DIR%\skybox.frag.glsl" -O -o "%SCRIPT_DIR%\skybox.frag.spv"
+glslc.exe -I "%SCRIPT_DIR%\bindless.glsl" -fshader-stage=fragment "%SCRIPT_DIR%\skybox.frag.glsl" -O -o "%SCRIPT_DIR%\skybox.frag.spv"
 
 glslc.exe -fshader-stage=fragment "%SCRIPT_DIR%\skybox_offscreen.frag.glsl" -O -o "%SCRIPT_DIR%\skybox_offscreen.frag.spv"
 

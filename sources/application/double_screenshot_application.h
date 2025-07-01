@@ -58,8 +58,8 @@ class SingleApp : public ApplicationBase {
     VkIndexType _indexBufferCubeType;
     std::unique_ptr<GraphicsPipeline> _graphicsPipelineSkybox;
     std::shared_ptr<DescriptorPool> _descriptorPoolSkybox;
-    DescriptorSet _descriptorSetSkybox;
     std::unique_ptr<GraphicsShaderProgram> _skyboxShaderProgram;
+    TextureHandle _skyboxHandle;
 
     // PBR objects.
     std::vector<Object> objects;
@@ -67,11 +67,9 @@ class SingleApp : public ApplicationBase {
     std::shared_ptr<DescriptorPool> _dynamicDescriptorPool;
     std::unique_ptr<GraphicsShaderProgram> _pbrShaderProgram;
     UniformBufferCamera _ubCamera;
-    UniformBufferObject _ubObject;
     UniformBufferLight _ubLight;
 
     std::unique_ptr<UniformBufferData<UniformBufferCamera>> _dynamicUniformBuffersCamera;
-    std::unique_ptr<UniformBufferTexture> _skyboxTextureUniform;
     std::unique_ptr<GraphicsShaderProgram> _shadowShaderProgram;
     std::unique_ptr<BindlessDescriptorSetWriter> _bindlessWriter;
 

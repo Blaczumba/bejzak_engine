@@ -63,7 +63,7 @@ public:
 	}
 };
 
-struct alignas(glm::vec4) PushConstantsPBR {
+struct PushConstantsPBR {
     uint32_t light;
     uint32_t diffuse;
     uint32_t normal;
@@ -73,9 +73,15 @@ struct alignas(glm::vec4) PushConstantsPBR {
     glm::mat4 model;
 };
 
-struct alignas(glm::vec4) PushConstantsShadow {
+struct PushConstantsShadow {
     glm::mat4 model;
     glm::mat4 lightProjView;
+};
+
+struct PushConstantsSkybox {
+    glm::mat4 proj;
+    glm::mat3x4 view;
+    uint32_t skyboxHandle;
 };
 
 
