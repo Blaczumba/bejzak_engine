@@ -199,7 +199,6 @@ Status SingleApp::createDescriptorSets() {
     ASSIGN_OR_RETURN(_dynamicUniformBuffersCamera, UniformBufferData<UniformBufferCamera>::create(*_logicalDevice, MAX_FRAMES_IN_FLIGHT));
 
     _skyboxTextureUniform = std::make_unique<UniformBufferTexture>(*_textureCubemap);
-    _shadowTextureUniform = std::make_unique<UniformBufferTexture>(*_shadowMap);
 
     ASSIGN_OR_RETURN(_pbrShaderProgram, ShaderProgramManager::createPBRProgram(*_logicalDevice));
     ASSIGN_OR_RETURN(_skyboxShaderProgram, ShaderProgramManager::createSkyboxProgram(*_logicalDevice));

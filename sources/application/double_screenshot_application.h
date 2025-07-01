@@ -72,7 +72,6 @@ class SingleApp : public ApplicationBase {
 
     std::unique_ptr<UniformBufferData<UniformBufferCamera>> _dynamicUniformBuffersCamera;
     std::unique_ptr<UniformBufferTexture> _skyboxTextureUniform;
-    std::unique_ptr<UniformBufferTexture> _shadowTextureUniform;
     std::unique_ptr<GraphicsShaderProgram> _shadowShaderProgram;
     std::unique_ptr<BindlessDescriptorSetWriter> _bindlessWriter;
 
