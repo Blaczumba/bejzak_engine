@@ -480,14 +480,13 @@ void SingleApp::recordOctreeSecondaryCommandBuffer(const VkCommandBuffer command
 
             const auto& transformComponent = _registry.getComponent<TransformComponent>(object->getEntity());
             const PushConstantsPBR pc = {
+                .model = transformComponent.model,
                 .light = (uint32_t)_lightHandle,
                 .diffuse = (uint32_t)meshComponent.diffuse,
                 .normal = (uint32_t)meshComponent.normal,
                 .metallicRoughness = (uint32_t)meshComponent.metallicRoughness,
                 .shadow = (uint32_t)_shadowHandle,
-                .model = transformComponent.model
             };
-
             vkCmdPushConstants(commandBuffer, _graphicsPipeline->getVkPipelineLayout(), VK_SHADER_STAGE_ALL, 0, sizeof(pc), &pc);
 
             static constexpr VkDeviceSize offsets[] = { 0 };

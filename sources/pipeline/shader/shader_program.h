@@ -64,13 +64,13 @@ public:
 };
 
 struct PushConstantsPBR {
+    glm::mat4 model;
     uint32_t light;
     uint32_t diffuse;
     uint32_t normal;
     uint32_t metallicRoughness;
     uint32_t shadow;
     uint32_t padding[3];
-    glm::mat4 model;
 };
 
 struct PushConstantsShadow {

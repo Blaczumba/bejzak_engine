@@ -1,6 +1,6 @@
 #version 450
 
-layout( push_constant ) uniform Constants {
+layout(push_constant) uniform Constants {
     mat4 model;
     mat4 lightProjView;
 

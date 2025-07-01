@@ -7,14 +7,13 @@ RegisterUniform(Light, { \
     vec3 pos; \
 });
 
-layout( push_constant ) uniform Constants {
+layout(push_constant) uniform Constants {
+    mat4 model;
     uint light;
     uint diffuse;
     uint normal;
     uint metallicRoughness;
     uint shadow;
-    uint padding[3];
-    mat4 model;
 
 } pushConstants;
 
