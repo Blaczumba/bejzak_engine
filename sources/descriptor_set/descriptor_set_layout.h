@@ -8,15 +8,12 @@
 #include <unordered_map>
 #include <vector>
 
-using DescriptorTypeCounterDict = std::unordered_map<VkDescriptorType, uint32_t>;
-
 class LogicalDevice;
 
 class DescriptorSetLayout {
 	VkDescriptorSetLayout _descriptorSetLayout = VK_NULL_HANDLE;
 	std::vector<VkDescriptorSetLayoutBinding> _bindings;
 	std::vector<VkDescriptorBindingFlags> _bindingFlags;
-	DescriptorTypeCounterDict _descriptorTypeOccurances;
 	uint8_t _binding;
 
 	const LogicalDevice* _logicalDevice;
@@ -36,5 +33,4 @@ public:
 
 	const VkDescriptorSetLayout& getVkDescriptorSetLayout() const;
 
-	const DescriptorTypeCounterDict& getDescriptorTypeCounter() const;
 };

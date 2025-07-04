@@ -10,7 +10,7 @@ DescriptorSetLayout::DescriptorSetLayout(const LogicalDevice& logicalDevice)
 
 DescriptorSetLayout::DescriptorSetLayout(DescriptorSetLayout&& layout) noexcept
     : _descriptorSetLayout(std::exchange(layout._descriptorSetLayout, VK_NULL_HANDLE)), _bindings(std::move(layout._bindings)),
-      _bindingFlags(std::move(layout._bindingFlags)), _descriptorTypeOccurances(std::move(layout._descriptorTypeOccurances)),
+      _bindingFlags(std::move(layout._bindingFlags)),
       _logicalDevice(layout._logicalDevice), _binding(0) {
 
 }
@@ -22,7 +22,6 @@ DescriptorSetLayout& DescriptorSetLayout::operator=(DescriptorSetLayout&& layout
     _descriptorSetLayout = std::exchange(layout._descriptorSetLayout, VK_NULL_HANDLE);
     _bindings = std::move(layout._bindings);
     _bindingFlags = std::move(layout._bindingFlags);
-    _descriptorTypeOccurances = std::move(layout._descriptorTypeOccurances);
     _logicalDevice = std::exchange(layout._logicalDevice, nullptr);
     _binding = layout._binding;
     return *this;
@@ -35,7 +34,6 @@ DescriptorSetLayout::~DescriptorSetLayout() {
 void DescriptorSetLayout::addLayoutBinding(VkDescriptorType descriptorType, VkShaderStageFlags stageFlags, uint32_t descriptorCount, VkDescriptorBindingFlags bindingFlags, const VkSampler* pImmutableSamplers) {
     _bindings.emplace_back(_binding++, descriptorType, descriptorCount, stageFlags, pImmutableSamplers);
     _bindingFlags.push_back(bindingFlags);
-    ++_descriptorTypeOccurances[descriptorType];
 }
 
 Status DescriptorSetLayout::build(VkDescriptorSetLayoutCreateFlags flags) {
@@ -68,8 +66,4 @@ Status DescriptorSetLayout::build(VkDescriptorSetLayoutCreateFlags flags) {
 
 const VkDescriptorSetLayout& DescriptorSetLayout::getVkDescriptorSetLayout() const {
     return _descriptorSetLayout;
-}
-
-const DescriptorTypeCounterDict& DescriptorSetLayout::getDescriptorTypeCounter() const {
-    return _descriptorTypeOccurances;
 }

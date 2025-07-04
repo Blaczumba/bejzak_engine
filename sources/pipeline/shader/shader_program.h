@@ -16,6 +16,10 @@
 class LogicalDevice;
 class PushConstants;
 
+enum class DescriptorSetType : uint8_t {
+    BINDLESS
+};
+
 class ShaderProgram {
 protected:
 	std::vector<DescriptorSetLayout> _descriptorSetLayouts;

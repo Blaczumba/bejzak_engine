@@ -19,12 +19,6 @@
       uniform Name Struct \
       GetLayoutVariableName(Name)[]
 
-// Register storage buffer
-//#define RegisterBuffer(Layout, BufferAccess, Name, Struct) \
-//  layout(Layout, set = BindlessDescriptorSet, \
-//         binding = BindlessStorageBinding) \
-//  BufferAccess buffer Name Struct GetLayoutVariableName(Name)[]
-
 // Access a specific resource
 #define GetResource(Name, Index) \
   GetLayoutVariableName(Name)[nonuniformEXT(Index)]

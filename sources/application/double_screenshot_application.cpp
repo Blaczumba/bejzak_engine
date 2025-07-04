@@ -173,6 +173,7 @@ Status SingleApp::loadObjects() {
         }
     }
     AABB sceneAABB = _registry.getComponent<MeshComponent>(_objects[0].getEntity()).aabb;
+
     for (int i = 1; i < _objects.size(); i++) {
         sceneAABB.extend(_registry.getComponent<MeshComponent>(_objects[i].getEntity()).aabb);
     }
@@ -252,8 +253,8 @@ Status SingleApp::createPresentResources() {
         VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
     );
     RETURN_IF_ERROR(_renderPass->build());
-
     _framebuffers.reserve(_swapchain->getImagesCount());
+
     for (uint8_t i = 0; i < _swapchain->getImagesCount(); ++i) {
         ASSIGN_OR_RETURN(auto framebuffer, Framebuffer::createFromSwapchain(*_renderPass, *_swapchain, *_singleTimeCommandPool, i));
         _framebuffers.push_back(std::move(framebuffer));
@@ -283,11 +284,10 @@ Status SingleApp::createShadowResources() {
     _shadowRenderPass = Renderpass::create(*_logicalDevice, attachmentLayout);
     RETURN_IF_ERROR(_shadowRenderPass->addSubpass({0}));
     RETURN_IF_ERROR(_shadowRenderPass->build());
-
     ASSIGN_OR_RETURN(_shadowFramebuffer, Framebuffer::createFromTextures(*_shadowRenderPass, { _shadowMap }));
 
     const GraphicsPipelineParameters parameters = {
-        .cullMode = VK_CULL_MODE_FRONT_BIT,
+        .cullMode = VK_CULL_MODE_BACK_BIT,
         .depthBiasConstantFactor = 0.7f,
         .depthBiasSlopeFactor = 2.0f,
     };
@@ -312,8 +312,8 @@ void SingleApp::run() {
         VkCommandBuffer commandBuffer = handle.getCommandBuffer();
         recordShadowCommandBuffer(commandBuffer, 0);
     }
-
     std::chrono::steady_clock::time_point previous;
+
     while (_window->open()) {
         float deltaTime = std::chrono::duration<float>(std::chrono::steady_clock::now() - previous).count();
         std::cout << 1.0f / deltaTime << std::endl;
@@ -342,8 +342,8 @@ void SingleApp::draw() {
 
     updateUniformBuffer(_currentFrame);
     vkResetFences(device, 1, &_inFlightFences[_currentFrame]);
-
     _primaryCommandBuffer[_currentFrame]->resetCommandBuffer();
+
     for(int i = 0; i < MAX_THREADS_IN_POOL; i++)
         _commandBuffers[_currentFrame][i]->resetCommandBuffer();
 
@@ -370,7 +370,6 @@ void SingleApp::draw() {
     if (vkQueueSubmit(_logicalDevice->getGraphicsQueue(), 1, &submitInfo, _inFlightFences[_currentFrame]) != VK_SUCCESS) {
         throw std::runtime_error("failed to submit draw command buffer!");
     }
-
     result = _swapchain->present(imageIndex, signalSemaphores[0]);
 
     if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR) {
@@ -391,7 +390,6 @@ VkFormat SingleApp::findDepthFormat() const {
         VK_FORMAT_D32_SFLOAT,
         VK_FORMAT_D32_SFLOAT_S8_UINT,
     };
-
     auto formatPtr = std::find_if(depthFormats.cbegin(), depthFormats.cend(), [&](VkFormat format) {
         return _physicalDevice->getPropertyManager().checkTextureFormatSupport(format, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
         });
@@ -399,7 +397,6 @@ VkFormat SingleApp::findDepthFormat() const {
     if (formatPtr == depthFormats.cend()) {
         throw std::runtime_error("failed to find depth format!");
     }
-
     return *formatPtr;
 }
 
@@ -409,11 +406,9 @@ void SingleApp::createSyncObjects() {
     _inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
 
     const VkDevice device = _logicalDevice->getVkDevice();
-
     const VkSemaphoreCreateInfo semaphoreInfo = {
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO
     };
-
     const VkFenceCreateInfo fenceInfo = {
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
         .flags = VK_FENCE_CREATE_SIGNALED_BIT
@@ -437,17 +432,19 @@ void SingleApp::updateUniformBuffer(uint32_t currentFrame) {
 
 void SingleApp::createCommandBuffers() {
     _commandPool.reserve(MAX_THREADS_IN_POOL + 1);
+
     for (int i = 0; i < MAX_THREADS_IN_POOL + 1; i++) {
         _commandPool.emplace_back(std::make_unique<CommandPool>(*_logicalDevice));
     }
-
     _primaryCommandBuffer.reserve(MAX_FRAMES_IN_FLIGHT);
     _commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
     _shadowCommandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
+
     for (int i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
         _primaryCommandBuffer.emplace_back(_commandPool[MAX_THREADS_IN_POOL]->createPrimaryCommandBuffer());
         _commandBuffers[i].reserve(MAX_THREADS_IN_POOL);
         _shadowCommandBuffers[i].reserve(MAX_THREADS_IN_POOL);
+
         for (int j = 0; j < MAX_THREADS_IN_POOL; j++) {
             _commandBuffers[i].emplace_back(_commandPool[j]->createSecondaryCommandBuffer());
             _shadowCommandBuffers[i].emplace_back(_commandPool[j]->createSecondaryCommandBuffer());
@@ -461,12 +458,6 @@ void SingleApp::recordOctreeSecondaryCommandBuffer(const VkCommandBuffer command
     static std::queue<const OctreeNode*> nodeQueue;
     nodeQueue.push(rootNode);
 
-    static constexpr OctreeNode::Subvolume options[] = {
-        OctreeNode::Subvolume::LOWER_LEFT_BACK, OctreeNode::Subvolume::LOWER_LEFT_FRONT,
-        OctreeNode::Subvolume::LOWER_RIGHT_BACK, OctreeNode::Subvolume::LOWER_RIGHT_FRONT,
-        OctreeNode::Subvolume::UPPER_LEFT_BACK, OctreeNode::Subvolume::UPPER_LEFT_FRONT,
-        OctreeNode::Subvolume::UPPER_RIGHT_BACK, OctreeNode::Subvolume::UPPER_RIGHT_FRONT
-    };
     _bindlessDescriptorSet.bind(commandBuffer, *_graphicsPipeline, 0);
     _dynamicDescriptorSet.bind(commandBuffer, *_graphicsPipeline, 1, { _currentFrame });
     while (!nodeQueue.empty()) {
@@ -494,6 +485,13 @@ void SingleApp::recordOctreeSecondaryCommandBuffer(const VkCommandBuffer command
             vkCmdBindIndexBuffer(commandBuffer, indexBuffer.getVkBuffer(), 0, meshComponent.indexType);
             vkCmdDrawIndexed(commandBuffer, indexBuffer.getSize() / getIndexSize(meshComponent.indexType), 1, 0, 0, 0);
         }
+
+        static constexpr OctreeNode::Subvolume options[] = {
+            OctreeNode::Subvolume::LOWER_LEFT_BACK, OctreeNode::Subvolume::LOWER_LEFT_FRONT,
+            OctreeNode::Subvolume::LOWER_RIGHT_BACK, OctreeNode::Subvolume::LOWER_RIGHT_FRONT,
+            OctreeNode::Subvolume::UPPER_LEFT_BACK, OctreeNode::Subvolume::UPPER_LEFT_FRONT,
+            OctreeNode::Subvolume::UPPER_RIGHT_BACK, OctreeNode::Subvolume::UPPER_RIGHT_FRONT
+        };
 
         for (auto option : options) {
             const OctreeNode* childNode = node->getChild(option);
