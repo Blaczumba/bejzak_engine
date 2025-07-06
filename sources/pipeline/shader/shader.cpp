@@ -3,12 +3,14 @@
 #include "lib/buffer/buffer.h"
 #include "logical_device/logical_device.h"
 
+#include <filesystem>
 #include <fstream>
+#include <string_view>
 
 namespace {
 
-ErrorOr<lib::Buffer<char>> readFile(const std::string& filename) {
-    std::ifstream file(filename, std::ios::ate | std::ios::binary);
+ErrorOr<lib::Buffer<char>> readFile(std::string_view filename) {
+    std::ifstream file(std::filesystem::path(SHADERS_PATH) / filename, std::ios::ate | std::ios::binary);
     if (!file.is_open()) {
         return Error(EngineError::LOAD_FAILURE);
     }
@@ -24,10 +26,10 @@ ErrorOr<lib::Buffer<char>> readFile(const std::string& filename) {
 } // namespace
 
 Shader::Shader(VkShaderModule shaderModule, const LogicalDevice& logicalDevice, VkShaderStageFlagBits shaderStage)
-    : _shaderModule(shaderModule), _logicalDevice(&logicalDevice), _shaderStage(shaderStage), _name("main") {
+    : _shaderModule(shaderModule), _logicalDevice(&logicalDevice), _shaderStage(shaderStage) {
 }
 
-ErrorOr<Shader> Shader::create(const LogicalDevice& logicalDevice, const std::string& shaderPath, VkShaderStageFlagBits shaderStage) {
+ErrorOr<Shader> Shader::create(const LogicalDevice& logicalDevice, std::string_view shaderPath, VkShaderStageFlagBits shaderStage) {
     ASSIGN_OR_RETURN(const lib::Buffer<char> shaderCode, readFile(shaderPath));
 
     VkShaderModuleCreateInfo createInfo = {
@@ -47,8 +49,7 @@ ErrorOr<Shader> Shader::create(const LogicalDevice& logicalDevice, const std::st
 Shader::Shader(Shader&& other) noexcept
     : _shaderModule(std::exchange(other._shaderModule, VK_NULL_HANDLE)),
     _logicalDevice(other._logicalDevice),
-    _shaderStage(other._shaderStage),
-    _name(std::move(other._name)) {
+    _shaderStage(other._shaderStage) {
 }
 
 Shader& Shader::operator=(Shader&& other) noexcept {
@@ -58,7 +59,6 @@ Shader& Shader::operator=(Shader&& other) noexcept {
     _shaderModule = std::exchange(other._shaderModule, VK_NULL_HANDLE);
     _logicalDevice = other._logicalDevice;
     _shaderStage = other._shaderStage;
-    _name = std::move(other._name);
 }
 
 Shader::~Shader() {
@@ -68,11 +68,12 @@ Shader::~Shader() {
 }
 
 VkPipelineShaderStageCreateInfo Shader::getVkPipelineStageCreateInfo() const {
+    static constexpr std::string_view pname = "main";
     return VkPipelineShaderStageCreateInfo{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
         .stage = _shaderStage,
         .module = _shaderModule,
-        .pName = _name.data()
+        .pName = pname.data()
     };
 }
 

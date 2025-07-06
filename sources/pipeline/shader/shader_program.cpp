@@ -10,7 +10,7 @@
 #include <iterator>
 #include <memory>
 
-ShaderProgram::ShaderProgram(const ShaderProgramManager& shaderProgramManager, std::vector<Shader>&& shaders, std::vector<DescriptorSetType>&& descriptorSetLayouts, std::span<const VkPushConstantRange> pushConstantRange)
+ShaderProgram::ShaderProgram(const ShaderProgramManager& shaderProgramManager, std::vector<std::string_view>&& shaders, std::vector<DescriptorSetType>&& descriptorSetLayouts, std::span<const VkPushConstantRange> pushConstantRange)
     : _shaderProgramManager(shaderProgramManager), _shaders(std::move(shaders)), _descriptorSetLayouts(std::move(descriptorSetLayouts)), _pushConstants(pushConstantRange.cbegin(), pushConstantRange.cend()) {}
 
 std::vector<VkDescriptorSetLayout> ShaderProgram::getVkDescriptorSetLayouts() const {
@@ -23,8 +23,10 @@ std::span<const DescriptorSetType> ShaderProgram::getDescriptorSetLayouts() cons
     return _descriptorSetLayouts;
 }
 
-std::span<const Shader> ShaderProgram::getShaders() const {
-    return _shaders;
+std::vector<VkPipelineShaderStageCreateInfo> ShaderProgram::getShaders() const {
+    std::vector<VkPipelineShaderStageCreateInfo> shaders;
+    std::transform(_shaders.cbegin(), _shaders.cend(), std::back_inserter(shaders), [this](std::string_view shaderPath) { return _shaderProgramManager.getShader(shaderPath)->getVkPipelineStageCreateInfo(); });
+    return shaders;
 }
 
 std::span<const VkPushConstantRange> ShaderProgram::getPushConstants() const {
@@ -32,12 +34,12 @@ std::span<const VkPushConstantRange> ShaderProgram::getPushConstants() const {
 }
 
 ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramManager::createPBRProgram() {
-    ASSIGN_OR_RETURN(Shader vertexShader, Shader::create(_logicalDevice, SHADERS_PATH "shader_pbr.vert.spv", VK_SHADER_STAGE_VERTEX_BIT));
-    ASSIGN_OR_RETURN(Shader fragmentShader, Shader::create(_logicalDevice, SHADERS_PATH "shader_pbr.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
-    std::vector<Shader> shaders;
-    shaders.reserve(2);
-    shaders.push_back(std::move(vertexShader));
-    shaders.push_back(std::move(fragmentShader));
+    static constexpr std::string_view vertexShaderPath = "shader_pbr.vert.spv";
+    static constexpr std::string_view fragmentShaderPath = "shader_pbr.frag.spv";
+    ASSIGN_OR_RETURN(Shader vertexShader, Shader::create(_logicalDevice, vertexShaderPath, VK_SHADER_STAGE_VERTEX_BIT));
+    ASSIGN_OR_RETURN(Shader fragmentShader, Shader::create(_logicalDevice, fragmentShaderPath, VK_SHADER_STAGE_FRAGMENT_BIT));
+    _shaders.emplace(vertexShaderPath, std::move(vertexShader));
+    _shaders.emplace(fragmentShaderPath, std::move(fragmentShader));
 
     PushConstants pushConstants(_logicalDevice.getPhysicalDevice());
     pushConstants.addPushConstant<PushConstantsPBR>(VK_SHADER_STAGE_ALL);
@@ -45,38 +47,38 @@ ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramManager::createPBRP
     ASSIGN_OR_RETURN(DescriptorSetType bindlessLayout, getOrCreateBindlessLayout());
     ASSIGN_OR_RETURN(DescriptorSetType cameraLayout, getOrCreateCameraLayout());
 
-    return GraphicsShaderProgram::create<VertexPTNT>(*this, std::move(shaders), std::vector{bindlessLayout, cameraLayout}, pushConstants.getVkPushConstantRange());
+    return GraphicsShaderProgram::create<VertexPTNT>(*this, std::vector{ vertexShaderPath, fragmentShaderPath }, std::vector{bindlessLayout, cameraLayout}, pushConstants.getVkPushConstantRange());
 }
 
 ShaderProgramManager::ShaderProgramManager(const LogicalDevice& logicalDevice) : _logicalDevice(logicalDevice) { }
 
 ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramManager::createSkyboxProgram() {
-    ASSIGN_OR_RETURN(Shader vertexShader, Shader::create(_logicalDevice, SHADERS_PATH "skybox.vert.spv", VK_SHADER_STAGE_VERTEX_BIT));
-    ASSIGN_OR_RETURN(Shader fragmentShader, Shader::create(_logicalDevice, SHADERS_PATH "skybox.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
-    std::vector<Shader> shaders;
-    shaders.reserve(2);
-    shaders.push_back(std::move(vertexShader));
-    shaders.push_back(std::move(fragmentShader));
+    static constexpr std::string_view vertexShaderPath = "skybox.vert.spv";
+    static constexpr std::string_view fragmentShaderPath = "skybox.frag.spv";
+    ASSIGN_OR_RETURN(Shader vertexShader, Shader::create(_logicalDevice, vertexShaderPath, VK_SHADER_STAGE_VERTEX_BIT));
+    ASSIGN_OR_RETURN(Shader fragmentShader, Shader::create(_logicalDevice, fragmentShaderPath, VK_SHADER_STAGE_FRAGMENT_BIT));
+    _shaders.emplace(vertexShaderPath, std::move(vertexShader));
+    _shaders.emplace(fragmentShaderPath, std::move(fragmentShader));
 
     PushConstants pushConstants(_logicalDevice.getPhysicalDevice());
     pushConstants.addPushConstant<PushConstantsSkybox>(VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
 
     ASSIGN_OR_RETURN(DescriptorSetType bindlessLayout, getOrCreateBindlessLayout());
 
-    return GraphicsShaderProgram::create<VertexP>(*this, std::move(shaders), std::vector{ bindlessLayout }, pushConstants.getVkPushConstantRange());
+    return GraphicsShaderProgram::create<VertexP>(*this, std::vector{ vertexShaderPath, fragmentShaderPath }, std::vector{ bindlessLayout }, pushConstants.getVkPushConstantRange());
 }
 
 ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramManager::createShadowProgram() {
-    ASSIGN_OR_RETURN(Shader vertexShader, Shader::create(_logicalDevice, SHADERS_PATH "shadow.vert.spv", VK_SHADER_STAGE_VERTEX_BIT));
-    ASSIGN_OR_RETURN(Shader fragmentShader, Shader::create(_logicalDevice, SHADERS_PATH "shadow.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT));
-    std::vector<Shader> shaders;
-    shaders.reserve(2);
-    shaders.push_back(std::move(vertexShader));
-    shaders.push_back(std::move(fragmentShader));
+    static constexpr std::string_view vertexShaderPath = "shadow.vert.spv";
+    static constexpr std::string_view fragmentShaderPath = "shadow.frag.spv";
+    ASSIGN_OR_RETURN(Shader vertexShader, Shader::create(_logicalDevice, vertexShaderPath, VK_SHADER_STAGE_VERTEX_BIT));
+    ASSIGN_OR_RETURN(Shader fragmentShader, Shader::create(_logicalDevice, fragmentShaderPath, VK_SHADER_STAGE_FRAGMENT_BIT));
+    _shaders.emplace(vertexShaderPath, std::move(vertexShader));
+    _shaders.emplace(fragmentShaderPath, std::move(fragmentShader));
 
     PushConstants pushConstants(_logicalDevice.getPhysicalDevice());
     pushConstants.addPushConstant<PushConstantsShadow>(VK_SHADER_STAGE_VERTEX_BIT);
-    return GraphicsShaderProgram::create<VertexP>(*this, std::move(shaders), {}, pushConstants.getVkPushConstantRange());
+    return GraphicsShaderProgram::create<VertexP>(*this, std::vector{ vertexShaderPath, fragmentShaderPath }, {}, pushConstants.getVkPushConstantRange());
 }
 
 const VkDescriptorSetLayout ShaderProgramManager::getVkDescriptorSetLayout(DescriptorSetType type) const {
@@ -85,6 +87,10 @@ const VkDescriptorSetLayout ShaderProgramManager::getVkDescriptorSetLayout(Descr
 
 const DescriptorSetLayout* ShaderProgramManager::getDescriptorSetLayout(DescriptorSetType type) const {
     return &_descriptorSetLayouts.find(type)->second;
+}
+
+const Shader* ShaderProgramManager::getShader(std::string_view shaderPath) const {
+    return &_shaders.find(shaderPath)->second;
 }
 
 ErrorOr<DescriptorSetType> ShaderProgramManager::getOrCreateBindlessLayout() {

@@ -34,9 +34,7 @@ public:
     GraphicsPipeline(const Renderpass& renderpass, const GraphicsShaderProgram& shaderProgram, const GraphicsPipelineParameters& parameters)
         : Pipeline(VK_PIPELINE_BIND_POINT_GRAPHICS), _renderpass(renderpass), _shaderProgram(shaderProgram), _parameters(parameters) {
         const VkDevice device = _renderpass.getLogicalDevice().getVkDevice();
-        std::span<const Shader> shaders = _shaderProgram.getShaders();
-        lib::Buffer<VkPipelineShaderStageCreateInfo> shaderStages(shaders.size());
-        std::transform(shaders.cbegin(), shaders.cend(), shaderStages.begin(), [](const Shader& shader) { return shader.getVkPipelineStageCreateInfo(); });
+        std::vector<VkPipelineShaderStageCreateInfo> shaders = _shaderProgram.getShaders();
 
         const VkPipelineVertexInputStateCreateInfo& vertexInputInfo = shaderProgram.getVkPipelineVertexInputStateCreateInfo();
 
@@ -133,8 +131,8 @@ public:
 
         VkGraphicsPipelineCreateInfo pipelineInfo{};
         pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        pipelineInfo.stageCount = static_cast<uint32_t>(shaderStages.size());
-        pipelineInfo.pStages = shaderStages.data();
+        pipelineInfo.stageCount = static_cast<uint32_t>(shaders.size());
+        pipelineInfo.pStages = shaders.data();
         pipelineInfo.pVertexInputState = &vertexInputInfo;
         pipelineInfo.pInputAssemblyState = &inputAssembly;
         pipelineInfo.pTessellationState = _parameters.patchControlPoints.has_value() ? &tessellationState : nullptr;

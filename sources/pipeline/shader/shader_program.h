@@ -33,6 +33,8 @@ public:
 
     const VkDescriptorSetLayout getVkDescriptorSetLayout(DescriptorSetType type) const;
 
+    const Shader* getShader(std::string_view shaderPath) const;
+
     const DescriptorSetLayout* getDescriptorSetLayout(DescriptorSetType type) const;
 
     ErrorOr<std::unique_ptr<GraphicsShaderProgram>> createPBRProgram();
@@ -52,15 +54,15 @@ private:
 class ShaderProgram {
 protected:
 	std::vector<DescriptorSetType> _descriptorSetLayouts;   // TODO: std::inplace_vector<DescriptorSetType, 4>
-	std::vector<Shader> _shaders;
+	std::vector<std::string_view> _shaders;
 	std::vector<VkPushConstantRange> _pushConstants;
 
 	const ShaderProgramManager& _shaderProgramManager;
 
 public:
-	ShaderProgram(const ShaderProgramManager& shaderProgramManager, std::vector<Shader>&& shaders, std::vector<DescriptorSetType>&& descriptorSetLayouts, std::span<const VkPushConstantRange> pushConstantRange);
+	ShaderProgram(const ShaderProgramManager& shaderProgramManager, std::vector<std::string_view>&& shaders, std::vector<DescriptorSetType>&& descriptorSetLayouts, std::span<const VkPushConstantRange> pushConstantRange);
 
-    std::span<const Shader> getShaders() const;
+    std::vector<VkPipelineShaderStageCreateInfo> getShaders() const;
 
     std::vector<VkDescriptorSetLayout> getVkDescriptorSetLayouts() const;
 
@@ -73,13 +75,13 @@ class GraphicsShaderProgram : public ShaderProgram {
 private:
 	VkPipelineVertexInputStateCreateInfo _vertexInputInfo;
 
-    GraphicsShaderProgram(const ShaderProgramManager& shaderProgramManager, std::vector<Shader>&& shaders, std::vector<DescriptorSetType>&& descriptorSetLayouts, const VkPipelineVertexInputStateCreateInfo& vertexInputInfo, std::span<const VkPushConstantRange> pushConstantRange)
+    GraphicsShaderProgram(const ShaderProgramManager& shaderProgramManager, std::vector<std::string_view>&& shaders, std::vector<DescriptorSetType>&& descriptorSetLayouts, const VkPipelineVertexInputStateCreateInfo& vertexInputInfo, std::span<const VkPushConstantRange> pushConstantRange)
         : ShaderProgram(shaderProgramManager, std::move(shaders), std::move(descriptorSetLayouts), pushConstantRange), _vertexInputInfo(vertexInputInfo) {
     }
 
 public:
     template<typename VertexType>
-    static std::unique_ptr<GraphicsShaderProgram> create(const ShaderProgramManager& shaderProgramManager, std::vector<Shader>&& shaders, std::vector<DescriptorSetType>&& descriptorSetLayouts, std::span<const VkPushConstantRange> pushConstantRange = {}) {
+    static std::unique_ptr<GraphicsShaderProgram> create(const ShaderProgramManager& shaderProgramManager, std::vector<std::string_view>&& shaders, std::vector<DescriptorSetType>&& descriptorSetLayouts, std::span<const VkPushConstantRange> pushConstantRange = {}) {
         static constexpr VkVertexInputBindingDescription bindingDescription = getBindingDescription<VertexType>();
         static constexpr auto attributeDescriptions = getAttributeDescriptions<VertexType>();
         const VkPipelineVertexInputStateCreateInfo vertexInputInfo = VkPipelineVertexInputStateCreateInfo{
