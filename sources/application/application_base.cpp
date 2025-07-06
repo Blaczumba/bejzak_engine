@@ -18,6 +18,7 @@ ApplicationBase::ApplicationBase() {
 	_surface = _window->createSurface(*_instance).value();
 	_physicalDevice = PhysicalDevice::create(*_surface).value();
 	_logicalDevice = LogicalDevice::create(*_physicalDevice).value();
+	_programManager = std::make_unique<ShaderProgramManager>(*_logicalDevice);
 	_swapchain = Swapchain::create(*_logicalDevice).value();
 
 	_singleTimeCommandPool = std::make_unique<CommandPool>(*_logicalDevice);

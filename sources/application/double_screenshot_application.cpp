@@ -199,20 +199,17 @@ Status SingleApp::createDescriptorSets() {
 
     ASSIGN_OR_RETURN(_dynamicUniformBuffersCamera, UniformBufferData<UniformBufferCamera>::create(*_logicalDevice, MAX_FRAMES_IN_FLIGHT));
 
-    ASSIGN_OR_RETURN(_pbrShaderProgram, ShaderProgramManager::createPBRProgram(*_logicalDevice));
-    ASSIGN_OR_RETURN(_skyboxShaderProgram, ShaderProgramManager::createSkyboxProgram(*_logicalDevice));
-    ASSIGN_OR_RETURN(_shadowShaderProgram, ShaderProgramManager::createShadowProgram(*_logicalDevice));
+    ASSIGN_OR_RETURN(_pbrShaderProgram, _programManager->createPBRProgram());
+    ASSIGN_OR_RETURN(_skyboxShaderProgram, _programManager->createSkyboxProgram());
+    ASSIGN_OR_RETURN(_shadowShaderProgram, _programManager->createShadowProgram());
     
     ASSIGN_OR_RETURN(_descriptorPool, DescriptorPool::create(*_logicalDevice, 150, VK_DESCRIPTOR_POOL_CREATE_UPDATE_AFTER_BIND_BIT));
     ASSIGN_OR_RETURN(_dynamicDescriptorPool, DescriptorPool::create(*_logicalDevice, 1));
     ASSIGN_OR_RETURN(_descriptorPoolSkybox, DescriptorPool::create(*_logicalDevice, 1));
 
-    std::span<const DescriptorSetLayout> layouts = _skyboxShaderProgram->getDescriptorSetLayouts();
-    layouts = _shadowShaderProgram->getDescriptorSetLayouts();
-
-    std::span<const DescriptorSetLayout> pbrLayouts = _pbrShaderProgram->getDescriptorSetLayouts();
-    ASSIGN_OR_RETURN(_bindlessDescriptorSet, _descriptorPool->createDesriptorSet(pbrLayouts[0]));
-    ASSIGN_OR_RETURN(_dynamicDescriptorSet, _dynamicDescriptorPool->createDesriptorSet(pbrLayouts[1]));
+    std::span<const DescriptorSetType> pbrLayouts = _pbrShaderProgram->getDescriptorSetLayouts();
+    ASSIGN_OR_RETURN(_bindlessDescriptorSet, _descriptorPool->createDesriptorSet(*_programManager->getDescriptorSetLayout(pbrLayouts[0])));
+    ASSIGN_OR_RETURN(_dynamicDescriptorSet, _dynamicDescriptorPool->createDesriptorSet(*_programManager->getDescriptorSetLayout(pbrLayouts[1])));
     _bindlessWriter = std::make_unique<BindlessDescriptorSetWriter>(_bindlessDescriptorSet);
     _shadowHandle = _bindlessWriter->storeTexture(*_shadowMap);
     _skyboxHandle = _bindlessWriter->storeTexture(*_textureCubemap);

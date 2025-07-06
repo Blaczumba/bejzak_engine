@@ -7,6 +7,7 @@
 #include <physical_device/physical_device.h>
 #include <swapchain/swapchain.h>
 #include <window/window.h>
+#include <pipeline/shader/shader_program.h>
 
 class ApplicationBase {
 protected:
@@ -20,6 +21,7 @@ protected:
     std::unique_ptr<LogicalDevice> _logicalDevice;
     std::unique_ptr<Swapchain> _swapchain;
     std::unique_ptr<CommandPool> _singleTimeCommandPool;
+    std::unique_ptr<ShaderProgramManager> _programManager;
 
 public:
     ApplicationBase();

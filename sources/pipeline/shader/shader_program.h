@@ -15,25 +15,52 @@
 
 class LogicalDevice;
 class PushConstants;
+class DescriptorSetLayout;
+class GraphicsShaderProgram;
 
 enum class DescriptorSetType : uint8_t {
-    BINDLESS
+    BINDLESS,
+    CAMERA
+};
+
+class ShaderProgramManager {
+    std::unordered_map<std::string_view, Shader> _shaders;
+    std::unordered_map<DescriptorSetType, DescriptorSetLayout> _descriptorSetLayouts;
+    const LogicalDevice& _logicalDevice;
+
+    ErrorOr<DescriptorSetType> getOrCreateBindlessLayout();
+    ErrorOr<DescriptorSetType> getOrCreateCameraLayout();
+
+public:
+    ShaderProgramManager(const LogicalDevice& logicalDevice);
+
+    const VkDescriptorSetLayout getVkDescriptorSetLayout(DescriptorSetType type) const;
+
+    const DescriptorSetLayout* getDescriptorSetLayout(DescriptorSetType type) const;
+
+    ErrorOr<std::unique_ptr<GraphicsShaderProgram>> createPBRProgram();
+    ErrorOr<std::unique_ptr<GraphicsShaderProgram>> createSkyboxProgram();
+    ErrorOr<std::unique_ptr<GraphicsShaderProgram>> createShadowProgram();
+
+    const LogicalDevice& getLogicalDevice() const;
 };
 
 class ShaderProgram {
 protected:
-	std::vector<DescriptorSetLayout> _descriptorSetLayouts;
+	std::vector<DescriptorSetType> _descriptorSetLayouts;   // TODO: std::inplace_vector<DescriptorSetType, 4>
 	std::vector<Shader> _shaders;
 	std::vector<VkPushConstantRange> _pushConstants;
 
-	const LogicalDevice& _logicalDevice;
+	const ShaderProgramManager& _shaderProgramManager;
 
 public:
-	ShaderProgram(const LogicalDevice& logicalDevice, std::vector<Shader>&& shaders, std::vector<DescriptorSetLayout>&& descriptorSetLayouts, std::span<const VkPushConstantRange> pushConstantRange);
+	ShaderProgram(const ShaderProgramManager& shaderProgramManager, std::vector<Shader>&& shaders, std::vector<DescriptorSetType>&& descriptorSetLayouts, std::span<const VkPushConstantRange> pushConstantRange);
 
     std::span<const Shader> getShaders() const;
 
-    std::span<const DescriptorSetLayout> getDescriptorSetLayouts() const;
+    std::vector<VkDescriptorSetLayout> getVkDescriptorSetLayouts() const;
+
+    std::span<const DescriptorSetType> getDescriptorSetLayouts() const;
 
 	std::span<const VkPushConstantRange> getPushConstants() const;
 };
@@ -42,13 +69,13 @@ class GraphicsShaderProgram : public ShaderProgram {
 private:
 	VkPipelineVertexInputStateCreateInfo _vertexInputInfo;
 
-    GraphicsShaderProgram(const LogicalDevice& logicalDevice, std::vector<Shader>&& shaders, std::vector<DescriptorSetLayout>&& descriptorSetLayouts, const VkPipelineVertexInputStateCreateInfo& vertexInputInfo, std::span<const VkPushConstantRange> pushConstantRange)
-        : ShaderProgram(logicalDevice, std::move(shaders), std::move(descriptorSetLayouts), pushConstantRange), _vertexInputInfo(vertexInputInfo) {
+    GraphicsShaderProgram(const ShaderProgramManager& shaderProgramManager, std::vector<Shader>&& shaders, std::vector<DescriptorSetType>&& descriptorSetLayouts, const VkPipelineVertexInputStateCreateInfo& vertexInputInfo, std::span<const VkPushConstantRange> pushConstantRange)
+        : ShaderProgram(shaderProgramManager, std::move(shaders), std::move(descriptorSetLayouts), pushConstantRange), _vertexInputInfo(vertexInputInfo) {
     }
 
 public:
     template<typename VertexType>
-    static std::unique_ptr<GraphicsShaderProgram> create(const LogicalDevice& logicalDevice, std::vector<Shader>&& shaders, std::vector<DescriptorSetLayout>&& descriptorSetLayouts, std::span<const VkPushConstantRange> pushConstantRange = {}) {
+    static std::unique_ptr<GraphicsShaderProgram> create(const ShaderProgramManager& shaderProgramManager, std::vector<Shader>&& shaders, std::vector<DescriptorSetType>&& descriptorSetLayouts, std::span<const VkPushConstantRange> pushConstantRange = {}) {
         static constexpr VkVertexInputBindingDescription bindingDescription = getBindingDescription<VertexType>();
         static constexpr auto attributeDescriptions = getAttributeDescriptions<VertexType>();
         const VkPipelineVertexInputStateCreateInfo vertexInputInfo = VkPipelineVertexInputStateCreateInfo{
@@ -58,7 +85,7 @@ public:
             .vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size()),
             .pVertexAttributeDescriptions = attributeDescriptions.data()
         };
-        return std::unique_ptr<GraphicsShaderProgram>(new GraphicsShaderProgram(logicalDevice, std::move(shaders), std::move(descriptorSetLayouts), vertexInputInfo, pushConstantRange));
+        return std::unique_ptr<GraphicsShaderProgram>(new GraphicsShaderProgram(shaderProgramManager, std::move(shaders), std::move(descriptorSetLayouts), vertexInputInfo, pushConstantRange));
     }
 
 
@@ -86,16 +113,4 @@ struct PushConstantsSkybox {
     glm::mat4 proj;
     glm::mat3x4 view;
     uint32_t skyboxHandle;
-};
-
-
-class ShaderProgramManager {
-public:
-    static ErrorOr<std::unique_ptr<GraphicsShaderProgram>> createNormalMappingProgram(const LogicalDevice& logicalDevice);
-    static ErrorOr<std::unique_ptr<GraphicsShaderProgram>> createPBRProgram(const LogicalDevice& logicalDevice);
-    static ErrorOr<std::unique_ptr<GraphicsShaderProgram>> createPBRTesselationProgram(const LogicalDevice& logicalDevice);
-    static ErrorOr<std::unique_ptr<GraphicsShaderProgram>> createSkyboxProgram(const LogicalDevice& logicalDevice);
-    static ErrorOr<std::unique_ptr<GraphicsShaderProgram>> createShadowProgram(const LogicalDevice& logicalDevice);
-    static ErrorOr<std::unique_ptr<GraphicsShaderProgram>> createSkyboxOffscreenProgram(const LogicalDevice& logicalDevice);
-    static ErrorOr<std::unique_ptr<GraphicsShaderProgram>> createPBROffscreenProgram(const LogicalDevice& logicalDevice);
 };
