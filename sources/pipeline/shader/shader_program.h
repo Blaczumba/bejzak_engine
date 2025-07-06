@@ -28,9 +28,6 @@ class ShaderProgramManager {
     std::unordered_map<DescriptorSetType, DescriptorSetLayout> _descriptorSetLayouts;
     const LogicalDevice& _logicalDevice;
 
-    ErrorOr<DescriptorSetType> getOrCreateBindlessLayout();
-    ErrorOr<DescriptorSetType> getOrCreateCameraLayout();
-
 public:
     ShaderProgramManager(const LogicalDevice& logicalDevice);
 
@@ -39,10 +36,17 @@ public:
     const DescriptorSetLayout* getDescriptorSetLayout(DescriptorSetType type) const;
 
     ErrorOr<std::unique_ptr<GraphicsShaderProgram>> createPBRProgram();
+
     ErrorOr<std::unique_ptr<GraphicsShaderProgram>> createSkyboxProgram();
+
     ErrorOr<std::unique_ptr<GraphicsShaderProgram>> createShadowProgram();
 
     const LogicalDevice& getLogicalDevice() const;
+
+private:
+    ErrorOr<DescriptorSetType> getOrCreateBindlessLayout();
+
+    ErrorOr<DescriptorSetType> getOrCreateCameraLayout();
 };
 
 class ShaderProgram {

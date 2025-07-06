@@ -4,33 +4,25 @@
 
 #include <vulkan/vulkan.h>
 
-#include <memory>
-#include <unordered_map>
-#include <vector>
+#include <span>
 
 class LogicalDevice;
 
 class DescriptorSetLayout {
 	VkDescriptorSetLayout _descriptorSetLayout = VK_NULL_HANDLE;
-	std::vector<VkDescriptorSetLayoutBinding> _bindings;
-	std::vector<VkDescriptorBindingFlags> _bindingFlags;
-	uint8_t _binding;
 
 	const LogicalDevice* _logicalDevice;
 
-public:
-	DescriptorSetLayout(const LogicalDevice& logicalDevice);
+	DescriptorSetLayout(const LogicalDevice& logicalDevice, const VkDescriptorSetLayout layout);
 
+public:
 	DescriptorSetLayout(DescriptorSetLayout&& layout) noexcept;
 
 	DescriptorSetLayout& operator=(DescriptorSetLayout&& layout) noexcept;
 
 	~DescriptorSetLayout();
 
-	Status build(VkDescriptorSetLayoutCreateFlags flags = {});
-
-	void addLayoutBinding(VkDescriptorType descriptorType, VkShaderStageFlags stageFlags, uint32_t descriptorCount = 1, VkDescriptorBindingFlags bindingFlags = {}, const VkSampler* pImmutableSamplers = nullptr);
+	static ErrorOr<DescriptorSetLayout> create(const LogicalDevice& logicalDevice, std::span<const VkDescriptorSetLayoutBinding> bindings, std::span<const VkDescriptorBindingFlags> bindingFlags = {}, VkDescriptorSetLayoutCreateFlags flags = 0);
 
 	const VkDescriptorSetLayout& getVkDescriptorSetLayout() const;
-
 };

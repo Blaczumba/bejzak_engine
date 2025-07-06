@@ -92,12 +92,24 @@ ErrorOr<DescriptorSetType> ShaderProgramManager::getOrCreateBindlessLayout() {
     if (auto it = _descriptorSetLayouts.find(layoutType); it != _descriptorSetLayouts.cend()) {
         return it->first;
     }
-    DescriptorSetLayout bindlessDescriptorSetLayout(_logicalDevice);
-    VkDescriptorBindingFlags flags{ VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT };
-    bindlessDescriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, VK_SHADER_STAGE_ALL, 200, flags);
-    bindlessDescriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, VK_SHADER_STAGE_ALL, 200, flags);
-    RETURN_IF_ERROR(bindlessDescriptorSetLayout.build(VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT));
-    _descriptorSetLayouts.emplace(layoutType, std::move(bindlessDescriptorSetLayout));
+    static constexpr VkDescriptorSetLayoutBinding bindings[] = {
+        {
+            .binding = 0,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            .descriptorCount = 200,
+            .stageFlags = VK_SHADER_STAGE_ALL,
+        },
+        {
+            .binding = 1,
+            .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            .descriptorCount = 200,
+            .stageFlags = VK_SHADER_STAGE_ALL,
+        }
+    };
+    static constexpr VkDescriptorBindingFlags flags{ VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT };
+    static constexpr VkDescriptorBindingFlags bindingFlags[] = { flags, flags };
+    ASSIGN_OR_RETURN(DescriptorSetLayout layout, DescriptorSetLayout::create(_logicalDevice, bindings, bindingFlags, VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT));
+    _descriptorSetLayouts.emplace(layoutType, std::move(layout));
     return layoutType;
 }
 
@@ -106,10 +118,16 @@ ErrorOr<DescriptorSetType> ShaderProgramManager::getOrCreateCameraLayout() {
     if (auto it = _descriptorSetLayouts.find(layoutType); it != _descriptorSetLayouts.cend()) {
         return it->first;
     }
-    DescriptorSetLayout descriptorSetLayout(_logicalDevice);
-    descriptorSetLayout.addLayoutBinding(VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT);
-    RETURN_IF_ERROR(descriptorSetLayout.build());
-    _descriptorSetLayouts.emplace(layoutType, std::move(descriptorSetLayout));
+    static constexpr VkDescriptorSetLayoutBinding bindings[] = {
+        {
+            .binding = 0,
+            .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+            .descriptorCount = 1,
+            .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
+        },
+    };
+    ASSIGN_OR_RETURN(DescriptorSetLayout layout, DescriptorSetLayout::create(_logicalDevice, bindings));
+    _descriptorSetLayouts.emplace(layoutType, std::move(layout));
     return layoutType;
 }
 
