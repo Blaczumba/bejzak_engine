@@ -63,6 +63,10 @@ uint32_t getIndexSize(VkIndexType type) {
     return 0;
 }
 
+static VkDeviceSize memoryAlignment(size_t size, size_t minUboAlignment) {
+    return minUboAlignment > 0 ? (size + minUboAlignment - 1) & ~(minUboAlignment - 1) : size;
+}
+
 void SingleApp::setInput() {
     if (MouseKeyboardManager* manager = _window->getMouseKeyboardManager(); manager != nullptr) {
         // manager->absorbCursor();
@@ -197,7 +201,9 @@ Status SingleApp::createDescriptorSets() {
         ASSIGN_OR_RETURN(_shadowMap, Texture::create2DShadowmap(*_logicalDevice, commandBuffer, 1024 * 2, 1024 * 2, VK_FORMAT_D32_SFLOAT));
     }
 
-    ASSIGN_OR_RETURN(_dynamicUniformBuffersCamera, UniformBufferData<UniformBufferCamera>::create(*_logicalDevice, MAX_FRAMES_IN_FLIGHT));
+    const auto& limits = _logicalDevice->getPhysicalDevice().getPropertyManager().getPhysicalDeviceLimits();
+    const uint32_t size = getMemoryAlignment(sizeof(UniformBufferCamera), limits.minUniformBufferOffsetAlignment);
+    ASSIGN_OR_RETURN(_dynamicUniformBuffersCamera, Buffer::createUniformBuffer(*_logicalDevice, MAX_FRAMES_IN_FLIGHT * size));
 
     ASSIGN_OR_RETURN(_pbrShaderProgram, _programManager->createPBRProgram());
     ASSIGN_OR_RETURN(_skyboxShaderProgram, _programManager->createSkyboxProgram());
@@ -213,7 +219,8 @@ Status SingleApp::createDescriptorSets() {
     _shadowHandle = _bindlessWriter->storeTexture(*_shadowMap);
     _skyboxHandle = _bindlessWriter->storeTexture(*_textureCubemap);
 
-    _dynamicDescriptorSet.writeDescriptorSet({ _dynamicUniformBuffersCamera.get() });
+    _dynamicDescriptorSetWriter.storeDynamicBuffer(_dynamicUniformBuffersCamera, size);
+    _dynamicDescriptorSetWriter.writeDescriptorSet(_logicalDevice->getVkDevice(), _dynamicDescriptorSet.getVkDescriptorSet());
 
     ASSIGN_OR_RETURN(_lightBuffer, Buffer::createUniformBuffer(*_logicalDevice, sizeof(_ubLight)));
     _lightHandle = _bindlessWriter->storeBuffer(_lightBuffer);
@@ -427,7 +434,7 @@ void SingleApp::updateUniformBuffer(uint32_t currentFrame) {
     _ubCamera.view = _camera->getViewMatrix();
     _ubCamera.proj = _camera->getProjectionMatrix();
     _ubCamera.pos = _camera->getPosition();
-    _dynamicUniformBuffersCamera->updateUniformBuffer(_ubCamera, currentFrame);
+    _dynamicUniformBuffersCamera.copyData(_ubCamera, currentFrame * memoryAlignment(sizeof(UniformBufferCamera), _logicalDevice->getPhysicalDevice().getPropertyManager().getPhysicalDeviceLimits().minUniformBufferOffsetAlignment));
 }
 
 void SingleApp::createCommandBuffers() {
@@ -459,7 +466,11 @@ void SingleApp::recordOctreeSecondaryCommandBuffer(const VkCommandBuffer command
     nodeQueue.push(rootNode);
 
     _bindlessDescriptorSet.bind(commandBuffer, *_graphicsPipeline, 0);
-    _dynamicDescriptorSet.bind(commandBuffer, *_graphicsPipeline, 1, { _currentFrame });
+    // _dynamicDescriptorSet.bind(commandBuffer, *_graphicsPipeline, 1, { _currentFrame });
+    VkDescriptorSet cameraDescriptor = _dynamicDescriptorSet.getVkDescriptorSet();
+    uint32_t offset;
+    _dynamicDescriptorSetWriter.getDynamicBufferSizesWithOffsets(&offset, { _currentFrame });
+    vkCmdBindDescriptorSets(commandBuffer, _graphicsPipeline->getVkPipelineBindPoint(), _graphicsPipeline->getVkPipelineLayout(), 1, 1, &cameraDescriptor, 1, &offset);
     while (!nodeQueue.empty()) {
         const OctreeNode* node = nodeQueue.front();
         nodeQueue.pop();

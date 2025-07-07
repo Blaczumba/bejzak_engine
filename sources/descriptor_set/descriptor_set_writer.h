@@ -9,6 +9,7 @@
 
 #include <cstdint>
 #include <initializer_list>
+#include <optional>
 #include <span>
 #include <vector>
 
@@ -28,7 +29,9 @@ public:
 
 	DescriptorSetWriter& storeTexture(const Texture& texture);
 
-	DescriptorSetWriter& storeBuffer(const Buffer& buffer, bool isDynamic = false);
+	DescriptorSetWriter& storeBuffer(const Buffer& buffer);
+
+	DescriptorSetWriter& storeDynamicBuffer(const Buffer& buffer, uint32_t dynamicElementSize);
 
 	DescriptorSetWriter& storeBufferArrayElement(const Buffer& buffer);
 

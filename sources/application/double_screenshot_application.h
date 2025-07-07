@@ -39,7 +39,6 @@ class SingleApp : public ApplicationBase {
     Registry _registry;
     std::unique_ptr<AssetManager> _assetManager;
     std::unique_ptr<ResourceManager> _resourceManager;
-    DescriptorSetWriter _dynamicDescriptorSetWriter;
     std::shared_ptr<Renderpass> _renderPass;
     std::vector<std::unique_ptr<Framebuffer>> _framebuffers;
 
@@ -69,12 +68,14 @@ class SingleApp : public ApplicationBase {
     UniformBufferCamera _ubCamera;
     UniformBufferLight _ubLight;
 
-    std::unique_ptr<UniformBufferData<UniformBufferCamera>> _dynamicUniformBuffersCamera;
+    DescriptorSetWriter _dynamicDescriptorSetWriter;
+    Buffer _dynamicUniformBuffersCamera;
+    DescriptorSet _dynamicDescriptorSet;
+
     std::unique_ptr<GraphicsShaderProgram> _shadowShaderProgram;
     std::unique_ptr<BindlessDescriptorSetWriter> _bindlessWriter;
 
     DescriptorSet _bindlessDescriptorSet;
-    DescriptorSet _dynamicDescriptorSet;
     Buffer _lightBuffer;
     BufferHandle _lightHandle;
 

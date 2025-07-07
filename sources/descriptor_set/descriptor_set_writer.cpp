@@ -15,7 +15,7 @@ DescriptorSetWriter& DescriptorSetWriter::storeTexture(const Texture& texture) {
 		VkWriteDescriptorSet {
 			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 			.dstBinding = _binding++,
-			.dstArrayElement = _arrayElement,
+			.dstArrayElement = _arrayElement++,
 			.descriptorCount = 1,
 			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 			.pImageInfo = &_imageInfos.back()
@@ -24,7 +24,7 @@ DescriptorSetWriter& DescriptorSetWriter::storeTexture(const Texture& texture) {
 	return *this;
 }
 
-DescriptorSetWriter& DescriptorSetWriter::storeBuffer(const Buffer& buffer, bool isDynamic) {
+DescriptorSetWriter& DescriptorSetWriter::storeBuffer(const Buffer& buffer) {
 	_bufferInfos.push_back(
 		VkDescriptorBufferInfo {
 			.buffer = buffer.getVkBuffer(),
@@ -32,15 +32,37 @@ DescriptorSetWriter& DescriptorSetWriter::storeBuffer(const Buffer& buffer, bool
 		}
 	);
 
-	const VkDescriptorType type = getDescriptorType(buffer.getUsage(), isDynamic);
 	_arrayElement = 0;
 	_descriptorWrites.push_back(
 		VkWriteDescriptorSet {
 			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 			.dstBinding = _binding++,
-			.dstArrayElement = _arrayElement,
+			.dstArrayElement = _arrayElement++,
 			.descriptorCount = 1,
-			.descriptorType = type,
+			.descriptorType = getDescriptorType(buffer.getUsage()),
+			.pBufferInfo = &_bufferInfos.back()
+		}
+	);
+	return *this;
+}
+
+DescriptorSetWriter& DescriptorSetWriter::storeDynamicBuffer(const Buffer& buffer, uint32_t dynamicElementSize) {
+	_bufferInfos.push_back(
+		VkDescriptorBufferInfo{
+			.buffer = buffer.getVkBuffer(),
+			.range = dynamicElementSize
+		}
+	);
+
+	_dynamicBuffersBaseSizes.push_back(dynamicElementSize);
+	_arrayElement = 0;
+	_descriptorWrites.push_back(
+		VkWriteDescriptorSet{
+			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			.dstBinding = _binding++,
+			.dstArrayElement = _arrayElement++,
+			.descriptorCount = 1,
+			.descriptorType = getDescriptorTypeDynamic(buffer.getUsage()),
 			.pBufferInfo = &_bufferInfos.back()
 		}
 	);
@@ -55,14 +77,13 @@ DescriptorSetWriter& DescriptorSetWriter::storeBufferArrayElement(const Buffer& 
 		}
 	);
 
-	const VkDescriptorType type = getDescriptorType(buffer.getUsage(), false);
 	_descriptorWrites.push_back(
 		VkWriteDescriptorSet{
 			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 			.dstBinding = _binding,
 			.dstArrayElement = _arrayElement++,
 			.descriptorCount = 1,
-			.descriptorType = type,
+			.descriptorType = getDescriptorType(buffer.getUsage()),
 			.pBufferInfo = &_bufferInfos.back()
 		}
 	);
