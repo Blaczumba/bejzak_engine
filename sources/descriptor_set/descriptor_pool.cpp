@@ -39,7 +39,7 @@ const VkDescriptorPool DescriptorPool::getVkDescriptorPool() const {
 	return _descriptorPool;
 }
 
-ErrorOr<DescriptorSet> DescriptorPool::createDesriptorSet(const DescriptorSetLayout& layout) const {
+ErrorOr<DescriptorSet> DescriptorPool::createDesriptorSet(const VkDescriptorSetLayout layout) const {
 	++_allocatedSets;
 	if (_allocatedSets > _maxNumSets) {
 		--_allocatedSets;
@@ -48,7 +48,7 @@ ErrorOr<DescriptorSet> DescriptorPool::createDesriptorSet(const DescriptorSetLay
 	return DescriptorSet::create(shared_from_this(), layout);
 }
 
-ErrorOr<std::vector<DescriptorSet>> DescriptorPool::createDesriptorSets(const DescriptorSetLayout& layout, uint32_t numSets) const {
+ErrorOr<std::vector<DescriptorSet>> DescriptorPool::createDesriptorSets(const VkDescriptorSetLayout layout, uint32_t numSets) const {
 	_allocatedSets += numSets;
 	if (_allocatedSets > _maxNumSets) {
 		_allocatedSets -= numSets;

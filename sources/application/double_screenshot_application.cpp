@@ -207,9 +207,8 @@ Status SingleApp::createDescriptorSets() {
     ASSIGN_OR_RETURN(_dynamicDescriptorPool, DescriptorPool::create(*_logicalDevice, 1));
     ASSIGN_OR_RETURN(_descriptorPoolSkybox, DescriptorPool::create(*_logicalDevice, 1));
 
-    std::span<const DescriptorSetType> pbrLayouts = _pbrShaderProgram->getDescriptorSetLayouts();
-    ASSIGN_OR_RETURN(_bindlessDescriptorSet, _descriptorPool->createDesriptorSet(*_programManager->getDescriptorSetLayout(pbrLayouts[0])));
-    ASSIGN_OR_RETURN(_dynamicDescriptorSet, _dynamicDescriptorPool->createDesriptorSet(*_programManager->getDescriptorSetLayout(pbrLayouts[1])));
+    ASSIGN_OR_RETURN(_bindlessDescriptorSet, _descriptorPool->createDesriptorSet(_programManager->getVkDescriptorSetLayout(DescriptorSetType::BINDLESS)));
+    ASSIGN_OR_RETURN(_dynamicDescriptorSet, _dynamicDescriptorPool->createDesriptorSet(_programManager->getVkDescriptorSetLayout(DescriptorSetType::CAMERA)));
     _bindlessWriter = std::make_unique<BindlessDescriptorSetWriter>(_bindlessDescriptorSet);
     _shadowHandle = _bindlessWriter->storeTexture(*_shadowMap);
     _skyboxHandle = _bindlessWriter->storeTexture(*_textureCubemap);
@@ -251,10 +250,14 @@ Status SingleApp::createPresentResources() {
     );
     RETURN_IF_ERROR(_renderPass->build());
     _framebuffers.reserve(_swapchain->getImagesCount());
-
-    for (uint8_t i = 0; i < _swapchain->getImagesCount(); ++i) {
-        ASSIGN_OR_RETURN(auto framebuffer, Framebuffer::createFromSwapchain(*_renderPass, *_swapchain, *_singleTimeCommandPool, i));
-        _framebuffers.push_back(std::move(framebuffer));
+    
+    {
+        SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
+        const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
+        for (uint8_t i = 0; i < _swapchain->getImagesCount(); ++i) {
+            ASSIGN_OR_RETURN(auto framebuffer, Framebuffer::createFromSwapchain(commandBuffer, *_renderPass, *_swapchain, i));
+            _framebuffers.push_back(std::move(framebuffer));
+        }
     }
     {
         const GraphicsPipelineParameters parameters = {
@@ -660,8 +663,12 @@ Status SingleApp::recreateSwapChain() {
     vkDeviceWaitIdle(_logicalDevice->getVkDevice());
 
     ASSIGN_OR_RETURN(_swapchain, Swapchain::create(*_logicalDevice, _swapchain->getVkSwapchain()));
-    for (uint8_t i = 0; i < _swapchain->getImagesCount(); ++i) {
-        ASSIGN_OR_RETURN(_framebuffers[i], Framebuffer::createFromSwapchain(*_renderPass, *_swapchain, *_singleTimeCommandPool, i));
+    {
+        SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
+        const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
+        for (uint8_t i = 0; i < _swapchain->getImagesCount(); ++i) {
+            ASSIGN_OR_RETURN(_framebuffers[i], Framebuffer::createFromSwapchain(commandBuffer, *_renderPass, *_swapchain, i));
+        }
     }
     return StatusOk();
 }

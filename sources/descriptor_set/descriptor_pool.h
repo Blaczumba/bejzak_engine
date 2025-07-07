@@ -30,9 +30,9 @@ public:
 
 	const VkDescriptorPool getVkDescriptorPool() const;
 
-	ErrorOr<DescriptorSet> createDesriptorSet(const DescriptorSetLayout& layout) const;
+	ErrorOr<DescriptorSet> createDesriptorSet(const VkDescriptorSetLayout layout) const;
 
-	ErrorOr<std::vector<DescriptorSet>> createDesriptorSets(const DescriptorSetLayout& layout, uint32_t numSets) const;
+	ErrorOr<std::vector<DescriptorSet>> createDesriptorSets(const VkDescriptorSetLayout layout, uint32_t numSets) const;
 
 	bool maxSetsReached() const;
 

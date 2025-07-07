@@ -20,12 +20,11 @@ class DescriptorSet {
 
 	std::vector<uint32_t> _dynamicBuffersBaseSizes;
 	std::shared_ptr<const DescriptorPool> _descriptorPool;
-	const DescriptorSetLayout* _layout;
 
-	DescriptorSet(const VkDescriptorSet descriptorSet, const std::shared_ptr<const DescriptorPool>& descriptorPool, const DescriptorSetLayout& layout);
+	DescriptorSet(const VkDescriptorSet descriptorSet, const std::shared_ptr<const DescriptorPool>& descriptorPool);
 
 public:
-	DescriptorSet();
+	DescriptorSet() = default;
 
 	DescriptorSet(DescriptorSet&& descriptorSet) noexcept;
 
@@ -33,9 +32,9 @@ public:
 
 	~DescriptorSet() = default;
 
-	static ErrorOr<DescriptorSet> create(const std::shared_ptr<const DescriptorPool>& descriptorPool, const DescriptorSetLayout& layout);
+	static ErrorOr<DescriptorSet> create(const std::shared_ptr<const DescriptorPool>& descriptorPool, const VkDescriptorSetLayout layout);
 
-	static ErrorOr<std::vector<DescriptorSet>> create(const std::shared_ptr<const DescriptorPool>& descriptorPool, const DescriptorSetLayout& layout, uint32_t numSets);
+	static ErrorOr<std::vector<DescriptorSet>> create(const std::shared_ptr<const DescriptorPool>& descriptorPool, const VkDescriptorSetLayout layout, uint32_t numSets);
 
 	void writeDescriptorSet(std::initializer_list<UniformBuffer*> uniformBuffers);
 

@@ -11,7 +11,7 @@
 #include <optional>
 #include <stdexcept>
 
-ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromSwapchain(const Renderpass& renderpass, const Swapchain& swapchain, const CommandPool& commandPool, uint8_t swapchainImageIndex) {
+ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromSwapchain(const VkCommandBuffer commandBuffer, const Renderpass& renderpass, const Swapchain& swapchain, uint8_t swapchainImageIndex) {
     if (swapchain.getImagesCount() <= swapchainImageIndex) {
         return Error(EngineError::INDEX_OUT_OF_RANGE);
     }
@@ -26,13 +26,12 @@ ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromSwapchain(const Ren
         .extent = swapchainExtent
     };
 
-    const LogicalDevice& logicalDevice = commandPool.getLogicalDevice();
+    const LogicalDevice& logicalDevice = renderpass.getLogicalDevice();
     const std::vector<VkAttachmentDescription>& descriptions = renderpass.getAttachmentsLayout().getVkAttachmentDescriptions();
 
     lib::Buffer<VkImageView> imageViews(descriptions.size());
     lib::Buffer<std::shared_ptr<Texture>> textureAttachments(imageViews.size());
-    SingleTimeCommandBuffer handle(commandPool);
-    const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
+
     for (size_t i = 0; i < imageViews.size(); ++i) {
         const auto& description = descriptions[i];
         switch (description.finalLayout) {

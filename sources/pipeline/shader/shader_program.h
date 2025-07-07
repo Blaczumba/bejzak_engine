@@ -23,8 +23,6 @@ enum class DescriptorSetType : uint8_t {
     CAMERA
 };
 
-
-
 class ShaderProgramManager {
     std::unordered_map<std::string_view, Shader> _shaders;
     std::unordered_map<DescriptorSetType, DescriptorSetLayout> _descriptorSetLayouts;

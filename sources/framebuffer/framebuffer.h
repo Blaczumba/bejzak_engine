@@ -26,7 +26,7 @@ class Framebuffer {
 	Framebuffer(const VkFramebuffer framebuffer, const Renderpass& renderpass, const VkViewport& viewport, const VkRect2D& scissor, lib::Buffer<std::shared_ptr<Texture>>&& textures);
 
 public:
-	static ErrorOr<std::unique_ptr<Framebuffer>> createFromSwapchain(const Renderpass& renderpass, const Swapchain& swapchain, const CommandPool& commandPool, uint8_t swapchainImageIndex);
+	static ErrorOr<std::unique_ptr<Framebuffer>> createFromSwapchain(const VkCommandBuffer commandBuffer, const Renderpass& renderpass, const Swapchain& swapchain, uint8_t swapchainImageIndex);
 	static ErrorOr<std::unique_ptr<Framebuffer>> createFromTextures(const Renderpass& renderpass, lib::Buffer<std::shared_ptr<Texture>>&& textures);
 
 	~Framebuffer();
