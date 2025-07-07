@@ -33,6 +33,14 @@ std::span<const VkPushConstantRange> ShaderProgram::getPushConstants() const {
     return _pushConstants;
 }
 
+GraphicsShaderProgram::GraphicsShaderProgram(const ShaderProgramManager& shaderProgramManager, const VkPipelineVertexInputStateCreateInfo& vertexInputInfo, std::vector<std::string_view>&& shaders, std::vector<DescriptorSetType>&& descriptorSetLayouts, std::span<const VkPushConstantRange> pushConstantRange)
+    : ShaderProgram(shaderProgramManager, std::move(shaders), std::move(descriptorSetLayouts), pushConstantRange), _vertexInputInfo(vertexInputInfo) {
+}
+
+const VkPipelineVertexInputStateCreateInfo& GraphicsShaderProgram::getVkPipelineVertexInputStateCreateInfo() const {
+    return _vertexInputInfo;
+}
+
 ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramManager::createPBRProgram() {
     static constexpr std::string_view vertexShaderPath = "shader_pbr.vert.spv";
     static constexpr std::string_view fragmentShaderPath = "shader_pbr.frag.spv";
@@ -47,7 +55,9 @@ ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramManager::createPBRP
     ASSIGN_OR_RETURN(DescriptorSetType bindlessLayout, getOrCreateBindlessLayout());
     ASSIGN_OR_RETURN(DescriptorSetType cameraLayout, getOrCreateCameraLayout());
 
-    return GraphicsShaderProgram::create<VertexPTNT>(*this, std::vector{ vertexShaderPath, fragmentShaderPath }, std::vector{bindlessLayout, cameraLayout}, pushConstants.getVkPushConstantRange());
+    const VkPipelineVertexInputStateCreateInfo vertexInputInfo = getVkPipelineVertexInputStateCreateInfo<VertexPTNT>();
+
+    return std::make_unique<GraphicsShaderProgram>(*this, vertexInputInfo, std::vector{ vertexShaderPath, fragmentShaderPath }, std::vector{bindlessLayout, cameraLayout}, pushConstants.getVkPushConstantRange());
 }
 
 ShaderProgramManager::ShaderProgramManager(const LogicalDevice& logicalDevice) : _logicalDevice(logicalDevice) { }
@@ -65,7 +75,9 @@ ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramManager::createSkyb
 
     ASSIGN_OR_RETURN(DescriptorSetType bindlessLayout, getOrCreateBindlessLayout());
 
-    return GraphicsShaderProgram::create<VertexP>(*this, std::vector{ vertexShaderPath, fragmentShaderPath }, std::vector{ bindlessLayout }, pushConstants.getVkPushConstantRange());
+    const VkPipelineVertexInputStateCreateInfo vertexInputInfo = getVkPipelineVertexInputStateCreateInfo<VertexP>();
+
+    return std::make_unique<GraphicsShaderProgram>(*this, vertexInputInfo, std::vector{ vertexShaderPath, fragmentShaderPath }, std::vector{ bindlessLayout }, pushConstants.getVkPushConstantRange());
 }
 
 ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramManager::createShadowProgram() {
@@ -78,7 +90,10 @@ ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramManager::createShad
 
     PushConstants pushConstants(_logicalDevice.getPhysicalDevice());
     pushConstants.addPushConstant<PushConstantsShadow>(VK_SHADER_STAGE_VERTEX_BIT);
-    return GraphicsShaderProgram::create<VertexP>(*this, std::vector{ vertexShaderPath, fragmentShaderPath }, {}, pushConstants.getVkPushConstantRange());
+
+    const VkPipelineVertexInputStateCreateInfo vertexInputInfo = getVkPipelineVertexInputStateCreateInfo<VertexP>();
+
+    return std::make_unique<GraphicsShaderProgram>(*this, vertexInputInfo, std::vector{ vertexShaderPath, fragmentShaderPath }, std::vector<DescriptorSetType>{}, pushConstants.getVkPushConstantRange());
 }
 
 const VkDescriptorSetLayout ShaderProgramManager::getVkDescriptorSetLayout(DescriptorSetType type) const {

@@ -23,6 +23,8 @@ enum class DescriptorSetType : uint8_t {
     CAMERA
 };
 
+
+
 class ShaderProgramManager {
     std::unordered_map<std::string_view, Shader> _shaders;
     std::unordered_map<DescriptorSetType, DescriptorSetLayout> _descriptorSetLayouts;
@@ -49,6 +51,19 @@ private:
     ErrorOr<DescriptorSetType> getOrCreateBindlessLayout();
 
     ErrorOr<DescriptorSetType> getOrCreateCameraLayout();
+
+    template<typename VertexType>
+    static VkPipelineVertexInputStateCreateInfo getVkPipelineVertexInputStateCreateInfo() {
+        static constexpr VkVertexInputBindingDescription bindingDescription = getBindingDescription<VertexType>();
+        static constexpr auto attributeDescriptions = getAttributeDescriptions<VertexType>();
+        return VkPipelineVertexInputStateCreateInfo{
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+            .vertexBindingDescriptionCount = 1,
+            .pVertexBindingDescriptions = &bindingDescription,
+            .vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size()),
+            .pVertexAttributeDescriptions = attributeDescriptions.data()
+        };
+    }
 };
 
 class ShaderProgram {
@@ -75,29 +90,10 @@ class GraphicsShaderProgram : public ShaderProgram {
 private:
 	VkPipelineVertexInputStateCreateInfo _vertexInputInfo;
 
-    GraphicsShaderProgram(const ShaderProgramManager& shaderProgramManager, std::vector<std::string_view>&& shaders, std::vector<DescriptorSetType>&& descriptorSetLayouts, const VkPipelineVertexInputStateCreateInfo& vertexInputInfo, std::span<const VkPushConstantRange> pushConstantRange)
-        : ShaderProgram(shaderProgramManager, std::move(shaders), std::move(descriptorSetLayouts), pushConstantRange), _vertexInputInfo(vertexInputInfo) {
-    }
-
 public:
-    template<typename VertexType>
-    static std::unique_ptr<GraphicsShaderProgram> create(const ShaderProgramManager& shaderProgramManager, std::vector<std::string_view>&& shaders, std::vector<DescriptorSetType>&& descriptorSetLayouts, std::span<const VkPushConstantRange> pushConstantRange = {}) {
-        static constexpr VkVertexInputBindingDescription bindingDescription = getBindingDescription<VertexType>();
-        static constexpr auto attributeDescriptions = getAttributeDescriptions<VertexType>();
-        const VkPipelineVertexInputStateCreateInfo vertexInputInfo = VkPipelineVertexInputStateCreateInfo{
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-            .vertexBindingDescriptionCount = 1,
-            .pVertexBindingDescriptions = &bindingDescription,
-            .vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size()),
-            .pVertexAttributeDescriptions = attributeDescriptions.data()
-        };
-        return std::unique_ptr<GraphicsShaderProgram>(new GraphicsShaderProgram(shaderProgramManager, std::move(shaders), std::move(descriptorSetLayouts), vertexInputInfo, pushConstantRange));
-    }
+    GraphicsShaderProgram(const ShaderProgramManager& shaderProgramManager, const VkPipelineVertexInputStateCreateInfo& vertexInputInfo, std::vector<std::string_view>&& shaders, std::vector<DescriptorSetType>&& descriptorSetLayouts, std::span<const VkPushConstantRange> pushConstantRange);
 
-
-	const VkPipelineVertexInputStateCreateInfo& getVkPipelineVertexInputStateCreateInfo() const {
-        return _vertexInputInfo;
-	}
+    const VkPipelineVertexInputStateCreateInfo& getVkPipelineVertexInputStateCreateInfo() const;
 };
 
 struct PushConstantsPBR {
