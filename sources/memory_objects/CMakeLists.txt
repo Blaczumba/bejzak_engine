@@ -4,7 +4,6 @@ target_link_libraries(Buffers PUBLIC Vulkan::Vulkan)
 target_link_libraries(Buffers PUBLIC MemoryAllocator)
 
 add_subdirectory(texture)
-add_subdirectory(uniform_buffer)
 
 add_library(Buffer buffer.cpp)
 target_link_libraries(Buffer PUBLIC Vulkan::Vulkan)

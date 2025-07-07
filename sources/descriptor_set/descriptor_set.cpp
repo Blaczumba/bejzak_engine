@@ -4,7 +4,6 @@
 #include "descriptor_set_layout.h"
 #include "lib/buffer/buffer.h"
 #include "logical_device/logical_device.h"
-#include "memory_objects/uniform_buffer/uniform_buffer.h"
 #include "pipeline/pipeline.h"
 #include "status/status.h"
 
@@ -19,7 +18,7 @@ DescriptorSet::DescriptorSet(const VkDescriptorSet descriptorSet, const std::sha
 	: _descriptorSet(descriptorSet), _descriptorPool(descriptorPool) {}
 
 DescriptorSet::DescriptorSet(DescriptorSet&& descriptorSet) noexcept
-    : _descriptorSet(descriptorSet._descriptorSet), _dynamicBuffersBaseSizes(std::move(descriptorSet._dynamicBuffersBaseSizes)), _descriptorPool(std::move(descriptorSet._descriptorPool)) {
+    : _descriptorSet(descriptorSet._descriptorSet), _descriptorPool(std::move(descriptorSet._descriptorPool)) {
 
 }
 
@@ -28,7 +27,6 @@ DescriptorSet& DescriptorSet::operator=(DescriptorSet&& descriptorSet) noexcept 
         return *this;
     }
     _descriptorSet = descriptorSet._descriptorSet;
-    _dynamicBuffersBaseSizes = std::move(descriptorSet._dynamicBuffersBaseSizes);
     _descriptorPool = std::move(descriptorSet._descriptorPool);
 
     return *this;
@@ -67,33 +65,6 @@ ErrorOr<std::vector<DescriptorSet>> DescriptorSet::create(const std::shared_ptr<
     descSets.reserve(descriptorSets.size());
     std::transform(descriptorSets.cbegin(), descriptorSets.cend(), std::back_inserter(descSets), [&](const VkDescriptorSet descriptorSet) { return DescriptorSet(descriptorSet, descriptorPool); });
     return descSets;
-}
-
-void DescriptorSet::writeDescriptorSet(std::initializer_list<UniformBuffer*> uniformBuffers) {
-    writeDescriptorSetImpl(uniformBuffers);
-}
-
-void DescriptorSet::writeDescriptorSet(std::span<const UniformBuffer*> uniformBuffers) {
-    writeDescriptorSetImpl(uniformBuffers);
-}
-
-void DescriptorSet::writeDescriptorSetImpl(std::span<const UniformBuffer* const> uniformBuffers) {
-    lib::Buffer<VkWriteDescriptorSet> descriptorWrites(uniformBuffers.size());
-    uint32_t bindingIndex = 0;
-    for (const UniformBuffer* uniformBuffer : uniformBuffers) {
-        descriptorWrites[bindingIndex] = uniformBuffer->getVkWriteDescriptorSet(_descriptorSet, bindingIndex);
-        if (uniformBuffer->getVkDescriptorType() == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC) {
-            _dynamicBuffersBaseSizes.emplace_back(uniformBuffer->getSize());
-        }
-        ++bindingIndex;
-    }
-    vkUpdateDescriptorSets(_descriptorPool->getLogicalDevice().getVkDevice(), static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
-}
-
-void DescriptorSet::bind(const VkCommandBuffer commandBuffer, const Pipeline& pipeline, uint32_t firstSet, std::initializer_list<uint32_t> dynamicOffsetStrides) {
-    std::array<uint32_t, 4> sizes;
-    std::transform(dynamicOffsetStrides.begin(), dynamicOffsetStrides.end(), _dynamicBuffersBaseSizes.cbegin(), sizes.begin(), std::multiplies<uint32_t>());
-    vkCmdBindDescriptorSets(commandBuffer, pipeline.getVkPipelineBindPoint(), pipeline.getVkPipelineLayout(), firstSet, 1, &_descriptorSet, dynamicOffsetStrides.size(), sizes.data());
 }
 
 const VkDescriptorSet DescriptorSet::getVkDescriptorSet() const {

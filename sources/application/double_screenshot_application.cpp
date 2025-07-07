@@ -202,7 +202,7 @@ Status SingleApp::createDescriptorSets() {
     }
 
     const auto& limits = _logicalDevice->getPhysicalDevice().getPropertyManager().getPhysicalDeviceLimits();
-    const uint32_t size = getMemoryAlignment(sizeof(UniformBufferCamera), limits.minUniformBufferOffsetAlignment);
+    const uint32_t size = memoryAlignment(sizeof(UniformBufferCamera), limits.minUniformBufferOffsetAlignment);
     ASSIGN_OR_RETURN(_dynamicUniformBuffersCamera, Buffer::createUniformBuffer(*_logicalDevice, MAX_FRAMES_IN_FLIGHT * size));
 
     ASSIGN_OR_RETURN(_pbrShaderProgram, _programManager->createPBRProgram());
@@ -465,12 +465,10 @@ void SingleApp::recordOctreeSecondaryCommandBuffer(const VkCommandBuffer command
     static std::queue<const OctreeNode*> nodeQueue;
     nodeQueue.push(rootNode);
 
-    _bindlessDescriptorSet.bind(commandBuffer, *_graphicsPipeline, 0);
-    // _dynamicDescriptorSet.bind(commandBuffer, *_graphicsPipeline, 1, { _currentFrame });
-    VkDescriptorSet cameraDescriptor = _dynamicDescriptorSet.getVkDescriptorSet();
+    VkDescriptorSet descriptorSets[] = { _bindlessDescriptorSet.getVkDescriptorSet(), _dynamicDescriptorSet.getVkDescriptorSet() };
     uint32_t offset;
     _dynamicDescriptorSetWriter.getDynamicBufferSizesWithOffsets(&offset, { _currentFrame });
-    vkCmdBindDescriptorSets(commandBuffer, _graphicsPipeline->getVkPipelineBindPoint(), _graphicsPipeline->getVkPipelineLayout(), 1, 1, &cameraDescriptor, 1, &offset);
+    vkCmdBindDescriptorSets(commandBuffer, _graphicsPipeline->getVkPipelineBindPoint(), _graphicsPipeline->getVkPipelineLayout(), 0, static_cast<uint32_t>(std::size(descriptorSets)), descriptorSets, 1, &offset);
     while (!nodeQueue.empty()) {
         const OctreeNode* node = nodeQueue.front();
         nodeQueue.pop();
@@ -576,7 +574,8 @@ void SingleApp::recordCommandBuffer(uint32_t imageIndex) {
                 .skyboxHandle = static_cast<uint32_t>(_skyboxHandle)
         };
         vkCmdPushConstants(commandBuffer, _graphicsPipelineSkybox->getVkPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(pc), &pc);
-        _bindlessDescriptorSet.bind(commandBuffer, *_graphicsPipelineSkybox);
+        const VkDescriptorSet descriptorSet = _bindlessDescriptorSet.getVkDescriptorSet();
+        vkCmdBindDescriptorSets(commandBuffer, _graphicsPipelineSkybox->getVkPipelineBindPoint(), _graphicsPipelineSkybox->getVkPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
         vkCmdDrawIndexed(commandBuffer, _indexBufferCube.getSize() / getIndexSize(_indexBufferCubeType), 1, 0, 0, 0);
 
         // Object

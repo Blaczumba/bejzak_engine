@@ -2,7 +2,7 @@
 
 #include "status/status.h"
 #include "descriptor_set/descriptor_set_layout.h"
-#include "memory_objects/uniform_buffer/push_constants.h"
+#include "pipeline/shader/push_constants.h"
 #include "primitives/vk_primitives.h"
 #include "shader.h"
 

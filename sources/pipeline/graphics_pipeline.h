@@ -3,7 +3,7 @@
 #include "pipeline.h"
 
 #include "logical_device/logical_device.h"
-#include "memory_objects/uniform_buffer/push_constants.h"
+#include "pipeline/shader/push_constants.h"
 #include "primitives/vk_primitives.h"
 #include "render_pass/render_pass.h"
 #include "shader/shader.h"
