@@ -1,4 +1,4 @@
-#include "bindless_descriptor_set_writer.h"
+#include "descriptor_set/bindless_descriptor_set_writer.h"
 
 #include "descriptor_set/descriptor_pool.h"
 
@@ -10,14 +10,6 @@ namespace {
 constexpr uint32_t UNIFORM_BINDING = 0;
 constexpr uint32_t TEXTURE_BINDING = 1;
 constexpr uint32_t STORAGE_BINDING = 2;
-
-constexpr VkDescriptorType getDescriptorType(VkBufferUsageFlags usageFlags) {
-	if ((usageFlags & VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT) == VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)
-		return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-	if ((usageFlags & VK_BUFFER_USAGE_STORAGE_BUFFER_BIT) == VK_BUFFER_USAGE_STORAGE_BUFFER_BIT)
-		return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
-	return VK_DESCRIPTOR_TYPE_MAX_ENUM;
-}
 
 uint32_t getNextHandle(uint32_t elementsCount, std::vector<uint32_t>& missingBindings) {
 	if (missingBindings.empty()) {

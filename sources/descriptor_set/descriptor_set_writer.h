@@ -1,0 +1,35 @@
+#pragma once
+
+#include "lib/buffer/buffer.h"
+#include "memory_objects/buffer.h"
+#include "memory_objects/texture/texture.h"
+#include "descriptor_set/descriptor_set.h"
+
+#include <vulkan/vulkan.h>
+
+#include <cstdint>
+#include <initializer_list>
+#include <span>
+#include <vector>
+
+class DescriptorSetWriter {
+	uint32_t binding = 0;
+
+	std::vector<VkDescriptorImageInfo> _imageInfos;
+	std::vector<VkDescriptorBufferInfo> _bufferInfos;
+
+	std::vector<VkWriteDescriptorSet> _descriptorWrites;
+
+	std::vector<uint32_t> _dynamicBuffersBaseSizes;
+
+public:
+	DescriptorSetWriter() = default;
+
+	DescriptorSetWriter& storeTexture(const Texture& texture);
+
+	DescriptorSetWriter& storeBuffer(const Buffer& buffer, bool isDynamic = false);
+
+	void writeDescriptorSet(const VkDevice device, const VkDescriptorSet descriptorSet);
+
+	void getDynamicBufferSizesWithOffsets(uint32_t* data, std::initializer_list<uint32_t> offsets) const;
+};
