@@ -13,7 +13,8 @@
 #include <vector>
 
 class DescriptorSetWriter {
-	uint32_t binding = 0;
+	uint32_t _binding = 0;
+	uint32_t _arrayElement = 0;
 
 	std::vector<VkDescriptorImageInfo> _imageInfos;
 	std::vector<VkDescriptorBufferInfo> _bufferInfos;
@@ -28,6 +29,8 @@ public:
 	DescriptorSetWriter& storeTexture(const Texture& texture);
 
 	DescriptorSetWriter& storeBuffer(const Buffer& buffer, bool isDynamic = false);
+
+	DescriptorSetWriter& storeBufferArrayElement(const Buffer& buffer);
 
 	void writeDescriptorSet(const VkDevice device, const VkDescriptorSet descriptorSet);
 

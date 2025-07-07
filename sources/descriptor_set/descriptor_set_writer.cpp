@@ -10,12 +10,12 @@ DescriptorSetWriter& DescriptorSetWriter::storeTexture(const Texture& texture) {
 			.imageLayout = texture.getImageParameters().layout
 		}
 	);
-
+	_arrayElement = 0;
 	_descriptorWrites.emplace_back(
 		VkWriteDescriptorSet {
 			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			.dstBinding = binding++,
-			.dstArrayElement = 1,
+			.dstBinding = _binding++,
+			.dstArrayElement = _arrayElement,
 			.descriptorCount = 1,
 			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 			.pImageInfo = &_imageInfos.back()
@@ -33,11 +33,34 @@ DescriptorSetWriter& DescriptorSetWriter::storeBuffer(const Buffer& buffer, bool
 	);
 
 	const VkDescriptorType type = getDescriptorType(buffer.getUsage(), isDynamic);
+	_arrayElement = 0;
 	_descriptorWrites.push_back(
 		VkWriteDescriptorSet {
 			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			.dstBinding = binding++,
-			.dstArrayElement = 1,
+			.dstBinding = _binding++,
+			.dstArrayElement = _arrayElement,
+			.descriptorCount = 1,
+			.descriptorType = type,
+			.pBufferInfo = &_bufferInfos.back()
+		}
+	);
+	return *this;
+}
+
+DescriptorSetWriter& DescriptorSetWriter::storeBufferArrayElement(const Buffer& buffer) {
+	_bufferInfos.push_back(
+		VkDescriptorBufferInfo{
+			.buffer = buffer.getVkBuffer(),
+			.range = buffer.getSize()
+		}
+	);
+
+	const VkDescriptorType type = getDescriptorType(buffer.getUsage(), false);
+	_descriptorWrites.push_back(
+		VkWriteDescriptorSet{
+			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+			.dstBinding = _binding,
+			.dstArrayElement = _arrayElement++,
 			.descriptorCount = 1,
 			.descriptorType = type,
 			.pBufferInfo = &_bufferInfos.back()

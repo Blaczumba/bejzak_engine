@@ -8,6 +8,7 @@
 #include "descriptor_set/descriptor_pool.h"
 #include "descriptor_set/descriptor_set.h"
 #include "descriptor_set/descriptor_set_layout.h"
+#include "descriptor_set/descriptor_set_writer.h"
 #include "entity_component_system/system/movement_system.h"
 #include "memory_objects/buffer.h"
 #include "memory_objects/texture/texture.h"
@@ -38,11 +39,9 @@ class SingleApp : public ApplicationBase {
     Registry _registry;
     std::unique_ptr<AssetManager> _assetManager;
     std::unique_ptr<ResourceManager> _resourceManager;
-
+    DescriptorSetWriter _dynamicDescriptorSetWriter;
     std::shared_ptr<Renderpass> _renderPass;
     std::vector<std::unique_ptr<Framebuffer>> _framebuffers;
-    std::unique_ptr<GraphicsPipeline> _graphicsPipeline;
-    std::unique_ptr<GraphicsPipeline> _graphicsPipelineNormal;
 
     // Shadowmap
     std::shared_ptr<Renderpass> _shadowRenderPass;
@@ -66,6 +65,7 @@ class SingleApp : public ApplicationBase {
     std::shared_ptr<DescriptorPool> _descriptorPool;
     std::shared_ptr<DescriptorPool> _dynamicDescriptorPool;
     std::unique_ptr<GraphicsShaderProgram> _pbrShaderProgram;
+    std::unique_ptr<GraphicsPipeline> _graphicsPipeline;
     UniformBufferCamera _ubCamera;
     UniformBufferLight _ubLight;
 
