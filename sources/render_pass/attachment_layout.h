@@ -2,6 +2,7 @@
 
 #include <vulkan/vulkan.h>
 
+#include <span>
 #include <vector>
 
 namespace Attachment {
@@ -18,10 +19,10 @@ class AttachmentLayout {
 public:
 	explicit AttachmentLayout(VkSampleCountFlagBits numMsaaSamples = VK_SAMPLE_COUNT_1_BIT);
 
-	const std::vector<VkClearValue>& getVkClearValues() const;
-	const std::vector<VkAttachmentDescription>& getVkAttachmentDescriptions() const;
-	const std::vector<VkImageLayout>& getVkSubpassLayouts() const;
-	const std::vector<Attachment::Type>& getAttachmentsTypes() const;
+	std::span<const VkClearValue> getVkClearValues() const;
+	std::span<const VkAttachmentDescription> getVkAttachmentDescriptions() const;
+	std::span<const VkImageLayout> getVkSubpassLayouts() const;
+	std::span<const Attachment::Type> getAttachmentsTypes() const;
 
 	uint32_t getAttachmentsCount() const;
 	uint32_t getColorAttachmentsCount() const;

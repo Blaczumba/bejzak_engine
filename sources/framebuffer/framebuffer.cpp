@@ -27,7 +27,7 @@ ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromSwapchain(const VkC
     };
 
     const LogicalDevice& logicalDevice = renderpass.getLogicalDevice();
-    const std::vector<VkAttachmentDescription>& descriptions = renderpass.getAttachmentsLayout().getVkAttachmentDescriptions();
+    std::span<const VkAttachmentDescription> descriptions = renderpass.getAttachmentsLayout().getVkAttachmentDescriptions();
 
     lib::Buffer<VkImageView> imageViews(descriptions.size());
     lib::Buffer<std::shared_ptr<Texture>> textureAttachments(imageViews.size());

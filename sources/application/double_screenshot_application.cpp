@@ -487,7 +487,7 @@ void SingleApp::recordOctreeSecondaryCommandBuffer(const VkCommandBuffer command
                 .metallicRoughness = (uint32_t)meshComponent.metallicRoughness,
                 .shadow = (uint32_t)_shadowHandle,
             };
-            vkCmdPushConstants(commandBuffer, _graphicsPipeline->getVkPipelineLayout(), VK_SHADER_STAGE_ALL, 0, sizeof(pc), &pc);
+            vkCmdPushConstants(commandBuffer, _graphicsPipeline->getVkPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(pc), &pc);
 
             static constexpr VkDeviceSize offsets[] = { 0 };
             vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer.getVkBuffer(), offsets);

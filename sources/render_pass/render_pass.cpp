@@ -61,7 +61,7 @@ Status Renderpass::build() {
         vkDestroyRenderPass(_logicalDevice.getVkDevice(), _renderpass, nullptr);
     }
 
-    const std::vector<VkAttachmentDescription>& attachmentDescriptions = _attachmentsLayout.getVkAttachmentDescriptions();
+    std::span<const VkAttachmentDescription> attachmentDescriptions = _attachmentsLayout.getVkAttachmentDescriptions();
     lib::Buffer<VkSubpassDescription> subpassDescriptions(_subpasses.size());
     std::transform(_subpasses.cbegin(), _subpasses.cend(), subpassDescriptions.begin(), [](const Subpass& subpass) { return subpass.getVkSubpassDescription(); });
 

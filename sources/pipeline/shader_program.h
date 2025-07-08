@@ -2,7 +2,6 @@
 
 #include "status/status.h"
 #include "descriptor_set/descriptor_set_layout.h"
-#include "pipeline/push_constants.h"
 #include "primitives/primitives.h"
 #include "shader.h"
 
@@ -11,10 +10,10 @@
 #include <memory>
 #include <optional>
 #include <span>
+#include <unordered_map>
 #include <vector>
 
 class LogicalDevice;
-class PushConstants;
 class DescriptorSetLayout;
 class GraphicsShaderProgram;
 
@@ -26,6 +25,7 @@ enum class DescriptorSetType : uint8_t {
 class ShaderProgramManager {
     std::unordered_map<std::string_view, Shader> _shaders;
     std::unordered_map<DescriptorSetType, DescriptorSetLayout> _descriptorSetLayouts;
+
     const LogicalDevice& _logicalDevice;
 
 public:
@@ -49,6 +49,15 @@ private:
     ErrorOr<DescriptorSetType> getOrCreateBindlessLayout();
 
     ErrorOr<DescriptorSetType> getOrCreateCameraLayout();
+
+    template<typename T>
+    static constexpr VkPushConstantRange getPushConstantRange(VkShaderStageFlags shaderStages, uint32_t offset = 0) {
+        return VkPushConstantRange{
+            .stageFlags = shaderStages,
+            .offset = offset,
+            .size = sizeof(T)
+        };
+    }
 
     template<typename VertexType>
     static VkPipelineVertexInputStateCreateInfo getVkPipelineVertexInputStateCreateInfo() {

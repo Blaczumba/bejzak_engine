@@ -1,6 +1,5 @@
 #pragma once
 
-#include <vector>
 #include <array>
 
 constexpr std::array validationLayers = {

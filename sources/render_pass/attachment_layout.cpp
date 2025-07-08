@@ -9,19 +9,19 @@ VkSampleCountFlagBits AttachmentLayout::getNumMsaaSamples() const {
 	return _numMsaaSamples;
 }
 
-const std::vector<VkClearValue>& AttachmentLayout::getVkClearValues() const {
+std::span<const VkClearValue> AttachmentLayout::getVkClearValues() const {
 	return _clearValues;
 }
 
-const std::vector<VkAttachmentDescription>& AttachmentLayout::getVkAttachmentDescriptions() const {
+std::span<const VkAttachmentDescription> AttachmentLayout::getVkAttachmentDescriptions() const {
 	return _attachmentDescriptions;
 }
 
-const std::vector<VkImageLayout>& AttachmentLayout::getVkSubpassLayouts() const {
+std::span<const VkImageLayout> AttachmentLayout::getVkSubpassLayouts() const {
 	return _subpassImageLayouts;
 }
 
-const std::vector<Attachment::Type>& AttachmentLayout::getAttachmentsTypes() const {
+std::span<const Attachment::Type> AttachmentLayout::getAttachmentsTypes() const {
 	return _attachmentTypes;
 }
 
