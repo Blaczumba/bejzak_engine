@@ -138,27 +138,22 @@ Status SingleApp::loadObjects() {
             if (!_textures.contains(diffusePath)) {
                 ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(diffusePath));
                 ASSIGN_OR_RETURN(auto texture, Texture::create2DImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
-                TextureHandle handle = _bindlessWriter->storeTexture(*texture);
-                _textures.emplace(diffusePath, std::make_pair(handle, std::move(texture)));
+                _textures.emplace(diffusePath, std::make_pair(_bindlessWriter->storeTexture(*texture), std::move(texture)));
             }
             if (!_textures.contains(normalPath)) {
                 ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(normalPath));
                 ASSIGN_OR_RETURN(auto texture, Texture::create2DImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
-                TextureHandle handle = _bindlessWriter->storeTexture(*texture);
-                _textures.emplace(normalPath, std::make_pair(handle, std::move(texture)));
+                _textures.emplace(normalPath, std::make_pair(_bindlessWriter->storeTexture(*texture), std::move(texture)));
             }
             if (!_textures.contains(metallicRoughnessPath)) {
                 ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(metallicRoughnessPath));
                 ASSIGN_OR_RETURN(auto texture, Texture::create2DImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
-                TextureHandle handle = _bindlessWriter->storeTexture(*texture);
-                _textures.emplace(metallicRoughnessPath, std::make_pair(handle, std::move(texture)));
+                _textures.emplace(metallicRoughnessPath, std::make_pair(_bindlessWriter->storeTexture(*texture), std::move(texture)));
             }
             _objects.emplace_back("Object", e);
+            _registry.addComponent<MaterialComponent>(e, MaterialComponent{_textures[diffusePath].first, _textures[normalPath].first, _textures[metallicRoughnessPath].first });
             ASSIGN_OR_RETURN(auto vData, _assetManager->getVertexData(std::to_string(i)));
             MeshComponent msh;
-            msh.diffuse = _textures[diffusePath].first;
-            msh.normal = _textures[normalPath].first;
-            msh.metallicRoughness = _textures[metallicRoughnessPath].first;
             ASSIGN_OR_RETURN(msh.vertexBuffer, Buffer::createVertexBuffer(*_logicalDevice, vData->vertexBuffer.getSize()));
             RETURN_IF_ERROR(msh.vertexBuffer.copyBuffer(commandBuffer, vData->vertexBuffer));
             ASSIGN_OR_RETURN(msh.indexBuffer, Buffer::createIndexBuffer(*_logicalDevice, vData->indexBuffer.getSize()));
@@ -237,14 +232,13 @@ Status SingleApp::createDescriptorSets() {
 Status SingleApp::createPresentResources() {
     const VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_4_BIT;
     const VkFormat swapchainImageFormat = _swapchain->getVkFormat();
-    const VkExtent2D extent = _swapchain->getExtent();
 
     AttachmentLayout attachmentsLayout(msaaSamples);
     attachmentsLayout.addColorResolvePresentAttachment(swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE)
     //              .addColorResolveAttachment(swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE)
                     .addColorAttachment(swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE)
     //              .addColorAttachment(swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE)
-                    .addDepthAttachment(findDepthFormat(), VK_ATTACHMENT_STORE_OP_DONT_CARE);
+                    .addDepthAttachment(VK_FORMAT_D24_UNORM_S8_UINT, VK_ATTACHMENT_STORE_OP_DONT_CARE);
 
     _renderPass = Renderpass::create(*_logicalDevice, attachmentsLayout);
     RETURN_IF_ERROR(_renderPass->addSubpass({0, 1, 2}));
@@ -256,7 +250,6 @@ Status SingleApp::createPresentResources() {
         VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT
     );
     RETURN_IF_ERROR(_renderPass->build());
-    _framebuffers.reserve(_swapchain->getImagesCount());
     
     {
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
@@ -284,9 +277,8 @@ Status SingleApp::createPresentResources() {
 }
 
 Status SingleApp::createShadowResources() {
-    const VkFormat imageFormat = VK_FORMAT_D32_SFLOAT;
     AttachmentLayout attachmentLayout;
-    attachmentLayout.addShadowAttachment(imageFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    attachmentLayout.addShadowAttachment(VK_FORMAT_D32_SFLOAT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
     _shadowRenderPass = Renderpass::create(*_logicalDevice, attachmentLayout);
     RETURN_IF_ERROR(_shadowRenderPass->addSubpass({0}));
@@ -349,8 +341,8 @@ void SingleApp::draw() {
 
     updateUniformBuffer(_currentFrame);
     vkResetFences(device, 1, &_inFlightFences[_currentFrame]);
-    _primaryCommandBuffer[_currentFrame]->resetCommandBuffer();
 
+    _primaryCommandBuffer[_currentFrame]->resetCommandBuffer();
     for(int i = 0; i < MAX_THREADS_IN_POOL; i++)
         _commandBuffers[_currentFrame][i]->resetCommandBuffer();
 
@@ -389,22 +381,6 @@ void SingleApp::draw() {
     if (++_currentFrame == MAX_FRAMES_IN_FLIGHT) {
         _currentFrame = 0;
     }
-}
-
-VkFormat SingleApp::findDepthFormat() const {
-    const std::array<VkFormat, 3> depthFormats = {
-        VK_FORMAT_D24_UNORM_S8_UINT,
-        VK_FORMAT_D32_SFLOAT,
-        VK_FORMAT_D32_SFLOAT_S8_UINT,
-    };
-    auto formatPtr = std::find_if(depthFormats.cbegin(), depthFormats.cend(), [&](VkFormat format) {
-        return _physicalDevice->getPropertyManager().checkTextureFormatSupport(format, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
-        });
-
-    if (formatPtr == depthFormats.cend()) {
-        throw std::runtime_error("failed to find depth format!");
-    }
-    return *formatPtr;
 }
 
 void SingleApp::createSyncObjects() {
@@ -474,21 +450,24 @@ void SingleApp::recordOctreeSecondaryCommandBuffer(const VkCommandBuffer command
         nodeQueue.pop();
 
         for (const Object* object : node->getObjects()) {
-            const auto& meshComponent = _registry.getComponent<MeshComponent>(object->getEntity());
-            const Buffer& indexBuffer = meshComponent.indexBuffer;
-            const Buffer& vertexBuffer = meshComponent.vertexBuffer;
 
+            const auto& materialComponent = _registry.getComponent<MaterialComponent>(object->getEntity());
             const auto& transformComponent = _registry.getComponent<TransformComponent>(object->getEntity());
+
             const PushConstantsPBR pc = {
                 .model = transformComponent.model,
                 .light = (uint32_t)_lightHandle,
-                .diffuse = (uint32_t)meshComponent.diffuse,
-                .normal = (uint32_t)meshComponent.normal,
-                .metallicRoughness = (uint32_t)meshComponent.metallicRoughness,
+                .diffuse = (uint32_t)materialComponent.diffuse,
+                .normal = (uint32_t)materialComponent.normal,
+                .metallicRoughness = (uint32_t)materialComponent.metallicRoughness,
                 .shadow = (uint32_t)_shadowHandle,
             };
+
             vkCmdPushConstants(commandBuffer, _graphicsPipeline->getVkPipelineLayout(), VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(pc), &pc);
 
+            const auto& meshComponent = _registry.getComponent<MeshComponent>(object->getEntity());
+            const Buffer& indexBuffer = meshComponent.indexBuffer;
+            const Buffer& vertexBuffer = meshComponent.vertexBuffer;
             static constexpr VkDeviceSize offsets[] = { 0 };
             vkCmdBindVertexBuffers(commandBuffer, 0, 1, &vertexBuffer.getVkBuffer(), offsets);
             vkCmdBindIndexBuffer(commandBuffer, indexBuffer.getVkBuffer(), 0, meshComponent.indexType);
@@ -578,13 +557,6 @@ void SingleApp::recordCommandBuffer(uint32_t imageIndex) {
         vkCmdBindDescriptorSets(commandBuffer, _graphicsPipelineSkybox->getVkPipelineBindPoint(), _graphicsPipelineSkybox->getVkPipelineLayout(), 0, 1, &descriptorSet, 0, nullptr);
         vkCmdDrawIndexed(commandBuffer, _indexBufferCube.getSize() / getIndexSize(_indexBufferCubeType), 1, 0, 0, 0);
 
-        // Object
-        //vkCmdBindPipeline(commandBuffer, _graphicsPipelineNormal->getVkPipelineBindPoint(), _graphicsPipelineNormal->getVkPipeline());
-        //_vertexBufferObject->bind(commandBuffer);
-        //_indexBufferObject->bind(commandBuffer);
-        //_entitytoDescriptorSet[_objectEntity]->bind(commandBuffer, *_graphicsPipelineNormal, { _currentFrame });
-        //vkCmdDrawIndexed(commandBuffer, _indexBufferObject->getIndexCount(), 1, 0, 0, 0);
-
         vkEndCommandBuffer(commandBuffer);
     });
 
@@ -600,41 +572,46 @@ void SingleApp::recordCommandBuffer(uint32_t imageIndex) {
 }
 
 void SingleApp::recordShadowCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
-    VkCommandBufferBeginInfo beginInfo{};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    const VkCommandBufferBeginInfo beginInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO
+    };
 
     //if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
     //    throw std::runtime_error("failed to begin recording command buffer!");
     //}
 
     VkExtent2D extent = _shadowMap->getVkExtent2D();
-    VkRenderPassBeginInfo renderPassInfo{};
-    renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassInfo.renderPass = _shadowRenderPass->getVkRenderPass();
-    renderPassInfo.framebuffer = _shadowFramebuffer->getVkFramebuffer();
-    renderPassInfo.renderArea.offset = { 0, 0 };
-    renderPassInfo.renderArea.extent = extent;
-
     const auto& clearValues = _shadowRenderPass->getAttachmentsLayout().getVkClearValues();
-    renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-    renderPassInfo.pClearValues = clearValues.data();
+    const VkRenderPassBeginInfo renderPassInfo = {
+        .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+        .renderPass = _shadowRenderPass->getVkRenderPass(),
+        .framebuffer = _shadowFramebuffer->getVkFramebuffer(),
+        .renderArea = {
+            .offset = { 0, 0 },
+            .extent = extent
+        },
+        .clearValueCount = static_cast<uint32_t>(clearValues.size()),
+        .pClearValues = clearValues.data()
+    };
     vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-    VkViewport viewport{};
-    viewport.x = 0.0f;
-    viewport.y = 0.0f;
-    viewport.width = (float)extent.width;
-    viewport.height = (float)extent.height;
-    viewport.minDepth = 0.0f;
-    viewport.maxDepth = 1.0f;
+    const VkViewport viewport = {
+        .x = 0.0f,
+        .y = 0.0f,
+        .width = static_cast<float>(extent.width),
+        .height = static_cast<float>(extent.height),
+        .minDepth = 0.0f,
+        .maxDepth = 1.0f
+    };
     vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
-    VkRect2D scissor{};
-    scissor.offset = { 0, 0 };
-    scissor.extent = extent;
+    const VkRect2D scissor = {
+        .offset = { 0, 0 },
+        .extent = extent
+    };
     vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-    VkDeviceSize offsets[] = { 0 };
+    const VkDeviceSize offsets[] = { 0 };
     vkCmdBindPipeline(commandBuffer, _shadowPipeline->getVkPipelineBindPoint(), _shadowPipeline->getVkPipeline());
 
     PushConstantsShadow pc = {
@@ -651,11 +628,6 @@ void SingleApp::recordShadowCommandBuffer(VkCommandBuffer commandBuffer, uint32_
         vkCmdBindIndexBuffer(commandBuffer, indexBuffer.getVkBuffer(), 0, meshComponent.indexType);
         vkCmdDrawIndexed(commandBuffer, indexBuffer.getSize() / getIndexSize(meshComponent.indexType), 1, 0, 0, 0);
     }
-
-    //_vertexBufferPrimitiveObject->bind(commandBuffer);
-    //_indexBufferObject->bind(commandBuffer);
-    //_descriptorSetShadow->bind(commandBuffer, *_shadowPipeline, { index });
-    //vkCmdDrawIndexed(commandBuffer, _indexBufferObject->getIndexCount(), 1, 0, 0, 0);
 
     vkCmdEndRenderPass(commandBuffer);
     //if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
