@@ -2,7 +2,7 @@
 
 #include "memory_allocator/allocation.h"
 #include "memory_allocator/memory_allocator.h"
-#include "memory_objects/texture/texture.h"
+#include "memory_objects/texture.h"
 #include "physical_device/physical_device.h"
 #include "status/status.h"
 

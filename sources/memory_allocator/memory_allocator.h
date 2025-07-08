@@ -1,6 +1,6 @@
 #pragma once
 
-#include "memory_objects/texture/image.h"
+#include "memory_objects/image.h"
 #include "status/status.h"
 
 #include <vulkan/vulkan.h>

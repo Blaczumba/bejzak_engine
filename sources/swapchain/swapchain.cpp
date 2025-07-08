@@ -1,7 +1,7 @@
 #include "swapchain.h"
 
 #include "logical_device/logical_device.h"
-#include "memory_objects/texture/texture.h"
+#include "memory_objects/texture.h"
 #include "physical_device/physical_device.h"
 #include "window/window.h"
 

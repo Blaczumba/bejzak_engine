@@ -2,7 +2,7 @@
 
 #include "lib/buffer/buffer.h"
 #include "memory_objects/buffer.h"
-#include "memory_objects/texture/texture.h"
+#include "memory_objects/texture.h"
 #include "descriptor_set/descriptor_set.h"
 
 #include <vulkan/vulkan.h>

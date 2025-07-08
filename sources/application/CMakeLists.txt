@@ -7,7 +7,7 @@ if(Boost_FOUND)
 endif()
 
 target_link_libraries(Application PRIVATE LibStrongTypes)
-target_link_libraries(Application PUBLIC Window Instance Surface DebugMessenger PhysicalDevice MemoryAllocator LogicalDevice Renderpass Attachment Swapchain Buffer CommandBuffer Framebuffer Pipeline Texture  OBJLoader TinyGLTFLoader DescriptorSet Camera Screenshot Entity ComponentSystem ECSRegistry Object ThreadPool Primitives AssetManager)
+target_link_libraries(Application PUBLIC Window Instance Surface DebugMessenger PhysicalDevice MemoryAllocator LogicalDevice Renderpass Swapchain Buffer CommandBuffer Framebuffer Pipeline OBJLoader TinyGLTFLoader DescriptorSet Camera Screenshot Entity ComponentSystem ECSRegistry Object ThreadPool Primitives AssetManager)
 target_link_libraries(Application PRIVATE OBJLoader)
 
 target_include_directories(Application PUBLIC ${CMAKE_SOURCE_DIR}/sources)

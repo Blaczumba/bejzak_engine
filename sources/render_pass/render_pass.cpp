@@ -1,7 +1,7 @@
 #include "render_pass.h"
 
 #include "lib/macros/status_macros.h"
-#include "render_pass/attachment/attachment_layout.h"
+#include "render_pass/attachment_layout.h"
 
 #include <algorithm>
 #include <iterator>

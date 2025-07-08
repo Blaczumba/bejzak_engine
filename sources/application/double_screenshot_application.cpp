@@ -11,7 +11,7 @@
 #include "entity_component_system/component/velocity.h"
 #include "pipeline/shader_program.h"
 #include "primitives/vertex_builder.h"
-#include "render_pass/attachment/attachment_layout.h"
+#include "render_pass/attachment_layout.h"
 #include "status/status.h"
 #include "thread_pool/thread_pool.h"
 

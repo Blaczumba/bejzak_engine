@@ -1,7 +1,7 @@
 #pragma once
 
 #include "lib/buffer/buffer.h"
-#include "memory_objects/texture/texture.h"
+#include "memory_objects/texture.h"
 #include "status/status.h"
 
 #include <vulkan/vulkan.h>

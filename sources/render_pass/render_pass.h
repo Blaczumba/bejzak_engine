@@ -1,7 +1,7 @@
 #pragma once
 
 #include "logical_device/logical_device.h"
-#include "render_pass/attachment/attachment_layout.h"
+#include "render_pass/attachment_layout.h"
 #include "status/status.h"
 
 #include <memory>

@@ -1,4 +1,4 @@
-#include "memory_objects/texture/texture.h"
+#include "memory_objects/texture.h"
 #include "memory_allocator.h"
 
 #define VMA_IMPLEMENTATION

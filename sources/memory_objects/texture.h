@@ -4,7 +4,7 @@
 #include "memory_allocator/memory_allocator.h"
 #include "memory_allocator/allocation.h"
 #include "memory_objects/buffers.h"
-#include "memory_objects/texture/image.h"
+#include "memory_objects/image.h"
 #include "status/status.h"
 
 #include <vulkan/vulkan.h>

@@ -12,7 +12,7 @@
 #include "entity_component_system/system/movement_system.h"
 #include "framebuffer/framebuffer.h"
 #include "memory_objects/buffer.h"
-#include "memory_objects/texture/texture.h"
+#include "memory_objects/texture.h"
 #include "model_loader/obj_loader/obj_loader.h"
 #include "object/object.h"
 #include "render_pass/render_pass.h"
