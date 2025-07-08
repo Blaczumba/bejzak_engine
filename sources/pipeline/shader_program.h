@@ -15,7 +15,7 @@
 
 class LogicalDevice;
 class DescriptorSetLayout;
-class GraphicsShaderProgram;
+class ShaderProgram;
 
 enum class DescriptorSetType : uint8_t {
     BINDLESS,
@@ -37,11 +37,11 @@ public:
 
     const DescriptorSetLayout* getDescriptorSetLayout(DescriptorSetType type) const;
 
-    ErrorOr<std::unique_ptr<GraphicsShaderProgram>> createPBRProgram();
+    ErrorOr<std::unique_ptr<ShaderProgram>> createPBRProgram();
 
-    ErrorOr<std::unique_ptr<GraphicsShaderProgram>> createSkyboxProgram();
+    ErrorOr<std::unique_ptr<ShaderProgram>> createSkyboxProgram();
 
-    ErrorOr<std::unique_ptr<GraphicsShaderProgram>> createShadowProgram();
+    ErrorOr<std::unique_ptr<ShaderProgram>> createShadowProgram();
 
     const LogicalDevice& getLogicalDevice() const;
 
@@ -81,10 +81,12 @@ protected:
 	std::vector<std::string_view> _shaders;
 	std::vector<VkPushConstantRange> _pushConstants;
 
+    std::optional<VkPipelineVertexInputStateCreateInfo> _vertexInputInfo;
+
 	const ShaderProgramManager& _shaderProgramManager;
 
 public:
-	ShaderProgram(const ShaderProgramManager& shaderProgramManager, std::vector<std::string_view>&& shaders, std::vector<DescriptorSetType>&& descriptorSetLayouts, std::span<const VkPushConstantRange> pushConstantRange);
+	ShaderProgram(const ShaderProgramManager& shaderProgramManager, std::initializer_list<std::string_view> shaders, std::initializer_list<DescriptorSetType> descriptorSetLayouts, std::span<const VkPushConstantRange> pushConstantRange, std::optional<VkPipelineVertexInputStateCreateInfo> vertexInputInfo = std::nullopt);
 
     std::vector<VkPipelineShaderStageCreateInfo> getVkPipelineShaderStageCreateInfos() const;
 
@@ -93,16 +95,8 @@ public:
     std::span<const DescriptorSetType> getDescriptorSetLayouts() const;
 
 	std::span<const VkPushConstantRange> getPushConstants() const;
-};
 
-class GraphicsShaderProgram : public ShaderProgram {
-private:
-	VkPipelineVertexInputStateCreateInfo _vertexInputInfo;
-
-public:
-    GraphicsShaderProgram(const ShaderProgramManager& shaderProgramManager, const VkPipelineVertexInputStateCreateInfo& vertexInputInfo, std::vector<std::string_view>&& shaders, std::vector<DescriptorSetType>&& descriptorSetLayouts, std::span<const VkPushConstantRange> pushConstantRange);
-
-    const VkPipelineVertexInputStateCreateInfo& getVkPipelineVertexInputStateCreateInfo() const;
+    const std::optional<VkPipelineVertexInputStateCreateInfo>& getVkPipelineVertexInputStateCreateInfo() const;
 };
 
 struct PushConstantsPBR {

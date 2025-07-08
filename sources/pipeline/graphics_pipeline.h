@@ -29,7 +29,7 @@ class GraphicsPipeline : public Pipeline {
     const ShaderProgram& _shaderProgram;
 
 public:
-    GraphicsPipeline(const Renderpass& renderpass, const GraphicsShaderProgram& shaderProgram, const GraphicsPipelineParameters& parameters)
+    GraphicsPipeline(const Renderpass& renderpass, const ShaderProgram& shaderProgram, const GraphicsPipelineParameters& parameters)
         : Pipeline(VK_PIPELINE_BIND_POINT_GRAPHICS), _renderpass(renderpass), _shaderProgram(shaderProgram), _parameters(parameters) {
         const VkDevice device = _renderpass.getLogicalDevice().getVkDevice();
      
@@ -125,13 +125,15 @@ public:
         depthStencil.back = {}; // Optional
 
         const std::vector<VkPipelineShaderStageCreateInfo> shaders = _shaderProgram.getVkPipelineShaderStageCreateInfos();
-        const VkPipelineVertexInputStateCreateInfo& vertexInputInfo = shaderProgram.getVkPipelineVertexInputStateCreateInfo();
+        const std::optional<VkPipelineVertexInputStateCreateInfo>& vertexInputInfo = shaderProgram.getVkPipelineVertexInputStateCreateInfo();
 
         VkGraphicsPipelineCreateInfo pipelineInfo{};
         pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
         pipelineInfo.stageCount = static_cast<uint32_t>(shaders.size());
         pipelineInfo.pStages = shaders.data();
-        pipelineInfo.pVertexInputState = &vertexInputInfo;
+        if (vertexInputInfo.has_value()) {
+            pipelineInfo.pVertexInputState = &vertexInputInfo.value();
+        }
         pipelineInfo.pInputAssemblyState = &inputAssembly;
         pipelineInfo.pTessellationState = _parameters.patchControlPoints.has_value() ? &tessellationState : nullptr;
         pipelineInfo.pViewportState = &viewportState;
