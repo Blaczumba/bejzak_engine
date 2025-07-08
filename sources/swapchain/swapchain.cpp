@@ -45,12 +45,8 @@ uint32_t Swapchain::getImagesCount() const {
     return _images.size();
 }
 
-const lib::Buffer<VkImage>& Swapchain::getVkImages() const {
-    return _images;
-}
-
-const lib::Buffer<VkImageView>& Swapchain::getVkImageViews() const {
-    return _views;
+const VkImageView Swapchain::getSwapchainVkImageView(size_t index) const {
+    return _views[index];
 }
 
 ErrorOr<std::unique_ptr<Swapchain>> Swapchain::create(const LogicalDevice& logicalDevice, const VkSwapchainKHR oldSwapchain) {

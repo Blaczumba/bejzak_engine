@@ -31,8 +31,6 @@ class ShaderProgramManager {
 public:
     ShaderProgramManager(const LogicalDevice& logicalDevice);
 
-    const VkDescriptorSetLayout getVkDescriptorSetLayout(DescriptorSetType type) const;
-
     const Shader* getShader(std::string_view shaderPath) const;
 
     const DescriptorSetLayout* getDescriptorSetLayout(DescriptorSetType type) const;

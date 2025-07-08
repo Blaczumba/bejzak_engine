@@ -39,11 +39,12 @@ class SingleApp : public ApplicationBase {
     std::unique_ptr<ResourceManager> _resourceManager;
     std::shared_ptr<Renderpass> _renderPass;
     std::vector<std::unique_ptr<Framebuffer>> _framebuffers;
+    std::vector<std::unique_ptr<Texture>> _attachments;
 
     // Shadowmap
     std::shared_ptr<Renderpass> _shadowRenderPass;
     std::unique_ptr<Framebuffer> _shadowFramebuffer;
-    std::shared_ptr<Texture> _shadowMap;
+    std::unique_ptr<Texture> _shadowMap;
     std::unique_ptr<GraphicsPipeline> _shadowPipeline;
     TextureHandle _shadowHandle;
 

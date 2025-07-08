@@ -32,12 +32,16 @@ public:
 	~Swapchain();
 
 	const VkSwapchainKHR getVkSwapchain() const;
+
 	const VkFormat getVkFormat() const;
+
 	VkExtent2D getExtent() const;
+
 	uint32_t getImagesCount() const;
-	const lib::Buffer<VkImage>& getVkImages() const;
-	const lib::Buffer<VkImageView>& getVkImageViews() const;
+
+	const VkImageView getSwapchainVkImageView(size_t index) const;
 
 	VkResult acquireNextImage(VkSemaphore presentCompleteSemaphore, uint32_t* imageIndex) const;
+
 	VkResult present(uint32_t imageIndex, VkSemaphore waitSemaphore) const;
 };

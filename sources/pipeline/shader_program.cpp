@@ -15,7 +15,7 @@ ShaderProgram::ShaderProgram(const ShaderProgramManager& shaderProgramManager, s
 
 std::vector<VkDescriptorSetLayout> ShaderProgram::getVkDescriptorSetLayouts() const {
     std::vector<VkDescriptorSetLayout> layouts;
-    std::transform(_descriptorSetLayouts.cbegin(), _descriptorSetLayouts.cend(), std::back_inserter(layouts), [this](DescriptorSetType layoutType) { return _shaderProgramManager.getVkDescriptorSetLayout(layoutType); });
+    std::transform(_descriptorSetLayouts.cbegin(), _descriptorSetLayouts.cend(), std::back_inserter(layouts), [this](DescriptorSetType layoutType) { return _shaderProgramManager.getDescriptorSetLayout(layoutType)->getVkDescriptorSetLayout(); });
     return layouts;
 }
 
@@ -87,10 +87,6 @@ ErrorOr<std::unique_ptr<ShaderProgram>> ShaderProgramManager::createShadowProgra
     const VkPipelineVertexInputStateCreateInfo vertexInputInfo = getVkPipelineVertexInputStateCreateInfo<VertexP>();
 
     return std::unique_ptr<ShaderProgram>(new ShaderProgram(*this, { vertexShaderPath, fragmentShaderPath }, {}, pushConstantRanges, vertexInputInfo));
-}
-
-const VkDescriptorSetLayout ShaderProgramManager::getVkDescriptorSetLayout(DescriptorSetType type) const {
-    return _descriptorSetLayouts.find(type)->second.getVkDescriptorSetLayout();
 }
 
 const DescriptorSetLayout* ShaderProgramManager::getDescriptorSetLayout(DescriptorSetType type) const {
