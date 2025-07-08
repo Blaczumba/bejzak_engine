@@ -23,7 +23,6 @@ ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromSwapchain(const VkC
 
     const LogicalDevice& logicalDevice = renderpass.getLogicalDevice();
     std::span<const VkAttachmentDescription> descriptions = renderpass.getAttachmentsLayout().getVkAttachmentDescriptions();
-
     lib::Buffer<VkImageView> imageViews(descriptions.size());
 
     for (size_t i = 0; i < imageViews.size(); ++i) {
