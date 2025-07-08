@@ -15,7 +15,6 @@
 #include "memory_objects/texture/texture.h"
 #include "model_loader/obj_loader/obj_loader.h"
 #include "object/object.h"
-#include "pipeline/shader/push_constants.h"
 #include "render_pass/render_pass.h"
 #include "resource_manager/asset_manager.h"
 #include "resource_manager/resource_manager.h"

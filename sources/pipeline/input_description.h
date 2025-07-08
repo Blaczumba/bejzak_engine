@@ -1,5 +1,5 @@
 #pragma once
-#include "primitives.h"
+#include "primitives/primitives.h"
 
 #include <vulkan/vulkan.h>
 

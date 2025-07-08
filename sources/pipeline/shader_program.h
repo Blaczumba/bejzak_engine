@@ -2,8 +2,8 @@
 
 #include "status/status.h"
 #include "descriptor_set/descriptor_set_layout.h"
-#include "pipeline/shader/push_constants.h"
-#include "primitives/vk_primitives.h"
+#include "pipeline/push_constants.h"
+#include "primitives/primitives.h"
 #include "shader.h"
 
 #include <vulkan/vulkan.h>

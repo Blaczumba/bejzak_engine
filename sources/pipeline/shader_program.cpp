@@ -3,7 +3,7 @@
 #include "descriptor_set/descriptor_set_layout.h"
 #include "lib/macros/status_macros.h"
 #include "logical_device/logical_device.h"
-#include "primitives/vk_primitives.h"
+#include "pipeline/input_description.h"
 #include "primitives/primitives.h"
 
 #include <algorithm>

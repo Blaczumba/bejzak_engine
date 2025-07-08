@@ -9,7 +9,7 @@
 #include "entity_component_system/component/position.h"
 #include "entity_component_system/component/transform.h"
 #include "entity_component_system/component/velocity.h"
-#include "pipeline/shader/shader_program.h"
+#include "pipeline/shader_program.h"
 #include "primitives/vertex_builder.h"
 #include "render_pass/attachment/attachment_layout.h"
 #include "status/status.h"

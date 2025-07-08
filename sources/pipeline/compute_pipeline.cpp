@@ -1,7 +1,5 @@
 #include "compute_pipeline.h"
 
-#include "shader/shader.h"
-
 #include <stdexcept>
 
 ComputePipeline::ComputePipeline(const LogicalDevice& logicalDevice, VkDescriptorSetLayout descriptorSetLayout, const std::string& computeShader)

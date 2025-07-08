@@ -3,11 +3,10 @@
 #include "pipeline.h"
 
 #include "logical_device/logical_device.h"
-#include "pipeline/shader/push_constants.h"
-#include "primitives/vk_primitives.h"
+#include "pipeline/push_constants.h"
 #include "render_pass/render_pass.h"
-#include "shader/shader.h"
-#include "shader/shader_program.h"
+#include "pipeline/shader.h"
+#include "pipeline/shader_program.h"
 
 #include <vulkan/vulkan.h>
 

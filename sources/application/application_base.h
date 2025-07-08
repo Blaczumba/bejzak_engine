@@ -7,7 +7,7 @@
 #include <physical_device/physical_device.h>
 #include <swapchain/swapchain.h>
 #include <window/window.h>
-#include <pipeline/shader/shader_program.h>
+#include <pipeline/shader_program.h>
 
 class ApplicationBase {
 protected:
