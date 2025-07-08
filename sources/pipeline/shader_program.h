@@ -46,6 +46,8 @@ public:
     const LogicalDevice& getLogicalDevice() const;
 
 private:
+    Status addShader(std::string_view shaderFile, VkShaderStageFlagBits shaderStages);
+
     ErrorOr<DescriptorSetType> getOrCreateBindlessLayout();
 
     ErrorOr<DescriptorSetType> getOrCreateCameraLayout();
@@ -84,7 +86,7 @@ protected:
 public:
 	ShaderProgram(const ShaderProgramManager& shaderProgramManager, std::vector<std::string_view>&& shaders, std::vector<DescriptorSetType>&& descriptorSetLayouts, std::span<const VkPushConstantRange> pushConstantRange);
 
-    std::vector<VkPipelineShaderStageCreateInfo> getShaders() const;
+    std::vector<VkPipelineShaderStageCreateInfo> getVkPipelineShaderStageCreateInfos() const;
 
     std::vector<VkDescriptorSetLayout> getVkDescriptorSetLayouts() const;
 

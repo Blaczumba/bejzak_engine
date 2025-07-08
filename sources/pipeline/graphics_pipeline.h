@@ -124,7 +124,7 @@ public:
         depthStencil.front = {}; // Optional
         depthStencil.back = {}; // Optional
 
-        const std::vector<VkPipelineShaderStageCreateInfo> shaders = _shaderProgram.getShaders();
+        const std::vector<VkPipelineShaderStageCreateInfo> shaders = _shaderProgram.getVkPipelineShaderStageCreateInfos();
         const VkPipelineVertexInputStateCreateInfo& vertexInputInfo = shaderProgram.getVkPipelineVertexInputStateCreateInfo();
 
         VkGraphicsPipelineCreateInfo pipelineInfo{};

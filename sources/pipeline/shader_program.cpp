@@ -23,7 +23,7 @@ std::span<const DescriptorSetType> ShaderProgram::getDescriptorSetLayouts() cons
     return _descriptorSetLayouts;
 }
 
-std::vector<VkPipelineShaderStageCreateInfo> ShaderProgram::getShaders() const {
+std::vector<VkPipelineShaderStageCreateInfo> ShaderProgram::getVkPipelineShaderStageCreateInfos() const {
     std::vector<VkPipelineShaderStageCreateInfo> shaders;
     std::transform(_shaders.cbegin(), _shaders.cend(), std::back_inserter(shaders), [this](std::string_view shaderPath) { return _shaderProgramManager.getShader(shaderPath)->getVkPipelineStageCreateInfo(); });
     return shaders;
@@ -44,10 +44,8 @@ const VkPipelineVertexInputStateCreateInfo& GraphicsShaderProgram::getVkPipeline
 ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramManager::createPBRProgram() {
     static constexpr std::string_view vertexShaderPath = "shader_pbr.vert.spv";
     static constexpr std::string_view fragmentShaderPath = "shader_pbr.frag.spv";
-    ASSIGN_OR_RETURN(Shader vertexShader, Shader::create(_logicalDevice, vertexShaderPath, VK_SHADER_STAGE_VERTEX_BIT));
-    ASSIGN_OR_RETURN(Shader fragmentShader, Shader::create(_logicalDevice, fragmentShaderPath, VK_SHADER_STAGE_FRAGMENT_BIT));
-    _shaders.emplace(vertexShaderPath, std::move(vertexShader));
-    _shaders.emplace(fragmentShaderPath, std::move(fragmentShader));
+    RETURN_IF_ERROR(addShader(vertexShaderPath, VK_SHADER_STAGE_VERTEX_BIT));
+    RETURN_IF_ERROR(addShader(fragmentShaderPath, VK_SHADER_STAGE_FRAGMENT_BIT));
 
     static constexpr VkPushConstantRange pushConstantRanges[] = {
         getPushConstantRange<PushConstantsPBR>(VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
@@ -66,10 +64,8 @@ ShaderProgramManager::ShaderProgramManager(const LogicalDevice& logicalDevice) :
 ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramManager::createSkyboxProgram() {
     static constexpr std::string_view vertexShaderPath = "skybox.vert.spv";
     static constexpr std::string_view fragmentShaderPath = "skybox.frag.spv";
-    ASSIGN_OR_RETURN(Shader vertexShader, Shader::create(_logicalDevice, vertexShaderPath, VK_SHADER_STAGE_VERTEX_BIT));
-    ASSIGN_OR_RETURN(Shader fragmentShader, Shader::create(_logicalDevice, fragmentShaderPath, VK_SHADER_STAGE_FRAGMENT_BIT));
-    _shaders.emplace(vertexShaderPath, std::move(vertexShader));
-    _shaders.emplace(fragmentShaderPath, std::move(fragmentShader));
+    RETURN_IF_ERROR(addShader(vertexShaderPath, VK_SHADER_STAGE_VERTEX_BIT));
+    RETURN_IF_ERROR(addShader(fragmentShaderPath, VK_SHADER_STAGE_FRAGMENT_BIT));
 
     ASSIGN_OR_RETURN(DescriptorSetType bindlessLayout, getOrCreateBindlessLayout());
 
@@ -85,10 +81,8 @@ ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramManager::createSkyb
 ErrorOr<std::unique_ptr<GraphicsShaderProgram>> ShaderProgramManager::createShadowProgram() {
     static constexpr std::string_view vertexShaderPath = "shadow.vert.spv";
     static constexpr std::string_view fragmentShaderPath = "shadow.frag.spv";
-    ASSIGN_OR_RETURN(Shader vertexShader, Shader::create(_logicalDevice, vertexShaderPath, VK_SHADER_STAGE_VERTEX_BIT));
-    ASSIGN_OR_RETURN(Shader fragmentShader, Shader::create(_logicalDevice, fragmentShaderPath, VK_SHADER_STAGE_FRAGMENT_BIT));
-    _shaders.emplace(vertexShaderPath, std::move(vertexShader));
-    _shaders.emplace(fragmentShaderPath, std::move(fragmentShader));
+    RETURN_IF_ERROR(addShader(vertexShaderPath, VK_SHADER_STAGE_VERTEX_BIT));
+    RETURN_IF_ERROR(addShader(fragmentShaderPath, VK_SHADER_STAGE_FRAGMENT_BIT));
 
     static constexpr VkPushConstantRange pushConstantRanges[] = {
         getPushConstantRange<PushConstantsShadow>(VK_SHADER_STAGE_VERTEX_BIT)
@@ -109,6 +103,12 @@ const DescriptorSetLayout* ShaderProgramManager::getDescriptorSetLayout(Descript
 
 const Shader* ShaderProgramManager::getShader(std::string_view shaderPath) const {
     return &_shaders.find(shaderPath)->second;
+}
+
+Status ShaderProgramManager::addShader(std::string_view shaderFile, VkShaderStageFlagBits shaderStages) {
+    ASSIGN_OR_RETURN(Shader shader, Shader::create(_logicalDevice, shaderFile, shaderStages));
+    _shaders.emplace(shaderFile, std::move(shader));
+    return StatusOk();
 }
 
 ErrorOr<DescriptorSetType> ShaderProgramManager::getOrCreateBindlessLayout() {
