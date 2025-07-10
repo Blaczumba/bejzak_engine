@@ -1,6 +1,5 @@
 #include "double_screenshot_application.h"
 
-#include "config/config.h"
 #include "lib/buffer/shared_buffer.h"
 #include "model_loader/tiny_gltf_loader/tiny_gltf_loader.h"
 #include "entity_component_system/system/movement_system.h"
@@ -496,7 +495,7 @@ void SingleApp::recordCommandBuffer(uint32_t imageIndex) {
     primaryCommandBuffer.begin();
     primaryCommandBuffer.beginRenderPass(framebuffer);
 
-    static const bool viewportScissorInheritance = (std::find(_physicalDevice->getAvailableRequestedExtensions().cbegin(), _physicalDevice->getAvailableRequestedExtensions().cend(), VK_NV_INHERITED_VIEWPORT_SCISSOR_EXTENSION_NAME) != _physicalDevice->getAvailableRequestedExtensions().cend());
+    static const bool viewportScissorInheritance = _physicalDevice->hasAvailableExtension(VK_NV_INHERITED_VIEWPORT_SCISSOR_EXTENSION_NAME);
     VkCommandBufferInheritanceViewportScissorInfoNV scissorViewportInheritance;
     if (viewportScissorInheritance) [[likely]] {
         scissorViewportInheritance = VkCommandBufferInheritanceViewportScissorInfoNV {

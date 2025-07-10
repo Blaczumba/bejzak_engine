@@ -1,6 +1,6 @@
 #include "logical_device.h"
 
-#include "config/config.h"
+#include "instance/extensions.h"
 #include "lib/buffer/buffer.h"
 
 #include <vulkan/vulkan.h>
@@ -23,8 +23,8 @@ LogicalDevice::~LogicalDevice() {
 }
 
 template<typename T> 
-void chainExtensionFeature(void** next, T& feature, std::string_view extension, const std::unordered_set<std::string_view>& availableExtensions) {
-    if (availableExtensions.contains(extension)) {
+void chainExtensionFeature(void** next, T& feature, std::string_view extension, const PhysicalDevice& physicalDevice) {
+    if (physicalDevice.hasAvailableExtension(extension)) {
         feature.pNext = *next;
         *next = (void*)&feature;
     }
@@ -48,28 +48,27 @@ ErrorOr<std::unique_ptr<LogicalDevice>> LogicalDevice::create(const PhysicalDevi
     );
 
     void* next = nullptr;
-    const std::unordered_set<std::string_view>& availableExtensions = physicalDevice.getAvailableRequestedExtensions();
 
     VkPhysicalDeviceIndexTypeUint8FeaturesEXT uint8IndexFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INDEX_TYPE_UINT8_FEATURES_EXT,
         .indexTypeUint8 = VK_TRUE
     };
 
-    chainExtensionFeature(&next, uint8IndexFeatures, VK_EXT_INDEX_TYPE_UINT8_EXTENSION_NAME, availableExtensions);
+    chainExtensionFeature(&next, uint8IndexFeatures, VK_EXT_INDEX_TYPE_UINT8_EXTENSION_NAME, physicalDevice);
 
     VkPhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
         .bufferDeviceAddress = VK_TRUE
     };
 
-    chainExtensionFeature(&next, bufferDeviceAddressFeatures, VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME, availableExtensions);
+    chainExtensionFeature(&next, bufferDeviceAddressFeatures, VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME, physicalDevice);
 
     VkPhysicalDeviceInheritedViewportScissorFeaturesNV viewportScissorsFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INHERITED_VIEWPORT_SCISSOR_FEATURES_NV,
         .inheritedViewportScissor2D = VK_TRUE,
     };
 
-    chainExtensionFeature(&next, viewportScissorsFeatures, VK_NV_INHERITED_VIEWPORT_SCISSOR_EXTENSION_NAME, availableExtensions);
+    chainExtensionFeature(&next, viewportScissorsFeatures, VK_NV_INHERITED_VIEWPORT_SCISSOR_EXTENSION_NAME, physicalDevice);
 
     VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
@@ -83,7 +82,7 @@ ErrorOr<std::unique_ptr<LogicalDevice>> LogicalDevice::create(const PhysicalDevi
         .runtimeDescriptorArray = VK_TRUE,
     };
 
-    chainExtensionFeature(&next, descriptorIndexingFeatures, VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME, availableExtensions);
+    chainExtensionFeature(&next, descriptorIndexingFeatures, VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME, physicalDevice);
 
     const VkPhysicalDeviceFeatures2 deviceFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
@@ -97,8 +96,7 @@ ErrorOr<std::unique_ptr<LogicalDevice>> LogicalDevice::create(const PhysicalDevi
         }
     };
 
-    lib::Buffer<const char*> extensions(availableExtensions.size());
-    std::transform(availableExtensions.cbegin(), availableExtensions.cend(), extensions.begin(), [](std::string_view ext) { return ext.data(); });
+    const lib::Buffer<const char*> extensions = physicalDevice.getAvailableExtensions();
 
     const VkDeviceCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -128,96 +126,7 @@ ErrorOr<std::unique_ptr<LogicalDevice>> LogicalDevice::create(const PhysicalDevi
     return std::unique_ptr<LogicalDevice>(new LogicalDevice(logicalDevice, physicalDevice, graphicsQueue, presentQueue, computeQueue, transferQueue));
 }
 
-const VkBuffer LogicalDevice::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage) const {
-    // DEPRECATED
-    const VkBufferCreateInfo bufferInfo = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = size,
-        .usage = usage,
-        .sharingMode = VK_SHARING_MODE_EXCLUSIVE
-    };
-
-    VkBuffer buffer;
-    if (vkCreateBuffer(_device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create buffer!");
-    }
-    return buffer;
-}
-
-const VkDeviceMemory LogicalDevice::createBufferMemory(VkBuffer buffer, VkMemoryPropertyFlags properties) const {
-    // DEPRECATED
-    const auto& propertyManager = _physicalDevice.getPropertyManager();
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(_device, buffer, &memRequirements);
-
-    const VkMemoryAllocateInfo allocInfo = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .allocationSize = memRequirements.size,
-        .memoryTypeIndex = propertyManager.findMemoryType(memRequirements.memoryTypeBits, properties)
-    };
-
-    VkDeviceMemory bufferMemory;
-    if (vkAllocateMemory(_device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate buffer memory!");
-    }
-    vkBindBufferMemory(_device, buffer, bufferMemory, 0);
-    return bufferMemory;
-}
-
-const VkImage LogicalDevice::createImage(const ImageParameters& params) const {
-    // DEPRECATED
-    VkImageCreateInfo imageInfo = {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .imageType = VK_IMAGE_TYPE_2D,
-        .format = params.format,
-        .extent = {
-            .width = params.width,
-            .height = params.height,
-            .depth = 1
-        },
-        .mipLevels = params.mipLevels,
-        .arrayLayers = params.layerCount,
-        .samples = params.numSamples,
-        .tiling = params.tiling,
-        .usage = params.usage,
-        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-        .initialLayout = params.layout
-    };
-
-    if (params.layerCount == 6)
-        imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-
-    VkImage image;
-    if (vkCreateImage(_device, &imageInfo, nullptr, &image) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create image!");
-    }
-    return image;
-}
-
-const VkDeviceMemory LogicalDevice::createImageMemory(const VkImage image, const ImageParameters& params) const {
-    // DEPRECATED
-    const auto& propertyManager = _physicalDevice.getPropertyManager();
-
-    VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(_device, image, &memRequirements);
-
-    const VkMemoryAllocateInfo allocInfo = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .allocationSize = memRequirements.size,
-        .memoryTypeIndex = propertyManager.findMemoryType(memRequirements.memoryTypeBits, params.properties)
-    };
-
-    VkDeviceMemory memory;
-    if (vkAllocateMemory(_device, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate image memory!");
-    }
-
-    vkBindImageMemory(_device, image, memory, 0);
-    return memory;
-}
-
 const VkImageView LogicalDevice::createImageView(const VkImage image, const ImageParameters& params) const {
-    // DEPRECATED
     const VkImageSubresourceRange range = {
         .aspectMask = params.aspect,
         .baseMipLevel = 0,
@@ -245,7 +154,6 @@ const VkImageView LogicalDevice::createImageView(const VkImage image, const Imag
 }
 
 const VkSampler LogicalDevice::createSampler(const SamplerParameters& params) const {
-    // DEPRECATED
     VkSamplerCreateInfo samplerInfo = {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
         .magFilter = params.magFilter,
@@ -280,14 +188,6 @@ const VkSampler LogicalDevice::createSampler(const SamplerParameters& params) co
     }
 
     return sampler;
-}
-
-void LogicalDevice::sendDataToMemory(const VkDeviceMemory memory, const void* data, size_t size) const {
-    // DEPRECATED
-    void* mappedMemory;
-    vkMapMemory(_device, memory, 0, size, 0, &mappedMemory);
-    std::memcpy(mappedMemory, data, size);
-    // vkUnmapMemory(_device, memory);
 }
 
 const VkDevice LogicalDevice::getVkDevice() const {

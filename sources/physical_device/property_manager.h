@@ -30,7 +30,6 @@ class PhysicalDevicePropertyManager {
 
     VkPhysicalDeviceProperties _properties              = {};
     VkPhysicalDeviceMemoryProperties _memoryProperties  = {};
-    lib::Buffer<VkExtensionProperties> _availableExtensions;
     lib::Buffer<VkQueueFamilyProperties> _queueFamilies;
 
     QueueFamilyIndices _queueFamilyIndices;
@@ -50,14 +49,8 @@ public:
     SwapChainSupportDetails getSwapChainSupportDetails() const;
 
     const lib::Buffer<VkQueueFamilyProperties>& getQueueFamilyProperties() const;
-    const lib::Buffer<VkExtensionProperties>& getAvailableExtensionProperties() const;
 
     bool isDiscreteGPU() const;
-    std::unordered_set<std::string_view> checkDeviceExtensionSupport() const;
-
-    bool checkBlittingSupport(VkFormat format) const;
-    bool checkTextureFormatSupport(VkFormat format, VkImageTiling tiling, VkFormatFeatureFlags features) const;
-    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const;
 
     friend class PhysicalDevice;
 };

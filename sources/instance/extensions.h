@@ -6,7 +6,7 @@ constexpr std::array validationLayers = {
     "VK_LAYER_KHRONOS_validation",
 };
 
-constexpr std::array deviceExtensions = {
+constexpr std::array requestedDeviceExtensions = {
     VK_EXT_INDEX_TYPE_UINT8_EXTENSION_NAME,
     VK_EXT_INLINE_UNIFORM_BLOCK_EXTENSION_NAME,
     VK_EXT_MEMORY_BUDGET_EXTENSION_NAME,

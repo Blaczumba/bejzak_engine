@@ -1,6 +1,6 @@
 #include "instance.h"
 
-#include "config/config.h"
+#include "instance/extensions.h"
 #include "debug_messenger/debug_messenger_utils.h"
 
 #include <algorithm>

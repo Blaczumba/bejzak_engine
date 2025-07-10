@@ -109,7 +109,6 @@ public:
 private:
     void setInput();
     void draw();
-    VkFormat findDepthFormat() const;
     void createCommandBuffers();
     void createSyncObjects();
     void updateUniformBuffer(uint32_t currentImage);
@@ -123,6 +122,5 @@ private:
     Status createShadowResources();
 
     Status loadObjects();
-    Status loadObject();
     Status loadCubemap();
 };

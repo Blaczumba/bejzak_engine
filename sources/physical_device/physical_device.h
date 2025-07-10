@@ -16,7 +16,7 @@ class PhysicalDevice {
     const Surface& _surface;
 
     const PhysicalDevicePropertyManager _propertyManager;
-    const std::unordered_set<std::string_view> _availableRequestedExtensions;
+    const std::unordered_set<std::string_view> _availableRequestedExtensions; // TODO: change to flat hash set
 
 	PhysicalDevice(const VkPhysicalDevice physicalDevice, const Surface& surface, std::unordered_set<std::string_view>&& availableRequestedExtensions, PhysicalDevicePropertyManager&& propertManager);
 
@@ -28,5 +28,6 @@ public:
     const VkPhysicalDevice getVkPhysicalDevice() const;
     const Surface& getSurface() const;
     const PhysicalDevicePropertyManager& getPropertyManager() const;
-    const std::unordered_set<std::string_view>& getAvailableRequestedExtensions() const;
+    bool hasAvailableExtension(std::string_view extension) const;
+    lib::Buffer<const char*> getAvailableExtensions() const;
 };

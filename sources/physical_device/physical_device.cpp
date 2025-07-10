@@ -3,6 +3,7 @@
 #include "lib/algorithm.h"
 #include "lib/macros/status_macros.h"
 #include "logical_device/logical_device.h"
+#include "instance/extensions.h"
 
 #include <algorithm>
 #include <array>
@@ -13,6 +14,33 @@
 
 PhysicalDevice::PhysicalDevice(const VkPhysicalDevice physicalDevice, const Surface& surface, std::unordered_set<std::string_view>&& availableRequestedExtensions, PhysicalDevicePropertyManager&& propertManager)
 	: _device(physicalDevice), _surface(surface), _availableRequestedExtensions(std::move(availableRequestedExtensions)), _propertyManager(std::move(propertManager)) { }
+
+namespace {
+
+std::unordered_set<std::string_view> checkDeviceExtensionSupport(VkPhysicalDevice device) {
+    uint32_t extensionCount;
+    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
+
+    lib::Buffer<VkExtensionProperties> availableExtensions(extensionCount);
+    vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, availableExtensions.data());
+
+    std::unordered_set<std::string_view> availableExtensionNames;
+    availableExtensionNames.reserve(extensionCount);
+    for (const VkExtensionProperties& ext : availableExtensions) {
+        availableExtensionNames.emplace(ext.extensionName);
+    }
+
+    std::unordered_set<std::string_view> supportedRequestedExtensions;
+    for (const char* requested : requestedDeviceExtensions) {
+        if (availableExtensionNames.contains(requested)) {
+            supportedRequestedExtensions.emplace(requested);
+        }
+    }
+
+    return supportedRequestedExtensions;
+}
+
+} // namespace
 
 ErrorOr<std::unique_ptr<PhysicalDevice>> PhysicalDevice::create(const Surface& surface) {
     const VkSurfaceKHR surf = surface.getVkSurface();
@@ -31,7 +59,7 @@ ErrorOr<std::unique_ptr<PhysicalDevice>> PhysicalDevice::create(const Surface& s
         const bool discreteGPU = propertyManager.isDiscreteGPU();
 
         if (lib::cont_all_of(std::initializer_list{ indices.isComplete(), swapChainAdequate, static_cast<bool>(supportedFeatures.samplerAnisotropy), discreteGPU }, [](bool condition) { return condition; })) {
-            return std::unique_ptr<PhysicalDevice>(new PhysicalDevice(device, surface, propertyManager.checkDeviceExtensionSupport(), std::move(propertyManager)));
+            return std::unique_ptr<PhysicalDevice>(new PhysicalDevice(device, surface, checkDeviceExtensionSupport(device), std::move(propertyManager)));
         }
     }
     return Error(EngineError::NOT_FOUND);
@@ -49,6 +77,13 @@ const PhysicalDevicePropertyManager& PhysicalDevice::getPropertyManager() const 
     return _propertyManager;
 }
 
-const std::unordered_set<std::string_view>& PhysicalDevice::getAvailableRequestedExtensions() const {
-    return _availableRequestedExtensions;
+bool PhysicalDevice::hasAvailableExtension(std::string_view extension) const {
+    return _availableRequestedExtensions.contains(extension);
+}
+
+lib::Buffer<const char*> PhysicalDevice::getAvailableExtensions() const {
+    lib::Buffer<const char*> extensions(_availableRequestedExtensions.size());
+    std::transform(_availableRequestedExtensions.cbegin(), _availableRequestedExtensions.cend(),
+        extensions.begin(),[](std::string_view extension) { return extension.data(); });
+    return extensions;
 }

@@ -34,13 +34,8 @@ public:
 
 	static ErrorOr<std::unique_ptr<LogicalDevice>> create(const PhysicalDevice& physicalDevice);
 
-	const VkBuffer createBuffer(VkDeviceSize size, VkBufferUsageFlags usage) const;
-	const VkImage createImage(const ImageParameters& params) const;
 	const VkSampler createSampler(const SamplerParameters& params) const;
-	const VkDeviceMemory createBufferMemory(VkBuffer buffer, VkMemoryPropertyFlags properties) const;
-	const VkDeviceMemory createImageMemory(const VkImage image, const ImageParameters& params) const;
 	const VkImageView createImageView(const VkImage image, const ImageParameters& params) const;
-	void sendDataToMemory(const VkDeviceMemory memory, const void* data, size_t size) const;
 
 	const VkDevice getVkDevice() const;
 	const PhysicalDevice& getPhysicalDevice() const;

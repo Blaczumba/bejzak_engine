@@ -1,7 +1,7 @@
 #include "property_manager.h"
 
 #include "lib/buffer/buffer.h"
-#include "config/config.h"
+#include "instance/extensions.h"
 
 #include <algorithm>
 #include <array>
@@ -20,9 +20,6 @@ PhysicalDevicePropertyManager::PhysicalDevicePropertyManager(const VkPhysicalDev
 
     uint32_t extensionCount;
     vkEnumerateDeviceExtensionProperties(_physicalDevice, nullptr, &extensionCount, nullptr);
-
-    _availableExtensions = lib::Buffer<VkExtensionProperties>(extensionCount);
-    vkEnumerateDeviceExtensionProperties(_physicalDevice, nullptr, &extensionCount, _availableExtensions.data());
 
     uint32_t queueFamilyCount = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(_physicalDevice, &queueFamilyCount, nullptr);
@@ -122,60 +119,8 @@ const lib::Buffer<VkQueueFamilyProperties>& PhysicalDevicePropertyManager::getQu
     return _queueFamilies;
 }
 
-const lib::Buffer<VkExtensionProperties>& PhysicalDevicePropertyManager::getAvailableExtensionProperties() const {
-    return _availableExtensions;
-}
-
-std::unordered_set<std::string_view> PhysicalDevicePropertyManager::checkDeviceExtensionSupport() const {
-    const lib::Buffer<VkExtensionProperties>& availableExtensions = getAvailableExtensionProperties();
-    std::unordered_set<std::string_view> availableRequestedExtensions;
-    for (const char* extension : deviceExtensions) {
-        if (std::find_if(availableExtensions.cbegin(), availableExtensions.cend(),
-            [&](const VkExtensionProperties& properties) {
-                return std::strcmp(properties.extensionName, extension) == 0;
-            }) != availableExtensions.cend()) {
-            availableRequestedExtensions.emplace(extension);
-        }
-    }
-    return availableRequestedExtensions;
-}
-
 bool PhysicalDevicePropertyManager::isDiscreteGPU() const {
     return _properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
-}
-
-bool PhysicalDevicePropertyManager::checkBlittingSupport(VkFormat format) const {
-    VkFormatProperties formatProps;
-    vkGetPhysicalDeviceFormatProperties(_physicalDevice, format, &formatProps);
-    if (formatProps.optimalTilingFeatures & VK_FORMAT_FEATURE_BLIT_SRC_BIT) {
-        return true;
-    }
-    return false;
-}
-
-bool PhysicalDevicePropertyManager::checkTextureFormatSupport(VkFormat format, VkImageTiling tiling, VkFormatFeatureFlags features) const {
-    VkFormatProperties properties;
-    vkGetPhysicalDeviceFormatProperties(_physicalDevice, format, &properties);
-
-    if (tiling == VK_IMAGE_TILING_LINEAR && (properties.linearTilingFeatures & features) == features) {
-        return true;
-    }
-
-    if (tiling == VK_IMAGE_TILING_OPTIMAL && (properties.optimalTilingFeatures & features) == features) {
-        return true;
-    }
-
-    return false;
-}
-
-uint32_t PhysicalDevicePropertyManager::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) const {
-    for (uint32_t i = 0; i < _memoryProperties.memoryTypeCount; i++) {
-        if ((typeFilter & (1 << i)) && (_memoryProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-            return i;
-        }
-    }
-
-    throw std::runtime_error("failed to find suitable memory type!");
 }
 
 bool QueueFamilyIndices::isComplete() const {
