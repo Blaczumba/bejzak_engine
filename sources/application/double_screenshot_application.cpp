@@ -62,10 +62,6 @@ uint32_t getIndexSize(VkIndexType type) {
     return 0;
 }
 
-static VkDeviceSize memoryAlignment(size_t size, size_t minUboAlignment) {
-    return minUboAlignment > 0 ? (size + minUboAlignment - 1) & ~(minUboAlignment - 1) : size;
-}
-
 void SingleApp::setInput() {
     if (MouseKeyboardManager* manager = _window->getMouseKeyboardManager(); manager != nullptr) {
         // manager->absorbCursor();
@@ -122,7 +118,7 @@ Status SingleApp::loadObjects() {
         ASSIGN_OR_RETURN(lib::SharedBuffer vertices, buildInterleavingVertexData(sceneData[i].positions, sceneData[i].textureCoordinates, sceneData[i].normals, sceneData[i].tangents));
         _assetManager->loadVertexData(std::to_string(i), sceneData[i].indices, static_cast<uint8_t>(sceneData[i].indexType), vertices, sceneData[i].positions);
     }
-    float maxSamplerAnisotropy = _physicalDevice->getPropertyManager().getMaxSamplerAnisotropy();
+    float maxSamplerAnisotropy = _physicalDevice->getMaxSamplerAnisotropy();
     _objects.reserve(sceneData.size());
     {
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
@@ -184,8 +180,7 @@ Status SingleApp::loadObjects() {
 }
 
 Status SingleApp::createDescriptorSets() {
-    const auto& propertyManager = _physicalDevice->getPropertyManager();
-    float maxSamplerAnisotropy = propertyManager.getMaxSamplerAnisotropy();
+    float maxSamplerAnisotropy = _physicalDevice->getMaxSamplerAnisotropy();
     _assetManager->loadImageCubemapAsync(TEXTURES_PATH "cubemap_yokohama_rgba.ktx");
     {
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
@@ -195,8 +190,7 @@ Status SingleApp::createDescriptorSets() {
         ASSIGN_OR_RETURN(_shadowMap, Texture::create2DShadowmap(*_logicalDevice, commandBuffer, 1024 * 2, 1024 * 2, VK_FORMAT_D32_SFLOAT));
     }
 
-    const auto& limits = _logicalDevice->getPhysicalDevice().getPropertyManager().getPhysicalDeviceLimits();
-    const uint32_t size = memoryAlignment(sizeof(UniformBufferCamera), limits.minUniformBufferOffsetAlignment);
+    const uint32_t size = _logicalDevice->getPhysicalDevice().getMemoryAlignment(sizeof(UniformBufferCamera));
     ASSIGN_OR_RETURN(_dynamicUniformBuffersCamera, Buffer::createUniformBuffer(*_logicalDevice, MAX_FRAMES_IN_FLIGHT * size));
 
     ASSIGN_OR_RETURN(_pbrShaderProgram, _programManager->createPBRProgram());
@@ -409,7 +403,7 @@ void SingleApp::updateUniformBuffer(uint32_t currentFrame) {
     _ubCamera.view = _camera->getViewMatrix();
     _ubCamera.proj = _camera->getProjectionMatrix();
     _ubCamera.pos = _camera->getPosition();
-    _dynamicUniformBuffersCamera.copyData(_ubCamera, currentFrame * memoryAlignment(sizeof(UniformBufferCamera), _logicalDevice->getPhysicalDevice().getPropertyManager().getPhysicalDeviceLimits().minUniformBufferOffsetAlignment));
+    _dynamicUniformBuffersCamera.copyData(_ubCamera, currentFrame * _physicalDevice->getMemoryAlignment(sizeof(UniformBufferCamera)));
 }
 
 void SingleApp::createCommandBuffers() {

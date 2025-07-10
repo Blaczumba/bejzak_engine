@@ -1,6 +1,5 @@
 #pragma once
 
-#include "property_manager.h"
 #include "status/status.h"
 #include "surface/surface.h"
 
@@ -11,14 +10,29 @@
 
 class LogicalDevice;
 
+struct QueueFamilyIndices {
+    std::optional<uint32_t> graphicsFamily;
+    std::optional<uint32_t> presentFamily;
+    std::optional<uint32_t> computeFamily;
+    std::optional<uint32_t> transferFamily;
+};
+
+struct SwapChainSupportDetails {
+    VkSurfaceCapabilitiesKHR capabilities;
+    lib::Buffer<VkSurfaceFormatKHR> formats;
+    lib::Buffer<VkPresentModeKHR> presentModes;
+};
+
+
 class PhysicalDevice {
     const VkPhysicalDevice _device;
+    VkPhysicalDeviceProperties _properties;
+
     const Surface& _surface;
 
-    const PhysicalDevicePropertyManager _propertyManager;
     const std::unordered_set<std::string_view> _availableRequestedExtensions; // TODO: change to flat hash set
 
-	PhysicalDevice(const VkPhysicalDevice physicalDevice, const Surface& surface, std::unordered_set<std::string_view>&& availableRequestedExtensions, PhysicalDevicePropertyManager&& propertManager);
+	PhysicalDevice(const VkPhysicalDevice physicalDevice, const Surface& surface);
 
 public:
     ~PhysicalDevice() = default;
@@ -26,8 +40,18 @@ public:
     static ErrorOr<std::unique_ptr<PhysicalDevice>> create(const Surface& surface);
 
     const VkPhysicalDevice getVkPhysicalDevice() const;
+
     const Surface& getSurface() const;
-    const PhysicalDevicePropertyManager& getPropertyManager() const;
+
     bool hasAvailableExtension(std::string_view extension) const;
+
+    float getMaxSamplerAnisotropy() const;
+
+    size_t getMemoryAlignment(size_t size) const;
+
     lib::Buffer<const char*> getAvailableExtensions() const;
+
+    QueueFamilyIndices getQueueFamilyIndices() const;
+
+    SwapChainSupportDetails getSwapchainSupportDetails() const;
 };

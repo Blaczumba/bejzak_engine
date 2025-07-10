@@ -50,9 +50,7 @@ const VkImageView Swapchain::getSwapchainVkImageView(size_t index) const {
 }
 
 ErrorOr<std::unique_ptr<Swapchain>> Swapchain::create(const LogicalDevice& logicalDevice, const VkSwapchainKHR oldSwapchain) {
-    const auto& propertyManager = logicalDevice.getPhysicalDevice().getPropertyManager();
-
-    const SwapChainSupportDetails swapChainSupport = propertyManager.getSwapChainSupportDetails();
+    const SwapChainSupportDetails swapChainSupport = logicalDevice.getPhysicalDevice().getSwapchainSupportDetails();
     const VkDevice device = logicalDevice.getVkDevice();
     const VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes, VK_PRESENT_MODE_MAILBOX_KHR);
     const Surface& surface = logicalDevice.getPhysicalDevice().getSurface();
@@ -77,7 +75,7 @@ ErrorOr<std::unique_ptr<Swapchain>> Swapchain::create(const LogicalDevice& logic
         .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
     };
 
-    const QueueFamilyIndices& indices = propertyManager.getQueueFamilyIndices();
+    const QueueFamilyIndices indices = logicalDevice.getPhysicalDevice().getQueueFamilyIndices();
     uint32_t queueFamilyIndices[] = { indices.graphicsFamily.value(), indices.presentFamily.value() };
 
     if (indices.graphicsFamily != indices.presentFamily) {

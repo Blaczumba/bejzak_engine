@@ -31,7 +31,7 @@ void chainExtensionFeature(void** next, T& feature, std::string_view extension, 
 }
 
 ErrorOr<std::unique_ptr<LogicalDevice>> LogicalDevice::create(const PhysicalDevice& physicalDevice) {
-    const QueueFamilyIndices& indices = physicalDevice.getPropertyManager().getQueueFamilyIndices();
+    const QueueFamilyIndices indices = physicalDevice.getQueueFamilyIndices();
 
     const std::set<uint32_t> uniqueQueueFamilies = {
         *indices.graphicsFamily,

@@ -8,7 +8,7 @@ CommandPool::CommandPool(const LogicalDevice& logicalDevice) : _logicalDevice(lo
     const VkCommandPoolCreateInfo poolInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
         .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, 
-        .queueFamilyIndex = _logicalDevice.getPhysicalDevice().getPropertyManager().getQueueFamilyIndices().graphicsFamily.value()
+        .queueFamilyIndex = _logicalDevice.getPhysicalDevice().getQueueFamilyIndices().graphicsFamily.value()
     };
 
     if (vkCreateCommandPool(_logicalDevice.getVkDevice(), &poolInfo, nullptr, &_commandPool) != VK_SUCCESS) {
