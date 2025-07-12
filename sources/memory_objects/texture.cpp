@@ -15,6 +15,35 @@ Texture::Texture(const LogicalDevice& logicalDevice, Texture::Type type, const V
 
 }
 
+namespace {
+
+struct ImageDeleter {
+    VkImage image;
+
+    void operator()(VmaWrapper& allocator, const VmaAllocation allocation) {
+        allocator.destroyVkImage(image, allocation);
+    }
+
+    void operator()(auto&&, auto&&) {
+        // throw std::runtime_error(EngineError::NOT_RECOGNIZED_TYPE);
+    }
+};
+
+} // namespace
+
+Texture::~Texture() {
+    const VkDevice device = _logicalDevice.getVkDevice();
+    if (_sampler != VK_NULL_HANDLE) {
+        vkDestroySampler(device, _sampler, nullptr);
+    }
+    if (_view != VK_NULL_HANDLE) {
+        vkDestroyImageView(device, _view, nullptr);
+    }
+    if (_image != VK_NULL_HANDLE) {
+        std::visit(ImageDeleter{ _image }, _logicalDevice.getMemoryAllocator(), _allocation);
+    }
+}
+
 ErrorOr<std::unique_ptr<Texture>> Texture::create2DShadowmap(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, uint32_t width, uint32_t height, VkFormat format) {
     ImageParameters imageParams = {
         .format = format,
@@ -81,13 +110,7 @@ ErrorOr<std::unique_ptr<Texture>> Texture::createColorAttachment(const LogicalDe
     );
 }
 
-namespace {
-
-ErrorOr<VkImage> allocate(Allocation& allocation, const ImageParameters& imageParameters, MemoryAllocator& memoryAllocator) {
-    return std::visit(ImageCreator{ allocation, imageParameters }, memoryAllocator);
-}
-
-bool hasStencil(VkFormat format) {
+static bool hasStencil(VkFormat format) {
     const std::array<VkFormat, 4> formats = {
         VK_FORMAT_S8_UINT,
         VK_FORMAT_D16_UNORM_S8_UINT,
@@ -95,20 +118,6 @@ bool hasStencil(VkFormat format) {
         VK_FORMAT_D32_SFLOAT_S8_UINT
     };
     return std::find(formats.begin(), formats.end(), format) != std::end(formats);
-}
-
-struct ImageDeleter {
-    VkImage image;
-
-    void operator()(VmaWrapper& allocator, const VmaAllocation allocation) {
-        allocator.destroyVkImage(image, allocation);
-    }
-
-    void operator()(auto&&, auto&&) {
-        // throw std::runtime_error(EngineError::NOT_RECOGNIZED_TYPE);
-    }
-};
-
 }
 
 ErrorOr<std::unique_ptr<Texture>> Texture::createDepthAttachment(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkFormat format, VkSampleCountFlagBits samples, VkExtent2D extent) {
@@ -123,19 +132,6 @@ ErrorOr<std::unique_ptr<Texture>> Texture::createDepthAttachment(const LogicalDe
             .usage = VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
         }
     );
-}
-
-Texture::~Texture() {
-    const VkDevice device = _logicalDevice.getVkDevice();
-    if (_sampler != VK_NULL_HANDLE) {
-        vkDestroySampler(device, _sampler, nullptr);
-    }
-    if (_view != VK_NULL_HANDLE) {
-        vkDestroyImageView(device, _view, nullptr);
-    }
-    if(_image != VK_NULL_HANDLE) {
-        std::visit(ImageDeleter{ _image }, _logicalDevice.getMemoryAllocator(), _allocation);
-    }
 }
 
 const VkImage Texture::getVkImage() const {
@@ -171,6 +167,10 @@ const ImageParameters& Texture::getImageParameters() const {
 
 const SamplerParameters& Texture::getSamplerParameters() const {
     return _samplerParameters;
+}
+
+static inline ErrorOr<VkImage> allocate(Allocation& allocation, const ImageParameters& imageParameters, MemoryAllocator& memoryAllocator) {
+    return std::visit(ImageCreator{ allocation, imageParameters }, memoryAllocator);
 }
 
 ErrorOr<std::unique_ptr<Texture>> Texture::createImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkImageLayout dstLayout, Texture::Type type, ImageParameters&& imageParams) {

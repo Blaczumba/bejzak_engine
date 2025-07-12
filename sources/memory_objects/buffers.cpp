@@ -62,8 +62,13 @@ void transitionImageLayout(VkCommandBuffer commandBuffer, VkImage image, VkImage
         .layerCount = layerCount
     };
 
-    VkImageMemoryBarrier barrier = {
+    const PipelineStageInfo srcStageInfo = sourceStageAndAccessMask(oldLayout);
+    const PipelineStageInfo dstStageInfo = sourceStageAndAccessMask(newLayout);
+
+    const VkImageMemoryBarrier barrier = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .srcAccessMask = srcStageInfo.accessFlags,
+        .dstAccessMask = dstStageInfo.accessFlags,
         .oldLayout = oldLayout,
         .newLayout = newLayout,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -71,11 +76,6 @@ void transitionImageLayout(VkCommandBuffer commandBuffer, VkImage image, VkImage
         .image = image,
         .subresourceRange = range
     };
-
-    const PipelineStageInfo srcStageInfo = sourceStageAndAccessMask(oldLayout);
-    const PipelineStageInfo dstStageInfo = sourceStageAndAccessMask(newLayout);
-    barrier.srcAccessMask = srcStageInfo.accessFlags;
-    barrier.dstAccessMask = dstStageInfo.accessFlags;
 
     vkCmdPipelineBarrier(
         commandBuffer,
