@@ -12,8 +12,6 @@
 class Instance {
 	const VkInstance _instance;
 
-	static bool checkValidationLayerSupport();
-
 	Instance(const VkInstance instance);
 
 public:

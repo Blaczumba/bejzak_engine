@@ -23,7 +23,7 @@ class Swapchain {
 	lib::Buffer<VkImage> _images;
 	lib::Buffer<VkImageView> _views;
 
-	Swapchain(const VkSwapchainKHR swapchain, const LogicalDevice& logicalDevice, VkSurfaceFormatKHR format, VkExtent2D extent, lib::Buffer<VkImage>&& images, lib::Buffer<VkImageView>&& views);
+	Swapchain(const VkSwapchainKHR swapchain, const LogicalDevice& logicalDevice, VkSurfaceFormatKHR format, VkExtent2D extent, uint32_t imageCount);
 
 public:
 	// If we want to recreate the swapchain use this factory method and pass an old (currently existing) swapchain.

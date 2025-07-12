@@ -3,15 +3,40 @@
 #include "instance/extensions.h"
 #include "debug_messenger/debug_messenger_utils.h"
 
-#include <algorithm>
-#include <cstring>
-#include <iostream>
-#include <stdexcept>
+#include <string_view>
+#include <unordered_set>
 
 Instance::Instance(const VkInstance instance) : _instance(instance) { }
 
 Instance::~Instance() {
     vkDestroyInstance(_instance, nullptr);
+}
+
+namespace {
+
+bool checkValidationLayerSupport() {
+    uint32_t layerCount;
+    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+
+    lib::Buffer<VkLayerProperties> availableLayers(layerCount);
+    if (layerCount > 0) {
+        vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+    }
+
+    std::unordered_set<std::string_view> availableLayerNames;
+    availableLayerNames.reserve(layerCount);
+    for (const VkLayerProperties& layer : availableLayers) {
+        availableLayerNames.emplace(layer.layerName);
+    }
+
+    for (const char* requested : validationLayers) {
+        if (!availableLayerNames.contains(requested)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 }
 
 ErrorOr<std::unique_ptr<Instance>> Instance::create(std::string_view engineName, const std::vector<const char*>& requiredExtensions) {
@@ -62,21 +87,6 @@ ErrorOr<std::unique_ptr<Instance>> Instance::create(std::string_view engineName,
 
 const VkInstance Instance::getVkInstance() const {
     return _instance;
-}
-
-bool Instance::checkValidationLayerSupport() {
-    uint32_t layerCount;
-    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-
-    lib::Buffer<VkLayerProperties> availableLayers(layerCount);
-    vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-
-    // Check if all validation layers are in available layers.
-    return std::all_of(validationLayers.cbegin(), validationLayers.cend(), [&](const char* layerName) {
-        return std::find_if(availableLayers.cbegin(), availableLayers.cend(), [&](const auto& layerProperty) {
-            return std::strcmp(layerName, layerProperty.layerName) == 0;
-            }) != availableLayers.cend();
-    });
 }
 
 ErrorOr<lib::Buffer<VkPhysicalDevice>> Instance::getAvailablePhysicalDevices() const {

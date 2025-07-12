@@ -17,7 +17,6 @@
 #include "object/object.h"
 #include "render_pass/render_pass.h"
 #include "resource_manager/asset_manager.h"
-#include "resource_manager/resource_manager.h"
 #include "scene/octree.h"
 #include "screenshot/screenshot.h"
 #include "status/status.h"
@@ -36,7 +35,6 @@ class SingleApp : public ApplicationBase {
     std::unique_ptr<Octree> _octree;
     Registry _registry;
     std::unique_ptr<AssetManager> _assetManager;
-    std::unique_ptr<ResourceManager> _resourceManager;
     std::shared_ptr<Renderpass> _renderPass;
     std::vector<std::unique_ptr<Framebuffer>> _framebuffers;
     std::vector<std::unique_ptr<Texture>> _attachments;

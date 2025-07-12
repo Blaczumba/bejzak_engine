@@ -6,6 +6,7 @@
 
 #include <memory>
 #include <optional>
+#include <span>
 #include <vector>
 
 class CommandPool;
@@ -29,13 +30,13 @@ class Renderpass {
 
 		VkSubpassDescription getVkSubpassDescription() const;
 
-		const std::vector<VkAttachmentReference>& getInputAttachmentRefs() const { return _inputAttachmentRefs; }
+		std::span<const VkAttachmentReference> getInputAttachmentRefs() const { return _inputAttachmentRefs; }
 
-		const std::vector<VkAttachmentReference>& getColorAttachmentRefs() const { return _colorAttachmentRefs; }
+		std::span<const VkAttachmentReference> getColorAttachmentRefs() const { return _colorAttachmentRefs; }
 
-		const std::vector<VkAttachmentReference>& getDepthAttachmentRefs() const { return _depthAttachmentRefs; }
+		std::span<const VkAttachmentReference> getDepthAttachmentRefs() const { return _depthAttachmentRefs; }
 
-		const std::vector<VkAttachmentReference>& getColorResolveAttachmentRefs() const { return _colorAttachmentResolveRefs; }
+		std::span<const VkAttachmentReference> getColorResolveAttachmentRefs() const { return _colorAttachmentResolveRefs; }
 	};
 
 public:
