@@ -66,7 +66,7 @@ void VmaWrapper::sendDataToBufferMemory(const VkBuffer buffer, const VmaAllocati
 	vmaCopyMemoryToAllocation(_allocator, data, allocation, 0, size);
 }
 
-ErrorOr<VmaWrapper::Image> VmaWrapper::createVkImage(const ImageParameters& params, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags) {
+ErrorOr<VmaWrapper::Image> VmaWrapper::createVkImage(const ImageParameters& params, VkImageLayout layout, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags) {
 	VkImageCreateInfo imageInfo = {
 		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 		.imageType = VK_IMAGE_TYPE_2D,
@@ -82,7 +82,7 @@ ErrorOr<VmaWrapper::Image> VmaWrapper::createVkImage(const ImageParameters& para
 		.tiling = params.tiling,
 		.usage = params.usage,
 		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-		.initialLayout = params.layout
+		.initialLayout = layout
 	};
 
 	if (params.layerCount == 6)

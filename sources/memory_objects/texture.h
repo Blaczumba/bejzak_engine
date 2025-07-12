@@ -53,8 +53,10 @@ public:
 
 	VkExtent2D getVkExtent2D() const;
 
+	VkImageLayout getVkImageLayout() const;
+
 private:
-	Texture(const LogicalDevice& logicalDevice, Texture::Type type, const VkImage image, const Allocation allocation, const ImageParameters& imageParameters, const VkImageView view = VK_NULL_HANDLE, const VkSampler sampler = VK_NULL_HANDLE, const SamplerParameters& samplerParameters = {});
+	Texture(const LogicalDevice& logicalDevice, Texture::Type type, const VkImage image, const Allocation allocation, VkImageLayout layout, const ImageParameters& imageParameters, const VkImageView view = VK_NULL_HANDLE, const VkSampler sampler = VK_NULL_HANDLE, const SamplerParameters& samplerParameters = {});
 	
 	Type _type;
 
@@ -62,6 +64,7 @@ private:
 	VkImage _image;
 	VkImageView _view;
 	VkSampler _sampler;
+	VkImageLayout _layout;
 
 	ImageParameters _imageParameters;
 	SamplerParameters _samplerParameters;
@@ -71,30 +74,11 @@ private:
 	void generateMipmaps(VkCommandBuffer commandBuffer);
 
 	// Helper functions.
-	static ErrorOr<std::unique_ptr<Texture>> createImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkImageLayout dstLayout, Texture::Type type, ImageParameters&& imageParams);
+	static ErrorOr<std::unique_ptr<Texture>> createImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkImageLayout dstLayout, Texture::Type type, const ImageParameters& imageParams);
 
-	static ErrorOr<std::unique_ptr<Texture>> createImageSampler(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkImageLayout dstLayout, Texture::Type type, ImageParameters& imageParams, const SamplerParameters& samplerParams);
+	static ErrorOr<std::unique_ptr<Texture>> createImageSampler(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkImageLayout dstLayout, Texture::Type type, const ImageParameters& imageParams, const SamplerParameters& samplerParams);
 
-	static ErrorOr<std::unique_ptr<Texture>> createMipmapImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, ImageParameters& imageParams, const SamplerParameters& samplerParams);
+	static ErrorOr<std::unique_ptr<Texture>> createMipmapImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, const ImageParameters& imageParams, const SamplerParameters& samplerParams);
 
-	static ErrorOr<std::unique_ptr<Texture>> createImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, Texture::Type type, const VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, ImageParameters& imageParams, const SamplerParameters& samplerParams);
+	static ErrorOr<std::unique_ptr<Texture>> createImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, Texture::Type type, const VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, const ImageParameters& imageParams, const SamplerParameters& samplerParams);
 };
-
-namespace {
-
-struct ImageCreator {
-	Allocation& allocation;
-	const ImageParameters& params;
-
-	const ErrorOr<VkImage> operator()(VmaWrapper& allocator) {
-		ASSIGN_OR_RETURN(VmaWrapper::Image imageData, allocator.createVkImage(params, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE));
-		allocation = imageData.allocation;
-		return imageData.image;
-	}
-
-	const ErrorOr<VkImage> operator()(auto&&) {
-		return Error(EngineError::NOT_RECOGNIZED_TYPE);
-	}
-};
-
-}

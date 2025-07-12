@@ -7,7 +7,7 @@ DescriptorSetWriter& DescriptorSetWriter::storeTexture(const Texture& texture) {
 		VkDescriptorImageInfo {
 			.sampler = texture.getVkSampler(),
 			.imageView = texture.getVkImageView(),
-			.imageLayout = texture.getImageParameters().layout
+			.imageLayout = texture.getVkImageLayout()
 		}
 	);
 	_arrayElement = 0;

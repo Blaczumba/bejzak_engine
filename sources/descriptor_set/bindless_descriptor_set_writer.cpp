@@ -33,7 +33,7 @@ TextureHandle BindlessDescriptorSetWriter::storeTexture(const Texture& texture) 
 	const VkDescriptorImageInfo imageInfo = {
 		.sampler = texture.getVkSampler(),
 		.imageView = texture.getVkImageView(),
-		.imageLayout = texture.getImageParameters().layout
+		.imageLayout = texture.getVkImageLayout()
 	};
 
 	const VkWriteDescriptorSet write = {

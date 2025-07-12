@@ -27,7 +27,6 @@ Swapchain::Swapchain(const VkSwapchainKHR swapchain, const LogicalDevice& logica
                 .format = surfaceFormat.format,
                 .width = extent.width,
                 .height = extent.height,
-                .layout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                 .aspect = VK_IMAGE_ASPECT_COLOR_BIT,
             });
         });

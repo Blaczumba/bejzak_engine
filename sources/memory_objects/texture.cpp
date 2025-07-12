@@ -10,12 +10,27 @@
 #include <array>
 #include <stdexcept>
 
-Texture::Texture(const LogicalDevice& logicalDevice, Texture::Type type, const VkImage image, const Allocation allocation, const ImageParameters& imageParameters, const VkImageView view, const VkSampler sampler, const SamplerParameters& samplerParameters)
-    : _logicalDevice(logicalDevice), _type(type), _image(image), _allocation(allocation), _imageParameters(imageParameters), _view(view), _sampler(sampler), _samplerParameters(samplerParameters) {
+Texture::Texture(const LogicalDevice& logicalDevice, Texture::Type type, const VkImage image, const Allocation allocation, VkImageLayout layout, const ImageParameters& imageParameters, const VkImageView view, const VkSampler sampler, const SamplerParameters& samplerParameters)
+    : _logicalDevice(logicalDevice), _type(type), _image(image), _allocation(allocation), _layout(layout), _imageParameters(imageParameters), _view(view), _sampler(sampler), _samplerParameters(samplerParameters) {
 
 }
 
 namespace {
+
+struct ImageCreator {
+    Allocation& allocation;
+    const ImageParameters& params;
+
+    const ErrorOr<VkImage> operator()(VmaWrapper& allocator) {
+        ASSIGN_OR_RETURN(VmaWrapper::Image imageData, allocator.createVkImage(params, VK_IMAGE_LAYOUT_UNDEFINED, VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE));
+        allocation = imageData.allocation;
+        return imageData.image;
+    }
+
+    const ErrorOr<VkImage> operator()(auto&&) {
+        return Error(EngineError::NOT_RECOGNIZED_TYPE);
+    }
+};
 
 struct ImageDeleter {
     VkImage image;
@@ -150,15 +165,20 @@ VkExtent2D Texture::getVkExtent2D() const {
     return VkExtent2D{ _imageParameters.width, _imageParameters.height };
 }
 
+VkImageLayout Texture::getVkImageLayout() const {
+    return _layout;
+}
+
 void Texture::transitionLayout(VkCommandBuffer commandBuffer, VkImageLayout newLayout) {
-    transitionImageLayout(commandBuffer, _image, _imageParameters.layout, newLayout, _imageParameters.aspect, _imageParameters.mipLevels, _imageParameters.layerCount);
+    transitionImageLayout(commandBuffer, _image, _layout, newLayout, _imageParameters.aspect, _imageParameters.mipLevels, _imageParameters.layerCount);
+    _layout = newLayout;
 }
 
 
 void Texture::generateMipmaps(VkCommandBuffer commandBuffer) {
     const VkImageLayout finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     generateImageMipmaps(commandBuffer, _image, _imageParameters.format, finalLayout, _imageParameters.width, _imageParameters.height, _imageParameters.mipLevels, _imageParameters.layerCount);
-    _imageParameters.layout = finalLayout;
+    _layout = finalLayout;
 }
 
 const ImageParameters& Texture::getImageParameters() const {
@@ -173,45 +193,42 @@ static inline ErrorOr<VkImage> allocate(Allocation& allocation, const ImageParam
     return std::visit(ImageCreator{ allocation, imageParameters }, memoryAllocator);
 }
 
-ErrorOr<std::unique_ptr<Texture>> Texture::createImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkImageLayout dstLayout, Texture::Type type, ImageParameters&& imageParams) {
+ErrorOr<std::unique_ptr<Texture>> Texture::createImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkImageLayout dstLayout, Texture::Type type, const ImageParameters& imageParams) {
     Allocation allocation;
     ASSIGN_OR_RETURN(const VkImage image, allocate(allocation, imageParams, logicalDevice.getMemoryAllocator()));
     const VkImageView view = logicalDevice.createImageView(image, imageParams);
-    transitionImageLayout(commandBuffer, image, imageParams.layout, dstLayout, imageParams.aspect, imageParams.mipLevels, imageParams.layerCount);
-    imageParams.layout = dstLayout;
-    return std::unique_ptr<Texture>(new Texture(logicalDevice, type, image, allocation, imageParams, view));
+    transitionImageLayout(commandBuffer, image, VK_IMAGE_LAYOUT_UNDEFINED, dstLayout, imageParams.aspect, imageParams.mipLevels, imageParams.layerCount);
+    return std::unique_ptr<Texture>(new Texture(logicalDevice, type, image, allocation, dstLayout, imageParams, view));
 }
 
-ErrorOr<std::unique_ptr<Texture>> Texture::createImageSampler(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkImageLayout dstLayout, Texture::Type type, ImageParameters& imageParams, const SamplerParameters& samplerParams) {
+ErrorOr<std::unique_ptr<Texture>> Texture::createImageSampler(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, VkImageLayout dstLayout, Texture::Type type, const ImageParameters& imageParams, const SamplerParameters& samplerParams) {
     const VkSampler sampler = logicalDevice.createSampler(samplerParams);
     Allocation allocation;
     ASSIGN_OR_RETURN(const VkImage image, allocate(allocation, imageParams, logicalDevice.getMemoryAllocator()));
     const VkImageView view = logicalDevice.createImageView(image, imageParams);
-    transitionImageLayout(commandBuffer, image, imageParams.layout, dstLayout, imageParams.aspect, imageParams.mipLevels, imageParams.layerCount);
-    imageParams.layout = dstLayout;
-    return std::unique_ptr<Texture>(new Texture(logicalDevice, type, image, allocation, imageParams, view, sampler, samplerParams));
+    transitionImageLayout(commandBuffer, image, VK_IMAGE_LAYOUT_UNDEFINED, dstLayout, imageParams.aspect, imageParams.mipLevels, imageParams.layerCount);
+    return std::unique_ptr<Texture>(new Texture(logicalDevice, type, image, allocation, dstLayout, imageParams, view, sampler, samplerParams));
 }
 
-ErrorOr<std::unique_ptr<Texture>> Texture::createMipmapImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, ImageParameters& imageParams, const SamplerParameters& samplerParams) {
+ErrorOr<std::unique_ptr<Texture>> Texture::createMipmapImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, const VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, const ImageParameters& imageParams, const SamplerParameters& samplerParams) {
     Allocation allocation;
     ASSIGN_OR_RETURN(const VkImage image, allocate(allocation, imageParams, logicalDevice.getMemoryAllocator()));
     const VkImageView view = logicalDevice.createImageView(image, imageParams);
     const VkSampler sampler = logicalDevice.createSampler(samplerParams);
-    transitionImageLayout(commandBuffer, image, imageParams.layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, imageParams.aspect, imageParams.mipLevels, imageParams.layerCount);
+    transitionImageLayout(commandBuffer, image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, imageParams.aspect, imageParams.mipLevels, imageParams.layerCount);
     copyBufferToImage(commandBuffer, copyBuffer, image, copyRegions);
     generateImageMipmaps(commandBuffer, image, imageParams.format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, imageParams.width, imageParams.height, imageParams.mipLevels, imageParams.layerCount);
-    imageParams.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    return std::unique_ptr<Texture>(new Texture(logicalDevice, Texture::Type::IMAGE_2D, image, allocation, imageParams, view, sampler, samplerParams));
+    return std::unique_ptr<Texture>(new Texture(logicalDevice, Texture::Type::IMAGE_2D, image, allocation, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, imageParams, view, sampler, samplerParams));
 }
 
-ErrorOr<std::unique_ptr<Texture>> Texture::createImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, Texture::Type type, const VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, ImageParameters& imageParams, const SamplerParameters& samplerParams) {
+ErrorOr<std::unique_ptr<Texture>> Texture::createImage(const LogicalDevice& logicalDevice, const VkCommandBuffer commandBuffer, Texture::Type type, const VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, const ImageParameters& imageParams, const SamplerParameters& samplerParams) {
     Allocation allocation;
     ASSIGN_OR_RETURN(const VkImage image, allocate(allocation, imageParams, logicalDevice.getMemoryAllocator()));
     const VkImageView view = logicalDevice.createImageView(image, imageParams);
     const VkSampler sampler = logicalDevice.createSampler(samplerParams);
-    transitionImageLayout(commandBuffer, image, imageParams.layout, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, imageParams.aspect, imageParams.mipLevels, imageParams.layerCount);
+    const VkImageLayout dstLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    transitionImageLayout(commandBuffer, image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, imageParams.aspect, imageParams.mipLevels, imageParams.layerCount);
     copyBufferToImage(commandBuffer, copyBuffer, image, copyRegions);
-    transitionImageLayout(commandBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, imageParams.aspect, imageParams.mipLevels, imageParams.layerCount);
-    imageParams.layout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    return std::unique_ptr<Texture>(new Texture(logicalDevice, type, image, allocation, imageParams, view, sampler, samplerParams));
+    transitionImageLayout(commandBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dstLayout, imageParams.aspect, imageParams.mipLevels, imageParams.layerCount);
+    return std::unique_ptr<Texture>(new Texture(logicalDevice, type, image, allocation, dstLayout, imageParams, view, sampler, samplerParams));
 }
