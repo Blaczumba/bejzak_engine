@@ -132,18 +132,18 @@ Status SingleApp::loadObjects() {
             const std::string normalPath = MODELS_PATH "sponza/" + sceneData[i].normalTexture;
             if (!_textures.contains(diffusePath)) {
                 ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(diffusePath));
-                ASSIGN_OR_RETURN(auto texture, Texture::create2DImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
-                _textures.emplace(diffusePath, std::make_pair(_bindlessWriter->storeTexture(*texture), std::move(texture)));
+                ASSIGN_OR_RETURN(auto texture, Texture::create2DImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer.getVkBuffer(), imgData->imageDimensions, VK_FORMAT_R8G8B8A8_SRGB, maxSamplerAnisotropy));
+                _textures.emplace(diffusePath, std::make_pair(_bindlessWriter->storeTexture(texture), std::move(texture)));
             }
             if (!_textures.contains(normalPath)) {
                 ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(normalPath));
-                ASSIGN_OR_RETURN(auto texture, Texture::create2DImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
-                _textures.emplace(normalPath, std::make_pair(_bindlessWriter->storeTexture(*texture), std::move(texture)));
+                ASSIGN_OR_RETURN(auto texture, Texture::create2DImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer.getVkBuffer(), imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
+                _textures.emplace(normalPath, std::make_pair(_bindlessWriter->storeTexture(texture), std::move(texture)));
             }
             if (!_textures.contains(metallicRoughnessPath)) {
                 ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(metallicRoughnessPath));
-                ASSIGN_OR_RETURN(auto texture, Texture::create2DImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
-                _textures.emplace(metallicRoughnessPath, std::make_pair(_bindlessWriter->storeTexture(*texture), std::move(texture)));
+                ASSIGN_OR_RETURN(auto texture, Texture::create2DImage(*_logicalDevice, commandBuffer, imgData->stagingBuffer.getVkBuffer(), imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
+                _textures.emplace(metallicRoughnessPath, std::make_pair(_bindlessWriter->storeTexture(texture), std::move(texture)));
             }
             _objects.emplace_back("Object", e);
             _registry.addComponent<MaterialComponent>(e, MaterialComponent{_textures[diffusePath].first, _textures[normalPath].first, _textures[metallicRoughnessPath].first });
@@ -186,7 +186,7 @@ Status SingleApp::createDescriptorSets() {
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
         ASSIGN_OR_RETURN(const AssetManager::ImageData* imgData, _assetManager->getImageData(TEXTURES_PATH "cubemap_yokohama_rgba.ktx"));
-        ASSIGN_OR_RETURN(_textureCubemap, Texture::createCubemap(*_logicalDevice, commandBuffer, imgData->stagingBuffer, imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
+        ASSIGN_OR_RETURN(_textureCubemap, Texture::createCubemap(*_logicalDevice, commandBuffer, imgData->stagingBuffer.getVkBuffer(), imgData->imageDimensions, VK_FORMAT_R8G8B8A8_UNORM, maxSamplerAnisotropy));
         ASSIGN_OR_RETURN(_shadowMap, Texture::create2DShadowmap(*_logicalDevice, commandBuffer, 1024 * 2, 1024 * 2, VK_FORMAT_D32_SFLOAT));
     }
 
@@ -204,8 +204,8 @@ Status SingleApp::createDescriptorSets() {
     ASSIGN_OR_RETURN(_bindlessDescriptorSet, _descriptorPool->createDesriptorSet(_programManager->getDescriptorSetLayout(DescriptorSetType::BINDLESS)->getVkDescriptorSetLayout()));
     ASSIGN_OR_RETURN(_dynamicDescriptorSet, _dynamicDescriptorPool->createDesriptorSet(_programManager->getDescriptorSetLayout(DescriptorSetType::CAMERA)->getVkDescriptorSetLayout()));
     _bindlessWriter = std::make_unique<BindlessDescriptorSetWriter>(_bindlessDescriptorSet);
-    _shadowHandle = _bindlessWriter->storeTexture(*_shadowMap);
-    _skyboxHandle = _bindlessWriter->storeTexture(*_textureCubemap);
+    _shadowHandle = _bindlessWriter->storeTexture(_shadowMap);
+    _skyboxHandle = _bindlessWriter->storeTexture(_textureCubemap);
 
     _dynamicDescriptorSetWriter.storeDynamicBuffer(_dynamicUniformBuffersCamera, size);
     _dynamicDescriptorSetWriter.writeDescriptorSet(_logicalDevice->getVkDevice(), _dynamicDescriptorSet.getVkDescriptorSet());
@@ -573,7 +573,7 @@ void SingleApp::recordShadowCommandBuffer(VkCommandBuffer commandBuffer, uint32_
     //    throw std::runtime_error("failed to begin recording command buffer!");
     //}
 
-    VkExtent2D extent = _shadowMap->getVkExtent2D();
+    VkExtent2D extent = _shadowMap.getVkExtent2D();
     const auto& clearValues = _shadowRenderPass->getAttachmentsLayout().getVkClearValues();
     const VkRenderPassBeginInfo renderPassInfo = {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,

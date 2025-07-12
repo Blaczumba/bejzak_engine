@@ -27,7 +27,7 @@
 
 class SingleApp : public ApplicationBase {
     uint32_t index = 0;
-    std::unordered_map<std::string, std::pair<TextureHandle, std::unique_ptr<Texture>>> _textures;
+    std::unordered_map<std::string, std::pair<TextureHandle, Texture>> _textures;
     std::unordered_map<std::string, Buffer> _vertexBufferMap;
     std::unordered_map<std::string, Buffer> _indexBufferMap;
     std::unordered_map<Entity, uint32_t> _entityToIndex;
@@ -37,19 +37,19 @@ class SingleApp : public ApplicationBase {
     std::unique_ptr<AssetManager> _assetManager;
     std::shared_ptr<Renderpass> _renderPass;
     std::vector<std::unique_ptr<Framebuffer>> _framebuffers;
-    std::vector<std::unique_ptr<Texture>> _attachments;
+    std::vector<Texture> _attachments;
 
     // Shadowmap
     std::shared_ptr<Renderpass> _shadowRenderPass;
     std::unique_ptr<Framebuffer> _shadowFramebuffer;
-    std::unique_ptr<Texture> _shadowMap;
+    Texture _shadowMap;
     std::unique_ptr<GraphicsPipeline> _shadowPipeline;
     TextureHandle _shadowHandle;
 
     // Cubemap.
     Buffer _vertexBufferCube;
     Buffer _indexBufferCube;
-    std::unique_ptr<Texture> _textureCubemap;
+    Texture _textureCubemap;
     VkIndexType _indexBufferCubeType;
     std::unique_ptr<GraphicsPipeline> _graphicsPipelineSkybox;
     std::shared_ptr<DescriptorPool> _descriptorPoolSkybox;

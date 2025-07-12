@@ -1,10 +1,5 @@
 #include "buffers.h"
 
-#include <iostream>
-#include <stdexcept>
-#include <utility>
-#include <variant>
-
 namespace {
 
 struct PipelineStageInfo {
@@ -129,7 +124,7 @@ void copyBufferToImage(VkCommandBuffer commandBuffer, VkBuffer buffer, VkImage i
     );
 }
 
-void copyBufferToImage(VkCommandBuffer commandBuffer, VkBuffer buffer, VkImage image, const std::vector<VkBufferImageCopy>& regions) {
+void copyBufferToImage(VkCommandBuffer commandBuffer, VkBuffer buffer, VkImage image, std::span<const VkBufferImageCopy> regions) {
     vkCmdCopyBufferToImage(
         commandBuffer,
         buffer,

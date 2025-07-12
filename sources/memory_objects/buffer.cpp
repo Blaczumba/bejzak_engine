@@ -1,10 +1,9 @@
 #include "buffer.h"
 
 #include "lib/macros/status_macros.h"
+#include "memory_objects/buffers.h"
 
-#include <iostream>
-
-Buffer::Buffer() : _usage(0), _buffer(VK_NULL_HANDLE), _size(0), _mappedMemory(nullptr) {};
+Buffer::Buffer() : _buffer(VK_NULL_HANDLE), _mappedMemory(nullptr) {};
 
 Buffer::Buffer(LogicalDevice& logicalDevice, const Allocation allocation, const VkBuffer buffer, VkBufferUsageFlags usage, uint32_t size, void* mappedData)
     : _logicalDevice(&logicalDevice), _allocation(allocation), _buffer(buffer), _usage(usage), _size(size), _mappedMemory(mappedData) {

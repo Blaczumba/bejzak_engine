@@ -10,7 +10,7 @@
 #include <iterator>
 #include <optional>
 
-ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromSwapchain(const VkCommandBuffer commandBuffer, const Renderpass& renderpass, VkExtent2D swapchainExtent, const VkImageView swapchainImageView, std::vector<std::unique_ptr<Texture>>& attachments) {
+ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromSwapchain(const VkCommandBuffer commandBuffer, const Renderpass& renderpass, VkExtent2D swapchainExtent, const VkImageView swapchainImageView, std::vector<Texture>& attachments) {
     const VkViewport viewport = {
         .width = static_cast<float>(swapchainExtent.width),
         .height = static_cast<float>(swapchainExtent.height),
@@ -32,14 +32,14 @@ ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromSwapchain(const VkC
             imageViews[i] = swapchainImageView;
             break;
         case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL: {
-            ASSIGN_OR_RETURN(std::unique_ptr<Texture> attachment, Texture::createColorAttachment(logicalDevice, commandBuffer, description.format, description.samples, swapchainExtent));
-            imageViews[i] = attachment->getVkImageView();
+            ASSIGN_OR_RETURN(Texture attachment, Texture::createColorAttachment(logicalDevice, commandBuffer, description.format, description.samples, swapchainExtent));
+            imageViews[i] = attachment.getVkImageView();
             attachments.push_back(std::move(attachment));
             break;
         }
         case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL: {
-            ASSIGN_OR_RETURN(std::unique_ptr<Texture> attachment, Texture::createDepthAttachment(logicalDevice, commandBuffer, description.format, description.samples, swapchainExtent));
-            imageViews[i] = attachment->getVkImageView();
+            ASSIGN_OR_RETURN(Texture attachment, Texture::createDepthAttachment(logicalDevice, commandBuffer, description.format, description.samples, swapchainExtent));
+            imageViews[i] = attachment.getVkImageView();
             attachments.push_back(std::move(attachment));
             break;
         }
@@ -65,11 +65,11 @@ ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromSwapchain(const VkC
     return std::unique_ptr<Framebuffer>(new Framebuffer(framebuffer, renderpass, viewport, scissor));
 }
 
-ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromTextures(const Renderpass& renderpass, std::span<const std::unique_ptr<Texture>> textures) {
+ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromTextures(const Renderpass& renderpass, std::span<const Texture> textures) {
     lib::Buffer<VkImageView> imageViews(textures.size());
     std::optional<VkExtent2D> extent;
     for (size_t i = 0; i < textures.size(); ++i) {
-        const auto& texture = *textures[i];
+        const auto& texture = textures[i];
         imageViews[i] = texture.getVkImageView();
         if (!extent.has_value()) {
             extent = texture.getVkExtent2D();

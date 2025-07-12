@@ -7,7 +7,6 @@
 #include <vulkan/vulkan.h>
 
 #include <initializer_list>
-#include <memory>
 #include <vector>
 
 class CommandPool;
@@ -24,9 +23,9 @@ class Framebuffer {
 	Framebuffer(const VkFramebuffer framebuffer, const Renderpass& renderpass, const VkViewport& viewport, const VkRect2D& scissor);
 
 public:
-	static ErrorOr<std::unique_ptr<Framebuffer>> createFromSwapchain(const VkCommandBuffer commandBuffer, const Renderpass& renderpass, VkExtent2D swapchainExtent, const VkImageView swapchainImageView, std::vector<std::unique_ptr<Texture>>& attachments);
+	static ErrorOr<std::unique_ptr<Framebuffer>> createFromSwapchain(const VkCommandBuffer commandBuffer, const Renderpass& renderpass, VkExtent2D swapchainExtent, const VkImageView swapchainImageView, std::vector<Texture>& attachments);
 	
-	static ErrorOr<std::unique_ptr<Framebuffer>> createFromTextures(const Renderpass& renderpass, std::span<const std::unique_ptr<Texture>> textures);
+	static ErrorOr<std::unique_ptr<Framebuffer>> createFromTextures(const Renderpass& renderpass, std::span<const Texture> textures);
 
 	~Framebuffer();
 
