@@ -34,16 +34,16 @@ public:
 
 	static ErrorOr<std::unique_ptr<LogicalDevice>> create(const PhysicalDevice& physicalDevice);
 
-	const VkSampler createSampler(const SamplerParameters& params) const;
-	const VkImageView createImageView(const VkImage image, const ImageParameters& params) const;
+	VkSampler createSampler(const SamplerParameters& params) const;
+	VkImageView createImageView(const VkImage image, const ImageParameters& params) const;
 
-	const VkDevice getVkDevice() const;
+	VkDevice getVkDevice() const;
 	const PhysicalDevice& getPhysicalDevice() const;
 	MemoryAllocator& getMemoryAllocator() const;
 
-	const VkQueue getQueue(QueueType queueType) const;
-	const VkQueue getGraphicsQueue() const;
-	const VkQueue getPresentQueue() const;
-	const VkQueue getComputeQueue() const;
-	const VkQueue getTransferQueue() const;
+	VkQueue getVkQueue(QueueType queueType) const;
+	VkQueue getGraphicsVkQueue() const;
+	VkQueue getPresentVkQueue() const;
+	VkQueue getComputeVkQueue() const;
+	VkQueue getTransferVkQueue() const;
 };

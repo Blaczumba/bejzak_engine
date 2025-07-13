@@ -173,15 +173,15 @@ ErrorOr<Texture> Texture::createDepthAttachment(const LogicalDevice& logicalDevi
     return createAttachment(logicalDevice, commandBuffer, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, Texture::Type::DEPTH_ATTACHMENT, imageParams);
 }
 
-const VkImage Texture::getVkImage() const {
+VkImage Texture::getVkImage() const {
     return _image;
 }
 
-const VkImageView Texture::getVkImageView() const {
+VkImageView Texture::getVkImageView() const {
     return _view;
 }
 
-const VkSampler Texture::getVkSampler() const {
+VkSampler Texture::getVkSampler() const {
     return _sampler;
 }
 

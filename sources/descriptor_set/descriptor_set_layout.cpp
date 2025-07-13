@@ -49,6 +49,6 @@ ErrorOr<DescriptorSetLayout> DescriptorSetLayout::create(const LogicalDevice& lo
     return DescriptorSetLayout(logicalDevice, descriptorSetLayout);
 }
 
-const VkDescriptorSetLayout& DescriptorSetLayout::getVkDescriptorSetLayout() const {
+VkDescriptorSetLayout DescriptorSetLayout::getVkDescriptorSetLayout() const {
     return _descriptorSetLayout;
 }

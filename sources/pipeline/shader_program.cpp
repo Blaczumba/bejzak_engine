@@ -15,7 +15,7 @@ ShaderProgram::ShaderProgram(const ShaderProgramManager& shaderProgramManager, s
 
 lib::Buffer<VkDescriptorSetLayout> ShaderProgram::getVkDescriptorSetLayouts() const {
     lib::Buffer<VkDescriptorSetLayout> layouts(_descriptorSetLayouts.size());
-    std::transform(_descriptorSetLayouts.cbegin(), _descriptorSetLayouts.cend(), layouts.begin(), [this](DescriptorSetType layoutType) { return _shaderProgramManager.getDescriptorSetLayout(layoutType)->getVkDescriptorSetLayout(); });
+    std::transform(_descriptorSetLayouts.cbegin(), _descriptorSetLayouts.cend(), layouts.begin(), [this](DescriptorSetType layoutType) { return _shaderProgramManager.getVkDescriptorSetLayout(layoutType); });
     return layouts;
 }
 
@@ -89,12 +89,18 @@ ErrorOr<std::unique_ptr<ShaderProgram>> ShaderProgramManager::createShadowProgra
     return std::unique_ptr<ShaderProgram>(new ShaderProgram(*this, { vertexShaderPath, fragmentShaderPath }, {}, pushConstantRanges, vertexInputInfo));
 }
 
-const DescriptorSetLayout* ShaderProgramManager::getDescriptorSetLayout(DescriptorSetType type) const {
-    return &_descriptorSetLayouts.find(type)->second;
+const VkDescriptorSetLayout ShaderProgramManager::getVkDescriptorSetLayout(DescriptorSetType type) const {
+    if (auto it = _descriptorSetLayouts.find(type); it != _descriptorSetLayouts.cend()) {
+        return it->second.getVkDescriptorSetLayout();
+    }
+    return VK_NULL_HANDLE;
 }
 
 const Shader* ShaderProgramManager::getShader(std::string_view shaderPath) const {
-    return &_shaders.find(shaderPath)->second;
+    if (auto it = _shaders.find(shaderPath); it != _shaders.cend()) {
+        return &it->second;
+    }
+    return nullptr;
 }
 
 Status ShaderProgramManager::addShader(std::string_view shaderFile, VkShaderStageFlagBits shaderStages) {

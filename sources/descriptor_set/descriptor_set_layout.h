@@ -24,5 +24,5 @@ public:
 
 	static ErrorOr<DescriptorSetLayout> create(const LogicalDevice& logicalDevice, std::span<const VkDescriptorSetLayoutBinding> bindings, std::span<const VkDescriptorBindingFlags> bindingFlags = {}, VkDescriptorSetLayoutCreateFlags flags = 0);
 
-	const VkDescriptorSetLayout& getVkDescriptorSetLayout() const;
+	VkDescriptorSetLayout getVkDescriptorSetLayout() const;
 };

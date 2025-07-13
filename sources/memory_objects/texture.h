@@ -44,11 +44,11 @@ public:
 
 	void transitionLayout(VkCommandBuffer commandBuffer, VkImageLayout newLayout);
 
-	const VkImage getVkImage() const;
+	VkImage getVkImage() const;
 
-	const VkImageView getVkImageView() const;
+	VkImageView getVkImageView() const;
 
-	const VkSampler getVkSampler() const;
+	VkSampler getVkSampler() const;
 
 	const ImageParameters& getImageParameters() const;
 

@@ -85,7 +85,7 @@ ErrorOr<std::unique_ptr<Instance>> Instance::create(std::string_view engineName,
     return std::unique_ptr<Instance>(new Instance(instance));
 }
 
-const VkInstance Instance::getVkInstance() const {
+VkInstance Instance::getVkInstance() const {
     return _instance;
 }
 

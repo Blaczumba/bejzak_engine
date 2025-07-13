@@ -48,7 +48,7 @@ public:
 	// Aggregates subpasses and dependencies and creates VkRenderPass object.
 	Status build();
 
-	const VkRenderPass getVkRenderPass() const;
+	VkRenderPass getVkRenderPass() const;
 
 	const AttachmentLayout& getAttachmentsLayout() const;
 

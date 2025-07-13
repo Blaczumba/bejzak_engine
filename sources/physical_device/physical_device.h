@@ -25,21 +25,21 @@ struct SwapChainSupportDetails {
 
 
 class PhysicalDevice {
-    const VkPhysicalDevice _device;
+    VkPhysicalDevice _device;
     VkPhysicalDeviceProperties _properties;
 
     const Surface& _surface;
 
     const std::unordered_set<std::string_view> _availableRequestedExtensions; // TODO: change to flat hash set
 
-	PhysicalDevice(const VkPhysicalDevice physicalDevice, const Surface& surface);
+	PhysicalDevice(VkPhysicalDevice physicalDevice, const Surface& surface);
 
 public:
     ~PhysicalDevice() = default;
 
     static ErrorOr<std::unique_ptr<PhysicalDevice>> create(const Surface& surface);
 
-    const VkPhysicalDevice getVkPhysicalDevice() const;
+    VkPhysicalDevice getVkPhysicalDevice() const;
 
     const Surface& getSurface() const;
 

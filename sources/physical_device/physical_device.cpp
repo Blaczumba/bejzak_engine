@@ -42,7 +42,7 @@ bool areQueueFamilyIndicesComplete(const QueueFamilyIndices& indices) {
         && indices.computeFamily.has_value() && indices.transferFamily.has_value();
 }
 
-QueueFamilyIndices findQueueFamilyIncides(const VkPhysicalDevice device, const VkSurfaceKHR surface) {
+QueueFamilyIndices findQueueFamilyIncides(VkPhysicalDevice device, VkSurfaceKHR surface) {
     uint32_t queueFamilyCount = 0;
     vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
 
@@ -74,7 +74,7 @@ QueueFamilyIndices findQueueFamilyIncides(const VkPhysicalDevice device, const V
     return indices;
 }
 
-SwapChainSupportDetails querySwapchainSupportDetails(const VkPhysicalDevice device, const VkSurfaceKHR surface) {
+SwapChainSupportDetails querySwapchainSupportDetails(VkPhysicalDevice device, VkSurfaceKHR surface) {
     SwapChainSupportDetails details;
 
     vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
@@ -98,7 +98,7 @@ SwapChainSupportDetails querySwapchainSupportDetails(const VkPhysicalDevice devi
 
 } // namespace
 
-PhysicalDevice::PhysicalDevice(const VkPhysicalDevice physicalDevice, const Surface& surface)
+PhysicalDevice::PhysicalDevice(VkPhysicalDevice physicalDevice, const Surface& surface)
     : _device(physicalDevice), _surface(surface), _availableRequestedExtensions(checkDeviceExtensionSupport(physicalDevice)) {
     vkGetPhysicalDeviceProperties(_device, &_properties);
 }
@@ -127,7 +127,7 @@ ErrorOr<std::unique_ptr<PhysicalDevice>> PhysicalDevice::create(const Surface& s
     return Error(EngineError::NOT_FOUND);
 }
 
-const VkPhysicalDevice PhysicalDevice::getVkPhysicalDevice() const {
+VkPhysicalDevice PhysicalDevice::getVkPhysicalDevice() const {
     return _device;
 }
 

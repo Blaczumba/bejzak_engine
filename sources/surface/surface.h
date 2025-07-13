@@ -8,12 +8,12 @@
 class Window;
 
 class Surface {
-	Surface(const VkSurfaceKHR surface, const Instance& instance, const Window& window);
+	Surface(VkSurfaceKHR surface, const Instance& instance, const Window& window);
 
 public:
 	~Surface();
 
-	const VkSurfaceKHR getVkSurface() const;
+	VkSurfaceKHR getVkSurface() const;
 	const Instance& getInstance() const;
 	const Window& getWindow() const;
 

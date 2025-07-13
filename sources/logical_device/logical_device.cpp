@@ -126,7 +126,7 @@ ErrorOr<std::unique_ptr<LogicalDevice>> LogicalDevice::create(const PhysicalDevi
     return std::unique_ptr<LogicalDevice>(new LogicalDevice(logicalDevice, physicalDevice, graphicsQueue, presentQueue, computeQueue, transferQueue));
 }
 
-const VkImageView LogicalDevice::createImageView(const VkImage image, const ImageParameters& params) const {
+VkImageView LogicalDevice::createImageView(const VkImage image, const ImageParameters& params) const {
     const VkImageSubresourceRange range = {
         .aspectMask = params.aspect,
         .baseMipLevel = 0,
@@ -153,7 +153,7 @@ const VkImageView LogicalDevice::createImageView(const VkImage image, const Imag
     return view;
 }
 
-const VkSampler LogicalDevice::createSampler(const SamplerParameters& params) const {
+VkSampler LogicalDevice::createSampler(const SamplerParameters& params) const {
     VkSamplerCreateInfo samplerInfo = {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
         .magFilter = params.magFilter,
@@ -190,7 +190,7 @@ const VkSampler LogicalDevice::createSampler(const SamplerParameters& params) co
     return sampler;
 }
 
-const VkDevice LogicalDevice::getVkDevice() const {
+VkDevice LogicalDevice::getVkDevice() const {
     return _device;
 }
 
@@ -202,7 +202,7 @@ MemoryAllocator& LogicalDevice::getMemoryAllocator() const {
     return _memoryAllocator;
 }
 
-const VkQueue LogicalDevice::getQueue(QueueType queueType) const {
+VkQueue LogicalDevice::getVkQueue(QueueType queueType) const {
     switch (queueType) {
     case QueueType::GRAPHICS:
         return _graphicsQueue;
@@ -217,18 +217,18 @@ const VkQueue LogicalDevice::getQueue(QueueType queueType) const {
     }
 }
 
-const VkQueue LogicalDevice::getGraphicsQueue() const {
+VkQueue LogicalDevice::getGraphicsVkQueue() const {
     return _graphicsQueue;
 }
 
-const VkQueue LogicalDevice::getPresentQueue() const {
+VkQueue LogicalDevice::getPresentVkQueue() const {
     return _presentQueue;
 }
 
-const VkQueue LogicalDevice::getComputeQueue() const {
+VkQueue LogicalDevice::getComputeVkQueue() const {
     return _computeQueue;
 }
 
-const VkQueue LogicalDevice::getTransferQueue() const {
+VkQueue LogicalDevice::getTransferVkQueue() const {
     return _transferQueue;
 }

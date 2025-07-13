@@ -1,12 +1,9 @@
 #include "swapchain.h"
 
 #include "logical_device/logical_device.h"
-#include "memory_objects/texture.h"
 #include "physical_device/physical_device.h"
-#include "window/window.h"
 
 #include <algorithm>
-#include <iterator>
 #include <limits>
 #include <span>
 
@@ -129,7 +126,7 @@ VkResult Swapchain::present(uint32_t imageIndex, VkSemaphore waitSemaphore) cons
         .pImageIndices = &imageIndex,
     };
 
-    return vkQueuePresentKHR(_logicalDevice.getPresentQueue(), &presentInfo);
+    return vkQueuePresentKHR(_logicalDevice.getPresentVkQueue(), &presentInfo);
 }
 
 namespace {

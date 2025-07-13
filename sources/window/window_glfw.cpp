@@ -8,7 +8,7 @@
 namespace Keyboard {
 namespace {
 
-constexpr std::array<int16_t, 121> fromKeyToGlfw = {
+constexpr int16_t fromKeyToGlfw[] = {
     GLFW_KEY_UNKNOWN,
 
     GLFW_KEY_Q, GLFW_KEY_W, GLFW_KEY_E, GLFW_KEY_R, GLFW_KEY_T, GLFW_KEY_Y, GLFW_KEY_U, GLFW_KEY_I, GLFW_KEY_O, GLFW_KEY_P,
@@ -43,7 +43,7 @@ constexpr std::array<int16_t, 121> fromKeyToGlfw = {
 
 constexpr std::array<Key, 349> fromGlfwToKey = [] {
     std::array<Key, 349> mapping{};
-    for (uint16_t i = 1; i < fromKeyToGlfw.size(); ++i) {
+    for (uint16_t i = 1; i < std::size(fromKeyToGlfw); ++i) {
         mapping[fromKeyToGlfw[i]] = static_cast<Key>(i);
     }
     return mapping;

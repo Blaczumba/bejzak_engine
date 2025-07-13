@@ -35,7 +35,7 @@ ErrorOr<std::unique_ptr<DescriptorPool>> DescriptorPool::create(const LogicalDev
 	return std::unique_ptr<DescriptorPool>(new DescriptorPool(descriptorPool, logicalDevice, maxNumSets));
 }
 
-const VkDescriptorPool DescriptorPool::getVkDescriptorPool() const {
+VkDescriptorPool DescriptorPool::getVkDescriptorPool() const {
 	return _descriptorPool;
 }
 

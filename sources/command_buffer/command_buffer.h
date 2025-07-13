@@ -23,7 +23,7 @@ public:
 	std::unique_ptr<SecondaryCommandBuffer> createSecondaryCommandBuffer() const;
 	void reset() const;
 
-	const VkCommandPool getVkCommandPool() const;
+	VkCommandPool getVkCommandPool() const;
 	const LogicalDevice& getLogicalDevice() const;
 };
 
@@ -37,7 +37,7 @@ public:
 	~CommandBuffer();
 	VkResult end() const;
 	void resetCommandBuffer() const;
-	const VkCommandBuffer getVkCommandBuffer() const;
+	VkCommandBuffer getVkCommandBuffer() const;
 };
 
 class PrimaryCommandBuffer : public CommandBuffer {
@@ -69,5 +69,5 @@ public:
 	SingleTimeCommandBuffer(const CommandPool& commandPool, QueueType queueType = QueueType::GRAPHICS);
 	~SingleTimeCommandBuffer();
 
-	const VkCommandBuffer getCommandBuffer() const;
+	VkCommandBuffer getCommandBuffer() const;
 };

@@ -1,7 +1,6 @@
 #pragma once
 
 #include "lib/buffer/buffer.h"
-#include "memory_objects/texture.h"
 #include "status/status.h"
 
 #include <vulkan/vulkan.h>
@@ -9,10 +8,7 @@
 #include <memory>
 #include <vector>
 
-class Window;
 class LogicalDevice;
-class PhysicalDevice;
-class Texture;
 
 class Swapchain {
 	VkSwapchainKHR _swapchain;

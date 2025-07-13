@@ -34,7 +34,7 @@ public:
 
     const Shader* getShader(std::string_view shaderPath) const;
 
-    const DescriptorSetLayout* getDescriptorSetLayout(DescriptorSetType type) const;
+    const VkDescriptorSetLayout getVkDescriptorSetLayout(DescriptorSetType type) const;
 
     ErrorOr<std::unique_ptr<ShaderProgram>> createPBRProgram();
 

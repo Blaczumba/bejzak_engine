@@ -28,7 +28,7 @@ public:
 
 	static ErrorOr<std::unique_ptr<DescriptorPool>> create(const LogicalDevice& logicalDevice, uint32_t maxNumSets, VkDescriptorPoolCreateFlags flags = {});
 
-	const VkDescriptorPool getVkDescriptorPool() const;
+	VkDescriptorPool getVkDescriptorPool() const;
 
 	ErrorOr<DescriptorSet> createDesriptorSet(const VkDescriptorSetLayout layout) const;
 

@@ -35,7 +35,7 @@ public:
 
 	static ErrorOr<std::vector<DescriptorSet>> create(const std::shared_ptr<const DescriptorPool>& descriptorPool, const VkDescriptorSetLayout layout, uint32_t numSets);
 
-	const VkDescriptorSet getVkDescriptorSet() const;
+	VkDescriptorSet getVkDescriptorSet() const;
 
 	const DescriptorPool& getDescriptorPool() const;
 };

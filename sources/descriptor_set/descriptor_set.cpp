@@ -67,7 +67,7 @@ ErrorOr<std::vector<DescriptorSet>> DescriptorSet::create(const std::shared_ptr<
     return descSets;
 }
 
-const VkDescriptorSet DescriptorSet::getVkDescriptorSet() const {
+VkDescriptorSet DescriptorSet::getVkDescriptorSet() const {
     return _descriptorSet;
 }
 
