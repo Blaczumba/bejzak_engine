@@ -21,7 +21,7 @@ void OctreeNode::addObject(const Object* object, const AABB& volume) {
         AABB{{md.x, md.y, md.z}, {uc.x, uc.y, uc.z}}  // Child 7: upper-right-back
     };
 
-    auto index = std::find_if(subVolumes.cbegin(), subVolumes.cend(),
+    size_t index = std::find_if(subVolumes.cbegin(), subVolumes.cend(),
         [volume](const AABB& subVolume) {
             return subVolume.contains(volume);
         }) - subVolumes.cbegin();

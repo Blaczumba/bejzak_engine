@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <print>
 
 SingleApp::SingleApp()
     : ApplicationBase() {
@@ -308,7 +309,7 @@ void SingleApp::run() {
 
     while (_window->open()) {
         float deltaTime = std::chrono::duration<float>(std::chrono::steady_clock::now() - previous).count();
-        std::cout << 1.0f / deltaTime << std::endl;
+        std::println("{}", 1.0f / deltaTime);
         previous = std::chrono::steady_clock::now();
         _window->pollEvents();
         _camera->updateInput(*_window->getMouseKeyboardManager(), _mouseXOffset, _mouseYOffset, deltaTime);

@@ -89,16 +89,16 @@ public:
         colorBlending.blendConstants[2] = 0.0f;
         colorBlending.blendConstants[3] = 0.0f;
 
-        std::vector<VkDynamicState> dynamicStates = {
+        static constexpr VkDynamicState dynamicStates[] = {
             VK_DYNAMIC_STATE_VIEWPORT,
             VK_DYNAMIC_STATE_SCISSOR,
         };
         VkPipelineDynamicStateCreateInfo dynamicState{};
         dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-        dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
-        dynamicState.pDynamicStates = dynamicStates.data();
+        dynamicState.dynamicStateCount = static_cast<uint32_t>(std::size(dynamicStates));
+        dynamicState.pDynamicStates = dynamicStates;
 
-        std::vector<VkDescriptorSetLayout> vkDescriptorSetLayouts = _shaderProgram.getVkDescriptorSetLayouts();
+        const lib::Buffer<VkDescriptorSetLayout> vkDescriptorSetLayouts = _shaderProgram.getVkDescriptorSetLayouts();
         std::span<const VkPushConstantRange> vkPushConstantRanges = _shaderProgram.getPushConstants();
 
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
@@ -124,7 +124,7 @@ public:
         depthStencil.front = {}; // Optional
         depthStencil.back = {}; // Optional
 
-        const std::vector<VkPipelineShaderStageCreateInfo> shaders = _shaderProgram.getVkPipelineShaderStageCreateInfos();
+        const lib::Buffer<VkPipelineShaderStageCreateInfo> shaders = _shaderProgram.getVkPipelineShaderStageCreateInfos();
         const std::optional<VkPipelineVertexInputStateCreateInfo>& vertexInputInfo = shaderProgram.getVkPipelineVertexInputStateCreateInfo();
 
         VkGraphicsPipelineCreateInfo pipelineInfo{};

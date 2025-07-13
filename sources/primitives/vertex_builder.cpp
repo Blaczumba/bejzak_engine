@@ -4,7 +4,7 @@
 
 // Function to build interleaved vertex data for position and texture coordinates
 ErrorOr<lib::Buffer<VertexPT>> buildInterleavingVertexData(std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords) {
-    if (positions.size() != texCoords.size()) {
+    if (positions.size() != texCoords.size()) [[unlikely]] {
         return Error(EngineError::SIZE_MISMATCH);
     }
 
@@ -19,7 +19,7 @@ ErrorOr<lib::Buffer<VertexPT>> buildInterleavingVertexData(std::span<const glm::
 
 // Function to build interleaved vertex data for position, texture coordinates, and normals
 ErrorOr<lib::Buffer<VertexPTN>> buildInterleavingVertexData(std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<const glm::vec3> normals) {
-    if (positions.size() != texCoords.size() || positions.size() != normals.size()) {
+    if (positions.size() != texCoords.size() || positions.size() != normals.size()) [[unlikely]] {
         throw Error(EngineError::SIZE_MISMATCH);
     }
 
@@ -34,7 +34,7 @@ ErrorOr<lib::Buffer<VertexPTN>> buildInterleavingVertexData(std::span<const glm:
 
 // Function to build interleaved vertex data for position, texture coordinates, normals, and tangents
 ErrorOr<lib::Buffer<VertexPTNT>> buildInterleavingVertexData(std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents) {
-    if (positions.size() != texCoords.size() || positions.size() != normals.size() || positions.size() != tangents.size()) {
+    if (positions.size() != texCoords.size() || positions.size() != normals.size() || positions.size() != tangents.size()) [[unlikely]] {
         throw Error(EngineError::SIZE_MISMATCH);
     }
 
@@ -47,11 +47,3 @@ ErrorOr<lib::Buffer<VertexPTNT>> buildInterleavingVertexData(std::span<const glm
     }
     return vertices;
 }
-
-//template <BufferLike... Buffer>
-//void buildInterleavingVertexDataAsBytes(void* destinationBuffer, const Buffer&... buffers, size_t size) {
-//	std::byte* dst = static_cast<std::byte*>(destinationBuffer);
-//	for (size_t i = 0; i < size; ++i) {
-//		((std::memcpy(dst, &buffers[i], sizeof(buffers[i])), dst += sizeof(buffers[i])), ...);
-//	}
-//}

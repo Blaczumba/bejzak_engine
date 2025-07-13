@@ -1,9 +1,10 @@
 #pragma once
 
-#include "status/status.h"
 #include "descriptor_set/descriptor_set_layout.h"
+#include "lib/buffer/buffer.h"
 #include "primitives/primitives.h"
 #include "shader.h"
+#include "status/status.h"
 
 #include <vulkan/vulkan.h>
 
@@ -86,9 +87,9 @@ protected:
 public:
 	ShaderProgram(const ShaderProgramManager& shaderProgramManager, std::initializer_list<std::string_view> shaders, std::initializer_list<DescriptorSetType> descriptorSetLayouts, std::span<const VkPushConstantRange> pushConstantRange, std::optional<VkPipelineVertexInputStateCreateInfo> vertexInputInfo = std::nullopt);
 
-    std::vector<VkPipelineShaderStageCreateInfo> getVkPipelineShaderStageCreateInfos() const;
+    lib::Buffer<VkPipelineShaderStageCreateInfo> getVkPipelineShaderStageCreateInfos() const;
 
-    std::vector<VkDescriptorSetLayout> getVkDescriptorSetLayouts() const;
+    lib::Buffer<VkDescriptorSetLayout> getVkDescriptorSetLayouts() const;
 
     std::span<const DescriptorSetType> getDescriptorSetLayouts() const;
 

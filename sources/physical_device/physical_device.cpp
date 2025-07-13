@@ -52,9 +52,6 @@ QueueFamilyIndices findQueueFamilyIncides(const VkPhysicalDevice device, const V
     QueueFamilyIndices indices;
 
     for (uint32_t i = 0; i < queueFamilies.size() && !areQueueFamilyIndicesComplete(indices); i++) {
-        VkBool32 presentSupport = VK_FALSE;
-        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
-
         if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
             indices.graphicsFamily = i;
         }
@@ -67,6 +64,8 @@ QueueFamilyIndices findQueueFamilyIncides(const VkPhysicalDevice device, const V
             indices.transferFamily = i;
         }
 
+        VkBool32 presentSupport = VK_FALSE;
+        vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
         if (presentSupport) {
             indices.presentFamily = i;
         }
@@ -112,7 +111,7 @@ ErrorOr<std::unique_ptr<PhysicalDevice>> PhysicalDevice::create(const Surface& s
         const QueueFamilyIndices& indices = findQueueFamilyIncides(device, surf);
         const SwapChainSupportDetails swapChainSupport = querySwapchainSupportDetails(device, surf);
 
-        bool swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
+        const bool swapChainAdequate = !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
 
         VkPhysicalDeviceFeatures supportedFeatures;
         vkGetPhysicalDeviceFeatures(device, &supportedFeatures);

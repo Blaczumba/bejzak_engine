@@ -13,20 +13,20 @@
 ShaderProgram::ShaderProgram(const ShaderProgramManager& shaderProgramManager, std::initializer_list<std::string_view> shaders, std::initializer_list<DescriptorSetType> descriptorSetLayouts, std::span<const VkPushConstantRange> pushConstantRange, std::optional<VkPipelineVertexInputStateCreateInfo> vertexInputInfo)
     : _shaderProgramManager(shaderProgramManager), _shaders(shaders), _descriptorSetLayouts(descriptorSetLayouts), _pushConstants(pushConstantRange.cbegin(), pushConstantRange.cend()), _vertexInputInfo(vertexInputInfo) {}
 
-std::vector<VkDescriptorSetLayout> ShaderProgram::getVkDescriptorSetLayouts() const {
-    std::vector<VkDescriptorSetLayout> layouts;
-    std::transform(_descriptorSetLayouts.cbegin(), _descriptorSetLayouts.cend(), std::back_inserter(layouts), [this](DescriptorSetType layoutType) { return _shaderProgramManager.getDescriptorSetLayout(layoutType)->getVkDescriptorSetLayout(); });
+lib::Buffer<VkDescriptorSetLayout> ShaderProgram::getVkDescriptorSetLayouts() const {
+    lib::Buffer<VkDescriptorSetLayout> layouts(_descriptorSetLayouts.size());
+    std::transform(_descriptorSetLayouts.cbegin(), _descriptorSetLayouts.cend(), layouts.begin(), [this](DescriptorSetType layoutType) { return _shaderProgramManager.getDescriptorSetLayout(layoutType)->getVkDescriptorSetLayout(); });
     return layouts;
+}
+
+lib::Buffer<VkPipelineShaderStageCreateInfo> ShaderProgram::getVkPipelineShaderStageCreateInfos() const {
+    lib::Buffer<VkPipelineShaderStageCreateInfo> shaders(_shaders.size());
+    std::transform(_shaders.cbegin(), _shaders.cend(), shaders.begin(), [this](std::string_view shaderPath) { return _shaderProgramManager.getShader(shaderPath)->getVkPipelineStageCreateInfo(); });
+    return shaders;
 }
 
 std::span<const DescriptorSetType> ShaderProgram::getDescriptorSetLayouts() const {
     return _descriptorSetLayouts;
-}
-
-std::vector<VkPipelineShaderStageCreateInfo> ShaderProgram::getVkPipelineShaderStageCreateInfos() const {
-    std::vector<VkPipelineShaderStageCreateInfo> shaders;
-    std::transform(_shaders.cbegin(), _shaders.cend(), std::back_inserter(shaders), [this](std::string_view shaderPath) { return _shaderProgramManager.getShader(shaderPath)->getVkPipelineStageCreateInfo(); });
-    return shaders;
 }
 
 std::span<const VkPushConstantRange> ShaderProgram::getPushConstants() const {

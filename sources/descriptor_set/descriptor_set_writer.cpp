@@ -3,7 +3,7 @@
 #include "descriptor_set/descriptor_set_writer_lib.h"
 
 DescriptorSetWriter& DescriptorSetWriter::storeTexture(const Texture& texture) {
-	_imageInfos.emplace_back(
+	_imageInfos.push_back(
 		VkDescriptorImageInfo {
 			.sampler = texture.getVkSampler(),
 			.imageView = texture.getVkImageView(),
@@ -11,7 +11,7 @@ DescriptorSetWriter& DescriptorSetWriter::storeTexture(const Texture& texture) {
 		}
 	);
 	_arrayElement = 0;
-	_descriptorWrites.emplace_back(
+	_descriptorWrites.push_back(
 		VkWriteDescriptorSet {
 			.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 			.dstBinding = _binding++,
