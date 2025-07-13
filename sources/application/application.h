@@ -25,7 +25,7 @@
 
 #include <unordered_map>
 
-class SingleApp : public ApplicationBase {
+class Application : public ApplicationBase {
     uint32_t index = 0;
     std::unordered_map<std::string, std::pair<TextureHandle, Texture>> _textures;
     std::unordered_map<std::string, Buffer> _vertexBufferMap;
@@ -96,12 +96,12 @@ class SingleApp : public ApplicationBase {
     float _mouseYOffset;
 
 public:
-    SingleApp();
-    ~SingleApp();
+    Application();
+    ~Application();
 
-    SingleApp(const SingleApp&) = delete;
-    SingleApp(SingleApp&&) = delete;
-    void operator=(const SingleApp&) = delete;
+    Application(const Application&) = delete;
+    Application(Application&&) = delete;
+    void operator=(const Application&) = delete;
 
     void run() override;
 private:

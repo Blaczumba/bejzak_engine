@@ -1,4 +1,4 @@
-#include "double_screenshot_application.h"
+#include "application.h"
 
 #include "lib/buffer/shared_buffer.h"
 #include "model_loader/tiny_gltf_loader/tiny_gltf_loader.h"
@@ -19,7 +19,7 @@
 #include <chrono>
 #include <print>
 
-SingleApp::SingleApp()
+Application::Application()
     : ApplicationBase() {
     
     _assetManager = std::make_unique<AssetManager>(*_logicalDevice);
@@ -63,7 +63,7 @@ uint32_t getIndexSize(VkIndexType type) {
     return 0;
 }
 
-void SingleApp::setInput() {
+void Application::setInput() {
     if (MouseKeyboardManager* manager = _window->getMouseKeyboardManager(); manager != nullptr) {
         // manager->absorbCursor();
 
@@ -91,7 +91,7 @@ void SingleApp::setInput() {
     }
 }
 
-Status SingleApp::loadCubemap() {
+Status Application::loadCubemap() {
     ASSIGN_OR_RETURN(VertexData vertexDataCube, loadObj(MODELS_PATH "cube.obj"));
     _assetManager->loadVertexData("cube.obj", vertexDataCube.indices, static_cast<uint8_t>(vertexDataCube.indexType), vertexDataCube.positions);
     {
@@ -107,7 +107,7 @@ Status SingleApp::loadCubemap() {
     return StatusOk();
 }
 
-Status SingleApp::loadObjects() {
+Status Application::loadObjects() {
     // TODO needs refactoring
     ASSIGN_OR_RETURN(auto sceneData, LoadGltf(MODELS_PATH "sponza/scene.gltf"));
     for (uint32_t i = 0; i < sceneData.size(); i++) {
@@ -180,7 +180,7 @@ Status SingleApp::loadObjects() {
     return StatusOk();
 }
 
-Status SingleApp::createDescriptorSets() {
+Status Application::createDescriptorSets() {
     float maxSamplerAnisotropy = _physicalDevice->getMaxSamplerAnisotropy();
     _assetManager->loadImageCubemapAsync(TEXTURES_PATH "cubemap_yokohama_rgba.ktx");
     {
@@ -223,7 +223,7 @@ Status SingleApp::createDescriptorSets() {
     return StatusOk();
 }
 
-Status SingleApp::createPresentResources() {
+Status Application::createPresentResources() {
     const VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_4_BIT;
     const VkFormat swapchainImageFormat = _swapchain->getVkFormat();
 
@@ -270,7 +270,7 @@ Status SingleApp::createPresentResources() {
     return StatusOk();
 }
 
-Status SingleApp::createShadowResources() {
+Status Application::createShadowResources() {
     AttachmentLayout attachmentLayout;
     attachmentLayout.addShadowAttachment(VK_FORMAT_D32_SFLOAT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
@@ -288,7 +288,7 @@ Status SingleApp::createShadowResources() {
     return StatusOk();
 }
 
-SingleApp::~SingleApp() {
+Application::~Application() {
     const VkDevice device = _logicalDevice->getVkDevice();
 
     for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
@@ -298,7 +298,7 @@ SingleApp::~SingleApp() {
     }
 }
 
-void SingleApp::run() {
+void Application::run() {
     updateUniformBuffer(_currentFrame);
     {
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
@@ -319,7 +319,7 @@ void SingleApp::run() {
     vkDeviceWaitIdle(_logicalDevice->getVkDevice());
 }
 
-void SingleApp::draw() {
+void Application::draw() {
     VkDevice device = _logicalDevice->getVkDevice();
     vkWaitForFences(device, 1, &_inFlightFences[_currentFrame], VK_TRUE, UINT64_MAX);
     uint32_t imageIndex;
@@ -377,7 +377,7 @@ void SingleApp::draw() {
     }
 }
 
-void SingleApp::createSyncObjects() {
+void Application::createSyncObjects() {
     _imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
     _renderFinishedSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
     _inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
@@ -400,14 +400,14 @@ void SingleApp::createSyncObjects() {
     }
 }
 
-void SingleApp::updateUniformBuffer(uint32_t currentFrame) {
+void Application::updateUniformBuffer(uint32_t currentFrame) {
     _ubCamera.view = _camera->getViewMatrix();
     _ubCamera.proj = _camera->getProjectionMatrix();
     _ubCamera.pos = _camera->getPosition();
     _dynamicUniformBuffersCamera.copyData(_ubCamera, currentFrame * _physicalDevice->getMemoryAlignment(sizeof(UniformBufferCamera)));
 }
 
-void SingleApp::createCommandBuffers() {
+void Application::createCommandBuffers() {
     _commandPool.reserve(MAX_THREADS_IN_POOL + 1);
 
     for (int i = 0; i < MAX_THREADS_IN_POOL + 1; i++) {
@@ -429,7 +429,7 @@ void SingleApp::createCommandBuffers() {
     }
 }
 
-void SingleApp::recordOctreeSecondaryCommandBuffer(const VkCommandBuffer commandBuffer, const OctreeNode* rootNode, const std::array<glm::vec4, NUM_CUBE_FACES>& planes) {
+void Application::recordOctreeSecondaryCommandBuffer(const VkCommandBuffer commandBuffer, const OctreeNode* rootNode, const std::array<glm::vec4, NUM_CUBE_FACES>& planes) {
     if (!rootNode || !rootNode->getVolume().intersectsFrustum(planes)) return;
 
     static std::queue<const OctreeNode*> nodeQueue;
@@ -484,7 +484,7 @@ void SingleApp::recordOctreeSecondaryCommandBuffer(const VkCommandBuffer command
     }
 }
 
-void SingleApp::recordCommandBuffer(uint32_t imageIndex) {
+void Application::recordCommandBuffer(uint32_t imageIndex) {
     const Framebuffer& framebuffer = *_framebuffers[imageIndex];
     const PrimaryCommandBuffer& primaryCommandBuffer = *_primaryCommandBuffer[_currentFrame];
     primaryCommandBuffer.begin();
@@ -565,7 +565,7 @@ void SingleApp::recordCommandBuffer(uint32_t imageIndex) {
     }
 }
 
-void SingleApp::recordShadowCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
+void Application::recordShadowCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
     const VkCommandBufferBeginInfo beginInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO
     };
@@ -629,7 +629,7 @@ void SingleApp::recordShadowCommandBuffer(VkCommandBuffer commandBuffer, uint32_
     //}
 }
 
-Status SingleApp::recreateSwapChain() {
+Status Application::recreateSwapChain() {
     VkExtent2D extent{};
     while (extent.width == 0 || extent.height == 0) {
         extent = _window->getFramebufferSize();

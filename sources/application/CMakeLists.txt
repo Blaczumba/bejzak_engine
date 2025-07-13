@@ -1,5 +1,5 @@
 # add_library(Application application_base.cpp offscreen_rendering_application.cpp)
-add_library(Application application_base.cpp double_screenshot_application.cpp)
+add_library(Application application_base.cpp application.cpp)
 
 target_link_libraries(Application PRIVATE Vulkan::Vulkan)
 if(Boost_FOUND)

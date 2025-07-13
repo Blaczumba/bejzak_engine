@@ -1,7 +1,7 @@
-#include <application/double_screenshot_application.h>
+#include <application/application.h>
 
 int main() {
-     SingleApp app;
+     Application app;
      app.run();
 
     return EXIT_SUCCESS;
