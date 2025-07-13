@@ -13,7 +13,7 @@ class DescriptorSetLayout {
 
 	const LogicalDevice* _logicalDevice;
 
-	DescriptorSetLayout(const LogicalDevice& logicalDevice, const VkDescriptorSetLayout layout);
+	DescriptorSetLayout(const LogicalDevice& logicalDevice, VkDescriptorSetLayout layout);
 
 public:
 	DescriptorSetLayout(DescriptorSetLayout&& layout) noexcept;

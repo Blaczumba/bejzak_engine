@@ -2,7 +2,7 @@
 
 #include "logical_device/logical_device.h"
 
-DescriptorSetLayout::DescriptorSetLayout(const LogicalDevice& logicalDevice, const VkDescriptorSetLayout layout) : _logicalDevice(&logicalDevice), _descriptorSetLayout(layout) {
+DescriptorSetLayout::DescriptorSetLayout(const LogicalDevice& logicalDevice, VkDescriptorSetLayout layout) : _logicalDevice(&logicalDevice), _descriptorSetLayout(layout) {
 
 }
 

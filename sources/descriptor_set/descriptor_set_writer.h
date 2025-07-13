@@ -35,7 +35,7 @@ public:
 
 	DescriptorSetWriter& storeBufferArrayElement(const Buffer& buffer);
 
-	void writeDescriptorSet(const VkDevice device, const VkDescriptorSet descriptorSet);
+	void writeDescriptorSet(VkDevice device, const VkDescriptorSet descriptorSet);
 
 	void getDynamicBufferSizesWithOffsets(uint32_t* data, std::initializer_list<uint32_t> offsets) const;
 };

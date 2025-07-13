@@ -27,7 +27,7 @@ class LogicalDevice {
 	VkQueue _computeQueue;
 	VkQueue _transferQueue;
 
-	LogicalDevice(const VkDevice logicalDevice, const PhysicalDevice& physicalDevice, const VkQueue graphicsQueue, const VkQueue presentQueue, const VkQueue computeQueue, const VkQueue transferQueue);
+	LogicalDevice(VkDevice logicalDevice, const PhysicalDevice& physicalDevice, VkQueue graphicsQueue, VkQueue presentQueue, VkQueue computeQueue, VkQueue transferQueue);
 
 public:
 	~LogicalDevice();
@@ -35,7 +35,7 @@ public:
 	static ErrorOr<std::unique_ptr<LogicalDevice>> create(const PhysicalDevice& physicalDevice);
 
 	VkSampler createSampler(const SamplerParameters& params) const;
-	VkImageView createImageView(const VkImage image, const ImageParameters& params) const;
+	VkImageView createImageView(VkImage image, const ImageParameters& params) const;
 
 	VkDevice getVkDevice() const;
 	const PhysicalDevice& getPhysicalDevice() const;

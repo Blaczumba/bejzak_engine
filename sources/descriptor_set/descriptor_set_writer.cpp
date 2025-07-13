@@ -90,7 +90,7 @@ DescriptorSetWriter& DescriptorSetWriter::storeBufferArrayElement(const Buffer& 
 	return *this;
 }
 
-void DescriptorSetWriter::writeDescriptorSet(const VkDevice device, const VkDescriptorSet descriptorSet) {
+void DescriptorSetWriter::writeDescriptorSet(VkDevice device, const VkDescriptorSet descriptorSet) {
 	for (auto& descriptorWrite : _descriptorWrites) {
 		descriptorWrite.dstSet = descriptorSet;
 	}

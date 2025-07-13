@@ -60,7 +60,7 @@ const VkImageView Swapchain::getSwapchainVkImageView(size_t index) const {
     return VK_NULL_HANDLE;
 }
 
-ErrorOr<std::unique_ptr<Swapchain>> Swapchain::create(const LogicalDevice& logicalDevice, const VkSwapchainKHR oldSwapchain) {
+ErrorOr<std::unique_ptr<Swapchain>> Swapchain::create(const LogicalDevice& logicalDevice, VkSwapchainKHR oldSwapchain) {
     const SwapChainSupportDetails swapChainSupport = logicalDevice.getPhysicalDevice().getSwapchainSupportDetails();
     const VkDevice device = logicalDevice.getVkDevice();
     const VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes, VK_PRESENT_MODE_MAILBOX_KHR);

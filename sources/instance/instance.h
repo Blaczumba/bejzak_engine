@@ -6,18 +6,18 @@
 #include <vulkan/vulkan.h>
 
 #include <memory>
-#include <vector>
+#include <span>
 #include <string_view>
 
 class Instance {
-	const VkInstance _instance;
+	VkInstance _instance;
 
-	Instance(const VkInstance instance);
+	Instance(VkInstance instance);
 
 public:
 	~Instance();
 
-	static ErrorOr<std::unique_ptr<Instance>> create(std::string_view engineName, const std::vector<const char*>& requiredExtensions);
+	static ErrorOr<std::unique_ptr<Instance>> create(std::string_view engineName, std::span<const char* const> requiredExtensions);
 
 	VkInstance getVkInstance() const;
 	ErrorOr<lib::Buffer<VkPhysicalDevice>> getAvailablePhysicalDevices() const;

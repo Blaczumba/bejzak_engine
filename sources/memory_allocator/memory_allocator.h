@@ -11,7 +11,7 @@
 
 class VmaWrapper {
 public:
-	VmaWrapper(const VkDevice device, const VkPhysicalDevice physicalDevice, const VkInstance instance);
+	VmaWrapper(VkDevice device, VkPhysicalDevice physicalDevice, VkInstance instance);
 	VmaWrapper(const VmaWrapper& allocator) = delete;
 	VmaWrapper(VmaWrapper&& allocator);
 	~VmaWrapper();
@@ -30,10 +30,10 @@ public:
 	};
 
 	ErrorOr<Buffer> createVkBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags = 0U);
-	void destroyVkBuffer(const VkBuffer buffer, const VmaAllocation allocation);
-	void sendDataToBufferMemory(const VkBuffer buffer, const VmaAllocation allocation, const void* data, size_t size);
+	void destroyVkBuffer(VkBuffer buffer, const VmaAllocation allocation);
+	void sendDataToBufferMemory(VkBuffer buffer, const VmaAllocation allocation, const void* data, size_t size);
 	ErrorOr<Image> createVkImage(const ImageParameters& params, VkImageLayout layout, VmaMemoryUsage memoryUsage, VmaAllocationCreateFlags flags = 0U);
-	void destroyVkImage(const VkImage image, const VmaAllocation allocation);
+	void destroyVkImage(VkImage image, const VmaAllocation allocation);
 
 private:
 	VmaAllocator _allocator;

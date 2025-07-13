@@ -21,7 +21,7 @@ class DescriptorPool : public std::enable_shared_from_this<const DescriptorPool>
 
 	const LogicalDevice& _logicalDevice;
 
-	DescriptorPool(const VkDescriptorPool descriptorPool, const LogicalDevice& logicalDevice, uint32_t maxNumSets);
+	DescriptorPool(VkDescriptorPool descriptorPool, const LogicalDevice& logicalDevice, uint32_t maxNumSets);
 
 public:
 	~DescriptorPool();
@@ -30,9 +30,9 @@ public:
 
 	VkDescriptorPool getVkDescriptorPool() const;
 
-	ErrorOr<DescriptorSet> createDesriptorSet(const VkDescriptorSetLayout layout) const;
+	ErrorOr<DescriptorSet> createDesriptorSet(VkDescriptorSetLayout layout) const;
 
-	ErrorOr<std::vector<DescriptorSet>> createDesriptorSets(const VkDescriptorSetLayout layout, uint32_t numSets) const;
+	ErrorOr<std::vector<DescriptorSet>> createDesriptorSets(VkDescriptorSetLayout layout, uint32_t numSets) const;
 
 	bool maxSetsReached() const;
 

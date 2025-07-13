@@ -14,7 +14,7 @@
 #include <string>
 #include <unordered_map>
 
-DescriptorSet::DescriptorSet(const VkDescriptorSet descriptorSet, const std::shared_ptr<const DescriptorPool>& descriptorPool)
+DescriptorSet::DescriptorSet(VkDescriptorSet descriptorSet, const std::shared_ptr<const DescriptorPool>& descriptorPool)
 	: _descriptorSet(descriptorSet), _descriptorPool(descriptorPool) {}
 
 DescriptorSet::DescriptorSet(DescriptorSet&& descriptorSet) noexcept
@@ -32,7 +32,7 @@ DescriptorSet& DescriptorSet::operator=(DescriptorSet&& descriptorSet) noexcept 
     return *this;
 }
 
-ErrorOr<DescriptorSet> DescriptorSet::create(const std::shared_ptr<const DescriptorPool>& descriptorPool, const VkDescriptorSetLayout layout) {
+ErrorOr<DescriptorSet> DescriptorSet::create(const std::shared_ptr<const DescriptorPool>& descriptorPool, VkDescriptorSetLayout layout) {
     const VkDescriptorSetAllocateInfo allocInfo = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
         .descriptorPool = descriptorPool->getVkDescriptorPool(),
@@ -47,7 +47,7 @@ ErrorOr<DescriptorSet> DescriptorSet::create(const std::shared_ptr<const Descrip
     return DescriptorSet(descriptorSet, descriptorPool);
 }
 
-ErrorOr<std::vector<DescriptorSet>> DescriptorSet::create(const std::shared_ptr<const DescriptorPool>& descriptorPool, const VkDescriptorSetLayout layout, uint32_t numSets) {
+ErrorOr<std::vector<DescriptorSet>> DescriptorSet::create(const std::shared_ptr<const DescriptorPool>& descriptorPool, VkDescriptorSetLayout layout, uint32_t numSets) {
     const std::vector<VkDescriptorSetLayout> layouts(numSets, layout);
     const VkDescriptorSetAllocateInfo allocInfo = {
         .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -63,7 +63,7 @@ ErrorOr<std::vector<DescriptorSet>> DescriptorSet::create(const std::shared_ptr<
 
     std::vector<DescriptorSet> descSets;
     descSets.reserve(descriptorSets.size());
-    std::transform(descriptorSets.cbegin(), descriptorSets.cend(), std::back_inserter(descSets), [&](const VkDescriptorSet descriptorSet) { return DescriptorSet(descriptorSet, descriptorPool); });
+    std::transform(descriptorSets.cbegin(), descriptorSets.cend(), std::back_inserter(descSets), [&](VkDescriptorSet descriptorSet) { return DescriptorSet(descriptorSet, descriptorPool); });
     return descSets;
 }
 

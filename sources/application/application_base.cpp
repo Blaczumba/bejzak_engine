@@ -8,7 +8,6 @@ ApplicationBase::ApplicationBase() {
 #ifdef VALIDATION_LAYERS_ENABLED
 	requiredExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif // VALIDATION_LAYERS_ENABLED
-	requiredExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
 
 	_instance = Instance::create("Bejzak Engine", requiredExtensions).value();
 #ifdef VALIDATION_LAYERS_ENABLED

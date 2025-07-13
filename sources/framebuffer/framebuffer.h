@@ -20,10 +20,10 @@ class Framebuffer {
 	VkViewport _viewport;
 	VkRect2D _scissor;
 
-	Framebuffer(const VkFramebuffer framebuffer, const Renderpass& renderpass, const VkViewport& viewport, const VkRect2D& scissor);
+	Framebuffer(VkFramebuffer framebuffer, const Renderpass& renderpass, const VkViewport& viewport, const VkRect2D& scissor);
 
 public:
-	static ErrorOr<std::unique_ptr<Framebuffer>> createFromSwapchain(const VkCommandBuffer commandBuffer, const Renderpass& renderpass, VkExtent2D swapchainExtent, const VkImageView swapchainImageView, std::vector<Texture>& attachments);
+	static ErrorOr<std::unique_ptr<Framebuffer>> createFromSwapchain(VkCommandBuffer commandBuffer, const Renderpass& renderpass, VkExtent2D swapchainExtent, VkImageView swapchainImageView, std::vector<Texture>& attachments);
 	
 	static ErrorOr<std::unique_ptr<Framebuffer>> createFromTextures(const Renderpass& renderpass, std::span<const Texture> textures);
 

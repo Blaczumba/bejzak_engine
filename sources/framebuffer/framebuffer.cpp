@@ -8,7 +8,7 @@
 
 #include <optional>
 
-ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromSwapchain(const VkCommandBuffer commandBuffer, const Renderpass& renderpass, VkExtent2D swapchainExtent, const VkImageView swapchainImageView, std::vector<Texture>& attachments) {
+ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromSwapchain(VkCommandBuffer commandBuffer, const Renderpass& renderpass, VkExtent2D swapchainExtent, VkImageView swapchainImageView, std::vector<Texture>& attachments) {
     const LogicalDevice& logicalDevice = renderpass.getLogicalDevice();
     std::span<const VkAttachmentDescription> attachmentDescriptions = renderpass.getAttachmentsLayout().getVkAttachmentDescriptions();
     std::vector<VkImageView> imageViews;
@@ -107,7 +107,7 @@ ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromTextures(const Rend
     return std::unique_ptr<Framebuffer>(new Framebuffer(framebuffer, renderpass, viewport, scissor));
 }
 
-Framebuffer::Framebuffer(const VkFramebuffer framebuffer, const Renderpass& renderpass, const VkViewport& viewport, const VkRect2D& scissor)
+Framebuffer::Framebuffer(VkFramebuffer framebuffer, const Renderpass& renderpass, const VkViewport& viewport, const VkRect2D& scissor)
     : _framebuffer(framebuffer), _renderpass(renderpass), _viewport(viewport), _scissor(scissor) {}
 
 Framebuffer::~Framebuffer() {

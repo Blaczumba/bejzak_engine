@@ -20,7 +20,7 @@ class DescriptorSet {
 
 	std::shared_ptr<const DescriptorPool> _descriptorPool;
 
-	DescriptorSet(const VkDescriptorSet descriptorSet, const std::shared_ptr<const DescriptorPool>& descriptorPool);
+	DescriptorSet(VkDescriptorSet descriptorSet, const std::shared_ptr<const DescriptorPool>& descriptorPool);
 
 public:
 	DescriptorSet() = default;
@@ -31,9 +31,9 @@ public:
 
 	~DescriptorSet() = default;
 
-	static ErrorOr<DescriptorSet> create(const std::shared_ptr<const DescriptorPool>& descriptorPool, const VkDescriptorSetLayout layout);
+	static ErrorOr<DescriptorSet> create(const std::shared_ptr<const DescriptorPool>& descriptorPool, VkDescriptorSetLayout layout);
 
-	static ErrorOr<std::vector<DescriptorSet>> create(const std::shared_ptr<const DescriptorPool>& descriptorPool, const VkDescriptorSetLayout layout, uint32_t numSets);
+	static ErrorOr<std::vector<DescriptorSet>> create(const std::shared_ptr<const DescriptorPool>& descriptorPool, VkDescriptorSetLayout layout, uint32_t numSets);
 
 	VkDescriptorSet getVkDescriptorSet() const;
 

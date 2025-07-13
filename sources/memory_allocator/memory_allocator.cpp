@@ -6,7 +6,7 @@
 
 #include <variant>
 
-VmaWrapper::VmaWrapper(const VkDevice device, const VkPhysicalDevice physicalDevice, const VkInstance instance) {
+VmaWrapper::VmaWrapper(VkDevice device, VkPhysicalDevice physicalDevice, VkInstance instance) {
 	const VmaAllocatorCreateInfo allocatorCreateInfo = {
 		// .flags = // VMA_ALLOCATOR_CREATE_KHR_DEDICATED_ALLOCATION_BIT |
 			// VMA_ALLOCATOR_CREATE_KHR_BIND_MEMORY2_BIT |
@@ -58,11 +58,11 @@ ErrorOr<VmaWrapper::Buffer> VmaWrapper::createVkBuffer(VkDeviceSize size, VkBuff
 	return VmaWrapper::Buffer{ buffer, allocation, allocationInfo.pMappedData };
 }
 
-void VmaWrapper::destroyVkBuffer(const VkBuffer buffer, const VmaAllocation allocation) {
+void VmaWrapper::destroyVkBuffer(VkBuffer buffer, const VmaAllocation allocation) {
 	vmaDestroyBuffer(_allocator, buffer, allocation);
 }
 
-void VmaWrapper::sendDataToBufferMemory(const VkBuffer buffer, const VmaAllocation allocation, const void* data, size_t size) {
+void VmaWrapper::sendDataToBufferMemory(VkBuffer buffer, const VmaAllocation allocation, const void* data, size_t size) {
 	vmaCopyMemoryToAllocation(_allocator, data, allocation, 0, size);
 }
 

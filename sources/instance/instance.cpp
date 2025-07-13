@@ -6,7 +6,7 @@
 #include <string_view>
 #include <unordered_set>
 
-Instance::Instance(const VkInstance instance) : _instance(instance) { }
+Instance::Instance(VkInstance instance) : _instance(instance) { }
 
 Instance::~Instance() {
     vkDestroyInstance(_instance, nullptr);
@@ -39,7 +39,7 @@ bool checkValidationLayerSupport() {
 
 }
 
-ErrorOr<std::unique_ptr<Instance>> Instance::create(std::string_view engineName, const std::vector<const char*>& requiredExtensions) {
+ErrorOr<std::unique_ptr<Instance>> Instance::create(std::string_view engineName, std::span<const char* const> requiredExtensions) {
 #ifdef VALIDATION_LAYERS_ENABLED
     if (!checkValidationLayerSupport()) {
         return Error(EngineError::NOT_SUPPORTED_VALIDATION_LAYERS);
