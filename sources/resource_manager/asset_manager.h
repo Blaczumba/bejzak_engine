@@ -54,6 +54,8 @@ public:
 	void loadImage2DAsync(const std::string& filePath);
 	void loadImageCubemapAsync(const std::string& filePath);
 
+	void loadVertexDataInterleaving(const std::string& filePath, std::span<const uint8_t> indices, uint8_t indexSize, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents);
+
 	template<typename VertexType, typename PrimitiveType>
 	void loadVertexData(const std::string& filePath, lib::SharedBuffer<uint8_t>& indices, uint8_t indexSize, lib::SharedBuffer<VertexType>& vertices, lib::SharedBuffer<PrimitiveType>& primitives);
 

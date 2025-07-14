@@ -5,6 +5,7 @@
 #include "logical_device/logical_device.h"
 #include "status/status.h"
 
+#include <glm/glm.hpp>
 #include <vulkan/vulkan.h>
 
 #include <array>
@@ -33,6 +34,12 @@ public:
     static ErrorOr<Buffer> createUniformBuffer(LogicalDevice& logicalDevice, uint32_t size);
 
     Status copyBuffer(const VkCommandBuffer commandBuffer, const Buffer& srcBuffer, std::optional<VkDeviceSize> size = std::nullopt, VkDeviceSize srcOffset = 0, VkDeviceSize dstOffset = 0);
+
+    Status copyDataInterleaving(std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords);
+
+    Status copyDataInterleaving(std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<const glm::vec3> normals);
+
+    Status copyDataInterleaving(std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents);
 
     template<typename T>
     Status copyData(std::span<const T> data, VkDeviceSize offset = 0);

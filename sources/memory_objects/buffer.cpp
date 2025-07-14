@@ -2,6 +2,9 @@
 
 #include "lib/macros/status_macros.h"
 #include "memory_objects/buffers.h"
+#include "primitives/vertex_builder.h"
+
+#include <glm/glm.hpp>
 
 Buffer::Buffer() : _buffer(VK_NULL_HANDLE), _mappedMemory(nullptr) {};
 
@@ -138,6 +141,27 @@ Status Buffer::copyBuffer(const VkCommandBuffer commandBuffer, const Buffer& src
     }
     copyBufferToBuffer(commandBuffer, srcBuffer._buffer, _buffer, srcOffset, dstOffset, size);
     return StatusOk();
+}
+
+Status Buffer::copyDataInterleaving(std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords) {
+    if (!_mappedMemory) [[unlikely]] {
+        return Error(EngineError::NOT_MAPPED);
+    }
+    return buildInterleavingVertexData(std::span(static_cast<uint8_t*>(_mappedMemory), _size), positions, texCoords);
+}
+
+Status Buffer::copyDataInterleaving(std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<const glm::vec3> normals) {
+    if (!_mappedMemory) [[unlikely]] {
+        return Error(EngineError::NOT_MAPPED);
+    }
+    return buildInterleavingVertexData(std::span(static_cast<uint8_t*>(_mappedMemory), _size), positions, texCoords, normals);
+}
+
+Status Buffer::copyDataInterleaving(std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents) {
+    if (!_mappedMemory) [[unlikely]] {
+        return Error(EngineError::NOT_MAPPED);
+    }
+    return buildInterleavingVertexData(std::span(static_cast<uint8_t*>(_mappedMemory), _size), positions, texCoords, normals, tangents);
 }
 
 VkBufferUsageFlags Buffer::getUsage() const {

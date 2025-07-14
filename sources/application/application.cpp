@@ -116,8 +116,7 @@ Status Application::loadObjects() {
         _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + sceneData[i].diffuseTexture);
         _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + sceneData[i].metallicRoughnessTexture);
         _assetManager->loadImage2DAsync(MODELS_PATH "sponza/" + sceneData[i].normalTexture);
-        ASSIGN_OR_RETURN(lib::SharedBuffer vertices, buildInterleavingVertexData(sceneData[i].positions, sceneData[i].textureCoordinates, sceneData[i].normals, sceneData[i].tangents));
-        _assetManager->loadVertexData(std::to_string(i), sceneData[i].indices, static_cast<uint8_t>(sceneData[i].indexType), vertices, sceneData[i].positions);
+        _assetManager->loadVertexDataInterleaving(std::to_string(i), sceneData[i].indices, static_cast<uint8_t>(sceneData[i].indexType), sceneData[i].positions, sceneData[i].textureCoordinates, sceneData[i].normals, sceneData[i].tangents);
     }
     float maxSamplerAnisotropy = _physicalDevice->getMaxSamplerAnisotropy();
     _objects.reserve(sceneData.size());

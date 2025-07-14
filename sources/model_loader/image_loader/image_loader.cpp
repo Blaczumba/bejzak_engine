@@ -99,9 +99,7 @@ struct Deallocator {
 		stbi_image_free(texture);
 	}
 
-	void operator()(auto&&) {
-		throw std::runtime_error("Unrecognized type of library image resource to free");
-	}
+	void operator()(auto&&) {}
 };
 
 }
