@@ -98,8 +98,8 @@ Status Application::loadCubemap() {
         SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
         const VkCommandBuffer commandBuffer = handle.getCommandBuffer();
         ASSIGN_OR_RETURN(auto vData, _assetManager->getVertexData("cube.obj"));
-        ASSIGN_OR_RETURN(_vertexBufferCube, Buffer::createVertexBuffer(*_logicalDevice, vData->vertexBufferPrimitives.getSize()));
-        RETURN_IF_ERROR(_vertexBufferCube.copyBuffer(commandBuffer, vData->vertexBufferPrimitives));
+        ASSIGN_OR_RETURN(_vertexBufferCube, Buffer::createVertexBuffer(*_logicalDevice, vData->vertexBufferPositions.getSize()));
+        RETURN_IF_ERROR(_vertexBufferCube.copyBuffer(commandBuffer, vData->vertexBufferPositions));
         ASSIGN_OR_RETURN(_indexBufferCube, Buffer::createIndexBuffer(*_logicalDevice, vData->indexBuffer.getSize()));
         RETURN_IF_ERROR(_indexBufferCube.copyBuffer(commandBuffer, vData->indexBuffer));
         _indexBufferCubeType = vData->indexType;
@@ -153,8 +153,8 @@ Status Application::loadObjects() {
             RETURN_IF_ERROR(msh.vertexBuffer.copyBuffer(commandBuffer, vData->vertexBuffer));
             ASSIGN_OR_RETURN(msh.indexBuffer, Buffer::createIndexBuffer(*_logicalDevice, vData->indexBuffer.getSize()));
             RETURN_IF_ERROR(msh.indexBuffer.copyBuffer(commandBuffer, vData->indexBuffer));
-            ASSIGN_OR_RETURN(msh.vertexBufferPrimitive, Buffer::createVertexBuffer(*_logicalDevice, vData->vertexBufferPrimitives.getSize()));
-            RETURN_IF_ERROR(msh.vertexBufferPrimitive.copyBuffer(commandBuffer, vData->vertexBufferPrimitives));
+            ASSIGN_OR_RETURN(msh.vertexBufferPrimitive, Buffer::createVertexBuffer(*_logicalDevice, vData->vertexBufferPositions.getSize()));
+            RETURN_IF_ERROR(msh.vertexBufferPrimitive.copyBuffer(commandBuffer, vData->vertexBufferPositions));
             msh.indexType = vData->indexType;
             msh.aabb = createAABBfromVertices(std::vector<glm::vec3>(sceneData[i].positions.cbegin(), sceneData[i].positions.cend()), sceneData[i].model);
             _registry.addComponent<MeshComponent>(e, std::move(msh));

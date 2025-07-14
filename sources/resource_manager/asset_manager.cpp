@@ -59,7 +59,7 @@ void AssetManager::loadVertexDataInterleavingAsync(const std::string& name, std:
         if (Status copyStatus = indexBuffer->copyData<uint8_t>(indices); !copyStatus.has_value()) [[unlikely]] {
             return ErrorOr<VertexData>(Error(copyStatus.error()));
         }
-        return ErrorOr<VertexData>(VertexData(std::move(vertexBuffer.value()), std::move(indexBuffer.value()), getIndexType(indexSize), std::move(vertexBufferPositions.value()), AABB{}));
+        return ErrorOr<VertexData>(VertexData(std::move(vertexBuffer.value()), std::move(indexBuffer.value()), getIndexType(indexSize), std::move(vertexBufferPositions.value())));
     }));
     _awaitingVertexDataResources.emplace(name, std::move(future));
 }

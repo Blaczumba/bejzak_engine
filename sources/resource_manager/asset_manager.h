@@ -1,15 +1,14 @@
 #pragma once
 
-#include "lib/buffer/shared_buffer.h"
 #include "logical_device/logical_device.h"
 #include "memory_objects/buffer.h"
 #include "model_loader/image_loader/image_loader.h"
 #include "primitives/geometry.h"
 #include "primitives/primitives.h"
 #include "status/status.h"
-#include "thread_pool/thread_pool.h"
 
 #include <algorithm>
+#include <future>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -47,8 +46,7 @@ public:
 		Buffer vertexBuffer;
 		Buffer indexBuffer;
 		VkIndexType indexType;
-		Buffer vertexBufferPrimitives;
-		AABB aabb;
+		Buffer vertexBufferPositions;
 	};
 
 	void loadImage2DAsync(const std::string& filePath);
@@ -90,7 +88,7 @@ void AssetManager::loadVertexDataAsync(const std::string& filePath, std::span<co
 			return ErrorOr<VertexData>(Error(indexBuffer.error()));
 		}
 		indexBuffer->copyData<uint8_t>(indices);
-		return ErrorOr<VertexData>(VertexData{ Buffer(), std::move(indexBuffer.value()), getIndexType(indexSize), std::move(vertexBuffer.value()), AABB{} });
+		return ErrorOr<VertexData>(VertexData{ Buffer(), std::move(indexBuffer.value()), getIndexType(indexSize), std::move(vertexBuffer.value())});
 	}));
 	_awaitingVertexDataResources.emplace(filePath, std::move(future));
 }
