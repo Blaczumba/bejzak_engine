@@ -3,7 +3,6 @@
 #include "model_loader/model_loader.h"
 #include "status/status.h"
 
-#include <expected>
 #include <string>
 #include <vector>
 

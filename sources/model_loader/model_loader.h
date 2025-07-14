@@ -20,10 +20,10 @@ enum class IndexType : uint8_t {
 IndexType getMatchingIndexType(size_t indicesCount);
 
 template<typename IndexT>
-std::enable_if_t<std::is_unsigned<IndexT>::value, lib::Buffer<uint8_t>> processIndices(const IndexT* srcIndices, size_t indicesCount, IndexType indexType) {
-	lib::Buffer<uint8_t> indices(indicesCount * static_cast<size_t>(indexType));
+std::enable_if_t<std::is_unsigned<IndexT>::value, lib::Buffer<uint8_t>> processIndices(std::span<const IndexT> srcIndices, IndexType indexType) {
+	lib::Buffer<uint8_t> indices(srcIndices.size() * static_cast<size_t>(indexType));
 	uint8_t* data = indices.data();
-	for (const IndexT& index : std::span(srcIndices, indicesCount)) {
+	for (const IndexT& index : srcIndices) {
 		std::memcpy(data, &index, static_cast<size_t>(indexType));
 		data += static_cast<size_t>(indexType);
 	}

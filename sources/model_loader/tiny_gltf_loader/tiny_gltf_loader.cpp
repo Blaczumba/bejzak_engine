@@ -10,7 +10,6 @@
 #define TINYGLTF_NO_STB_IMAGE_WRITE
 #include <tinygltf/tiny_gltf.h>
 
-#include <expected>
 #include <map>
 #include <span>
 #include <string>
@@ -53,17 +52,12 @@ std::enable_if_t<std::is_unsigned<IndexType>::value, lib::Buffer<glm::vec3>> pro
     lib::Buffer<glm::vec3> tangents(positions.size());
     for (size_t i = 0; i < indices.size(); i += 3) {
         const glm::vec3& pos0 = positions[indices[i]];
-        const glm::vec3& pos1 = positions[indices[i + 1]];
-        const glm::vec3& pos2 = positions[indices[i + 2]];
+        glm::vec3 edge1 = positions[indices[i + 1]] - pos0;
+        glm::vec3 edge2 = positions[indices[i + 2]] - pos0;
 
         const glm::vec2& texCoord0 = texCoords[indices[i]];
-        const glm::vec2& texCoord1 = texCoords[indices[i + 1]];
-        const glm::vec2& texCoord2 = texCoords[indices[i + 2]];
-
-        glm::vec3 edge1 = pos1 - pos0;
-        glm::vec3 edge2 = pos2 - pos0;
-        glm::vec2 deltaUV1 = texCoord1 - texCoord0;
-        glm::vec2 deltaUV2 = texCoord2 - texCoord0;
+        glm::vec2 deltaUV1 = texCoords[indices[i + 1]] - texCoord0;
+        glm::vec2 deltaUV2 = texCoords[indices[i + 2]] - texCoord0;
 
         // float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
         tangents[indices[i]] = tangents[indices[i + 1]] = tangents[indices[i + 2]] = glm::normalize(deltaUV2.y * edge1 - deltaUV1.y * edge2); // f scale
@@ -100,12 +94,6 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
         lib::SharedBuffer<glm::vec3> positions;
         lib::SharedBuffer<glm::vec2> texCoords;
         lib::SharedBuffer<glm::vec3> normals;
-        lib::SharedBuffer<glm::vec3> tangents;
-        lib::SharedBuffer<glm::vec3> bitangents;
-
-        lib::SharedBuffer<uint8_t> indices;
-        uint32_t indicesCount;
-        IndexType indexType = IndexType::NONE;
 
         std::span<const unsigned char> positionsData = processAttribute(model, attributes, "POSITION");
         if (positionsData.data()) {
@@ -126,6 +114,9 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
         }
 
         // Load indices
+        lib::SharedBuffer<uint8_t> indices;
+        uint32_t indicesCount;
+        IndexType indexType = IndexType::NONE;
         if (primitive.indices >= 0) {
             const tinygltf::Accessor& accessor = model.accessors[primitive.indices];
             const tinygltf::BufferView& bufferView = model.bufferViews[accessor.bufferView];
@@ -138,16 +129,17 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
             // Determine the component type and process
             switch (accessor.componentType) {
             case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-                indices = processIndices(reinterpret_cast<const uint8_t*>(&buffer.data[offset]), indicesCount, indexType);
+                indices = processIndices(std::span(reinterpret_cast<const uint8_t*>(&buffer.data[offset]), indicesCount), indexType);
                 break;
             case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-                indices = processIndices(reinterpret_cast<const uint16_t*>(&buffer.data[offset]), indicesCount, indexType);
+                indices = processIndices(std::span(reinterpret_cast<const uint16_t*>(&buffer.data[offset]), indicesCount), indexType);
                 break;
             case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-                indices = processIndices(reinterpret_cast<const uint32_t*>(&buffer.data[offset]), indicesCount, indexType);
+                indices = processIndices(std::span(reinterpret_cast<const uint32_t*>(&buffer.data[offset]), indicesCount), indexType);
             }
         }
 
+        lib::SharedBuffer<glm::vec3> tangents;
         switch (indexType) {
         case IndexType::UINT8:
             tangents = processTangents(std::span<const uint8_t>(indices), positions, texCoords);
@@ -180,14 +172,11 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
 ErrorOr<std::vector<VertexData>> LoadGltf(const std::string& filePath) {
     tinygltf::Model model;
     tinygltf::TinyGLTF loader;
-    std::string err;
-    std::string warn;
-    bool ret;
 
-    if (filePath.find(".glb") != std::string::npos || filePath.find(".bin") != std::string::npos)
-        loader.LoadBinaryFromFile(&model, &err, &warn, filePath);
-    else if (filePath.find(".gltf") != std::string::npos)
-        loader.LoadASCIIFromFile(&model, &err, &warn, filePath);
+    if (filePath.ends_with(".glb") || filePath.ends_with(".bin"))
+        loader.LoadBinaryFromFile(&model, nullptr, nullptr, filePath);
+    else if (filePath.ends_with(".gltf"))
+        loader.LoadASCIIFromFile(&model, nullptr, nullptr, filePath);
     else
         return Error(EngineError::LOAD_FAILURE);
 

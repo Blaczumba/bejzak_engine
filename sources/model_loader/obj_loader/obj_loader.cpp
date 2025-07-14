@@ -47,9 +47,9 @@ ErrorOr<VertexData> loadObj(const std::string& filePath) {
     }
 
     std::unordered_map<Indices, int, Indices::Hash> mp;
-    for (const auto& shape : shapes) {
-        for (const auto& index : shape.mesh.indices) {
-            Indices idx = Indices{ index.vertex_index, index.normal_index, index.texcoord_index };
+    for (const tinyobj::shape_t& shape : shapes) {
+        for (const tinyobj::index_t& index : shape.mesh.indices) {
+            const Indices idx = Indices{ index.vertex_index, index.normal_index, index.texcoord_index };
             if (auto ptr = mp.find(idx); ptr != mp.cend()) {
                 indices.push_back(ptr->second);
             }
@@ -57,9 +57,9 @@ ErrorOr<VertexData> loadObj(const std::string& filePath) {
                 mp.insert({ idx, static_cast<uint32_t>(positions.size()) });
 
                 indices.emplace_back(static_cast<uint32_t>(positions.size()));
-                int vertexIndex = 3 * index.vertex_index;
-                int texIndex = 2 * index.texcoord_index;
-                int normalIndex = 3 * index.normal_index;
+                const int vertexIndex = 3 * index.vertex_index;
+                const int texIndex = 2 * index.texcoord_index;
+                const int normalIndex = 3 * index.normal_index;
                 positions.emplace_back(attrib.vertices[vertexIndex], attrib.vertices[vertexIndex + 1], attrib.vertices[vertexIndex + 2]);
                 texCoords.emplace_back(attrib.texcoords[texIndex], 1.0f - attrib.texcoords[texIndex + 1]);
                 normals.emplace_back(attrib.normals[normalIndex], attrib.normals[normalIndex + 1], attrib.normals[normalIndex + 2]);
@@ -71,7 +71,7 @@ ErrorOr<VertexData> loadObj(const std::string& filePath) {
         .positions = lib::SharedBuffer<glm::vec3>(positions.data(), positions.size()),
         .textureCoordinates = lib::SharedBuffer<glm::vec2>(texCoords.data(), texCoords.size()),
         .normals = lib::SharedBuffer<glm::vec3>(normals.data(), normals.size()),
-        .indices = processIndices(indices.data(), indices.size(), indexType),
+        .indices = processIndices(std::span<const unsigned int>(indices), indexType),
         .indexType = indexType
     };
 }
