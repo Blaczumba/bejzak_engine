@@ -33,8 +33,8 @@ void AssetManager::loadImageCubemapAsync(const std::string& filePath) {
 	loadImageAsync(filePath, ImageLoader::loadCubemapImage);
 }
 
-void AssetManager::loadVertexDataInterleaving(const std::string& filePath, std::span<const uint8_t> indices, uint8_t indexSize, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents) {
-    if (_awaitingVertexDataResources.contains(filePath)) {
+void AssetManager::loadVertexDataInterleavingAsync(const std::string& name, std::span<const uint8_t> indices, uint8_t indexSize, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents) {
+    if (_awaitingVertexDataResources.contains(name)) {
         return;
     }
     auto future = std::async(std::launch::async, ([this, indices, indexSize, positions, texCoords, normals, tangents]() {
@@ -42,12 +42,9 @@ void AssetManager::loadVertexDataInterleaving(const std::string& filePath, std::
         if (!vertexBuffer.has_value()) [[unlikely]] {
             return ErrorOr<VertexData>(Error(vertexBuffer.error()));
         }
-        auto start = std::chrono::high_resolution_clock::now();
         if (Status copyStatus = vertexBuffer->copyDataInterleaving(positions, texCoords, normals, tangents); !copyStatus.has_value()) [[unlikely]] {
             return ErrorOr<VertexData>(Error(copyStatus.error()));
         }
-        auto stop = std::chrono::high_resolution_clock::now();
-        std::cout << std::chrono::duration_cast<std::chrono::nanoseconds>(stop - start).count() << std::endl << std::endl;
         auto vertexBufferPositions = Buffer::createStagingBuffer(_logicalDevice, positions.size() * sizeof(glm::vec3));
         if (!vertexBufferPositions.has_value()) [[unlikely]] {
             return ErrorOr<VertexData>(Error(vertexBufferPositions.error()));
@@ -59,10 +56,12 @@ void AssetManager::loadVertexDataInterleaving(const std::string& filePath, std::
         if (!indexBuffer.has_value()) [[unlikely]] {
             return ErrorOr<VertexData>(Error(indexBuffer.error()));
         }
-        indexBuffer->copyData<uint8_t>(indices);
+        if (Status copyStatus = indexBuffer->copyData<uint8_t>(indices); !copyStatus.has_value()) [[unlikely]] {
+            return ErrorOr<VertexData>(Error(copyStatus.error()));
+        }
         return ErrorOr<VertexData>(VertexData(std::move(vertexBuffer.value()), std::move(indexBuffer.value()), getIndexType(indexSize), std::move(vertexBufferPositions.value()), AABB{}));
     }));
-    _awaitingVertexDataResources.emplace(filePath, std::move(future));
+    _awaitingVertexDataResources.emplace(name, std::move(future));
 }
 
 ErrorOr<const ImageData*> AssetManager::getImageData(const std::string& filePath) {

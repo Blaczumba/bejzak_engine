@@ -54,13 +54,10 @@ public:
 	void loadImage2DAsync(const std::string& filePath);
 	void loadImageCubemapAsync(const std::string& filePath);
 
-	void loadVertexDataInterleaving(const std::string& filePath, std::span<const uint8_t> indices, uint8_t indexSize, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents);
-
-	template<typename VertexType, typename PrimitiveType>
-	void loadVertexData(const std::string& filePath, lib::SharedBuffer<uint8_t>& indices, uint8_t indexSize, lib::SharedBuffer<VertexType>& vertices, lib::SharedBuffer<PrimitiveType>& primitives);
+	void loadVertexDataInterleavingAsync(const std::string& name, std::span<const uint8_t> indices, uint8_t indexSize, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents);
 
 	template<typename VertexType>
-	void loadVertexData(const std::string& filePath, lib::SharedBuffer<uint8_t>& indices, uint8_t indexSize, lib::SharedBuffer<VertexType>& vertices);
+	void loadVertexDataAsync(const std::string& filePath, std::span<const uint8_t> indices, uint8_t indexSize, std::span<const VertexType> vertices);
 
 	ErrorOr<const ImageData*> getImageData(const std::string& filePath);
 	ErrorOr<const VertexData*> getVertexData(const std::string& filePath);
@@ -77,43 +74,17 @@ private:
 	std::unordered_map<std::string, std::future<ErrorOr<ImageData>>> _awaitingImageResources;
 };
 
-template<typename VertexType, typename PrimitiveType>
-void AssetManager::loadVertexData(const std::string& filePath, lib::SharedBuffer<uint8_t>& indices, uint8_t indexSize, lib::SharedBuffer<VertexType>& vertices, lib::SharedBuffer<PrimitiveType>& primitives) {
-	if (_awaitingVertexDataResources.contains(filePath)) {
-		return;
-	}
-	auto future = std::async(std::launch::async, ([this, indices, indexSize, vertices, primitives]() {
-		auto vertexBuffer = Buffer::createStagingBuffer(_logicalDevice, vertices.size() * sizeof(VertexType));
-		if (!vertexBuffer.has_value()) [[unlikely]] {
-			return ErrorOr<VertexData>(Error(vertexBuffer.error()));
-		}
-		vertexBuffer->copyData<VertexType>(vertices);
-		auto vertexBufferPrimitives = Buffer::createStagingBuffer(_logicalDevice, primitives.size() * sizeof(PrimitiveType));
-		if (!vertexBufferPrimitives.has_value()) [[unlikely]] {
-			return ErrorOr<VertexData>(Error(vertexBufferPrimitives.error()));
-		}
-		vertexBufferPrimitives->copyData<PrimitiveType>(primitives);
-		auto indexBuffer = Buffer::createStagingBuffer(_logicalDevice, indices.size());
-		if (!indexBuffer.has_value()) [[unlikely]] {
-			return ErrorOr<VertexData>(Error(indexBuffer.error()));
-		}
-		indexBuffer->copyData<uint8_t>(indices);
-		return ErrorOr<VertexData>(VertexData(std::move(vertexBuffer.value()), std::move(indexBuffer.value()), getIndexType(indexSize), std::move(vertexBufferPrimitives.value()), AABB{}));
-	}));
-	 _awaitingVertexDataResources.emplace(filePath, std::move(future));
-}
-
-template<typename VertexType>
-void AssetManager::loadVertexData(const std::string& filePath, lib::SharedBuffer<uint8_t>& indices, uint8_t indexSize, lib::SharedBuffer<VertexType>& vertices) {
+template<typename Type>
+void AssetManager::loadVertexDataAsync(const std::string& filePath, std::span<const uint8_t> indices, uint8_t indexSize, std::span<const Type> vertices) {
 	if (_awaitingVertexDataResources.contains(filePath)) {
 		return;
 	}
 	auto future = std::async(std::launch::async, ([this, indices, indexSize, vertices]() {
-		auto vertexBuffer = Buffer::createStagingBuffer(_logicalDevice, vertices.size() * sizeof(VertexType));
+		auto vertexBuffer = Buffer::createStagingBuffer(_logicalDevice, vertices.size() * sizeof(Type));
 		if (!vertexBuffer.has_value()) [[unlikely]] {
 			return ErrorOr<VertexData>(Error(vertexBuffer.error()));
 		}
-		vertexBuffer->copyData<VertexType>(vertices);
+		vertexBuffer->copyData<Type>(vertices);
 		auto indexBuffer = Buffer::createStagingBuffer(_logicalDevice, indices.size());
 		if (!indexBuffer.has_value()) [[unlikely]] {
 			return ErrorOr<VertexData>(Error(indexBuffer.error()));
