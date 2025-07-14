@@ -62,9 +62,6 @@ public:
     }
 
     SharedBuffer& operator=(Buffer<T>&& other) noexcept {
-        if (this == &other) {
-            return *this;
-        }
         _buffer = std::move(other._buffer);
         _size = std::exchange(other._size, 0);
         return *this;

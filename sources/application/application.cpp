@@ -81,6 +81,9 @@ void Application::setInput() {
 
             _mouseXOffset = xPosIn - lastX;
             _mouseYOffset = lastY - yPosIn; // reversed since y-coordinates go from bottom to top
+
+            lastX = xPosIn;
+            lastY = yPosIn;
         });
     }
 }

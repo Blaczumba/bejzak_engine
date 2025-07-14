@@ -67,13 +67,11 @@ ErrorOr<VertexData> loadObj(const std::string& filePath) {
         }
     }
     IndexType indexType = getMatchingIndexType(indices.size());
-    lib::SharedBuffer<uint8_t> indicesBuffer(indices.size() * static_cast<size_t>(indexType));
-    processIndices(indicesBuffer.data(), indices.data(), indices.size(), indexType);
     return VertexData{
         .positions = lib::SharedBuffer<glm::vec3>(positions.data(), positions.size()),
         .textureCoordinates = lib::SharedBuffer<glm::vec2>(texCoords.data(), texCoords.size()),
         .normals = lib::SharedBuffer<glm::vec3>(normals.data(), normals.size()),
-        .indices = std::move(indicesBuffer),
+        .indices = processIndices(indices.data(), indices.size(), indexType),
         .indexType = indexType
     };
 }

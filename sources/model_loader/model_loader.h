@@ -20,18 +20,14 @@ enum class IndexType : uint8_t {
 IndexType getMatchingIndexType(size_t indicesCount);
 
 template<typename IndexT>
-std::enable_if_t<std::is_unsigned<IndexT>::value> processIndices(uint8_t* dstIndices, const IndexT* srcIndices, size_t indicesCount, IndexType indexType) {
-	size_t offset = {};
-	switch (indexType) {
-	case IndexType::UINT8:
-		std::for_each(srcIndices, srcIndices + indicesCount, [=, &offset](const IndexT& srcIndex) {std::memcpy(dstIndices + offset, &static_cast<const uint8_t&>(srcIndex), static_cast<size_t>(indexType)); offset += static_cast<size_t>(indexType); });
-		break;
-	case IndexType::UINT16:
-		std::for_each(srcIndices, srcIndices + indicesCount, [=, &offset](const IndexT& srcIndex) {std::memcpy(dstIndices + offset, &static_cast<const uint16_t&>(srcIndex), static_cast<size_t>(indexType)); offset += static_cast<size_t>(indexType); });
-		break;
-	case IndexType::UINT32:
-		std::for_each(srcIndices, srcIndices + indicesCount, [=, &offset](const IndexT& srcIndex) {std::memcpy(dstIndices + offset, &static_cast<const uint32_t&>(srcIndex), static_cast<size_t>(indexType)); offset += static_cast<size_t>(indexType); });
+std::enable_if_t<std::is_unsigned<IndexT>::value, lib::Buffer<uint8_t>> processIndices(const IndexT* srcIndices, size_t indicesCount, IndexType indexType) {
+	lib::Buffer<uint8_t> indices(indicesCount * static_cast<size_t>(indexType));
+	uint8_t* data = indices.data();
+	for (const IndexT& index : std::span(srcIndices, indicesCount)) {
+		std::memcpy(data, &index, static_cast<size_t>(indexType));
+		data += static_cast<size_t>(indexType);
 	}
+	return indices;
 }
 
 struct VertexData {

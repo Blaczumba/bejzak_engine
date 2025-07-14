@@ -49,7 +49,8 @@ std::span<const unsigned char> processAttribute(const tinygltf::Model& model, st
 }
 
 template<typename IndexType>
-std::enable_if_t<std::is_unsigned<IndexType>::value> processTangents(std::span<const IndexType> indices, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<glm::vec3> tangents) {
+std::enable_if_t<std::is_unsigned<IndexType>::value, lib::Buffer<glm::vec3>> processTangents(std::span<const IndexType> indices, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords) {
+    lib::Buffer<glm::vec3> tangents(positions.size());
     for (size_t i = 0; i < indices.size(); i += 3) {
         const glm::vec3& pos0 = positions[indices[i]];
         const glm::vec3& pos1 = positions[indices[i + 1]];
@@ -68,11 +69,12 @@ std::enable_if_t<std::is_unsigned<IndexType>::value> processTangents(std::span<c
         tangents[indices[i]] = tangents[indices[i + 1]] = tangents[indices[i + 2]] = glm::normalize(deltaUV2.y * edge1 - deltaUV1.y * edge2); // f scale
         //glm::vec3 bitangent = glm::normalize(-deltaUV2.x * edge1 + deltaUV1.x * edge2); // f scale
     }
+    return tangents;
 }
 
 std::string getTextureUri(const tinygltf::Model& model, const tinygltf::ParameterMap& values, const std::string& textureType) {
     auto it = values.find(textureType);
-    if (it == values.end()) {
+    if (it == values.cend()) {
         return std::string{};
     }
     const tinygltf::Texture& texture = model.textures[it->second.TextureIndex()];
@@ -84,16 +86,16 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
     glm::mat4 currentTransform = parentTransform * GetNodeTransform(node);
 
     if (node.mesh < 0) {
-        for (const auto& childIndex : node.children) {
+        for (int childIndex : node.children) {
             ProcessNode(model, model.nodes[childIndex], currentTransform, vertexDataList);
         }
         return;
     }
 
-    const auto& mesh = model.meshes[node.mesh];
+    const tinygltf::Mesh& mesh = model.meshes[node.mesh];
 
-    for (const auto& primitive : mesh.primitives) {
-        const auto& attributes = primitive.attributes;
+    for (const tinygltf::Primitive& primitive : mesh.primitives) {
+        const std::map<std::string, int>& attributes = primitive.attributes;
 
         lib::SharedBuffer<glm::vec3> positions;
         lib::SharedBuffer<glm::vec2> texCoords;
@@ -103,21 +105,21 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
 
         lib::SharedBuffer<uint8_t> indices;
         uint32_t indicesCount;
-        IndexType indexType;
+        IndexType indexType = IndexType::NONE;
 
-        auto positionsData = processAttribute(model, attributes, "POSITION");
+        std::span<const unsigned char> positionsData = processAttribute(model, attributes, "POSITION");
         if (positionsData.data()) {
             const glm::vec3* data = reinterpret_cast<const glm::vec3*>(positionsData.data());
             positions = lib::SharedBuffer<glm::vec3>(data, data + positionsData.size());
         }
 
-        auto textureCoordsData = processAttribute(model, attributes, "TEXCOORD_0");
+        std::span<const unsigned char> textureCoordsData = processAttribute(model, attributes, "TEXCOORD_0");
         if (textureCoordsData.data()) {
             const glm::vec2* data = reinterpret_cast<const glm::vec2*>(textureCoordsData.data());
             texCoords = lib::SharedBuffer<glm::vec2>(data, data + textureCoordsData.size());
         }
 
-        auto normalsData = processAttribute(model, attributes, "NORMAL");
+        std::span<const unsigned char> normalsData = processAttribute(model, attributes, "NORMAL");
         if (normalsData.data()) {
             const glm::vec3* data = reinterpret_cast<const glm::vec3*>(normalsData.data());
             normals = lib::SharedBuffer<glm::vec3>(data, data + normalsData.size());
@@ -131,33 +133,30 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
 
             indicesCount = accessor.count;
             indexType = getMatchingIndexType(indicesCount);
-            indices = lib::SharedBuffer<uint8_t>(indicesCount * static_cast<size_t>(indexType));
+            const size_t offset = accessor.byteOffset + bufferView.byteOffset;
 
             // Determine the component type and process
-            if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT) {
-                const uint16_t* data = reinterpret_cast<const uint16_t*>(&buffer.data[accessor.byteOffset + bufferView.byteOffset]);
-                processIndices(indices.data(), data, indicesCount, indexType);
-            }
-            else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT) {
-                const uint32_t* data = reinterpret_cast<const uint32_t*>(&buffer.data[accessor.byteOffset + bufferView.byteOffset]);
-                processIndices(indices.data(), data, indicesCount, indexType);
-            }
-            else if (accessor.componentType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE) {
-                const uint8_t* data = reinterpret_cast<const uint8_t*>(&buffer.data[accessor.byteOffset + bufferView.byteOffset]);
-                processIndices(indices.data(), data, indicesCount, indexType);
+            switch (accessor.componentType) {
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+                indices = processIndices(reinterpret_cast<const uint8_t*>(&buffer.data[offset]), indicesCount, indexType);
+                break;
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                indices = processIndices(reinterpret_cast<const uint16_t*>(&buffer.data[offset]), indicesCount, indexType);
+                break;
+            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                indices = processIndices(reinterpret_cast<const uint32_t*>(&buffer.data[offset]), indicesCount, indexType);
             }
         }
 
-        tangents = lib::SharedBuffer<glm::vec3>(normals.size());
         switch (indexType) {
         case IndexType::UINT8:
-            processTangents(std::span<const uint8_t>(indices), positions, texCoords, tangents);
+            tangents = processTangents(std::span<const uint8_t>(indices), positions, texCoords);
             break;
         case IndexType::UINT16:
-            processTangents(std::span(reinterpret_cast<const uint16_t*>(indices.data()), indicesCount), positions, texCoords, tangents);
+            tangents = processTangents(std::span(reinterpret_cast<const uint16_t*>(indices.data()), indicesCount), positions, texCoords);
             break;
         case IndexType::UINT32:
-            processTangents(std::span(reinterpret_cast<const uint32_t*>(indices.data()), indicesCount), positions, texCoords, tangents);
+            tangents = processTangents(std::span(reinterpret_cast<const uint32_t*>(indices.data()), indicesCount), positions, texCoords);
         }
 
         // Load textures
@@ -173,7 +172,7 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
         vertexDataList.emplace_back(std::move(positions), std::move(texCoords), std::move(normals), std::move(tangents), std::move(indices), indexType, currentTransform, std::move(diffuseTexture), std::move(normalTexture), std::move(metallicRoughnessTexture));
     }
 
-    for (const auto& childIndex : node.children) {
+    for (int childIndex : node.children) {
         ProcessNode(model, model.nodes[childIndex], currentTransform, vertexDataList);
     }
 }
@@ -193,8 +192,8 @@ ErrorOr<std::vector<VertexData>> LoadGltf(const std::string& filePath) {
         return Error(EngineError::LOAD_FAILURE);
 
     std::vector<VertexData> vertexDataList;
-    for (const auto& scene : model.scenes) {
-        for (const auto& nodeIndex : scene.nodes) {
+    for (const tinygltf::Scene& scene : model.scenes) {
+        for (int nodeIndex : scene.nodes) {
             const tinygltf::Node& node = model.nodes[nodeIndex];
             ProcessNode(model, node, glm::mat4(1.0f), vertexDataList);
         }
