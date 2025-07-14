@@ -76,17 +76,11 @@ void Application::setInput() {
         });
 
         manager->setMouseMoveCallback([&](float xPosIn, float yPosIn) {
-            float xpos = static_cast<float>(xPosIn);
-            float ypos = static_cast<float>(yPosIn);
-
             static float lastX = xPosIn;
             static float lastY = yPosIn;
 
-            _mouseXOffset = xpos - lastX;
-            _mouseYOffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
-
-            lastX = xpos;
-            lastY = ypos;
+            _mouseXOffset = xPosIn - lastX;
+            _mouseYOffset = lastY - yPosIn; // reversed since y-coordinates go from bottom to top
         });
     }
 }
