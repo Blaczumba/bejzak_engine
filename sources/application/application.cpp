@@ -26,16 +26,12 @@ Application::Application()
 
     createDescriptorSets();
     loadObjects();
-    // loadObject();
     loadCubemap();
     createPresentResources();
     createShadowResources();
-
     createCommandBuffers();
-
     _camera = std::make_unique<FPSCamera>(glm::radians(45.0f), 1920.0f / 1080.0f, 0.01f, 100.0f);
     setInput();
-
     createSyncObjects();
 }
 

@@ -47,6 +47,26 @@ std::span<const unsigned char> processAttribute(const tinygltf::Model& model, st
     return std::span<const unsigned char>(&buffer.data[accessor.byteOffset + bufferView.byteOffset], accessor.count);
 }
 
+lib::Buffer<uint8_t> createIndices(const tinygltf::Model& model, const tinygltf::Primitive& primitive, IndexType* indexType) {
+    const tinygltf::Accessor& accessor = model.accessors[primitive.indices];
+    const tinygltf::BufferView& bufferView = model.bufferViews[accessor.bufferView];
+    const tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
+
+    size_t indicesCount = accessor.count;
+    *indexType = getMatchingIndexType(indicesCount);
+    const size_t offset = accessor.byteOffset + bufferView.byteOffset;
+
+    switch (accessor.componentType) {
+    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+        return processIndices(std::span(reinterpret_cast<const uint8_t*>(&buffer.data[offset]), indicesCount), *indexType);
+    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+        return processIndices(std::span(reinterpret_cast<const uint16_t*>(&buffer.data[offset]), indicesCount), *indexType);
+    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+        return processIndices(std::span(reinterpret_cast<const uint32_t*>(&buffer.data[offset]), indicesCount), *indexType);
+    }
+    return lib::Buffer<uint8_t>{};
+}
+
 template<typename IndexType>
 std::enable_if_t<std::is_unsigned<IndexType>::value, lib::Buffer<glm::vec3>> processTangents(std::span<const IndexType> indices, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords) {
     lib::Buffer<glm::vec3> tangents(positions.size());
@@ -66,6 +86,19 @@ std::enable_if_t<std::is_unsigned<IndexType>::value, lib::Buffer<glm::vec3>> pro
     return tangents;
 }
 
+lib::Buffer<glm::vec3> createTangents(IndexType indexType, std::span<const uint8_t> indicesBytes, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords) {
+    const size_t indicesCount = indicesBytes.size() / static_cast<size_t>(indexType);
+    switch (indexType) {
+    case IndexType::UINT8:
+        return processTangents(indicesBytes, positions, texCoords);
+    case IndexType::UINT16:
+        return processTangents(std::span(reinterpret_cast<const uint16_t*>(indicesBytes.data()), indicesCount), positions, texCoords);
+    case IndexType::UINT32:
+        return processTangents(std::span(reinterpret_cast<const uint32_t*>(indicesBytes.data()), indicesCount), positions, texCoords);
+    }
+    return lib::Buffer<glm::vec3>{};
+}
+
 std::string getTextureUri(const tinygltf::Model& model, const tinygltf::ParameterMap& values, const std::string& textureType) {
     auto it = values.find(textureType);
     if (it == values.cend()) {
@@ -76,8 +109,8 @@ std::string getTextureUri(const tinygltf::Model& model, const tinygltf::Paramete
     return image.uri;
 }
 
-void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::mat4 parentTransform, std::vector<VertexData>& vertexDataList) {
-    glm::mat4 currentTransform = parentTransform * GetNodeTransform(node);
+void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, const glm::mat4& parentTransform, std::vector<VertexData>& vertexDataList) {
+    const glm::mat4 currentTransform = parentTransform * GetNodeTransform(node);
 
     if (node.mesh < 0) {
         for (int childIndex : node.children) {
@@ -86,70 +119,36 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
         return;
     }
 
-    const tinygltf::Mesh& mesh = model.meshes[node.mesh];
-
-    for (const tinygltf::Primitive& primitive : mesh.primitives) {
+    for (const tinygltf::Primitive& primitive : model.meshes[node.mesh].primitives) {
         const std::map<std::string, int>& attributes = primitive.attributes;
 
         lib::SharedBuffer<glm::vec3> positions;
         lib::SharedBuffer<glm::vec2> texCoords;
         lib::SharedBuffer<glm::vec3> normals;
 
-        std::span<const unsigned char> positionsData = processAttribute(model, attributes, "POSITION");
-        if (positionsData.data()) {
+        if (std::span<const unsigned char> positionsData = processAttribute(model, attributes, "POSITION"); positionsData.data()) {
             const glm::vec3* data = reinterpret_cast<const glm::vec3*>(positionsData.data());
             positions = lib::SharedBuffer<glm::vec3>(data, data + positionsData.size());
         }
 
-        std::span<const unsigned char> textureCoordsData = processAttribute(model, attributes, "TEXCOORD_0");
-        if (textureCoordsData.data()) {
+        if (std::span<const unsigned char> textureCoordsData = processAttribute(model, attributes, "TEXCOORD_0");  textureCoordsData.data()) {
             const glm::vec2* data = reinterpret_cast<const glm::vec2*>(textureCoordsData.data());
             texCoords = lib::SharedBuffer<glm::vec2>(data, data + textureCoordsData.size());
         }
 
-        std::span<const unsigned char> normalsData = processAttribute(model, attributes, "NORMAL");
-        if (normalsData.data()) {
+        if (std::span<const unsigned char> normalsData = processAttribute(model, attributes, "NORMAL");  normalsData.data()) {
             const glm::vec3* data = reinterpret_cast<const glm::vec3*>(normalsData.data());
             normals = lib::SharedBuffer<glm::vec3>(data, data + normalsData.size());
         }
 
         // Load indices
-        lib::SharedBuffer<uint8_t> indices;
-        uint32_t indicesCount;
+        lib::SharedBuffer<uint8_t> indicesBytes;
         IndexType indexType = IndexType::NONE;
         if (primitive.indices >= 0) {
-            const tinygltf::Accessor& accessor = model.accessors[primitive.indices];
-            const tinygltf::BufferView& bufferView = model.bufferViews[accessor.bufferView];
-            const tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
-
-            indicesCount = accessor.count;
-            indexType = getMatchingIndexType(indicesCount);
-            const size_t offset = accessor.byteOffset + bufferView.byteOffset;
-
-            // Determine the component type and process
-            switch (accessor.componentType) {
-            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-                indices = processIndices(std::span(reinterpret_cast<const uint8_t*>(&buffer.data[offset]), indicesCount), indexType);
-                break;
-            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-                indices = processIndices(std::span(reinterpret_cast<const uint16_t*>(&buffer.data[offset]), indicesCount), indexType);
-                break;
-            case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-                indices = processIndices(std::span(reinterpret_cast<const uint32_t*>(&buffer.data[offset]), indicesCount), indexType);
-            }
+            indicesBytes = createIndices(model, primitive, &indexType);
         }
 
-        lib::SharedBuffer<glm::vec3> tangents;
-        switch (indexType) {
-        case IndexType::UINT8:
-            tangents = processTangents(std::span<const uint8_t>(indices), positions, texCoords);
-            break;
-        case IndexType::UINT16:
-            tangents = processTangents(std::span(reinterpret_cast<const uint16_t*>(indices.data()), indicesCount), positions, texCoords);
-            break;
-        case IndexType::UINT32:
-            tangents = processTangents(std::span(reinterpret_cast<const uint32_t*>(indices.data()), indicesCount), positions, texCoords);
-        }
+        lib::SharedBuffer<glm::vec3> tangents = createTangents(indexType, indicesBytes, positions, texCoords);
 
         // Load textures
         std::string diffuseTexture;
@@ -161,7 +160,7 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, glm::
             metallicRoughnessTexture = getTextureUri(model, material.values, "metallicRoughnessTexture");
             normalTexture = getTextureUri(model, material.additionalValues, "normalTexture");
         }
-        vertexDataList.emplace_back(std::move(positions), std::move(texCoords), std::move(normals), std::move(tangents), std::move(indices), indexType, currentTransform, std::move(diffuseTexture), std::move(normalTexture), std::move(metallicRoughnessTexture));
+        vertexDataList.emplace_back(std::move(positions), std::move(texCoords), std::move(normals), std::move(tangents), std::move(indicesBytes), indexType, currentTransform, std::move(diffuseTexture), std::move(normalTexture), std::move(metallicRoughnessTexture));
     }
 
     for (int childIndex : node.children) {

@@ -32,6 +32,8 @@ public:
         std::copy(init.begin(), init.end(), _buffer.get());
     }
 
+    SharedBuffer(std::span<const T> buffer) : SharedBuffer(buffer.data(), buffer.size()) {}
+
     SharedBuffer(SharedBuffer&& other) noexcept : _buffer(std::move(other._buffer)), _size(std::exchange(other._size, 0)) {}
 
     SharedBuffer(Buffer<T>&& other) noexcept : _buffer(std::move(other._buffer)), _size(std::exchange(other._size, 0)) {}

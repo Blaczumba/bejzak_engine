@@ -35,6 +35,8 @@ public:
         std::copy(init.begin(), init.end(), _buffer.get());
     }
 
+    Buffer(std::span<const T> buffer) : Buffer(buffer.data(), buffer.size()) {}
+
 	Buffer(Buffer&& other) noexcept : _buffer(std::move(other._buffer)), _size(std::exchange(other._size, 0)) {}
 
     template<typename... Args>

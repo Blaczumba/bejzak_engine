@@ -77,7 +77,7 @@ void AssetManager::loadVertexDataAsync(const std::string& filePath, std::span<co
 	if (_awaitingVertexDataResources.contains(filePath)) {
 		return;
 	}
-	auto future = std::async(std::launch::async, ([this, indices, indexSize, vertices]() {
+	auto future = std::async(std::launch::async, ([this, indices, indexSize, vertices]() { // TODO: boost::asio::post, boost::asio::use_future
 		auto vertexBuffer = Buffer::createStagingBuffer(_logicalDevice, vertices.size() * sizeof(Type));
 		if (!vertexBuffer.has_value()) [[unlikely]] {
 			return ErrorOr<VertexData>(Error(vertexBuffer.error()));

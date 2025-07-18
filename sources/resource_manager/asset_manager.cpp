@@ -11,7 +11,7 @@ void AssetManager::loadImageAsync(const std::string& filePath, std::function<Err
     if (_awaitingImageResources.contains(filePath)) {
         return;
     }
-    auto future = std::async(std::launch::async, ([this, filePath, loadingFunction = std::move(loadingFunction)]() {
+    auto future = std::async(std::launch::async, [this, filePath, loadingFunction = std::move(loadingFunction)]() { // TODO: boost::asio::post, boost::asio::use_future
         ErrorOr<ImageResource> resource = loadingFunction(filePath);
         if (!resource.has_value()) [[unlikely]]
             return ErrorOr<ImageData>(Error(resource.error()));
@@ -21,7 +21,7 @@ void AssetManager::loadImageAsync(const std::string& filePath, std::function<Err
         stagingBuffer->copyData(std::span(static_cast<const uint8_t*>(resource->data), resource->size));
         ImageLoader::deallocateResources(*resource);
         return ErrorOr<ImageData>(ImageData(std::move(*stagingBuffer), std::move(resource->dimensions)));
-    }));
+    });
     _awaitingImageResources.emplace(filePath, std::move(future));
 }
 
@@ -37,7 +37,7 @@ void AssetManager::loadVertexDataInterleavingAsync(const std::string& name, std:
     if (_awaitingVertexDataResources.contains(name)) {
         return;
     }
-    auto future = std::async(std::launch::async, ([this, indices, indexSize, positions, texCoords, normals, tangents]() {
+    auto future = std::async(std::launch::async, [this, indices, indexSize, positions, texCoords, normals, tangents]() { // TODO: boost::asio::post, boost::asio::use_future
         auto vertexBuffer = Buffer::createStagingBuffer(_logicalDevice, positions.size() * sizeof(VertexPTNT));
         if (!vertexBuffer.has_value()) [[unlikely]] {
             return ErrorOr<VertexData>(Error(vertexBuffer.error()));
@@ -60,7 +60,7 @@ void AssetManager::loadVertexDataInterleavingAsync(const std::string& name, std:
             return ErrorOr<VertexData>(Error(copyStatus.error()));
         }
         return ErrorOr<VertexData>(VertexData(std::move(vertexBuffer.value()), std::move(indexBuffer.value()), getIndexType(indexSize), std::move(vertexBufferPositions.value())));
-    }));
+    });
     _awaitingVertexDataResources.emplace(name, std::move(future));
 }
 
