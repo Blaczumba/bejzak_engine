@@ -8,7 +8,7 @@ CommandPool::CommandPool(const LogicalDevice& logicalDevice) : _logicalDevice(lo
     const VkCommandPoolCreateInfo poolInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
         .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, 
-        .queueFamilyIndex = _logicalDevice.getPhysicalDevice().getPropertyManager().getQueueFamilyIndices().graphicsFamily.value()
+        .queueFamilyIndex = _logicalDevice.getPhysicalDevice().getQueueFamilyIndices().graphicsFamily.value()
     };
 
     if (vkCreateCommandPool(_logicalDevice.getVkDevice(), &poolInfo, nullptr, &_commandPool) != VK_SUCCESS) {
@@ -31,7 +31,7 @@ void CommandPool::reset() const {
     vkResetCommandPool(_logicalDevice.getVkDevice(), _commandPool, 0);
 }
 
-const VkCommandPool CommandPool::getVkCommandPool() const {
+VkCommandPool CommandPool::getVkCommandPool() const {
     return _commandPool;
 }
 
@@ -65,7 +65,7 @@ void CommandBuffer::resetCommandBuffer() const {
     vkResetCommandBuffer(_commandBuffer, 0);
 }
 
-const VkCommandBuffer CommandBuffer::getVkCommandBuffer() const {
+VkCommandBuffer CommandBuffer::getVkCommandBuffer() const {
     return _commandBuffer;
 }
 
@@ -134,7 +134,7 @@ VkResult PrimaryCommandBuffer::submit(QueueType type, const VkSemaphore waitSema
         vkResetFences(logicalDevice.getVkDevice(), 1, &waitFence);
     }
 
-    return vkQueueSubmit(logicalDevice.getQueue(type), 1, &submitInfo, waitFence);
+    return vkQueueSubmit(logicalDevice.getVkQueue(type), 1, &submitInfo, waitFence);
 }
 
 SecondaryCommandBuffer::SecondaryCommandBuffer(const CommandPool& commandPool)
@@ -191,7 +191,7 @@ SingleTimeCommandBuffer::SingleTimeCommandBuffer(const CommandPool& commandPool,
 SingleTimeCommandBuffer::~SingleTimeCommandBuffer() {
     const LogicalDevice& logicalDevice = _commandPool.getLogicalDevice();
     const VkDevice device = logicalDevice.getVkDevice();
-    const VkQueue queue = logicalDevice.getQueue(_queueType);
+    const VkQueue queue = logicalDevice.getVkQueue(_queueType);
 
     vkEndCommandBuffer(_commandBuffer);
 

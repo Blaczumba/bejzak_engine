@@ -1,19 +1,14 @@
 #pragma once
 
-#include "lib/buffer/buffer.h"
-#include "lib/status/status.h"
 #include "logical_device/logical_device.h"
-#include "memory_objects/staging_buffer.h"
+#include "memory_objects/buffer.h"
 #include "model_loader/image_loader/image_loader.h"
 #include "primitives/geometry.h"
 #include "primitives/primitives.h"
-#include "thread_pool/thread_pool.h"
+#include "status/status.h"
 
 #include <algorithm>
-#include <atomic>
-#include <condition_variable>
-#include <iterator>
-#include <mutex>
+#include <future>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -40,71 +35,60 @@ constexpr VkIndexType getIndexType(uint8_t indexSize) {
 
 class AssetManager {
 public:
-	AssetManager(MemoryAllocator& memoryAllocator);
+	AssetManager(LogicalDevice& logicalDevice);
 	
 	struct ImageData {
-		StagingBuffer stagingBuffer;
+		Buffer stagingBuffer;
 		ImageDimensions imageDimensions;
 	};
 
 	struct VertexData {
-		std::optional<StagingBuffer> vertexBuffer;	// std::nullopt when the type is VertexP.
-		StagingBuffer indexBuffer;
+		Buffer vertexBuffer;
+		Buffer indexBuffer;
 		VkIndexType indexType;
-		StagingBuffer vertexBufferPrimitives;	// VertexP/glm::vec3 buffer.
-		AABB aabb;
+		Buffer vertexBufferPositions;
 	};
 
 	void loadImage2DAsync(const std::string& filePath);
 	void loadImageCubemapAsync(const std::string& filePath);
 
+	void loadVertexDataInterleavingAsync(const std::string& name, std::span<const uint8_t> indices, uint8_t indexSize, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents);
+
 	template<typename VertexType>
-	lib::Status loadVertexData(std::string_view key, const lib::Buffer<VertexType>& vertices, const lib::Buffer<uint8_t>& indices, uint8_t indexSize) {
-		// TODO: Needs refactoring
-		static_assert(VertexTraits<VertexType>::hasPosition, "Cannot load vertex data with no position defined");
-		StagingBuffer indexBuffer(_memoryAllocator, indices);
-		auto handleVertexBuffer = [&]() -> std::tuple<std::optional<StagingBuffer>, StagingBuffer> {
-			if (typeid(VertexType) == typeid(VertexP)) {
-				return { std::nullopt, StagingBuffer(_memoryAllocator, std::span(vertices.data(), vertices.size()))};
-			}
-			else {
-				std::vector<glm::vec3> primitives;
-				primitives.reserve(vertices.size());
-				std::transform(vertices.cbegin(), vertices.cend(), std::back_inserter(primitives), [](const VertexType& vertex) { return vertex.pos; });
-				return { StagingBuffer(_memoryAllocator, std::span(vertices.data(), vertices.size())), StagingBuffer(_memoryAllocator, std::span(primitives.data(), primitives.size())) };
-			}
-		};
-		auto [vertexBuffer, primitivesVertexBuffer] = handleVertexBuffer();
-		_vertexDataResources.emplace(
-			std::piecewise_construct,
-			std::forward_as_tuple(key),
-			std::forward_as_tuple(
-				std::move(vertexBuffer),
-				std::move(indexBuffer),
-				getIndexType(indexSize),
-				std::move(primitivesVertexBuffer),
-				AABB{}
-			)
-		);
-		return lib::StatusOk();
-	}
+	void loadVertexDataAsync(const std::string& filePath, std::span<const uint8_t> indices, uint8_t indexSize, std::span<const VertexType> vertices);
 
-	lib::ErrorOr<const ImageData*> getImageData(const std::string& filePath);
-	void deleteImage(std::string_view filePath);
-
-	const VertexData& getVertexData(std::string_view key) const {
-		auto ptr = _vertexDataResources.find(std::string{ key });
-		return ptr->second; // TODO if not found branch
-	}
+	ErrorOr<const ImageData*> getImageData(const std::string& filePath);
+	ErrorOr<const VertexData*> getVertexData(const std::string& filePath);
 
 private:
-	void loadImageAsync(const std::string& filePath, std::function<lib::ErrorOr<ImageResource>(std::string_view)>&& loadingFunction);
+	void loadImageAsync(const std::string& filePath, std::function<ErrorOr<ImageResource>(std::string_view)>&& loadingFunction);
 
-	MemoryAllocator& _memoryAllocator;
+	LogicalDevice& _logicalDevice;
 
 	std::unordered_map<std::string, VertexData> _vertexDataResources;
-	std::unordered_map<std::string, std::future<std::unique_ptr<VertexData>>> _awaitingVertexDataResources;
+	std::unordered_map<std::string, std::future<ErrorOr<VertexData>>> _awaitingVertexDataResources;
 
 	std::unordered_map<std::string, ImageData> _imageResources;
-	std::unordered_map<std::string, std::future<lib::ErrorOr<ImageData>>> _awaitingImageResources;
+	std::unordered_map<std::string, std::future<ErrorOr<ImageData>>> _awaitingImageResources;
 };
+
+template<typename Type>
+void AssetManager::loadVertexDataAsync(const std::string& filePath, std::span<const uint8_t> indices, uint8_t indexSize, std::span<const Type> vertices) {
+	if (_awaitingVertexDataResources.contains(filePath)) {
+		return;
+	}
+	auto future = std::async(std::launch::async, ([this, indices, indexSize, vertices]() { // TODO: boost::asio::post, boost::asio::use_future
+		auto vertexBuffer = Buffer::createStagingBuffer(_logicalDevice, vertices.size() * sizeof(Type));
+		if (!vertexBuffer.has_value()) [[unlikely]] {
+			return ErrorOr<VertexData>(Error(vertexBuffer.error()));
+		}
+		vertexBuffer->copyData<Type>(vertices);
+		auto indexBuffer = Buffer::createStagingBuffer(_logicalDevice, indices.size());
+		if (!indexBuffer.has_value()) [[unlikely]] {
+			return ErrorOr<VertexData>(Error(indexBuffer.error()));
+		}
+		indexBuffer->copyData<uint8_t>(indices);
+		return ErrorOr<VertexData>(VertexData{ Buffer(), std::move(indexBuffer.value()), getIndexType(indexSize), std::move(vertexBuffer.value())});
+	}));
+	_awaitingVertexDataResources.emplace(filePath, std::move(future));
+}

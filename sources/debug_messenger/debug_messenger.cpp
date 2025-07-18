@@ -14,7 +14,7 @@ DebugMessenger::DebugMessenger(const Instance& instance) : _instance(instance) {
 }
 
 DebugMessenger::~DebugMessenger() {
-    VkInstance instance = _instance.getVkInstance();
+    const VkInstance instance = _instance.getVkInstance();
     auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
     if (func != nullptr) {
         func(_instance.getVkInstance(), _debugMessenger, nullptr);
@@ -22,7 +22,7 @@ DebugMessenger::~DebugMessenger() {
 }
 
 VkResult DebugMessenger::CreateDebugUtilsMessengerEXT(const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator) {
-    VkInstance instance = _instance.getVkInstance();
+    const VkInstance instance = _instance.getVkInstance();
     auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
     if (func != nullptr) {
         return func(instance, pCreateInfo, pAllocator, &_debugMessenger);

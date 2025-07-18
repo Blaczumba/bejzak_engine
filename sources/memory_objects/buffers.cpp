@@ -1,10 +1,5 @@
 #include "buffers.h"
 
-#include <iostream>
-#include <stdexcept>
-#include <utility>
-#include <variant>
-
 namespace {
 
 struct PipelineStageInfo {
@@ -62,8 +57,13 @@ void transitionImageLayout(VkCommandBuffer commandBuffer, VkImage image, VkImage
         .layerCount = layerCount
     };
 
-    VkImageMemoryBarrier barrier = {
+    const PipelineStageInfo srcStageInfo = sourceStageAndAccessMask(oldLayout);
+    const PipelineStageInfo dstStageInfo = sourceStageAndAccessMask(newLayout);
+
+    const VkImageMemoryBarrier barrier = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
+        .srcAccessMask = srcStageInfo.accessFlags,
+        .dstAccessMask = dstStageInfo.accessFlags,
         .oldLayout = oldLayout,
         .newLayout = newLayout,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -71,11 +71,6 @@ void transitionImageLayout(VkCommandBuffer commandBuffer, VkImage image, VkImage
         .image = image,
         .subresourceRange = range
     };
-
-    const PipelineStageInfo srcStageInfo = sourceStageAndAccessMask(oldLayout);
-    const PipelineStageInfo dstStageInfo = sourceStageAndAccessMask(newLayout);
-    barrier.srcAccessMask = srcStageInfo.accessFlags;
-    barrier.dstAccessMask = dstStageInfo.accessFlags;
 
     vkCmdPipelineBarrier(
         commandBuffer,
@@ -87,11 +82,12 @@ void transitionImageLayout(VkCommandBuffer commandBuffer, VkImage image, VkImage
     );
 }
 
-void copyBufferToBuffer(VkCommandBuffer commandBuffer, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+void copyBufferToBuffer(VkCommandBuffer commandBuffer, VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize srcOffset, VkDeviceSize dstOffset, VkDeviceSize size) {
     const VkBufferCopy copyRegion = {
-        .size = size
+        .srcOffset = srcOffset,
+        .dstOffset = dstOffset,
+        .size = size,
     };
-
     vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
 }
 
@@ -128,7 +124,7 @@ void copyBufferToImage(VkCommandBuffer commandBuffer, VkBuffer buffer, VkImage i
     );
 }
 
-void copyBufferToImage(VkCommandBuffer commandBuffer, VkBuffer buffer, VkImage image, const std::vector<VkBufferImageCopy>& regions) {
+void copyBufferToImage(VkCommandBuffer commandBuffer, VkBuffer buffer, VkImage image, std::span<const VkBufferImageCopy> regions) {
     vkCmdCopyBufferToImage(
         commandBuffer,
         buffer,

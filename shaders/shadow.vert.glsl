@@ -1,19 +1,13 @@
 #version 450
 
-layout(binding = 0) uniform Light {
-    mat4 projView;
-
-    vec3 pos;
-
-} light;
-
-layout(binding = 1) uniform ObjectUniform {
+layout(push_constant) uniform Constants {
     mat4 model;
+    mat4 lightProjView;
 
-} object;
+} pushConstants;
 
 layout (location = 0) in vec3 inPosition;
 
 void main() {
-    gl_Position = light.projView * object.model * vec4(inPosition, 1.0);
+    gl_Position = pushConstants.lightProjView * pushConstants.model * vec4(inPosition, 1.0);
 } 

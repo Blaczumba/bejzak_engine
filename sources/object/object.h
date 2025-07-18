@@ -2,8 +2,6 @@
 
 #include "descriptor_set/descriptor_set.h"
 #include "entity_component_system/entity/entity.h"
-#include "memory_objects/index_buffer.h"
-#include "memory_objects/vertex_buffer.h"
 #include "primitives/geometry.h"
 
 #include <algorithm>

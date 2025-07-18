@@ -1,8 +1,13 @@
 #pragma once
 
+#include "descriptor_set/descriptor_set_layout.h"
+#include "lib/buffer/buffer.h"
+#include "status/status.h"
+
 #include <vulkan/vulkan.h>
 
 #include <memory>
+#include <span>
 #include <vector>
 
 class DescriptorPool;
@@ -13,16 +18,24 @@ class Pipeline;
 class DescriptorSet {
 	VkDescriptorSet _descriptorSet;
 
-	std::vector<uint32_t> _dynamicBuffersBaseSizes;
-	const std::shared_ptr<const DescriptorPool> _descriptorPool;
+	std::shared_ptr<const DescriptorPool> _descriptorPool;
+
+	DescriptorSet(VkDescriptorSet descriptorSet, const std::shared_ptr<const DescriptorPool>& descriptorPool);
 
 public:
-	DescriptorSet(const std::shared_ptr<const DescriptorPool>& descriptorPool);
+	DescriptorSet() = default;
+
+	DescriptorSet(DescriptorSet&& descriptorSet) noexcept;
+
+	DescriptorSet& operator=(DescriptorSet&& DescriptorSet) noexcept;
+
 	~DescriptorSet() = default;
 
-	void updateDescriptorSet(const std::vector<UniformBuffer*>& uniformBuffers);
-	void bind(VkCommandBuffer commandBuffer, const Pipeline& pipeline, std::initializer_list<uint32_t> dynamicOffsetStrides = {});
+	static ErrorOr<DescriptorSet> create(const std::shared_ptr<const DescriptorPool>& descriptorPool, VkDescriptorSetLayout layout);
 
-	const VkDescriptorSet getVkDescriptorSet(size_t i) const;
+	static ErrorOr<std::vector<DescriptorSet>> create(const std::shared_ptr<const DescriptorPool>& descriptorPool, VkDescriptorSetLayout layout, uint32_t numSets);
 
+	VkDescriptorSet getVkDescriptorSet() const;
+
+	const DescriptorPool& getDescriptorPool() const;
 };

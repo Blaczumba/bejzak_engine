@@ -1,0 +1,37 @@
+Checks: >
+  -*,
+  clang-analyzer-*,
+  cppcoreguidelines-*,
+  modernize-*,
+  performance-*,
+  readability-*,
+  bugprone-*,
+  misc-*,
+  portability-*,
+  hicpp-*,
+  google-*,
+  -google-runtime-references,  # optional: disables overly strict Google style
+
+WarningsAsErrors: >
+  clang-analyzer-*,
+  bugprone-*,
+  cppcoreguidelines-*,
+  performance-*,
+  modernize-*,
+  readability-*
+
+HeaderFilterRegex: '^(?!.*vulkan).*'
+FormatStyle: file  # picks up from .clang-format if available
+CheckOptions:
+  - key:             modernize-use-nullptr.NullMacros
+    value:           'NULL'
+  - key:             modernize-use-override.IgnoreDestructors
+    value:           '0'
+  - key:             readability-identifier-naming.VariableCase
+    value:           lower_case
+  - key:             readability-identifier-naming.FunctionCase
+    value:           CamelCase
+  - key:             cppcoreguidelines-avoid-magic-numbers.IgnoreEnums
+    value:           '1'
+  - key:             cppcoreguidelines-avoid-magic-numbers.IgnoreArraySizeConstants
+    value:           '1'

@@ -1,26 +1,57 @@
 #pragma once
 
-#include "property_manager.h"
-#include "window/window/window.h"
+#include "status/status.h"
+#include "surface/surface.h"
 
 #include <memory>
 #include <optional>
-#include <vector>
+#include <string_view>
+#include <unordered_set>
 
 class LogicalDevice;
 
-class PhysicalDevice {
-    VkPhysicalDevice _device = VK_NULL_HANDLE;
-    const Window& _window;
+struct QueueFamilyIndices {
+    std::optional<uint32_t> graphicsFamily;
+    std::optional<uint32_t> presentFamily;
+    std::optional<uint32_t> computeFamily;
+    std::optional<uint32_t> transferFamily;
+};
 
-    PhysicalDevicePropertyManager _propertyManager;
+struct SwapChainSupportDetails {
+    VkSurfaceCapabilitiesKHR capabilities;
+    lib::Buffer<VkSurfaceFormatKHR> formats;
+    lib::Buffer<VkPresentModeKHR> presentModes;
+};
+
+
+class PhysicalDevice {
+    VkPhysicalDevice _device;
+    VkPhysicalDeviceProperties _properties;
+
+    const Surface& _surface;
+
+    const std::unordered_set<std::string_view> _availableRequestedExtensions; // TODO: change to flat hash set
+
+	PhysicalDevice(VkPhysicalDevice physicalDevice, const Surface& surface);
 
 public:
-	PhysicalDevice(const Window& window);
+    ~PhysicalDevice() = default;
 
-    const VkPhysicalDevice getVkPhysicalDevice() const;
-    const Window& getWindow() const;
-    const PhysicalDevicePropertyManager& getPropertyManager() const;
+    static ErrorOr<std::unique_ptr<PhysicalDevice>> create(const Surface& surface);
 
-    std::unique_ptr<LogicalDevice> createLogicalDevice();
+    VkPhysicalDevice getVkPhysicalDevice() const;
+
+    const Surface& getSurface() const;
+
+    bool hasAvailableExtension(std::string_view extension) const;
+
+    float getMaxSamplerAnisotropy() const;
+
+    size_t getMemoryAlignment(size_t size) const;
+
+    lib::Buffer<const char*> getAvailableExtensions() const;
+
+    QueueFamilyIndices getQueueFamilyIndices() const;
+
+    SwapChainSupportDetails getSwapchainSupportDetails() const;
 };

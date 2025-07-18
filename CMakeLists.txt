@@ -9,6 +9,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
+
+# if(CLANG_TIDY_EXE)
+#     message(STATUS "Found clang-tidy: ${CLANG_TIDY_EXE}")
+#     set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE}")
+# endif()
+
 find_package(Vulkan REQUIRED)
 
 if(NOT Vulkan_FOUND)
@@ -39,6 +46,8 @@ else()
     message(STATUS "Building in Debug mode.")
     add_definitions(-DVALIDATION_LAYERS_ENABLED)
 endif()
+
+add_definitions(-DGLM_FORCE_NO_CTOR_INIT)
 
 add_subdirectory(${CMAKE_SOURCE_DIR}/external/glfw)
 add_subdirectory(${CMAKE_SOURCE_DIR}/external/tinyobjloader)

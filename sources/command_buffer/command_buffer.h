@@ -23,7 +23,7 @@ public:
 	std::unique_ptr<SecondaryCommandBuffer> createSecondaryCommandBuffer() const;
 	void reset() const;
 
-	const VkCommandPool getVkCommandPool() const;
+	VkCommandPool getVkCommandPool() const;
 	const LogicalDevice& getLogicalDevice() const;
 };
 
@@ -37,7 +37,7 @@ public:
 	~CommandBuffer();
 	VkResult end() const;
 	void resetCommandBuffer() const;
-	const VkCommandBuffer getVkCommandBuffer() const;
+	VkCommandBuffer getVkCommandBuffer() const;
 };
 
 class PrimaryCommandBuffer : public CommandBuffer {
@@ -50,8 +50,6 @@ public:
 	void endRenderPass() const;
 	void executeSecondaryCommandBuffers(std::initializer_list<VkCommandBuffer> commandBuffers) const;
 	VkResult submit(QueueType type, const VkSemaphore waitSemaphore, const VkSemaphore signalSemaphore, const VkFence waitFence) const;
-
-	const VkViewport& getViewport() const;
 };
 
 class SecondaryCommandBuffer : public CommandBuffer {

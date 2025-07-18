@@ -1,6 +1,6 @@
 #pragma once
 
-#include "lib/buffer/buffer.h"
+#include "lib/buffer/shared_buffer.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -20,26 +20,22 @@ enum class IndexType : uint8_t {
 IndexType getMatchingIndexType(size_t indicesCount);
 
 template<typename IndexT>
-std::enable_if_t<std::is_unsigned<IndexT>::value> processIndices(uint8_t* dstIndices, const IndexT* srcIndices, size_t indicesCount, IndexType indexType) {
-	size_t offset = {};
-	switch (indexType) {
-	case IndexType::UINT8:
-		std::for_each(srcIndices, srcIndices + indicesCount, [=, &offset](const IndexT& srcIndex) {std::memcpy(dstIndices + offset, &static_cast<const uint8_t&>(srcIndex), static_cast<size_t>(indexType)); offset += static_cast<size_t>(indexType); });
-		break;
-	case IndexType::UINT16:
-		std::for_each(srcIndices, srcIndices + indicesCount, [=, &offset](const IndexT& srcIndex) {std::memcpy(dstIndices + offset, &static_cast<const uint16_t&>(srcIndex), static_cast<size_t>(indexType)); offset += static_cast<size_t>(indexType); });
-		break;
-	case IndexType::UINT32:
-		std::for_each(srcIndices, srcIndices + indicesCount, [=, &offset](const IndexT& srcIndex) {std::memcpy(dstIndices + offset, &static_cast<const uint32_t&>(srcIndex), static_cast<size_t>(indexType)); offset += static_cast<size_t>(indexType); });
+std::enable_if_t<std::is_unsigned<IndexT>::value, lib::Buffer<uint8_t>> processIndices(std::span<const IndexT> srcIndices, IndexType indexType) {
+	lib::Buffer<uint8_t> indices(srcIndices.size() * static_cast<size_t>(indexType));
+	uint8_t* data = indices.data();
+	for (const IndexT& index : srcIndices) {
+		std::memcpy(data, &index, static_cast<size_t>(indexType));
+		data += static_cast<size_t>(indexType);
 	}
+	return indices;
 }
 
 struct VertexData {
-	std::vector<glm::vec3> positions;
-	std::vector<glm::vec2> textureCoordinates;
-	std::vector<glm::vec3> normals;
-	std::vector<glm::vec3> tangents;
-	lib::Buffer<uint8_t> indices;
+	lib::SharedBuffer<glm::vec3> positions;
+	lib::SharedBuffer<glm::vec2> textureCoordinates;
+	lib::SharedBuffer<glm::vec3> normals;
+	lib::SharedBuffer<glm::vec3> tangents;
+	lib::SharedBuffer<uint8_t> indices;
 	IndexType indexType;
 
 	glm::mat4 model;

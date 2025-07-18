@@ -3,11 +3,9 @@
 #include "pipeline.h"
 
 #include "logical_device/logical_device.h"
-#include "memory_objects/uniform_buffer/push_constants.h"
-#include "primitives/vk_primitives.h"
 #include "render_pass/render_pass.h"
-#include "shader/shader.h"
-#include "shader/shader_program.h"
+#include "pipeline/shader.h"
+#include "pipeline/shader_program.h"
 
 #include <vulkan/vulkan.h>
 
@@ -17,11 +15,11 @@
 #include <unordered_map>
 
 struct GraphicsPipelineParameters {
-    VkCullModeFlags cullMode                    = VK_CULL_MODE_BACK_BIT;
-    VkSampleCountFlagBits msaaSamples           = VK_SAMPLE_COUNT_1_BIT;
-    std::optional<uint32_t> patchControlPoints  = std::nullopt;
-    float depthBiasConstantFactor               = 0.0f;
-    float depthBiasSlopeFactor                  = 0.0f;
+    VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
+    VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
+    std::optional<uint32_t> patchControlPoints = std::nullopt;
+    float depthBiasConstantFactor = 0.0f;
+    float depthBiasSlopeFactor = 0.0f;
 };
 
 class GraphicsPipeline : public Pipeline {
@@ -31,14 +29,10 @@ class GraphicsPipeline : public Pipeline {
     const ShaderProgram& _shaderProgram;
 
 public:
-    GraphicsPipeline(const Renderpass& renderpass, const GraphicsShaderProgram& shaderProgram, const GraphicsPipelineParameters& parameters)
+    GraphicsPipeline(const Renderpass& renderpass, const ShaderProgram& shaderProgram, const GraphicsPipelineParameters& parameters)
         : Pipeline(VK_PIPELINE_BIND_POINT_GRAPHICS), _renderpass(renderpass), _shaderProgram(shaderProgram), _parameters(parameters) {
         const VkDevice device = _renderpass.getLogicalDevice().getVkDevice();
-        const auto& descriptorSetLayout = _shaderProgram.getDescriptorSetLayout();
-        const auto& shaderStages = _shaderProgram.getVkPipelineShaderStageCreateInfos();
-
-        const VkPipelineVertexInputStateCreateInfo& vertexInputInfo = shaderProgram.getVkPipelineVertexInputStateCreateInfo();
-
+     
         VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
         inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
         inputAssembly.primitiveRestartEnable = VK_FALSE;
@@ -95,25 +89,24 @@ public:
         colorBlending.blendConstants[2] = 0.0f;
         colorBlending.blendConstants[3] = 0.0f;
 
-        std::vector<VkDynamicState> dynamicStates = {
+        static constexpr VkDynamicState dynamicStates[] = {
             VK_DYNAMIC_STATE_VIEWPORT,
             VK_DYNAMIC_STATE_SCISSOR,
         };
         VkPipelineDynamicStateCreateInfo dynamicState{};
         dynamicState.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-        dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
-        dynamicState.pDynamicStates = dynamicStates.data();
+        dynamicState.dynamicStateCount = static_cast<uint32_t>(std::size(dynamicStates));
+        dynamicState.pDynamicStates = dynamicStates;
 
-        const auto& pushConstantsLayout = _shaderProgram.getPushConstants().getVkPushConstantRange();
-        VkDescriptorSetLayout vkDescriptorSetLayout = descriptorSetLayout.getVkDescriptorSetLayout();
+        const lib::Buffer<VkDescriptorSetLayout> vkDescriptorSetLayouts = _shaderProgram.getVkDescriptorSetLayouts();
+        std::span<const VkPushConstantRange> vkPushConstantRanges = _shaderProgram.getPushConstants();
 
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        pipelineLayoutInfo.setLayoutCount = 1;
-        pipelineLayoutInfo.pSetLayouts = &vkDescriptorSetLayout;
-        if (!pushConstantsLayout.empty())
-            pipelineLayoutInfo.pPushConstantRanges = pushConstantsLayout.data();
-        pipelineLayoutInfo.pushConstantRangeCount = static_cast<uint32_t>(pushConstantsLayout.size());
+        pipelineLayoutInfo.setLayoutCount = static_cast<uint32_t>(vkDescriptorSetLayouts.size());
+        pipelineLayoutInfo.pSetLayouts = vkDescriptorSetLayouts.data();
+        pipelineLayoutInfo.pushConstantRangeCount = static_cast<uint32_t>(vkPushConstantRanges.size());
+        pipelineLayoutInfo.pPushConstantRanges = vkPushConstantRanges.data();
 
         if (vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &_pipelineLayout) != VK_SUCCESS) {
             throw std::runtime_error("failed to create pipeline layout!");
@@ -131,11 +124,16 @@ public:
         depthStencil.front = {}; // Optional
         depthStencil.back = {}; // Optional
 
+        const lib::Buffer<VkPipelineShaderStageCreateInfo> shaders = _shaderProgram.getVkPipelineShaderStageCreateInfos();
+        const std::optional<VkPipelineVertexInputStateCreateInfo>& vertexInputInfo = shaderProgram.getVkPipelineVertexInputStateCreateInfo();
+
         VkGraphicsPipelineCreateInfo pipelineInfo{};
         pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-        pipelineInfo.stageCount = static_cast<uint32_t>(shaderStages.size());
-        pipelineInfo.pStages = shaderStages.data();
-        pipelineInfo.pVertexInputState = &vertexInputInfo;
+        pipelineInfo.stageCount = static_cast<uint32_t>(shaders.size());
+        pipelineInfo.pStages = shaders.data();
+        if (vertexInputInfo.has_value()) {
+            pipelineInfo.pVertexInputState = &vertexInputInfo.value();
+        }
         pipelineInfo.pInputAssemblyState = &inputAssembly;
         pipelineInfo.pTessellationState = _parameters.patchControlPoints.has_value() ? &tessellationState : nullptr;
         pipelineInfo.pViewportState = &viewportState;

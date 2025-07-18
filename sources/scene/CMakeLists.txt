@@ -1,4 +1,4 @@
-add_library(Scene octree/octree.cpp)
+add_library(Scene octree.cpp)
 
 target_link_libraries(Scene Object)
 

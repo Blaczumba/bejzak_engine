@@ -7,4 +7,4 @@
 #include <variant>
 
 using MemoryAllocator = std::variant<std::monostate, VmaWrapper>;
-using Allocation = std::variant<VmaAllocation>;
+using Allocation = std::variant<std::monostate, VmaAllocation>;

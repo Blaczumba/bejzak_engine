@@ -1,5 +1,8 @@
 #pragma once
 
+#include "lib/buffer/buffer.h"
+#include "status/status.h"
+
 #include <vulkan/vulkan.h>
 
 #include <memory>
@@ -17,18 +20,21 @@ class DescriptorPool : public std::enable_shared_from_this<const DescriptorPool>
 	mutable uint32_t _allocatedSets;
 
 	const LogicalDevice& _logicalDevice;
-	const DescriptorSetLayout& _descriptorSetLayout;
+
+	DescriptorPool(VkDescriptorPool descriptorPool, const LogicalDevice& logicalDevice, uint32_t maxNumSets);
 
 public:
-	DescriptorPool(const LogicalDevice& logicalDevice, const DescriptorSetLayout& descriptorSetLayout, uint32_t maxNumSets);
 	~DescriptorPool();
 
-	const VkDescriptorPool getVkDescriptorPool() const;
-	const DescriptorSetLayout& getDescriptorSetLayout() const;
-	std::unique_ptr<DescriptorSet> createDesriptorSet() const;
+	static ErrorOr<std::unique_ptr<DescriptorPool>> create(const LogicalDevice& logicalDevice, uint32_t maxNumSets, VkDescriptorPoolCreateFlags flags = {});
+
+	VkDescriptorPool getVkDescriptorPool() const;
+
+	ErrorOr<DescriptorSet> createDesriptorSet(VkDescriptorSetLayout layout) const;
+
+	ErrorOr<std::vector<DescriptorSet>> createDesriptorSets(VkDescriptorSetLayout layout, uint32_t numSets) const;
+
 	bool maxSetsReached() const;
 
-private:
 	const LogicalDevice& getLogicalDevice() const;
-	friend class DescriptorSet;
 };

@@ -1,9 +1,9 @@
 #pragma once
 
 #include "model_loader/model_loader.h"
+#include "status/status.h"
 
-#include <expected>
 #include <string>
 #include <vector>
 
-std::expected<std::vector<VertexData>, std::string_view> LoadGltf(const std::string& filePath);
+ErrorOr<std::vector<VertexData>> LoadGltf(const std::string& filePath);

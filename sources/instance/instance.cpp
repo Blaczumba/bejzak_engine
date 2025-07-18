@@ -1,22 +1,52 @@
 #include "instance.h"
 
-#include "config/config.h"
+#include "instance/extensions.h"
 #include "debug_messenger/debug_messenger_utils.h"
-#include "window/window/window.h"
 
-#include <algorithm>
-#include <cstring>
-#include <iostream>
-#include <stdexcept>
+#include <string_view>
+#include <unordered_set>
 
-Instance::Instance(std::string_view engineName, const std::vector<const char*>& requiredExtensions) {
+Instance::Instance(VkInstance instance) : _instance(instance) { }
+
+Instance::~Instance() {
+    vkDestroyInstance(_instance, nullptr);
+}
+
+namespace {
+
+bool checkValidationLayerSupport() {
+    uint32_t layerCount;
+    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
+
+    lib::Buffer<VkLayerProperties> availableLayers(layerCount);
+    if (layerCount > 0) {
+        vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
+    }
+
+    std::unordered_set<std::string_view> availableLayerNames;
+    availableLayerNames.reserve(layerCount);
+    for (const VkLayerProperties& layer : availableLayers) {
+        availableLayerNames.emplace(layer.layerName);
+    }
+
+    for (const char* requested : validationLayers) {
+        if (!availableLayerNames.contains(requested)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+}
+
+ErrorOr<std::unique_ptr<Instance>> Instance::create(std::string_view engineName, std::span<const char* const> requiredExtensions) {
 #ifdef VALIDATION_LAYERS_ENABLED
     if (!checkValidationLayerSupport()) {
-        throw std::runtime_error("validation layers requested, but not available!");
+        return Error(EngineError::NOT_SUPPORTED_VALIDATION_LAYERS);
     }
 #endif // VALIDATION_LAYERS_ENABLED
 
-    VkApplicationInfo appInfo = {
+    const VkApplicationInfo appInfo = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pApplicationName = engineName.data(),
         .applicationVersion = VK_MAKE_VERSION(1, 0, 0),
@@ -47,43 +77,27 @@ Instance::Instance(std::string_view engineName, const std::vector<const char*>& 
         .ppEnabledExtensionNames = requiredExtensions.data()
     };
 
-    if (vkCreateInstance(&createInfo, nullptr, &_instance) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create instance!");
+    VkInstance instance;
+    if (VkResult result = vkCreateInstance(&createInfo, nullptr, &instance); result != VK_SUCCESS) {
+        return Error(result);
     }
+
+    return std::unique_ptr<Instance>(new Instance(instance));
 }
 
-Instance::~Instance() {
-    vkDestroyInstance(_instance, nullptr);
-}
-
-const VkInstance Instance::getVkInstance() const {
+VkInstance Instance::getVkInstance() const {
     return _instance;
 }
 
-bool Instance::checkValidationLayerSupport() const {
-    uint32_t layerCount;
-    vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
-
-    std::vector<VkLayerProperties> availableLayers(layerCount);
-    vkEnumerateInstanceLayerProperties(&layerCount, availableLayers.data());
-
-    // Check if all validation layers are in available layers.
-    return std::all_of(validationLayers.cbegin(), validationLayers.cend(), [&](const char* layerName) {
-        return std::find_if(availableLayers.cbegin(), availableLayers.cend(), [&](const auto& layerProperty) {
-            return std::strcmp(layerName, layerProperty.layerName) == 0;
-            }) != availableLayers.cend();
-    });
-}
-
-std::vector<VkPhysicalDevice> Instance::getAvailablePhysicalDevices() const {
-    uint32_t deviceCount = 0;
+ErrorOr<lib::Buffer<VkPhysicalDevice>> Instance::getAvailablePhysicalDevices() const {
+    uint32_t deviceCount;
     vkEnumeratePhysicalDevices(_instance, &deviceCount, nullptr);
 
     if (deviceCount == 0) {
-        throw std::runtime_error("failed to find GPUs with Vulkan support!");
+        return Error(EngineError::NOT_FOUND);
     }
 
-    std::vector<VkPhysicalDevice> devices(deviceCount);
+    lib::Buffer<VkPhysicalDevice> devices(deviceCount);
     vkEnumeratePhysicalDevices(_instance, &deviceCount, devices.data());
 
     return devices;

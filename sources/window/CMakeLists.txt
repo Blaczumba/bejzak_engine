@@ -1,3 +1,22 @@
-add_subdirectory(window)
-add_subdirectory(callback_observer)
-add_subdirectory(callback_manager)
+add_library(Window window.cpp)
+
+target_link_libraries(Window PUBLIC Surface)
+
+if(WIN32)
+	add_library(WindowGLFW window_glfw.cpp)
+	target_link_libraries(WindowGLFW PUBLIC glfw)
+	target_include_directories(WindowGLFW PUBLIC ${CMAKE_SOURCE_DIR}/sources)
+	target_include_directories(WindowGLFW PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+	target_link_libraries(Window PUBLIC WindowGLFW)
+elseif(UNIX)
+	add_library(WindowGLFW window_glfw.cpp)
+	target_link_libraries(WindowGLFW PUBLIC glfw)
+	target_include_directories(WindowGLFW PUBLIC ${CMAKE_SOURCE_DIR}/sources)
+	target_include_directories(WindowGLFW PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
+	target_link_libraries(Window PUBLIC WindowGLFW)
+endif()
+
+target_include_directories(Window PUBLIC ${CMAKE_SOURCE_DIR}/sources)
+target_include_directories(Window PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

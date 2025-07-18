@@ -1,29 +1,28 @@
 #pragma once
 
+#include "status/status.h"
+
 #include <vulkan/vulkan.h>
 
-#include <unordered_map>
-#include <vector>
-
-using DescriptorTypeCounterDict = std::unordered_map<VkDescriptorType, uint8_t>;
+#include <span>
 
 class LogicalDevice;
 
 class DescriptorSetLayout {
 	VkDescriptorSetLayout _descriptorSetLayout = VK_NULL_HANDLE;
-	std::vector<VkDescriptorSetLayoutBinding> _bindings;
-	DescriptorTypeCounterDict _descriptorTypeOccurances;
-	uint32_t _binding;
 
-	const LogicalDevice& _logicalDevice;
+	const LogicalDevice* _logicalDevice;
+
+	DescriptorSetLayout(const LogicalDevice& logicalDevice, VkDescriptorSetLayout layout);
 
 public:
-	DescriptorSetLayout(const LogicalDevice& logicalDevice);
+	DescriptorSetLayout(DescriptorSetLayout&& layout) noexcept;
+
+	DescriptorSetLayout& operator=(DescriptorSetLayout&& layout) noexcept;
+
 	~DescriptorSetLayout();
 
-	void addLayoutBinding(VkDescriptorType descriptorType, VkShaderStageFlags stageFlags, uint32_t descriptorCount = 1, const VkSampler* pImmutableSamplers = nullptr);
-	void create();
+	static ErrorOr<DescriptorSetLayout> create(const LogicalDevice& logicalDevice, std::span<const VkDescriptorSetLayoutBinding> bindings, std::span<const VkDescriptorBindingFlags> bindingFlags = {}, VkDescriptorSetLayoutCreateFlags flags = 0);
 
-	const VkDescriptorSetLayout getVkDescriptorSetLayout() const;
-	const DescriptorTypeCounterDict& getDescriptorTypeCounter() const;
+	VkDescriptorSetLayout getVkDescriptorSetLayout() const;
 };

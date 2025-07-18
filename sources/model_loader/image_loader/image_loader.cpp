@@ -7,11 +7,11 @@
 #include <stdexcept>
 #include <vector>
 
-lib::ErrorOr<ImageResource> ImageLoader::load2DImage(std::string_view imagePath) {
+ErrorOr<ImageResource> ImageLoader::load2DImage(std::string_view imagePath) {
     int width, height, channels;
     stbi_uc* pixels = stbi_load(imagePath.data(), &width, &height, &channels, STBI_rgb_alpha);
     if (!pixels) {
-        return lib::Error("Failed to load texture image.");
+        return Error(EngineError::LOAD_FAILURE);
     }
 
     return ImageResource{
@@ -40,10 +40,10 @@ lib::ErrorOr<ImageResource> ImageLoader::load2DImage(std::string_view imagePath)
     };
 }
 
-lib::ErrorOr<ImageResource> ImageLoader::loadCubemapImage(std::string_view imagePath) {
+ErrorOr<ImageResource> ImageLoader::loadCubemapImage(std::string_view imagePath) {
 	ktxTexture* ktxTexture;
 	if (ktxResult result = ktxTexture_CreateFromNamedFile(imagePath.data(), KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT, &ktxTexture); result != KTX_SUCCESS) {
-		return lib::Error("Failed to load ktx file.");
+		return Error(EngineError::LOAD_FAILURE);
 	}
 
 	ImageResource image{
@@ -64,7 +64,7 @@ lib::ErrorOr<ImageResource> ImageLoader::loadCubemapImage(std::string_view image
 			ktx_size_t offset;
 			if (ktxResult result = ktxTexture_GetImageOffset(ktxTexture, level, 0, face, &offset); result != KTX_SUCCESS) {
 				ktxTexture_Destroy(ktxTexture);
-				return lib::Error("Failed to get image offset.");
+				return Error(EngineError::LOAD_FAILURE);
 			}
 
 			image.dimensions.copyRegions.emplace_back(
@@ -99,9 +99,7 @@ struct Deallocator {
 		stbi_image_free(texture);
 	}
 
-	void operator()(auto&&) {
-		throw std::runtime_error("Unrecognized type of library image resource to free");
-	}
+	void operator()(auto&&) {}
 };
 
 }

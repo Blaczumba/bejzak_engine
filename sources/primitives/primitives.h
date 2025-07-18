@@ -102,11 +102,6 @@ struct UniformBufferLight {
     alignas(16) glm::vec3 pos;
 };
 
-struct UniformBufferObject {
-    alignas(16) glm::mat4 model;
-
-};
-
 struct UniformBufferCamera {
     alignas(16) glm::mat4 view;
     alignas(16) glm::mat4 proj;

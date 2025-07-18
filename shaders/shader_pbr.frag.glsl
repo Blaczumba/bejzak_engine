@@ -1,15 +1,16 @@
 #version 450
 
-layout(binding=0) uniform CameraUniform {
-    mat4 view;
-    mat4 proj;
-    vec3 pos;
-} camera;
+#include "bindless.glsl"
 
-layout(binding = 1) uniform sampler2D texSampler;
-layout(binding = 4) uniform sampler2DShadow shadowMap;
-layout(binding = 5) uniform sampler2D normalMap;
-layout(binding = 6) uniform sampler2D metallicRoughnessMap;
+layout(push_constant) uniform Constants {
+    mat4 model;
+    uint light;
+    uint diffuse;
+    uint normal;
+    uint metallicRoughness;
+    uint shadow;
+
+} pushConstants;
 
 layout(location = 0) in vec3 TBNfragPosition;
 layout(location = 1) in vec2 fragTexCoord;
@@ -36,15 +37,15 @@ float calculateShadow() {
     if(lightFrag.z >= 1.0)
         return 1.0;
 
-    float sum = textureOffset(shadowMap, lightFrag.xyz, offsets[0])
-        + textureOffset(shadowMap, lightFrag.xyz, offsets[1])
-        + textureOffset(shadowMap, lightFrag.xyz, offsets[2])
-        + textureOffset(shadowMap, lightFrag.xyz, offsets[3])
-        + textureOffset(shadowMap, lightFrag.xyz, offsets[4])
-        + textureOffset(shadowMap, lightFrag.xyz, offsets[5])
-        + textureOffset(shadowMap, lightFrag.xyz, offsets[6])
-        + textureOffset(shadowMap, lightFrag.xyz, offsets[7])
-        + textureOffset(shadowMap, lightFrag.xyz, offsets[8]);
+    float sum = textureOffset(uGlobalTexturesShadow[nonuniformEXT(pushConstants.shadow)], lightFrag.xyz, offsets[0])
+        + textureOffset(uGlobalTexturesShadow[nonuniformEXT(pushConstants.shadow)], lightFrag.xyz, offsets[1])
+        + textureOffset(uGlobalTexturesShadow[nonuniformEXT(pushConstants.shadow)], lightFrag.xyz, offsets[2])
+        + textureOffset(uGlobalTexturesShadow[nonuniformEXT(pushConstants.shadow)], lightFrag.xyz, offsets[3])
+        + textureOffset(uGlobalTexturesShadow[nonuniformEXT(pushConstants.shadow)], lightFrag.xyz, offsets[4])
+        + textureOffset(uGlobalTexturesShadow[nonuniformEXT(pushConstants.shadow)], lightFrag.xyz, offsets[5])
+        + textureOffset(uGlobalTexturesShadow[nonuniformEXT(pushConstants.shadow)], lightFrag.xyz, offsets[6])
+        + textureOffset(uGlobalTexturesShadow[nonuniformEXT(pushConstants.shadow)], lightFrag.xyz, offsets[7])
+        + textureOffset(uGlobalTexturesShadow[nonuniformEXT(pushConstants.shadow)], lightFrag.xyz, offsets[8]);
 
     return sum / KELNER_SIZE;
 }
@@ -75,9 +76,9 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness) {
 }
 
 void main() {
-    vec3 albedo = texture(texSampler, fragTexCoord, 0).rgb;
-    vec2 metallicRoughness = texture(metallicRoughnessMap, fragTexCoord).bg;
-    vec3 normal = normalize(2.0 * texture(normalMap, fragTexCoord).rgb - 1.0);
+    vec3 albedo = texture(uGlobalTextures2D[nonuniformEXT(pushConstants.diffuse)], fragTexCoord, 0).rgb;
+    vec2 metallicRoughness = texture(uGlobalTextures2D[nonuniformEXT(pushConstants.metallicRoughness)], fragTexCoord).bg;
+    vec3 normal = normalize(2.0 * texture(uGlobalTextures2D[nonuniformEXT(pushConstants.normal)], fragTexCoord).rgb - 1.0);
 
     vec3 lightDir = normalize(TBNLightPos - TBNfragPosition);
     vec3 viewDir = normalize(TBNViewPos - TBNfragPosition);

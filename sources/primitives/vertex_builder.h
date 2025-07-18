@@ -1,13 +1,17 @@
 #pragma once
 
 #include "lib/buffer/buffer.h"
-#include "lib/status/status.h"
+#include "status/status.h"
 #include "primitives.h"
 
 #include <string_view>
 #include <vector>
 
-lib::ErrorOr<lib::Buffer<VertexP>> buildInterleavingVertexData(const std::vector<glm::vec3>& positions);
-lib::ErrorOr<lib::Buffer<VertexPT>> buildInterleavingVertexData(const std::vector<glm::vec3>& positions, const std::vector<glm::vec2>& texCoords);
-lib::ErrorOr<lib::Buffer<VertexPTN>> buildInterleavingVertexData(const std::vector<glm::vec3>& positions, const std::vector<glm::vec2>& texCoords, const std::vector<glm::vec3>& normals);
-lib::ErrorOr<lib::Buffer<VertexPTNT>> buildInterleavingVertexData(const std::vector<glm::vec3>& positions, const std::vector<glm::vec2>& texCoords, const std::vector<glm::vec3>& normals, const std::vector<glm::vec3>& tangents);
+ErrorOr<lib::Buffer<VertexPT>> buildInterleavingVertexData(std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords);
+ErrorOr<lib::Buffer<VertexPTN>> buildInterleavingVertexData(std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<const glm::vec3> normals);
+ErrorOr<lib::Buffer<VertexPTNT>> buildInterleavingVertexData(std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents);
+
+Status buildInterleavingVertexData(std::span<uint8_t> output, std::span<const glm::vec3> positions);
+Status buildInterleavingVertexData(std::span<uint8_t> output, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords);
+Status buildInterleavingVertexData(std::span<uint8_t> output, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<const glm::vec3> normals);
+Status buildInterleavingVertexData(std::span<uint8_t> output, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents);

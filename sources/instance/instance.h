@@ -1,18 +1,24 @@
 #pragma once
 
+#include "lib/buffer/buffer.h"
+#include "status/status.h"
+
 #include <vulkan/vulkan.h>
 
-#include <vector>
+#include <memory>
+#include <span>
 #include <string_view>
 
 class Instance {
 	VkInstance _instance;
 
-	bool checkValidationLayerSupport() const;
+	Instance(VkInstance instance);
 
 public:
-	Instance(std::string_view engineName, const std::vector<const char*>& requiredExtensions);
 	~Instance();
-	const VkInstance getVkInstance() const;
-	std::vector<VkPhysicalDevice> getAvailablePhysicalDevices() const;
+
+	static ErrorOr<std::unique_ptr<Instance>> create(std::string_view engineName, std::span<const char* const> requiredExtensions);
+
+	VkInstance getVkInstance() const;
+	ErrorOr<lib::Buffer<VkPhysicalDevice>> getAvailablePhysicalDevices() const;
 };

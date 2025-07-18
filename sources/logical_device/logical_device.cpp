@@ -1,17 +1,38 @@
 #include "logical_device.h"
 
-#include "config/config.h"
+#include "instance/extensions.h"
+#include "lib/buffer/buffer.h"
 
 #include <vulkan/vulkan.h>
 
+#include <algorithm>
+#include <cstring>
 #include <set>
 #include <stdexcept>
 
-LogicalDevice::LogicalDevice(const PhysicalDevice& physicalDevice)
-    : _physicalDevice(physicalDevice) {
-    const QueueFamilyIndices& indices = physicalDevice.getPropertyManager().getQueueFamilyIndices();
+LogicalDevice::LogicalDevice(VkDevice logicalDevice, const PhysicalDevice& physicalDevice, VkQueue graphicsQueue, VkQueue presentQueue, VkQueue computeQueue, VkQueue transferQueue)
+    : _device(logicalDevice), _physicalDevice(physicalDevice),
+    _memoryAllocator(std::in_place_type<VmaWrapper>, logicalDevice, physicalDevice.getVkPhysicalDevice(), _physicalDevice.getSurface().getInstance().getVkInstance()),
+    _graphicsQueue(graphicsQueue), _presentQueue(presentQueue), _computeQueue(computeQueue), _transferQueue(transferQueue){
+}
 
-    std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
+LogicalDevice::~LogicalDevice() {
+    // TODO refactor
+    std::get<VmaWrapper>(_memoryAllocator).destroy();
+    vkDestroyDevice(_device, nullptr);
+}
+
+template<typename T> 
+void chainExtensionFeature(void** next, T& feature, std::string_view extension, const PhysicalDevice& physicalDevice) {
+    if (physicalDevice.hasAvailableExtension(extension)) {
+        feature.pNext = *next;
+        *next = (void*)&feature;
+    }
+}
+
+ErrorOr<std::unique_ptr<LogicalDevice>> LogicalDevice::create(const PhysicalDevice& physicalDevice) {
+    const QueueFamilyIndices indices = physicalDevice.getQueueFamilyIndices();
+
     const std::set<uint32_t> uniqueQueueFamilies = {
         *indices.graphicsFamily,
         *indices.presentFamily,
@@ -20,41 +41,62 @@ LogicalDevice::LogicalDevice(const PhysicalDevice& physicalDevice)
     };
 
     float queuePriority = 1.0f;
-    queueCreateInfos.reserve(uniqueQueueFamilies.size());
-    for (uint32_t queueFamily : uniqueQueueFamilies) {
-        queueCreateInfos.emplace_back(
-            VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-            nullptr, 0, queueFamily, 1, &queuePriority
-        );
-    }
-    const VkPhysicalDeviceIndexTypeUint8FeaturesEXT uint8IndexFeatures = {
+    lib::Buffer<VkDeviceQueueCreateInfo> queueCreateInfos(uniqueQueueFamilies.size());
+    std::transform(uniqueQueueFamilies.cbegin(), uniqueQueueFamilies.cend(), queueCreateInfos.begin(), [&queuePriority](uint32_t queueFamilyIndex) {
+            return VkDeviceQueueCreateInfo{ VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO, nullptr, 0, queueFamilyIndex, 1, &queuePriority }; 
+        }
+    );
+
+    void* next = nullptr;
+
+    VkPhysicalDeviceIndexTypeUint8FeaturesEXT uint8IndexFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INDEX_TYPE_UINT8_FEATURES_EXT,
         .indexTypeUint8 = VK_TRUE
     };
 
-    const VkPhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeatures = {
+    chainExtensionFeature(&next, uint8IndexFeatures, VK_EXT_INDEX_TYPE_UINT8_EXTENSION_NAME, physicalDevice);
+
+    VkPhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
-        .pNext = (void*)&uint8IndexFeatures,
         .bufferDeviceAddress = VK_TRUE
     };
 
-    const VkPhysicalDeviceInheritedViewportScissorFeaturesNV viewportScissorsFeatures = {
+    chainExtensionFeature(&next, bufferDeviceAddressFeatures, VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME, physicalDevice);
+
+    VkPhysicalDeviceInheritedViewportScissorFeaturesNV viewportScissorsFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INHERITED_VIEWPORT_SCISSOR_FEATURES_NV,
-        .pNext = (void*)&bufferDeviceAddressFeatures,
-        .inheritedViewportScissor2D = VK_TRUE
+        .inheritedViewportScissor2D = VK_TRUE,
     };
+
+    chainExtensionFeature(&next, viewportScissorsFeatures, VK_NV_INHERITED_VIEWPORT_SCISSOR_EXTENSION_NAME, physicalDevice);
+
+    VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
+        .shaderUniformBufferArrayNonUniformIndexing = VK_TRUE,
+        .shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
+        .shaderStorageBufferArrayNonUniformIndexing = VK_TRUE,
+        .descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE,
+        .descriptorBindingSampledImageUpdateAfterBind = VK_TRUE,
+        .descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE,
+        .descriptorBindingPartiallyBound = VK_TRUE,
+        .runtimeDescriptorArray = VK_TRUE,
+    };
+
+    chainExtensionFeature(&next, descriptorIndexingFeatures, VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME, physicalDevice);
 
     const VkPhysicalDeviceFeatures2 deviceFeatures = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-        .pNext = (void*)&viewportScissorsFeatures,
+        .pNext = next,
         .features = {
             .geometryShader = VK_TRUE,
             .tessellationShader = VK_TRUE,
             .sampleRateShading = VK_TRUE,
             .depthClamp = VK_TRUE,
-            .samplerAnisotropy = VK_TRUE
+            .samplerAnisotropy = VK_TRUE,
         }
     };
+
+    const lib::Buffer<const char*> extensions = physicalDevice.getAvailableExtensions();
 
     const VkDeviceCreateInfo createInfo = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -67,107 +109,24 @@ LogicalDevice::LogicalDevice(const PhysicalDevice& physicalDevice)
     #else
         .enabledLayerCount = 0,
     #endif  // VALIDATION_LAYERS_ENABLED
-        .enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size()),
-        .ppEnabledExtensionNames = deviceExtensions.data(),
+        .enabledExtensionCount = static_cast<uint32_t>(extensions.size()),
+        .ppEnabledExtensionNames = extensions.data(),
     };
 
-    if (vkCreateDevice(_physicalDevice.getVkPhysicalDevice(), &createInfo, nullptr, &_device) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create logical device!");
+    VkDevice logicalDevice;
+    if (VkResult result = vkCreateDevice(physicalDevice.getVkPhysicalDevice(), &createInfo, nullptr, &logicalDevice); result != VK_SUCCESS) {
+        return Error(result);
     }
 
-    _memoryAllocator.emplace<VmaWrapper>(_device, _physicalDevice.getVkPhysicalDevice(), _physicalDevice.getWindow().getInstance().getVkInstance());
-
-    vkGetDeviceQueue(_device, *indices.graphicsFamily, 0, &_graphicsQueue);
-    vkGetDeviceQueue(_device, *indices.presentFamily, 0, &_presentQueue);
-    vkGetDeviceQueue(_device, *indices.computeFamily, 0, &_computeQueue);
-    vkGetDeviceQueue(_device, *indices.transferFamily, 0, &_transferQueue);
+    VkQueue graphicsQueue, presentQueue, computeQueue, transferQueue;
+    vkGetDeviceQueue(logicalDevice, *indices.graphicsFamily, 0, &graphicsQueue);
+    vkGetDeviceQueue(logicalDevice, *indices.presentFamily, 0, &presentQueue);
+    vkGetDeviceQueue(logicalDevice, *indices.computeFamily, 0, &computeQueue);
+    vkGetDeviceQueue(logicalDevice, *indices.transferFamily, 0, &transferQueue);
+    return std::unique_ptr<LogicalDevice>(new LogicalDevice(logicalDevice, physicalDevice, graphicsQueue, presentQueue, computeQueue, transferQueue));
 }
 
-const VkBuffer LogicalDevice::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage) const {
-    const VkBufferCreateInfo bufferInfo = {
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .size = size,
-        .usage = usage,
-        .sharingMode = VK_SHARING_MODE_EXCLUSIVE
-    };
-
-    VkBuffer buffer;
-    if (vkCreateBuffer(_device, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create buffer!");
-    }
-    return buffer;
-}
-
-const VkDeviceMemory LogicalDevice::createBufferMemory(VkBuffer buffer, VkMemoryPropertyFlags properties) const {
-    const auto& propertyManager = _physicalDevice.getPropertyManager();
-    VkMemoryRequirements memRequirements;
-    vkGetBufferMemoryRequirements(_device, buffer, &memRequirements);
-
-    const VkMemoryAllocateInfo allocInfo = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .allocationSize = memRequirements.size,
-        .memoryTypeIndex = propertyManager.findMemoryType(memRequirements.memoryTypeBits, properties)
-    };
-
-    VkDeviceMemory bufferMemory;
-    if (vkAllocateMemory(_device, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate buffer memory!");
-    }
-    vkBindBufferMemory(_device, buffer, bufferMemory, 0);
-    return bufferMemory;
-}
-
-const VkImage LogicalDevice::createImage(const ImageParameters& params) const {
-    VkImageCreateInfo imageInfo = {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-        .imageType = VK_IMAGE_TYPE_2D,
-        .format = params.format,
-        .extent = {
-            .width = params.width,
-            .height = params.height,
-            .depth = 1
-        },
-        .mipLevels = params.mipLevels,
-        .arrayLayers = params.layerCount,
-        .samples = params.numSamples,
-        .tiling = params.tiling,
-        .usage = params.usage,
-        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-        .initialLayout = params.layout
-    };
-
-    if (params.layerCount == 6)
-        imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-
-    VkImage image;
-    if (vkCreateImage(_device, &imageInfo, nullptr, &image) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create image!");
-    }
-    return image;
-}
-
-const VkDeviceMemory LogicalDevice::createImageMemory(const VkImage image, const ImageParameters& params) const {
-    const auto& propertyManager = _physicalDevice.getPropertyManager();
-
-    VkMemoryRequirements memRequirements;
-    vkGetImageMemoryRequirements(_device, image, &memRequirements);
-
-    const VkMemoryAllocateInfo allocInfo = {
-        .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-        .allocationSize = memRequirements.size,
-        .memoryTypeIndex = propertyManager.findMemoryType(memRequirements.memoryTypeBits, params.properties)
-    };
-
-    VkDeviceMemory memory;
-    if (vkAllocateMemory(_device, &allocInfo, nullptr, &memory) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate image memory!");
-    }
-
-    vkBindImageMemory(_device, image, memory, 0);
-    return memory;
-}
-
-const VkImageView LogicalDevice::createImageView(const VkImage image, const ImageParameters& params) const {
+VkImageView LogicalDevice::createImageView(const VkImage image, const ImageParameters& params) const {
     const VkImageSubresourceRange range = {
         .aspectMask = params.aspect,
         .baseMipLevel = 0,
@@ -194,7 +153,7 @@ const VkImageView LogicalDevice::createImageView(const VkImage image, const Imag
     return view;
 }
 
-const VkSampler LogicalDevice::createSampler(const SamplerParameters& params) const {
+VkSampler LogicalDevice::createSampler(const SamplerParameters& params) const {
     VkSamplerCreateInfo samplerInfo = {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
         .magFilter = params.magFilter,
@@ -231,19 +190,7 @@ const VkSampler LogicalDevice::createSampler(const SamplerParameters& params) co
     return sampler;
 }
 
-void LogicalDevice::sendDataToMemory(const VkDeviceMemory memory, const void* data, size_t size) const {
-    void* mappedMemory;
-    vkMapMemory(_device, memory, 0, size, 0, &mappedMemory);
-    std::memcpy(mappedMemory, data, size);
-    // vkUnmapMemory(_device, memory);
-}
-
-LogicalDevice::~LogicalDevice() {
-    std::get<VmaWrapper>(_memoryAllocator).destroy();
-    vkDestroyDevice(_device, nullptr);
-}
-
-const VkDevice LogicalDevice::getVkDevice() const {
+VkDevice LogicalDevice::getVkDevice() const {
     return _device;
 }
 
@@ -255,7 +202,7 @@ MemoryAllocator& LogicalDevice::getMemoryAllocator() const {
     return _memoryAllocator;
 }
 
-const VkQueue LogicalDevice::getQueue(QueueType queueType) const {
+VkQueue LogicalDevice::getVkQueue(QueueType queueType) const {
     switch (queueType) {
     case QueueType::GRAPHICS:
         return _graphicsQueue;
@@ -270,18 +217,18 @@ const VkQueue LogicalDevice::getQueue(QueueType queueType) const {
     }
 }
 
-const VkQueue LogicalDevice::getGraphicsQueue() const {
+VkQueue LogicalDevice::getGraphicsVkQueue() const {
     return _graphicsQueue;
 }
 
-const VkQueue LogicalDevice::getPresentQueue() const {
+VkQueue LogicalDevice::getPresentVkQueue() const {
     return _presentQueue;
 }
 
-const VkQueue LogicalDevice::getComputeQueue() const {
+VkQueue LogicalDevice::getComputeVkQueue() const {
     return _computeQueue;
 }
 
-const VkQueue LogicalDevice::getTransferQueue() const {
+VkQueue LogicalDevice::getTransferVkQueue() const {
     return _transferQueue;
 }
