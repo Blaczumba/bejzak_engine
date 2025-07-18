@@ -1,5 +1,5 @@
-include_directories(${CMAKE_SOURCE_DIR}/external/glm)
-include_directories(${CMAKE_SOURCE_DIR}/external/)
+include_directories(${PROJECT_SOURCE_DIR}/external/glm)
+include_directories(${PROJECT_SOURCE_DIR}/external/)
 
 if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
@@ -30,33 +30,5 @@ add_subdirectory(scene)
 add_subdirectory(thread_pool)
 add_subdirectory(framebuffer)
 add_subdirectory(resource_manager)
-
-add_compile_definitions(SHADERS_PATH="${CMAKE_SOURCE_DIR}/shaders/")
-add_compile_definitions(TEXTURES_PATH="${CMAKE_SOURCE_DIR}/assets/textures/")
-add_compile_definitions(MODELS_PATH="${CMAKE_SOURCE_DIR}/assets/models/")
-
-add_subdirectory(application)
-
-add_executable(${CMAKE_PROJECT_NAME} main.cpp)
-
-if(WIN32)
-    set(SHADER_COMPILE_SCRIPT
-    "${CMAKE_SOURCE_DIR}/shaders/compile_shaders.bat")
-elseif(UNIX)
-    set(SHADER_COMPILE_SCRIPT
-    "${CMAKE_SOURCE_DIR}/shaders/compile_shaders.sh")
-endif()
-
-file(CHMOD ${SHADER_COMPILE_SCRIPT} PERMISSIONS OWNER_EXECUTE OWNER_WRITE OWNER_READ)
-
-add_custom_target(
-    CompileShaders
-    COMMAND ${SHADER_COMPILE_SCRIPT}
-    COMMENT "Compiling shaders...")
-
-add_dependencies(${CMAKE_PROJECT_NAME} CompileShaders)
-
-target_link_libraries(${CMAKE_PROJECT_NAME} PRIVATE Application)
-target_include_directories(${CMAKE_PROJECT_NAME} PRIVATE "${CMAKE_SOURCE_DIR}/external/tinygltf")
 
 add_subdirectory(tests)

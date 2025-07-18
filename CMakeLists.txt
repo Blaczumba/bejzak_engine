@@ -49,9 +49,9 @@ endif()
 
 add_definitions(-DGLM_FORCE_NO_CTOR_INIT)
 
-add_subdirectory(${CMAKE_SOURCE_DIR}/external/glfw)
-add_subdirectory(${CMAKE_SOURCE_DIR}/external/tinyobjloader)
-add_subdirectory(${CMAKE_SOURCE_DIR}/external/googletest)
+add_subdirectory(${PROJECT_SOURCE_DIR}/external/glfw)
+add_subdirectory(${PROJECT_SOURCE_DIR}/external/tinyobjloader)
+add_subdirectory(${PROJECT_SOURCE_DIR}/external/googletest)
 
 if(WIN32)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /W3")

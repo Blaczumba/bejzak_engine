@@ -3,7 +3,7 @@ add_library(Pipeline pipeline.cpp graphics_pipeline.cpp compute_pipeline.cpp sha
 target_link_libraries(Pipeline PUBLIC Vulkan::Vulkan)
 target_link_libraries(Pipeline PUBLIC LogicalDevice Renderpass)
 
-target_include_directories(Pipeline PUBLIC ${CMAKE_SOURCE_DIR}/sources)
+target_include_directories(Pipeline PUBLIC ${PROJECT_SOURCE_DIR}/sources)
 target_include_directories(Pipeline PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
-target_compile_definitions(Pipeline PUBLIC SHADERS_PATH="${CMAKE_SOURCE_DIR}/shaders/")
+target_compile_definitions(Pipeline PUBLIC SHADERS_PATH="${PROJECT_SOURCE_DIR}/shaders/")
