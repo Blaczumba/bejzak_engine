@@ -56,7 +56,7 @@ ErrorOr<std::unique_ptr<Instance>> Instance::create(std::string_view engineName,
     };
 
 #ifdef VALIDATION_LAYERS_ENABLED
-    const VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = populateDebugMessengerCreateInfoUtility();
+    static constexpr VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo = populateDebugMessengerCreateInfoUtility();
 #else
     VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
 #endif // VALIDATION_LAYERS_ENABLED

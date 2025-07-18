@@ -6,28 +6,27 @@
 #include <iostream>
 #include <stdexcept>
 
-DebugMessenger::DebugMessenger(const Instance& instance) : _instance(instance) {
-    const VkDebugUtilsMessengerCreateInfoEXT createInfo = populateDebugMessengerCreateInfoUtility();
-    if (CreateDebugUtilsMessengerEXT(&createInfo, nullptr) != VK_SUCCESS) {
-        throw std::runtime_error("failed to set up debug messenger!");
+DebugMessenger::DebugMessenger(const Instance& instance, VkDebugUtilsMessengerEXT debugUtilsMessenger) : _instance(instance), _debugUtilsMessenger(debugUtilsMessenger) {}
+
+ErrorOr<std::unique_ptr<DebugMessenger>> DebugMessenger::create(const Instance& instance) {
+    static constexpr VkDebugUtilsMessengerCreateInfoEXT createInfo = populateDebugMessengerCreateInfoUtility();
+    VkDebugUtilsMessengerEXT debugUtilsMessenger;
+    if (auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance.getVkInstance(), "vkCreateDebugUtilsMessengerEXT"); func != nullptr) {
+        if (VkResult result = func(instance.getVkInstance(), &createInfo, nullptr, &debugUtilsMessenger); result != VK_SUCCESS) {
+            return Error(result);
+        }
     }
+    else {
+        return Error(VK_ERROR_EXTENSION_NOT_PRESENT);
+    }
+
+    return std::unique_ptr<DebugMessenger>(new DebugMessenger(instance, debugUtilsMessenger));
 }
 
 DebugMessenger::~DebugMessenger() {
     const VkInstance instance = _instance.getVkInstance();
     auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
     if (func != nullptr) {
-        func(_instance.getVkInstance(), _debugMessenger, nullptr);
-    }
-}
-
-VkResult DebugMessenger::CreateDebugUtilsMessengerEXT(const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator) {
-    const VkInstance instance = _instance.getVkInstance();
-    auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
-    if (func != nullptr) {
-        return func(instance, pCreateInfo, pAllocator, &_debugMessenger);
-    }
-    else {
-        return VK_ERROR_EXTENSION_NOT_PRESENT;
+        func(_instance.getVkInstance(), _debugUtilsMessenger, nullptr);
     }
 }

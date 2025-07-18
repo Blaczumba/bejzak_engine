@@ -1,5 +1,7 @@
 #pragma once
 
+#include "status/status.h"
+
 #include <vulkan/vulkan.h>
 
 #include <memory>
@@ -7,12 +9,13 @@
 class Instance;
 
 class DebugMessenger {
-	VkDebugUtilsMessengerEXT _debugMessenger;
+	VkDebugUtilsMessengerEXT _debugUtilsMessenger;
+
 	const Instance& _instance;
 
-	VkResult CreateDebugUtilsMessengerEXT(const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator);
-
+	DebugMessenger(const Instance& instance, VkDebugUtilsMessengerEXT debugUtilsMessenger);
 public:
-	DebugMessenger(const Instance& instance);
+	static ErrorOr<std::unique_ptr<DebugMessenger>> create(const Instance& instance);
+
 	~DebugMessenger();
 };
