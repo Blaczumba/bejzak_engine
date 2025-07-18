@@ -24,8 +24,7 @@ ErrorOr<std::unique_ptr<DebugMessenger>> DebugMessenger::create(const Instance& 
 }
 
 DebugMessenger::~DebugMessenger() {
-    const VkInstance instance = _instance.getVkInstance();
-    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(_instance.getVkInstance(), "vkDestroyDebugUtilsMessengerEXT");
     if (func != nullptr) {
         func(_instance.getVkInstance(), _debugUtilsMessenger, nullptr);
     }
