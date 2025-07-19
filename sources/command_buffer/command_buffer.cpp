@@ -1,6 +1,7 @@
 #include "command_buffer.h"
 
 #include <stdexcept>
+#include <iterator>
 
 CommandPool::CommandPool(const LogicalDevice& logicalDevice, VkCommandPool commandPool) : _logicalDevice(logicalDevice), _commandPool(commandPool) {}
 
@@ -21,12 +22,20 @@ ErrorOr<std::unique_ptr<CommandPool>> CommandPool::create(const LogicalDevice& l
 CommandPool::~CommandPool() {
     vkDestroyCommandPool(_logicalDevice.getVkDevice(), _commandPool, nullptr);
 }
-std::unique_ptr<PrimaryCommandBuffer> CommandPool::createPrimaryCommandBuffer() const {
-    return std::make_unique<PrimaryCommandBuffer>(shared_from_this());
+ErrorOr<std::unique_ptr<PrimaryCommandBuffer>> CommandPool::createPrimaryCommandBuffer() const {
+    return PrimaryCommandBuffer::create(shared_from_this());
 }
 
-std::unique_ptr<SecondaryCommandBuffer> CommandPool::createSecondaryCommandBuffer() const {
-    return std::make_unique<SecondaryCommandBuffer>(shared_from_this());
+ErrorOr<std::vector<std::unique_ptr<PrimaryCommandBuffer>>> CommandPool::createPrimaryCommandBuffers(uint32_t count) const {
+    return PrimaryCommandBuffer::create(shared_from_this(), count);
+}
+
+ErrorOr<std::unique_ptr<SecondaryCommandBuffer>> CommandPool::createSecondaryCommandBuffer() const {
+    return SecondaryCommandBuffer::create(shared_from_this());
+}
+
+ErrorOr<std::vector<std::unique_ptr<SecondaryCommandBuffer>>> CommandPool::createSecondaryCommandBuffers(uint32_t count) const {
+    return SecondaryCommandBuffer::create(shared_from_this(), count);
 }
 
 void CommandPool::reset() const {
@@ -41,19 +50,8 @@ const LogicalDevice& CommandPool::getLogicalDevice() const {
     return _logicalDevice;
 }
 
-CommandBuffer::CommandBuffer(const std::shared_ptr<const CommandPool>& commandPool, VkCommandBufferLevel level)
-    :_commandPool(commandPool) {
-    const VkCommandBufferAllocateInfo allocInfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .commandPool = _commandPool->getVkCommandPool(),
-        .level = level,
-        .commandBufferCount = 1,
-    };
-
-    if (vkAllocateCommandBuffers(_commandPool->getLogicalDevice().getVkDevice(), &allocInfo, &_commandBuffer) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate command buffers!");
-    }
-}
+CommandBuffer::CommandBuffer(const std::shared_ptr<const CommandPool>& commandPool, VkCommandBuffer commandBuffer)
+    :_commandPool(commandPool), _commandBuffer(commandBuffer) {}
 
 CommandBuffer::~CommandBuffer() {
     vkFreeCommandBuffers(_commandPool->getLogicalDevice().getVkDevice(), _commandPool->getVkCommandPool(), 1, &_commandBuffer);
@@ -71,8 +69,46 @@ VkCommandBuffer CommandBuffer::getVkCommandBuffer() const {
     return _commandBuffer;
 }
 
-PrimaryCommandBuffer::PrimaryCommandBuffer(const std::shared_ptr<const CommandPool>& commandPool)
-    : CommandBuffer(commandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY) {}
+PrimaryCommandBuffer::PrimaryCommandBuffer(const std::shared_ptr<const CommandPool>& commandPool, VkCommandBuffer commandBuffer)
+    : CommandBuffer(commandPool, commandBuffer) {}
+
+ErrorOr<std::unique_ptr<PrimaryCommandBuffer>> PrimaryCommandBuffer::create(const std::shared_ptr<const CommandPool>& commandPool) {
+    const VkCommandBufferAllocateInfo allocInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool = commandPool->getVkCommandPool(),
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = 1,
+    };
+
+    VkCommandBuffer commandBuffer;
+    if (VkResult result = vkAllocateCommandBuffers(commandPool->getLogicalDevice().getVkDevice(), &allocInfo, &commandBuffer); result != VK_SUCCESS) {
+        return Error(result);
+    }
+
+    return std::unique_ptr<PrimaryCommandBuffer>(new PrimaryCommandBuffer(commandPool, commandBuffer));
+}
+
+ErrorOr<std::vector<std::unique_ptr<PrimaryCommandBuffer>>> PrimaryCommandBuffer::create(const std::shared_ptr<const CommandPool>& commandPool, uint32_t count) {
+    const VkCommandBufferAllocateInfo allocInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool = commandPool->getVkCommandPool(),
+        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+        .commandBufferCount = count,
+    };
+
+    lib::Buffer<VkCommandBuffer> commandBuffers(count);
+    if (VkResult result = vkAllocateCommandBuffers(commandPool->getLogicalDevice().getVkDevice(), &allocInfo, commandBuffers.data()); result != VK_SUCCESS) {
+        return Error(result);
+    }
+
+	std::vector<std::unique_ptr<PrimaryCommandBuffer>> primaryCommandBuffers;
+	primaryCommandBuffers.reserve(count);
+    std::transform(commandBuffers.begin(), commandBuffers.end(), std::back_inserter(primaryCommandBuffers),
+        [&commandPool](VkCommandBuffer commandBuffer) {
+            return std::unique_ptr<PrimaryCommandBuffer>(new PrimaryCommandBuffer(commandPool, commandBuffer));
+		});
+    return primaryCommandBuffers;
+}
 
 VkResult PrimaryCommandBuffer::begin(uint32_t subpassIndex) const {
     const VkCommandBufferBeginInfo beginInfo = {
@@ -137,8 +173,47 @@ VkResult PrimaryCommandBuffer::submit(QueueType type, const VkSemaphore waitSema
     return vkQueueSubmit(logicalDevice.getVkQueue(type), 1, &submitInfo, waitFence);
 }
 
-SecondaryCommandBuffer::SecondaryCommandBuffer(const std::shared_ptr<const CommandPool>& commandPool)
-    : CommandBuffer(commandPool, VK_COMMAND_BUFFER_LEVEL_SECONDARY) {}
+SecondaryCommandBuffer::SecondaryCommandBuffer(const std::shared_ptr<const CommandPool>& commandPool, VkCommandBuffer commandBuffer)
+    : CommandBuffer(commandPool, commandBuffer) {}
+
+ErrorOr<std::unique_ptr<SecondaryCommandBuffer>> SecondaryCommandBuffer::create(const std::shared_ptr<const CommandPool>& commandPool) {
+    const VkCommandBufferAllocateInfo allocInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool = commandPool->getVkCommandPool(),
+        .level = VK_COMMAND_BUFFER_LEVEL_SECONDARY,
+        .commandBufferCount = 1,
+    };
+
+    VkCommandBuffer commandBuffer;
+    if (VkResult result = vkAllocateCommandBuffers(commandPool->getLogicalDevice().getVkDevice(), &allocInfo, &commandBuffer); result != VK_SUCCESS) {
+        return Error(result);
+    }
+
+    return std::unique_ptr<SecondaryCommandBuffer>(new SecondaryCommandBuffer(commandPool, commandBuffer));
+}
+
+ErrorOr<std::vector<std::unique_ptr<SecondaryCommandBuffer>>> SecondaryCommandBuffer::create(const std::shared_ptr<const CommandPool>& commandPool, uint32_t count) {
+    const VkCommandBufferAllocateInfo allocInfo = {
+        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+        .commandPool = commandPool->getVkCommandPool(),
+        .level = VK_COMMAND_BUFFER_LEVEL_SECONDARY,
+        .commandBufferCount = count,
+    };
+
+    lib::Buffer<VkCommandBuffer> commandBuffers(count);
+    if (VkResult result = vkAllocateCommandBuffers(commandPool->getLogicalDevice().getVkDevice(), &allocInfo, commandBuffers.data()); result != VK_SUCCESS) {
+        return Error(result);
+    }
+
+    std::vector<std::unique_ptr<SecondaryCommandBuffer>> secondaryCommandBuffers;
+    secondaryCommandBuffers.reserve(count);
+    std::transform(commandBuffers.begin(), commandBuffers.end(), std::back_inserter(secondaryCommandBuffers),
+        [&commandPool](VkCommandBuffer commandBuffer) {
+            return std::unique_ptr<SecondaryCommandBuffer>(new SecondaryCommandBuffer(commandPool, commandBuffer));
+        });
+
+    return secondaryCommandBuffers;
+}
 
 VkResult SecondaryCommandBuffer::begin(const Framebuffer& framebuffer, const VkCommandBufferInheritanceViewportScissorInfoNV* scissorViewportInheritance, uint32_t subpassIndex) const {
     const VkCommandBufferInheritanceInfo inheritance = {
