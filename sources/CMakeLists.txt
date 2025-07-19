@@ -6,6 +6,7 @@ if(Boost_FOUND)
 endif()
 
 add_subdirectory(lib)
+add_subdirectory(status)
 
 add_subdirectory(window)
 add_subdirectory(instance)

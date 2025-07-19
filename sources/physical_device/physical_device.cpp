@@ -120,7 +120,7 @@ ErrorOr<std::unique_ptr<PhysicalDevice>> PhysicalDevice::create(const Surface& s
         vkGetPhysicalDeviceProperties(device, &properties);
         const bool discreteGPU = (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU);
 
-        if (lib::cont_all_of(std::initializer_list{ areQueueFamilyIndicesComplete(indices), swapChainAdequate, static_cast<bool>(supportedFeatures.samplerAnisotropy), discreteGPU}, [](bool condition) { return condition; })) {
+        if (lib::cont_all_of(std::initializer_list{ areQueueFamilyIndicesComplete(indices), swapChainAdequate, static_cast<bool>(supportedFeatures.samplerAnisotropy)}, [](bool condition) { return condition; })) {
             return std::unique_ptr<PhysicalDevice>(new PhysicalDevice(device, surface));
         }
     }

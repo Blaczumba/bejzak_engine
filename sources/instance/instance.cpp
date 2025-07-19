@@ -42,7 +42,7 @@ bool checkValidationLayerSupport() {
 ErrorOr<std::unique_ptr<Instance>> Instance::create(std::string_view engineName, std::span<const char* const> requiredExtensions) {
 #ifdef VALIDATION_LAYERS_ENABLED
     if (!checkValidationLayerSupport()) {
-        return Error(EngineError::NOT_SUPPORTED_VALIDATION_LAYERS);
+        return Error(VK_ERROR_FEATURE_NOT_PRESENT);
     }
 #endif // VALIDATION_LAYERS_ENABLED
 

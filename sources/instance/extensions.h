@@ -9,6 +9,7 @@ constexpr std::array validationLayers = {
 };
 
 constexpr std::array requestedDeviceExtensions = {
+    VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME,
     VK_EXT_INDEX_TYPE_UINT8_EXTENSION_NAME,
     VK_EXT_INLINE_UNIFORM_BLOCK_EXTENSION_NAME,
     VK_EXT_MEMORY_BUDGET_EXTENSION_NAME,
