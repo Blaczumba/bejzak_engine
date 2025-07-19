@@ -1,30 +1,32 @@
 #include "command_buffer.h"
 
-#include "framebuffer/framebuffer.h"
-
 #include <stdexcept>
 
-CommandPool::CommandPool(const LogicalDevice& logicalDevice) : _logicalDevice(logicalDevice) {
+CommandPool::CommandPool(const LogicalDevice& logicalDevice, VkCommandPool commandPool) : _logicalDevice(logicalDevice), _commandPool(commandPool) {}
+
+ErrorOr<std::unique_ptr<CommandPool>> CommandPool::create(const LogicalDevice& logicalDevice) {
     const VkCommandPoolCreateInfo poolInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT, 
-        .queueFamilyIndex = _logicalDevice.getPhysicalDevice().getQueueFamilyIndices().graphicsFamily.value()
+        .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+        .queueFamilyIndex = *logicalDevice.getPhysicalDevice().getQueueFamilyIndices().graphicsFamily
     };
 
-    if (vkCreateCommandPool(_logicalDevice.getVkDevice(), &poolInfo, nullptr, &_commandPool) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create graphics command pool!");
+	VkCommandPool commandPool;
+    if (VkResult result = vkCreateCommandPool(logicalDevice.getVkDevice(), &poolInfo, nullptr, &commandPool); result != VK_SUCCESS) {
+        return Error(result);
     }
+	return std::unique_ptr<CommandPool>(new CommandPool(logicalDevice, commandPool));
 }
 
 CommandPool::~CommandPool() {
     vkDestroyCommandPool(_logicalDevice.getVkDevice(), _commandPool, nullptr);
 }
 std::unique_ptr<PrimaryCommandBuffer> CommandPool::createPrimaryCommandBuffer() const {
-    return std::make_unique<PrimaryCommandBuffer>(*this);
+    return std::make_unique<PrimaryCommandBuffer>(shared_from_this());
 }
 
 std::unique_ptr<SecondaryCommandBuffer> CommandPool::createSecondaryCommandBuffer() const {
-    return std::make_unique<SecondaryCommandBuffer>(*this);
+    return std::make_unique<SecondaryCommandBuffer>(shared_from_this());
 }
 
 void CommandPool::reset() const {
@@ -39,22 +41,22 @@ const LogicalDevice& CommandPool::getLogicalDevice() const {
     return _logicalDevice;
 }
 
-CommandBuffer::CommandBuffer(const CommandPool& commandPool, VkCommandBufferLevel level)
+CommandBuffer::CommandBuffer(const std::shared_ptr<const CommandPool>& commandPool, VkCommandBufferLevel level)
     :_commandPool(commandPool) {
     const VkCommandBufferAllocateInfo allocInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .commandPool = _commandPool.getVkCommandPool(),
+        .commandPool = _commandPool->getVkCommandPool(),
         .level = level,
         .commandBufferCount = 1,
     };
 
-    if (vkAllocateCommandBuffers(_commandPool.getLogicalDevice().getVkDevice(), &allocInfo, &_commandBuffer) != VK_SUCCESS) {
+    if (vkAllocateCommandBuffers(_commandPool->getLogicalDevice().getVkDevice(), &allocInfo, &_commandBuffer) != VK_SUCCESS) {
         throw std::runtime_error("failed to allocate command buffers!");
     }
 }
 
 CommandBuffer::~CommandBuffer() {
-    vkFreeCommandBuffers(_commandPool.getLogicalDevice().getVkDevice(), _commandPool.getVkCommandPool(), 1, &_commandBuffer);
+    vkFreeCommandBuffers(_commandPool->getLogicalDevice().getVkDevice(), _commandPool->getVkCommandPool(), 1, &_commandBuffer);
 }
 
 VkResult CommandBuffer::end() const {
@@ -69,10 +71,8 @@ VkCommandBuffer CommandBuffer::getVkCommandBuffer() const {
     return _commandBuffer;
 }
 
-PrimaryCommandBuffer::PrimaryCommandBuffer(const CommandPool& commandPool)
-    : CommandBuffer(commandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY) {
-
-}
+PrimaryCommandBuffer::PrimaryCommandBuffer(const std::shared_ptr<const CommandPool>& commandPool)
+    : CommandBuffer(commandPool, VK_COMMAND_BUFFER_LEVEL_PRIMARY) {}
 
 VkResult PrimaryCommandBuffer::begin(uint32_t subpassIndex) const {
     const VkCommandBufferBeginInfo beginInfo = {
@@ -129,7 +129,7 @@ VkResult PrimaryCommandBuffer::submit(QueueType type, const VkSemaphore waitSema
         submitInfo.pSignalSemaphores = signalSemaphores;
     }
 
-    const LogicalDevice& logicalDevice = _commandPool.getLogicalDevice();
+    const LogicalDevice& logicalDevice = _commandPool->getLogicalDevice();
     if (waitFence != VK_NULL_HANDLE) {
         vkResetFences(logicalDevice.getVkDevice(), 1, &waitFence);
     }
@@ -137,10 +137,8 @@ VkResult PrimaryCommandBuffer::submit(QueueType type, const VkSemaphore waitSema
     return vkQueueSubmit(logicalDevice.getVkQueue(type), 1, &submitInfo, waitFence);
 }
 
-SecondaryCommandBuffer::SecondaryCommandBuffer(const CommandPool& commandPool)
-    : CommandBuffer(commandPool, VK_COMMAND_BUFFER_LEVEL_SECONDARY) {
-
-}
+SecondaryCommandBuffer::SecondaryCommandBuffer(const std::shared_ptr<const CommandPool>& commandPool)
+    : CommandBuffer(commandPool, VK_COMMAND_BUFFER_LEVEL_SECONDARY) {}
 
 VkResult SecondaryCommandBuffer::begin(const Framebuffer& framebuffer, const VkCommandBufferInheritanceViewportScissorInfoNV* scissorViewportInheritance, uint32_t subpassIndex) const {
     const VkCommandBufferInheritanceInfo inheritance = {
