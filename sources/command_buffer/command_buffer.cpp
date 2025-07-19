@@ -83,7 +83,7 @@ VkResult PrimaryCommandBuffer::begin(uint32_t subpassIndex) const {
 
 void PrimaryCommandBuffer::beginRenderPass(const Framebuffer& framebuffer) const {
     const Renderpass& renderpass = framebuffer.getRenderpass();
-    const auto& clearValues = renderpass.getAttachmentsLayout().getVkClearValues();
+    std::span<const VkClearValue> clearValues = renderpass.getAttachmentsLayout().getVkClearValues();
     const VkRenderPassBeginInfo renderPassInfo = {
         .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
         .renderPass = renderpass.getVkRenderPass(),
