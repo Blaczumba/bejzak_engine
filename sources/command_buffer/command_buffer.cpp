@@ -87,13 +87,6 @@ VkResult createCommandBuffers(VkDevice device, VkCommandPool commandPool, VkComm
 } // namespace
 
 ErrorOr<std::unique_ptr<PrimaryCommandBuffer>> PrimaryCommandBuffer::create(const std::shared_ptr<const CommandPool>& commandPool) {
-    const VkCommandBufferAllocateInfo allocInfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .commandPool = commandPool->getVkCommandPool(),
-        .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        .commandBufferCount = 1,
-    };
-
     VkCommandBuffer commandBuffer;
     if (VkResult result = createCommandBuffers(commandPool->getLogicalDevice().getVkDevice(), commandPool->getVkCommandPool(), VK_COMMAND_BUFFER_LEVEL_PRIMARY, { &commandBuffer, 1 }); result != VK_SUCCESS) {
         return Error(result);
