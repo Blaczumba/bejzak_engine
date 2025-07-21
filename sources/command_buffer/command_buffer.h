@@ -22,13 +22,13 @@ public:
 
 	~CommandPool();
 
-	ErrorOr<std::unique_ptr<PrimaryCommandBuffer>> createPrimaryCommandBuffer() const;
+	ErrorOr<PrimaryCommandBuffer> createPrimaryCommandBuffer() const;
 
-	ErrorOr<std::vector<std::unique_ptr<PrimaryCommandBuffer>>> createPrimaryCommandBuffers(uint32_t count) const;
+	ErrorOr<std::vector<PrimaryCommandBuffer>> createPrimaryCommandBuffers(uint32_t count) const;
 
-	ErrorOr<std::unique_ptr<SecondaryCommandBuffer>> createSecondaryCommandBuffer() const;
+	ErrorOr<SecondaryCommandBuffer> createSecondaryCommandBuffer() const;
 
-	ErrorOr<std::vector<std::unique_ptr<SecondaryCommandBuffer>>> createSecondaryCommandBuffers(uint32_t count) const;
+	ErrorOr<std::vector<SecondaryCommandBuffer>> createSecondaryCommandBuffers(uint32_t count) const;
 
 	void reset() const;
 
@@ -67,9 +67,9 @@ public:
 
 	PrimaryCommandBuffer& operator=(PrimaryCommandBuffer&&) noexcept = default;
 
-	static ErrorOr<std::unique_ptr<PrimaryCommandBuffer>> create(const std::shared_ptr<const CommandPool>& commandPool);
+	static ErrorOr<PrimaryCommandBuffer> create(const std::shared_ptr<const CommandPool>& commandPool);
 
-	static ErrorOr<std::vector<std::unique_ptr<PrimaryCommandBuffer>>> create(const std::shared_ptr<const CommandPool>& commandPool, uint32_t count);
+	static ErrorOr<std::vector<PrimaryCommandBuffer>> create(const std::shared_ptr<const CommandPool>& commandPool, uint32_t count);
 
 	VkResult begin(uint32_t subpassIndex = 0) const;
 
@@ -90,9 +90,9 @@ public:
 
 	SecondaryCommandBuffer& operator=(SecondaryCommandBuffer&&) noexcept = default;
 
-	static ErrorOr<std::unique_ptr<SecondaryCommandBuffer>> create(const std::shared_ptr<const CommandPool>& commandPool);
+	static ErrorOr<SecondaryCommandBuffer> create(const std::shared_ptr<const CommandPool>& commandPool);
 
-	static ErrorOr<std::vector<std::unique_ptr<SecondaryCommandBuffer>>> create(const std::shared_ptr<const CommandPool>& commandPool, uint32_t count);
+	static ErrorOr<std::vector<SecondaryCommandBuffer>> create(const std::shared_ptr<const CommandPool>& commandPool, uint32_t count);
 
 	VkResult begin(const Framebuffer& framebuffer, const VkCommandBufferInheritanceViewportScissorInfoNV* scissorViewportInheritance = nullptr, uint32_t subpassIndex = 0) const;
 };
