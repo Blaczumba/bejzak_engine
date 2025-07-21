@@ -57,8 +57,8 @@ public:
 	template<typename VertexType>
 	void loadVertexDataAsync(const std::string& filePath, std::span<const uint8_t> indices, uint8_t indexSize, std::span<const VertexType> vertices);
 
-	ErrorOr<const ImageData*> getImageData(const std::string& filePath);
-	ErrorOr<const VertexData*> getVertexData(const std::string& filePath);
+	ErrorOr<std::reference_wrapper<const ImageData>> getImageData(const std::string& filePath);
+	ErrorOr<std::reference_wrapper<const VertexData>> getVertexData(const std::string& filePath);
 
 private:
 	void loadImageAsync(const std::string& filePath, std::function<ErrorOr<ImageResource>(std::string_view)>&& loadingFunction);

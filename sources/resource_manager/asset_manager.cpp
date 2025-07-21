@@ -64,32 +64,32 @@ void AssetManager::loadVertexDataInterleavingAsync(const std::string& name, std:
     _awaitingVertexDataResources.emplace(name, std::move(future));
 }
 
-ErrorOr<const ImageData*> AssetManager::getImageData(const std::string& filePath) {
+ErrorOr<std::reference_wrapper<const ImageData>> AssetManager::getImageData(const std::string& filePath) {
     auto imageIt = _imageResources.find(filePath);
     if (imageIt != _imageResources.cend()) {
-        return &imageIt->second;
+        return imageIt->second;
     }
 	auto it = _awaitingImageResources.find(filePath);
     if (it != _awaitingImageResources.cend()) {
         ASSIGN_OR_RETURN(ImageData imageData, it->second.get());
         auto ptr = _imageResources.emplace(filePath, std::move(imageData));
         _awaitingImageResources.erase(it);
-		return &ptr.first->second;
+		return ptr.first->second;
     }
     return Error(EngineError::NOT_FOUND);
 }
 
-ErrorOr<const VertexData*> AssetManager::getVertexData(const std::string& filePath) {
+ErrorOr<std::reference_wrapper<const VertexData>> AssetManager::getVertexData(const std::string& filePath) {
     auto vertexIt = _vertexDataResources.find(filePath);
     if (vertexIt != _vertexDataResources.cend()) {
-        return &vertexIt->second;
+        return vertexIt->second;
     }
     auto it = _awaitingVertexDataResources.find(filePath);
     if (it != _awaitingVertexDataResources.cend()) {
         ASSIGN_OR_RETURN(auto vertexData, it->second.get());
         auto ptr = _vertexDataResources.emplace(filePath, std::move(vertexData));
         _awaitingVertexDataResources.erase(it);
-        return &ptr.first->second;
+        return ptr.first->second;
     }
     return Error(EngineError::NOT_FOUND);
 }
