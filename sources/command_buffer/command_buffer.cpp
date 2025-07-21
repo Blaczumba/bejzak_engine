@@ -53,6 +53,17 @@ const LogicalDevice& CommandPool::getLogicalDevice() const {
 CommandBuffer::CommandBuffer(const std::shared_ptr<const CommandPool>& commandPool, VkCommandBuffer commandBuffer)
     :_commandPool(commandPool), _commandBuffer(commandBuffer) {}
 
+CommandBuffer::CommandBuffer(CommandBuffer&& other) noexcept
+	: _commandPool(std::move(other._commandPool)), _commandBuffer(std::exchange(other._commandBuffer, VK_NULL_HANDLE)) {}
+
+CommandBuffer& CommandBuffer::operator=(CommandBuffer&& other) noexcept {
+	if (this == &other) {
+	    return *this;
+	}
+    _commandPool = std::move(other._commandPool);
+	_commandBuffer = std::exchange(other._commandBuffer, VK_NULL_HANDLE);
+}
+
 CommandBuffer::~CommandBuffer() {
     vkFreeCommandBuffers(_commandPool->getLogicalDevice().getVkDevice(), _commandPool->getVkCommandPool(), 1, &_commandBuffer);
 }
@@ -74,14 +85,14 @@ PrimaryCommandBuffer::PrimaryCommandBuffer(const std::shared_ptr<const CommandPo
 
 namespace {
 
-VkResult createCommandBuffers(VkDevice device, VkCommandPool commandPool, VkCommandBufferLevel level, std::span<VkCommandBuffer> commandBuffers) {
+VkResult createCommandBuffers(VkDevice device, VkCommandPool commandPool, VkCommandBufferLevel level, std::span<VkCommandBuffer> outCommandBuffers) {
     const VkCommandBufferAllocateInfo allocInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
         .commandPool = commandPool,
         .level = level,
-        .commandBufferCount = static_cast<uint32_t>(commandBuffers.size()),
+        .commandBufferCount = static_cast<uint32_t>(outCommandBuffers.size()),
     };
-    return vkAllocateCommandBuffers(device, &allocInfo, commandBuffers.data());
+    return vkAllocateCommandBuffers(device, &allocInfo, outCommandBuffers.data());
 }
 
 } // namespace

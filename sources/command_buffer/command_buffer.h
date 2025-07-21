@@ -45,6 +45,10 @@ protected:
 	CommandBuffer(const std::shared_ptr<const CommandPool>& commandPool, VkCommandBuffer commandBuffer);
 
 public:
+	CommandBuffer(CommandBuffer&&) noexcept;
+
+	CommandBuffer& operator=(CommandBuffer&&) noexcept;
+
 	~CommandBuffer();
 
 	VkResult end() const;
@@ -59,6 +63,10 @@ class PrimaryCommandBuffer : public CommandBuffer {
 	PrimaryCommandBuffer(const std::shared_ptr<const CommandPool>& commandPool, VkCommandBuffer commandBuffer);
 
 public:
+	PrimaryCommandBuffer(PrimaryCommandBuffer&&) noexcept = default;
+
+	PrimaryCommandBuffer& operator=(PrimaryCommandBuffer&&) noexcept = default;
+
 	static ErrorOr<std::unique_ptr<PrimaryCommandBuffer>> create(const std::shared_ptr<const CommandPool>& commandPool);
 
 	static ErrorOr<std::vector<std::unique_ptr<PrimaryCommandBuffer>>> create(const std::shared_ptr<const CommandPool>& commandPool, uint32_t count);
@@ -78,6 +86,10 @@ class SecondaryCommandBuffer : public CommandBuffer {
 	SecondaryCommandBuffer(const std::shared_ptr<const CommandPool>& commandPool, VkCommandBuffer commandBuffer);
 
 public:
+	SecondaryCommandBuffer(SecondaryCommandBuffer&&) noexcept = default;
+
+	SecondaryCommandBuffer& operator=(SecondaryCommandBuffer&&) noexcept = default;
+
 	static ErrorOr<std::unique_ptr<SecondaryCommandBuffer>> create(const std::shared_ptr<const CommandPool>& commandPool);
 
 	static ErrorOr<std::vector<std::unique_ptr<SecondaryCommandBuffer>>> create(const std::shared_ptr<const CommandPool>& commandPool, uint32_t count);
