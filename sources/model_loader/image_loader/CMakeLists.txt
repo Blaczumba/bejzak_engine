@@ -11,7 +11,7 @@ set(KTX_SOURCES
 add_library(ImageLoader image_loader.cpp ${KTX_SOURCES})
 
 target_link_libraries(ImageLoader PUBLIC Vulkan::Vulkan)
-target_link_libraries(ImageLoader PUBLIC LogicalDevice CommandBuffer Buffers)
+target_link_libraries(ImageLoader PUBLIC LogicalDevice CommandBuffer)
 
 target_include_directories(ImageLoader PUBLIC ${PROJECT_SOURCE_DIR}/sources)
 target_include_directories(ImageLoader PUBLIC ${PROJECT_SOURCE_DIR}/external/ktx/include)

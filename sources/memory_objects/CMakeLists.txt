@@ -1,9 +1,4 @@
-add_library(Buffers buffers.cpp)
-
-target_link_libraries(Buffers PUBLIC Vulkan::Vulkan)
-target_link_libraries(Buffers PUBLIC MemoryAllocator)
-
-add_library(Buffer buffer.cpp texture.cpp)
+add_library(Buffer buffer.cpp texture.cpp buffers.cpp)
 target_link_libraries(Buffer PUBLIC Vulkan::Vulkan)
 target_link_libraries(Buffer PUBLIC LogicalDevice CommandBuffer)
 
