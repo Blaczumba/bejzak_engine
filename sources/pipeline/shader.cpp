@@ -59,6 +59,7 @@ Shader& Shader::operator=(Shader&& other) noexcept {
     _shaderModule = std::exchange(other._shaderModule, VK_NULL_HANDLE);
     _logicalDevice = other._logicalDevice;
     _shaderStage = other._shaderStage;
+    return *this;
 }
 
 Shader::~Shader() {

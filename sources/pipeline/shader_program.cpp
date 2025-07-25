@@ -11,7 +11,7 @@
 #include <memory>
 
 ShaderProgram::ShaderProgram(const ShaderProgramManager& shaderProgramManager, std::initializer_list<std::string_view> shaders, std::initializer_list<DescriptorSetType> descriptorSetLayouts, std::span<const VkPushConstantRange> pushConstantRange, std::optional<VkPipelineVertexInputStateCreateInfo> vertexInputInfo)
-    : _shaderProgramManager(shaderProgramManager), _shaders(shaders), _descriptorSetLayouts(descriptorSetLayouts), _pushConstants(pushConstantRange.cbegin(), pushConstantRange.cend()), _vertexInputInfo(vertexInputInfo) {}
+    : _shaderProgramManager(shaderProgramManager), _shaders(shaders), _descriptorSetLayouts(descriptorSetLayouts), _pushConstants(std::cbegin(pushConstantRange), std::cend(pushConstantRange)), _vertexInputInfo(vertexInputInfo) {}
 
 lib::Buffer<VkDescriptorSetLayout> ShaderProgram::getVkDescriptorSetLayouts() const {
     lib::Buffer<VkDescriptorSetLayout> layouts(_descriptorSetLayouts.size());

@@ -82,7 +82,7 @@ void AssetManager::loadVertexDataAsync(const std::string& filePath, std::span<co
 		if (!vertexBuffer.has_value()) [[unlikely]] {
 			return ErrorOr<VertexData>(Error(vertexBuffer.error()));
 		}
-		vertexBuffer->copyData<Type>(vertices);
+		vertexBuffer->copyData(vertices);
 		auto indexBuffer = Buffer::createStagingBuffer(_logicalDevice, indices.size());
 		if (!indexBuffer.has_value()) [[unlikely]] {
 			return ErrorOr<VertexData>(Error(indexBuffer.error()));

@@ -62,6 +62,7 @@ CommandBuffer& CommandBuffer::operator=(CommandBuffer&& other) noexcept {
 	}
     _commandPool = std::move(other._commandPool);
 	_commandBuffer = std::exchange(other._commandBuffer, VK_NULL_HANDLE);
+    return *this;
 }
 
 CommandBuffer::~CommandBuffer() {

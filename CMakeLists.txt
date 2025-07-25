@@ -1,13 +1,11 @@
 cmake_minimum_required(VERSION 3.19)
 
-set(CMAKE_PROJECT_NAME BejzakEngine)
+set(ENGINE_NAME BejzakEngine)
 
-project(${CMAKE_PROJECT_NAME})
+project(${ENGINE_NAME})
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
 
@@ -49,7 +47,11 @@ endif()
 
 add_definitions(-DGLM_FORCE_NO_CTOR_INIT)
 
-add_subdirectory(${PROJECT_SOURCE_DIR}/external/glfw)
+if(NOT ANDROID)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/external/glfw)
+endif()
+
 add_subdirectory(${PROJECT_SOURCE_DIR}/external/tinyobjloader)
 add_subdirectory(${PROJECT_SOURCE_DIR}/external/googletest)
 
@@ -62,3 +64,17 @@ elseif(UNIX)
 endif()
 
 add_subdirectory(sources)
+
+add_library(${ENGINE_NAME} INTERFACE)
+target_link_libraries(${ENGINE_NAME} INTERFACE
+        Status Window Instance
+        Surface DebugMessenger
+        PhysicalDevice MemoryAllocator
+        LogicalDevice Renderpass
+        Swapchain Buffer CommandBuffer
+        Framebuffer Pipeline OBJLoader
+        TinyGLTFLoader DescriptorSet
+        Camera Entity
+        ComponentSystem ECSRegistry
+        Object Primitives AssetManager
+)

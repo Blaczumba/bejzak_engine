@@ -41,6 +41,7 @@ Texture& Texture::operator=(Texture&& texture) noexcept {
     _imageParameters = texture._imageParameters;
     _samplerParameters = texture._samplerParameters;
     _logicalDevice = texture._logicalDevice;
+    return *this;
 }
 
 namespace {

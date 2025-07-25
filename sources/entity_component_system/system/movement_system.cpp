@@ -10,13 +10,13 @@
 MovementSystem::MovementSystem(Registry* reg) : registry(reg) {}
 
 void MovementSystem::update(float deltaTime) {
-    registry->updateComponents<PositionComponent, VelocityComponent>(
-        [deltaTime](PositionComponent& pos, VelocityComponent& vel) {
-            pos.x += vel.dx * deltaTime;
-            pos.y += vel.dy * deltaTime;
-
-            //std::cout << "Entity " << entity << " moved to ("
-            //    << pos.x << ", " << pos.y << ")\n"; 
-        }
-    );
+//    registry->updateComponents<PositionComponent, VelocityComponent>(
+//        [deltaTime](PositionComponent& pos, VelocityComponent& vel) {
+//            pos.x += vel.dx * deltaTime;
+//            pos.y += vel.dy * deltaTime;
+//
+//            //std::cout << "Entity " << entity << " moved to ("
+//            //    << pos.x << ", " << pos.y << ")\n";
+//        }
+//    );
 }

@@ -9,7 +9,7 @@ ErrorOr<lib::Buffer<VertexPT>> buildInterleavingVertexData(std::span<const glm::
     }
 
     lib::Buffer<VertexPT> vertices(positions.size());
-    std::transform(positions.cbegin(), positions.cend(), texCoords.cbegin(), vertices.begin(),
+    std::transform(std::cbegin(positions), std::cend(positions), std::cbegin(texCoords), vertices.begin(),
         [](const glm::vec3& pos, const glm::vec2& texCoord) {
         return VertexPT{ pos, texCoord };
     });

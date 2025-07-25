@@ -1,6 +1,7 @@
 #pragma once
 
 #include "descriptor_set/descriptor_set_layout.h"
+#include "input_description.h"
 #include "lib/buffer/buffer.h"
 #include "primitives/primitives.h"
 #include "shader.h"
