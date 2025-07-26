@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vulkan_wrapper/lib/buffer/shared_buffer.h"
+#include "lib/buffer/shared_buffer.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>

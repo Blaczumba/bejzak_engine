@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vulkan_wrapper/lib/buffer/buffer.h"
+#include "lib/buffer/buffer.h"
 #include "vulkan_wrapper/memory_objects/buffer.h"
 #include "vulkan_wrapper/memory_objects/texture.h"
 #include "vulkan_wrapper/descriptor_set/descriptor_set.h"

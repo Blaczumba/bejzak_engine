@@ -1,7 +1,7 @@
 #include "logical_device.h"
 
 #include "vulkan_wrapper/instance/extensions.h"
-#include "vulkan_wrapper/lib/buffer/buffer.h"
+#include "lib/buffer/buffer.h"
 
 #include <vulkan/vulkan.h>
 

@@ -1,6 +1,6 @@
 #include "tiny_gltf_loader.h"
 
-#include "vulkan_wrapper/lib/buffer/shared_buffer.h"
+#include "lib/buffer/shared_buffer.h"
 #include "vulkan_wrapper/model_loader/model_loader.h"
 #include "vulkan_wrapper/primitives/primitives.h"
 #include "vulkan_wrapper/status/status.h"

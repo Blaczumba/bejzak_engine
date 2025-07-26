@@ -1,6 +1,6 @@
 #include "render_pass.h"
 
-#include "vulkan_wrapper/lib/macros/status_macros.h"
+#include "lib/macros/status_macros.h"
 #include "vulkan_wrapper/render_pass/attachment_layout.h"
 
 #include <algorithm>

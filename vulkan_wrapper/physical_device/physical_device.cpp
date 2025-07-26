@@ -1,7 +1,7 @@
 #include "physical_device.h"
 
-#include "vulkan_wrapper/lib/algorithm.h"
-#include "vulkan_wrapper/lib/macros/status_macros.h"
+#include "lib/algorithm.h"
+#include "lib/macros/status_macros.h"
 #include "vulkan_wrapper/logical_device/logical_device.h"
 #include "vulkan_wrapper/instance/extensions.h"
 

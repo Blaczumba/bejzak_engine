@@ -5,7 +5,6 @@ if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
 endif()
 
-add_subdirectory(lib)
 add_subdirectory(status)
 
 add_subdirectory(instance)

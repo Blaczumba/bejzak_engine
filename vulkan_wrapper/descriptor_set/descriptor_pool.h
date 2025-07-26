@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vulkan_wrapper/lib/buffer/buffer.h"
+#include "lib/buffer/buffer.h"
 #include "vulkan_wrapper/status/status.h"
 
 #include <vulkan/vulkan.h>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vulkan_wrapper/lib/macros/status_macros.h"
+#include "lib/macros/status_macros.h"
 #include "vulkan_wrapper/memory_allocator/memory_allocator.h"
 #include "vulkan_wrapper/memory_allocator/allocation.h"
 #include "vulkan_wrapper/memory_objects/image.h"

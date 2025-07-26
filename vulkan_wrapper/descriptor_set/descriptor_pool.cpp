@@ -1,6 +1,6 @@
 #include "descriptor_pool.h"
 
-#include "vulkan_wrapper/lib/buffer/buffer.h"
+#include "lib/buffer/buffer.h"
 #include "vulkan_wrapper/logical_device/logical_device.h"
 #include "descriptor_set.h"
 #include "descriptor_set_layout.h"

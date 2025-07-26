@@ -1,7 +1,7 @@
 #pragma once
 
 #include "buffer_deallocator.h"
-#include "vulkan_wrapper/lib/buffer/buffer.h"
+#include "lib/buffer/buffer.h"
 #include "vulkan_wrapper/logical_device/logical_device.h"
 #include "vulkan_wrapper/status/status.h"
 

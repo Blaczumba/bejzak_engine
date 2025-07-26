@@ -63,6 +63,7 @@ elseif(UNIX)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -DNDEBUG")
 endif()
 
+add_subdirectory(lib)
 add_subdirectory(common)
 
 if(Vulkan_FOUND)
