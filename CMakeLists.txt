@@ -78,3 +78,11 @@ target_link_libraries(${ENGINE_NAME} INTERFACE
         ComponentSystem ECSRegistry
         Object Primitives AssetManager
 )
+
+if (ANDROID)
+    add_subdirectory(openxr_lib)
+    # target_compile_definitions(${ENGINE_NAME} INTERFACE XR_USE_PLATFORM_ANDROID)
+    target_link_libraries(${ENGINE_NAME} INTERFACE
+            OpenxrInstance OpenxrPlatform
+    )
+endif ()
