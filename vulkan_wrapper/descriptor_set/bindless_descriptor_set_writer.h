@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common/util/bindless_descriptor_handles.h"
 #include "vulkan_wrapper/memory_objects/buffer.h"
 #include "vulkan_wrapper/memory_objects/texture.h"
 #include "vulkan_wrapper/descriptor_set/descriptor_set.h"
@@ -13,9 +14,6 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <set>
-
-enum class TextureHandle : uint32_t { INVALID = std::numeric_limits<uint32_t>::max() };
-enum class BufferHandle : uint32_t { INVALID = std::numeric_limits<uint32_t>::max() };
 
 class BindlessDescriptorSetWriter {
 	const DescriptorSet& _descriptorSet;
