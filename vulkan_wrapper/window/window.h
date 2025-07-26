@@ -1,5 +1,5 @@
 #pragma once
-#include "input.h"
+#include "common/input_manager/mouse_keyboard_manager.h"
 
 #include "vulkan_wrapper/instance/instance.h"
 #include "vulkan_wrapper/status/status.h"

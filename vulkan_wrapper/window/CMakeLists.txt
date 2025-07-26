@@ -1,6 +1,6 @@
 add_library(Window window.cpp)
 
-target_link_libraries(Window PUBLIC Surface)
+target_link_libraries(Window PUBLIC Surface CommonInputManagerGlfw)
 
 if((WIN32 OR UNIX) AND NOT ANDROID)
 	add_library(WindowGLFW window_glfw.cpp)

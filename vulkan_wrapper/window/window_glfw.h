@@ -1,27 +1,13 @@
 #pragma once
 
-#include "input.h"
 #include "window.h"
 
+#include "common/input_manager/mouse_keyboard_manager_glfw.h"
 #include "vulkan_wrapper/status/status.h"
 
 #include <memory>
 #include <string_view>
 
-class GLFWwindow;
-
-class MouseKeyboardManagerGlfw : public MouseKeyboardManager {
-	GLFWwindow* _window;
-
-public:
-	MouseKeyboardManagerGlfw(GLFWwindow* window);
-
-	bool isPressed(Keyboard::Key key) const override;
-	void setKeyboardCallback(Keyboard::Callback callback) const override;
-	void setMouseMoveCallback(Mouse::MoveCallback callback) const override;
-	void absorbCursor() const override;
-	void freeCursor() const override;
-};
 
 class WindowGlfw : public Window {
 	GLFWwindow* _window;
