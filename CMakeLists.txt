@@ -64,7 +64,7 @@ elseif(UNIX)
 endif()
 
 if(Vulkan_FOUND)
-    add_subdirectory(vulkan_lib)
+    add_subdirectory(vulkan_wrapper)
 endif()
 
 add_library(${ENGINE_NAME} INTERFACE)
