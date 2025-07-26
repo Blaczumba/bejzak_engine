@@ -63,7 +63,9 @@ elseif(UNIX)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -DNDEBUG")
 endif()
 
-add_subdirectory(sources)
+if(Vulkan_FOUND)
+    add_subdirectory(vulkan_lib)
+endif()
 
 add_library(${ENGINE_NAME} INTERFACE)
 target_link_libraries(${ENGINE_NAME} INTERFACE
