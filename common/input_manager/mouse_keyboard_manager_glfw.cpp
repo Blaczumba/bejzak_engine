@@ -50,30 +50,30 @@ constexpr std::array<Key, 349> fromGlfwToKey = [] {
 } // namespace
 } // namespace Keyboard
 
-MouseKeyboardManagerGlfw::MouseKeyboardManagerGlfw(GLFWwindow* window) : _window(window) {}
+MouseKeyboardManagerGlfw::MouseKeyboardManagerGlfw(const std::shared_ptr<const WindowGlfw>& window) : _window(window) {}
 
 bool MouseKeyboardManagerGlfw::isPressed(Keyboard::Key key) const {
-    return glfwGetKey(_window, Keyboard::fromKeyToGlfw[static_cast<uint16_t>(key)]) == GLFW_PRESS;
+    return glfwGetKey(static_cast<GLFWwindow*>(_window->getNativeHandler()), Keyboard::fromKeyToGlfw[static_cast<uint16_t>(key)]) == GLFW_PRESS;
 }
 
 void MouseKeyboardManagerGlfw::setKeyboardCallback(Keyboard::Callback callback) const {
     static Keyboard::Callback keyCallback = callback;
-    glfwSetKeyCallback(_window, [](GLFWwindow* win, int key, int scancode, int action, int mods) {
+    glfwSetKeyCallback(static_cast<GLFWwindow*>(_window->getNativeHandler()), [](GLFWwindow* win, int key, int scancode, int action, int mods) {
         keyCallback(Keyboard::fromGlfwToKey[key], action);
     });
 }
 
 void MouseKeyboardManagerGlfw::setMouseMoveCallback(Mouse::MoveCallback callback) const {
     static Mouse::MoveCallback mouseCallback = callback;
-    glfwSetCursorPosCallback(_window, [](GLFWwindow* win, double xPos, double yPos) {
+    glfwSetCursorPosCallback(static_cast<GLFWwindow*>(_window->getNativeHandler()), [](GLFWwindow* win, double xPos, double yPos) {
         mouseCallback(xPos, yPos);
     });
 }
 
 void MouseKeyboardManagerGlfw::absorbCursor() const {
-    glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
+    glfwSetInputMode(static_cast<GLFWwindow*>(_window->getNativeHandler()), GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 }
 
 void MouseKeyboardManagerGlfw::freeCursor() const {
-    glfwSetInputMode(_window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+    glfwSetInputMode(static_cast<GLFWwindow*>(_window->getNativeHandler()), GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 }

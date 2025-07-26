@@ -2,13 +2,10 @@
 
 #include "common/input_manager/mouse_keyboard_manager_glfw.h"
 
-#include <GLFW/glfw3.h>
-
 WindowGlfw::WindowGlfw(std::string_view windowName, uint32_t width, uint32_t height) {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
     _window = glfwCreateWindow(width, height, windowName.data(), /*glfwGetPrimaryMonitor()*/ nullptr, nullptr);
-    _mouseKeyboard = std::make_unique<MouseKeyboardManagerGlfw>(_window);
 
     glfwSetWindowUserPointer(_window, this);
 }
@@ -51,6 +48,6 @@ void* WindowGlfw::getNativeHandler() const {
     return _window;
 }
 
-MouseKeyboardManager* WindowGlfw::getMouseKeyboardManager() {
-    return _mouseKeyboard.get();
+std::unique_ptr<const MouseKeyboardManager> WindowGlfw::createMouseKeyboardManager() const {
+    return std::make_unique<const MouseKeyboardManagerGlfw>(shared_from_this());
 }

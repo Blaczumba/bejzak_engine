@@ -12,14 +12,18 @@ public:
 	virtual ~Window() = default;
 
 	virtual bool open() const = 0;
+
 	virtual void close() const = 0;
 
 	virtual void pollEvents() = 0;
 
 	virtual void setWindowSize(int width, int height) = 0;
+
 	virtual Extent2D getFramebufferSize() const = 0;
 
 	virtual std::vector<const char*> getVulkanExtensions() const = 0;
+
 	virtual void* getNativeHandler() const = 0;
-	virtual MouseKeyboardManager* getMouseKeyboardManager() = 0;
+
+	virtual std::unique_ptr<const MouseKeyboardManager> createMouseKeyboardManager() const = 0;
 };

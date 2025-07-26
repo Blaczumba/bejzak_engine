@@ -76,11 +76,14 @@ namespace Mouse {
 class MouseKeyboardManager {
 public:
     virtual ~MouseKeyboardManager() = default;
+
     virtual bool isPressed(Keyboard::Key key) const = 0;
+
     virtual void setKeyboardCallback(Keyboard::Callback callback) const = 0;
-    // virtual bool isPressed(Mouse::Button button) const = 0;
+
     virtual void setMouseMoveCallback(Mouse::MoveCallback callback) const = 0;
+
     virtual void absorbCursor() const = 0;
+
     virtual void freeCursor() const = 0;
-    // virtual void setMouseScrollCallback(MouseCallback callback)
 };
