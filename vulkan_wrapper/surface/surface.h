@@ -1,9 +1,12 @@
 #pragma once
 
 #include "vulkan_wrapper/instance/instance.h"
-#include "vulkan_wrapper/window/window.h"
+#include "vulkan_wrapper/status/status.h"
+#include "common/window/window.h"
 
 #include "vulkan/vulkan.h"
+
+#include <memory>
 
 class Window;
 
@@ -11,6 +14,8 @@ class Surface {
 	Surface(VkSurfaceKHR surface, const Instance& instance, const Window& window);
 
 public:
+	static ErrorOr<std::unique_ptr<Surface>> create(const Instance& instance, Window* window);
+
 	~Surface();
 
 	VkSurfaceKHR getVkSurface() const;

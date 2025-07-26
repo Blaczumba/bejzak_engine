@@ -2,7 +2,8 @@
 
 #include "camera.h"
 
-#include "vulkan_wrapper/window/window.h"
+#include "common/window/window.h"
+#include "common/input_manager/mouse_keyboard_manager.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>

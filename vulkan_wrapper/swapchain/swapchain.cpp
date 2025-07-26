@@ -68,7 +68,8 @@ ErrorOr<std::unique_ptr<Swapchain>> Swapchain::create(const LogicalDevice& logic
     const Window& window = surface.getWindow();
 
     const VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats, VK_FORMAT_B8G8R8A8_SRGB);
-    const VkExtent2D extent = chooseSwapExtent(window.getFramebufferSize(), swapChainSupport.capabilities);
+	const Extent2D windowExtent = window.getFramebufferSize();
+    const VkExtent2D extent = chooseSwapExtent({windowExtent.width, windowExtent.height}, swapChainSupport.capabilities);
 
     uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
     if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {

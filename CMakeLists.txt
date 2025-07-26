@@ -71,7 +71,7 @@ endif()
 
 add_library(${ENGINE_NAME} INTERFACE)
 target_link_libraries(${ENGINE_NAME} INTERFACE
-        Status Window Instance
+        Instance Status 
         Surface DebugMessenger
         PhysicalDevice MemoryAllocator
         LogicalDevice Renderpass

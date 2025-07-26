@@ -8,7 +8,6 @@ endif()
 add_subdirectory(lib)
 add_subdirectory(status)
 
-add_subdirectory(window)
 add_subdirectory(instance)
 add_subdirectory(surface)
 add_subdirectory(debug_messenger)

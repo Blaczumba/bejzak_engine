@@ -4,9 +4,6 @@
 
 #include <GLFW/glfw3.h>
 
-#include <array>
-#include <stdexcept>
-
 WindowGlfw::WindowGlfw(std::string_view windowName, uint32_t width, uint32_t height) {
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -19,10 +16,6 @@ WindowGlfw::WindowGlfw(std::string_view windowName, uint32_t width, uint32_t hei
 WindowGlfw::~WindowGlfw() {
     glfwDestroyWindow(_window);
     glfwTerminate();
-}
-
-GLFWwindow* WindowGlfw::getGlfwWindow() {
-    return _window;
 }
 
 bool WindowGlfw::open() const {
@@ -41,25 +34,21 @@ void WindowGlfw::setWindowSize(int width, int height) {
     glfwSetWindowSize(_window, width, height);
 }
 
-VkExtent2D WindowGlfw::getFramebufferSize() const {
+Extent2D WindowGlfw::getFramebufferSize() const {
     int width, height;
     glfwWaitEvents();
     glfwGetFramebufferSize(_window, &width, &height);
     return { static_cast<uint32_t>(width), static_cast<uint32_t>(height) };
 }
 
-std::vector<const char*> WindowGlfw::getExtensions() const {
+std::vector<const char*> WindowGlfw::getVulkanExtensions() const {
     uint32_t glfwExtensionCount;
     const char** glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
     return std::vector<const char*>(glfwExtensions, glfwExtensions + glfwExtensionCount);
 }
 
-ErrorOr<std::unique_ptr<Surface>> WindowGlfw::createSurface(const Instance& instance) const {
-    VkSurfaceKHR surface;
-    if (VkResult result = glfwCreateWindowSurface(instance.getVkInstance(), _window, nullptr, &surface); result != VK_SUCCESS) {
-        return Error(result);
-    }
-    return std::unique_ptr<Surface>(new Surface(surface, instance, *this));
+void* WindowGlfw::getNativeHandler() const {
+    return _window;
 }
 
 MouseKeyboardManager* WindowGlfw::getMouseKeyboardManager() {
