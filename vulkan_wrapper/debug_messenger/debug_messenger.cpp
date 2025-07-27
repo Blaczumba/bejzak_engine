@@ -3,9 +3,6 @@
 #include "debug_messenger_utils.h"
 #include "vulkan_wrapper/instance/instance.h"
 
-#include <iostream>
-#include <stdexcept>
-
 DebugMessenger::DebugMessenger(const Instance& instance, VkDebugUtilsMessengerEXT debugUtilsMessenger) : _instance(instance), _debugUtilsMessenger(debugUtilsMessenger) {}
 
 ErrorOr<std::unique_ptr<DebugMessenger>> DebugMessenger::create(const Instance& instance) {

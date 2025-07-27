@@ -1,12 +1,11 @@
 #pragma once
 
 #include "common/status/status.h"
+#include "vulkan_wrapper/instance/instance.h"
 
 #include <vulkan/vulkan.h>
 
 #include <memory>
-
-class Instance;
 
 class DebugMessenger {
 	VkDebugUtilsMessengerEXT _debugUtilsMessenger;

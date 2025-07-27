@@ -10,10 +10,7 @@
 #include <span>
 #include <vector>
 
-class DescriptorPool;
-class LogicalDevice;
-class UniformBuffer;
-class Pipeline;
+class DescriptorPool; // DescriptorPool is forward declared to avoid circular dependency
 
 class DescriptorSet {
 	VkDescriptorSet _descriptorSet;

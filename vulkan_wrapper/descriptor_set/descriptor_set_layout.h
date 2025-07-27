@@ -1,12 +1,11 @@
 #pragma once
 
 #include "common/status/status.h"
+#include "vulkan_wrapper/logical_device/logical_device.h"
 
 #include <vulkan/vulkan.h>
 
 #include <span>
-
-class LogicalDevice;
 
 class DescriptorSetLayout {
 	VkDescriptorSetLayout _descriptorSetLayout = VK_NULL_HANDLE;
