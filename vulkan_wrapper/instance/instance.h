@@ -20,5 +20,6 @@ public:
 	static ErrorOr<std::unique_ptr<Instance>> create(std::string_view engineName, std::span<const char* const> requiredExtensions);
 
 	VkInstance getVkInstance() const;
+
 	ErrorOr<lib::Buffer<VkPhysicalDevice>> getAvailablePhysicalDevices() const;
 };

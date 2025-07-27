@@ -25,10 +25,6 @@ std::span<const Attachment::Type> AttachmentLayout::getAttachmentsTypes() const 
 	return _attachmentTypes;
 }
 
-uint32_t AttachmentLayout::getAttachmentsCount() const {
-	return _attachmentTypes.size();
-}
-
 uint32_t AttachmentLayout::getColorAttachmentsCount() const {
 	return std::count(_attachmentTypes.cbegin(), _attachmentTypes.cend(), Attachment::Type::COLOR);
 }

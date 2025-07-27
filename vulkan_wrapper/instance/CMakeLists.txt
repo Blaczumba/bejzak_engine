@@ -1,4 +1,4 @@
-add_library(Instance instance.cpp)
+add_library(Instance instance.h instance.cpp)
 
 target_link_libraries(Instance PUBLIC Vulkan::Vulkan)
 

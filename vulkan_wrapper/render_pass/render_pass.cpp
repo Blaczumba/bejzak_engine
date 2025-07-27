@@ -4,14 +4,14 @@
 
 #include <algorithm>
 #include <iterator>
-#include <stdexcept>
 
 Status Renderpass::Subpass::addOutputAttachment(const AttachmentLayout& layout, uint32_t attachmentBinding) {
-    if (layout.getAttachmentsCount() <= attachmentBinding) {
+	std::span<const Attachment::Type> attachmentTypes = layout.getAttachmentsTypes();
+    if (attachmentTypes.size() <= attachmentBinding) {
         return Error(EngineError::INDEX_OUT_OF_RANGE);
     }
 
-    switch (layout.getAttachmentsTypes()[attachmentBinding]) {
+    switch (attachmentTypes[attachmentBinding]) {
     case Attachment::Type::COLOR:
         _colorAttachmentRefs.emplace_back(attachmentBinding, layout.getVkSubpassLayouts()[attachmentBinding]);
         break;
@@ -28,7 +28,7 @@ Status Renderpass::Subpass::addOutputAttachment(const AttachmentLayout& layout, 
 }
 
 Status Renderpass::Subpass::addInputAttachment(const AttachmentLayout& layout, uint32_t attachmentBinding, VkImageLayout imageLayout) {
-    if (layout.getAttachmentsCount() <= attachmentBinding) {
+    if (layout.getAttachmentsTypes().size() <= attachmentBinding) {
         return Error(EngineError::INDEX_OUT_OF_RANGE);
     }
     _inputAttachmentRefs.emplace_back(attachmentBinding, imageLayout);

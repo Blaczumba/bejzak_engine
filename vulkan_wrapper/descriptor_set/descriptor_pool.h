@@ -1,7 +1,11 @@
 #pragma once
 
+#include "descriptor_set.h"
+#include "descriptor_set_layout.h"
+
 #include "common/status/status.h"
 #include "lib/buffer/buffer.h"
+#include "vulkan_wrapper/logical_device/logical_device.h"
 
 #include <vulkan/vulkan.h>
 
@@ -9,10 +13,6 @@
 #include <stdexcept>
 #include <unordered_map>
 #include <vector>
-
-class LogicalDevice;
-class DescriptorSetLayout;
-class DescriptorSet;
 
 class DescriptorPool : public std::enable_shared_from_this<const DescriptorPool> {
 	VkDescriptorPool _descriptorPool;

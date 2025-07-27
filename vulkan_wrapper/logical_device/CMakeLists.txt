@@ -1,4 +1,4 @@
-add_library(LogicalDevice logical_device.cpp)
+add_library(LogicalDevice logical_device.h logical_device.cpp)
 
 target_link_libraries(LogicalDevice PUBLIC PhysicalDevice PRIVATE MemoryAllocator)
 

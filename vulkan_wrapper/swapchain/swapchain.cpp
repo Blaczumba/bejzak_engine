@@ -11,7 +11,7 @@ namespace {
 
 VkSurfaceFormatKHR chooseSwapSurfaceFormat(std::span<const VkSurfaceFormatKHR> availableFormats, VkFormat preferredFormat);
 VkPresentModeKHR chooseSwapPresentMode(std::span<const VkPresentModeKHR> availablePresentModes, VkPresentModeKHR preferredMode);
-VkExtent2D chooseSwapExtent(VkExtent2D actualWindowExtent, const VkSurfaceCapabilitiesKHR& capabilities);
+VkExtent2D chooseSwapExtent(Extent2D actualWindowExtent, const VkSurfaceCapabilitiesKHR& capabilities);
 
 }   // namespace
 
@@ -62,20 +62,14 @@ const VkImageView Swapchain::getSwapchainVkImageView(size_t index) const {
 
 ErrorOr<std::unique_ptr<Swapchain>> Swapchain::create(const LogicalDevice& logicalDevice, VkSwapchainKHR oldSwapchain) {
     const SwapChainSupportDetails swapChainSupport = logicalDevice.getPhysicalDevice().getSwapchainSupportDetails();
-    const VkDevice device = logicalDevice.getVkDevice();
-    const VkPresentModeKHR presentMode = chooseSwapPresentMode(swapChainSupport.presentModes, VK_PRESENT_MODE_MAILBOX_KHR);
-    const Surface& surface = logicalDevice.getPhysicalDevice().getSurface();
-    const Window& window = surface.getWindow();
-
-    const VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats, VK_FORMAT_B8G8R8A8_SRGB);
-	const Extent2D windowExtent = window.getFramebufferSize();
-    const VkExtent2D extent = chooseSwapExtent({windowExtent.width, windowExtent.height}, swapChainSupport.capabilities);
-
     uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
     if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
         imageCount = swapChainSupport.capabilities.maxImageCount;
     }
 
+    const Surface& surface = logicalDevice.getPhysicalDevice().getSurface();
+    const VkExtent2D extent = chooseSwapExtent(surface.getWindow().getFramebufferSize(), swapChainSupport.capabilities);
+    const VkSurfaceFormatKHR surfaceFormat = chooseSwapSurfaceFormat(swapChainSupport.formats, VK_FORMAT_B8G8R8A8_SRGB);
     VkSwapchainCreateInfoKHR createInfo = {
         .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
         .surface = surface.getVkSurface(),
@@ -100,12 +94,12 @@ ErrorOr<std::unique_ptr<Swapchain>> Swapchain::create(const LogicalDevice& logic
     }
     createInfo.preTransform = swapChainSupport.capabilities.currentTransform;
     createInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    createInfo.presentMode = presentMode;
+    createInfo.presentMode = chooseSwapPresentMode(swapChainSupport.presentModes, VK_PRESENT_MODE_MAILBOX_KHR);
     createInfo.clipped = VK_TRUE;
     createInfo.oldSwapchain = oldSwapchain;
 
     VkSwapchainKHR swapchain;
-    if (VkResult result = vkCreateSwapchainKHR(device, &createInfo, nullptr, &swapchain); result != VK_SUCCESS) {
+    if (VkResult result = vkCreateSwapchainKHR(logicalDevice.getVkDevice(), &createInfo, nullptr, &swapchain); result != VK_SUCCESS) {
         return Error(result);
     }
 
@@ -147,13 +141,14 @@ VkPresentModeKHR chooseSwapPresentMode(std::span<const VkPresentModeKHR> availab
     return (availablePresentMode != std::cend(availablePresentModes)) ? *availablePresentMode : VK_PRESENT_MODE_FIFO_KHR;
 }
 
-VkExtent2D chooseSwapExtent(VkExtent2D actualWindowExtent, const VkSurfaceCapabilitiesKHR& capabilities) {
+VkExtent2D chooseSwapExtent(Extent2D actualWindowExtent, const VkSurfaceCapabilitiesKHR& capabilities) {
     if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
         return capabilities.currentExtent;
     }
-    actualWindowExtent.width = std::clamp(actualWindowExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-    actualWindowExtent.height = std::clamp(actualWindowExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
-    return actualWindowExtent;
+    return {
+        std::clamp(actualWindowExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
+        std::clamp(actualWindowExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height)
+    };
 }
 
 }   // namespace

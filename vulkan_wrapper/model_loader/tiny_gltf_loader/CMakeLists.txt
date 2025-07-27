@@ -1,4 +1,4 @@
-add_library(TinyGLTFLoader tiny_gltf_loader.cpp)
+add_library(TinyGLTFLoader tiny_gltf_loader.h tiny_gltf_loader.cpp)
 
 target_link_libraries(TinyGLTFLoader PUBLIC ModelLoader)
 

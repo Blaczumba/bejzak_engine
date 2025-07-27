@@ -80,9 +80,8 @@ target_link_libraries(${ENGINE_NAME} INTERFACE
         PhysicalDevice MemoryAllocator
         LogicalDevice Renderpass
         Swapchain Buffer CommandBuffer
-        Framebuffer Pipeline OBJLoader
-        TinyGLTFLoader DescriptorSet
-        Scene
+        Framebuffer Pipeline ModelLoader
+        DescriptorSet Scene
 
         CommonCamera CommonECS
         CommonObject CommonPrimitives

@@ -9,9 +9,6 @@
 #include <initializer_list>
 #include <vector>
 
-class CommandPool;
-class Swapchain;
-
 class Framebuffer {
 	VkFramebuffer _framebuffer;
 

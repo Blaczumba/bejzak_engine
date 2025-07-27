@@ -1,6 +1,4 @@
-add_library(MemoryAllocator memory_allocator.cpp memory_allocator.h allocation.h)
-
-# target_link_libraries(MemoryAllocator PUBLIC Texture)
+add_library(MemoryAllocator memory_allocator.h memory_allocator.cpp allocation.h)
 
 target_include_directories(MemoryAllocator PUBLIC ${PROJECT_SOURCE_DIR})
 target_include_directories(MemoryAllocator PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

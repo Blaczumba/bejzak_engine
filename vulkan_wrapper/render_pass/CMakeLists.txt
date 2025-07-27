@@ -1,5 +1,7 @@
-add_library(Renderpass render_pass.cpp attachment_layout.cpp)
-
+add_library(Renderpass
+	render_pass.h render_pass.cpp
+	attachment_layout.h attachment_layout.cpp
+)
 target_link_libraries(Renderpass PUBLIC LogicalDevice)
 target_link_libraries(Renderpass PUBLIC Vulkan::Vulkan)
 

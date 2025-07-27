@@ -8,8 +8,6 @@
 
 #include <memory>
 
-class Window;
-
 class Surface {
 	Surface(VkSurfaceKHR surface, const Instance& instance, const Window& window);
 
@@ -19,7 +17,9 @@ public:
 	~Surface();
 
 	VkSurfaceKHR getVkSurface() const;
+
 	const Instance& getInstance() const;
+
 	const Window& getWindow() const;
 
 private:

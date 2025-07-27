@@ -2,13 +2,12 @@
 
 #include "common/status/status.h"
 #include "lib/buffer/buffer.h"
+#include "vulkan_wrapper/logical_device/logical_device.h"
 
 #include <vulkan/vulkan.h>
 
 #include <memory>
 #include <vector>
-
-class LogicalDevice;
 
 class Swapchain {
 	VkSwapchainKHR _swapchain;

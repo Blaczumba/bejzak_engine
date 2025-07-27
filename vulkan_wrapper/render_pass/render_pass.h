@@ -9,9 +9,6 @@
 #include <span>
 #include <vector>
 
-class CommandPool;
-class LogicalDevice;
-
 class Renderpass {
 	class Subpass {
 		std::vector<VkAttachmentReference> _inputAttachmentRefs;

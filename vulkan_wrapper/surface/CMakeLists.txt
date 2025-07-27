@@ -1,4 +1,4 @@
-add_library(Surface surface.cpp)
+add_library(Surface surface.h surface.cpp)
 
 target_link_libraries(Surface PUBLIC Vulkan::Vulkan Instance)
 target_link_libraries(Surface PUBLIC CommonWindow)

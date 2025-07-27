@@ -1,4 +1,4 @@
-add_library(OBJLoader obj_loader.cpp)
+add_library(OBJLoader obj_loader.h obj_loader.cpp)
 
 target_link_libraries(OBJLoader PRIVATE tinyobjloader)
 target_link_libraries(OBJLoader PUBLIC ModelLoader)

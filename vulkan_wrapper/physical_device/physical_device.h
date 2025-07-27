@@ -8,8 +8,6 @@
 #include <string_view>
 #include <unordered_set>
 
-class LogicalDevice;
-
 struct QueueFamilyIndices {
     std::optional<uint32_t> graphicsFamily;
     std::optional<uint32_t> presentFamily;

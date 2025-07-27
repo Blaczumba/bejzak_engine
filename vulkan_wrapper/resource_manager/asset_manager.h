@@ -6,6 +6,7 @@
 #include "vulkan_wrapper/logical_device/logical_device.h"
 #include "vulkan_wrapper/memory_objects/buffer.h"
 #include "vulkan_wrapper/model_loader/image_loader/image_loader.h"
+#include "vulkan_wrapper/util/index_buffer_util.h"
 
 #include <algorithm>
 #include <future>
@@ -15,23 +16,6 @@
 #include <span>
 #include <unordered_map>
 #include <unordered_set>
-
-namespace {
-
-constexpr VkIndexType getIndexType(uint8_t indexSize) {
-	switch (indexSize) {
-	case 1:
-		return VK_INDEX_TYPE_UINT8_EXT;
-	case 2:
-		return VK_INDEX_TYPE_UINT16;
-	case 4:
-		return VK_INDEX_TYPE_UINT32;
-	default:
-		return VK_INDEX_TYPE_NONE_KHR;
-	}
-}
-
-}
 
 class AssetManager {
 public:

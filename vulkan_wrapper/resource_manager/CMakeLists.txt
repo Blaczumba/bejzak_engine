@@ -1,4 +1,4 @@
-add_library(AssetManager asset_manager.cpp)
+add_library(AssetManager asset_manager.h asset_manager.cpp)
 
 target_link_libraries(AssetManager PUBLIC Vulkan::Vulkan)
 target_link_libraries(AssetManager PUBLIC ImageLoader LogicalDevice Buffer CommonPrimitives)

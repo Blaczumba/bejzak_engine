@@ -1,5 +1,6 @@
 #pragma once
 
+#include "common/util/index_buffer_index.h"
 #include "lib/buffer/shared_buffer.h"
 
 #include <glm/glm.hpp>
@@ -9,15 +10,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-
-enum class IndexType : uint8_t {
-	NONE = 0,
-	UINT8 = 1,
-	UINT16 = 2,
-	UINT32 = 4
-};
-
-IndexType getMatchingIndexType(size_t indicesCount);
 
 template<typename IndexT>
 std::enable_if_t<std::is_unsigned<IndexT>::value, lib::Buffer<uint8_t>> processIndices(std::span<const IndexT> srcIndices, IndexType indexType) {

@@ -1,4 +1,4 @@
-add_library(Swapchain swapchain.cpp)
+add_library(Swapchain swapchain.h swapchain.cpp)
 
 target_link_libraries(Swapchain PUBLIC LogicalDevice)
 

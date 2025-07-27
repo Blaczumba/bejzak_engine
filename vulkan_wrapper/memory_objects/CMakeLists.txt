@@ -1,4 +1,8 @@
-add_library(Buffer buffer.cpp texture.cpp buffers.cpp)
+add_library(Buffer
+	buffer.h buffer.cpp
+	texture.h texture.cpp
+	buffers.cpp buffer_deallocator.h image.h
+)
 target_link_libraries(Buffer PUBLIC Vulkan::Vulkan)
 target_link_libraries(Buffer PUBLIC LogicalDevice CommandBuffer)
 

@@ -24,7 +24,6 @@ public:
 	std::span<const VkImageLayout> getVkSubpassLayouts() const;
 	std::span<const Attachment::Type> getAttachmentsTypes() const;
 
-	uint32_t getAttachmentsCount() const;
 	uint32_t getColorAttachmentsCount() const;
 
 	VkSampleCountFlagBits getNumMsaaSamples() const;

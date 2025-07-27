@@ -8,7 +8,7 @@ set(KTX_SOURCES
     ${KTX_DIR}/lib/filestream.c)
 
 
-add_library(ImageLoader image_loader.cpp ${KTX_SOURCES})
+add_library(ImageLoader image_loader.h image_loader.cpp ${KTX_SOURCES})
 
 target_link_libraries(ImageLoader PUBLIC Vulkan::Vulkan)
 target_link_libraries(ImageLoader PUBLIC LogicalDevice CommandBuffer)

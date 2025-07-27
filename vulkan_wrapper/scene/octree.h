@@ -27,8 +27,11 @@ public:
     };
 
 	OctreeNode(const AABB& volume);
+
 	void addObject(const Object* object, const AABB& volume);
+
     const OctreeNode* getChild(Subvolume subvolume) const;
+
     const AABB& getVolume() const;
 
     const std::vector<const Object*>& getObjects() const;

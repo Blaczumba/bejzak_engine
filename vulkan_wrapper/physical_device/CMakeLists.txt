@@ -1,4 +1,4 @@
-add_library(PhysicalDevice physical_device.cpp)
+add_library(PhysicalDevice physical_device.h physical_device.cpp)
 
 target_link_libraries(PhysicalDevice PUBLIC LogicalDevice Surface)
 

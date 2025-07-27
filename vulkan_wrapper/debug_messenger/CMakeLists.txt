@@ -1,4 +1,4 @@
-add_library(DebugMessenger debug_messenger.cpp debug_messenger_utils.cpp)
+add_library(DebugMessenger debug_messenger.h debug_messenger.cpp debug_messenger_utils.h debug_messenger_utils.cpp)
 
 target_link_libraries(DebugMessenger PUBLIC Instance)
 

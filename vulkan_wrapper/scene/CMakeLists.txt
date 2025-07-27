@@ -1,4 +1,4 @@
-add_library(Scene octree.cpp)
+add_library(Scene octree.h octree.cpp)
 
 target_link_libraries(Scene CommonObject CommonPrimitives)
 
