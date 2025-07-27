@@ -17,6 +17,8 @@ public:
 
 	bool isPressed(Keyboard::Key key) const override;
 
+	glm::vec2 getMousePosition() const override;
+
 	void setKeyboardCallback(Keyboard::Callback callback) const override;
 
 	void setMouseMoveCallback(Mouse::MoveCallback callback) const override;

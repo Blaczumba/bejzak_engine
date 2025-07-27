@@ -1,5 +1,7 @@
 #pragma once
 
+#include <glm/glm.hpp>
+
 #include <cstdint>
 #include <functional>
 
@@ -78,6 +80,8 @@ public:
     virtual ~MouseKeyboardManager() = default;
 
     virtual bool isPressed(Keyboard::Key key) const = 0;
+
+	virtual glm::vec2 getMousePosition() const = 0;
 
     virtual void setKeyboardCallback(Keyboard::Callback callback) const = 0;
 

@@ -56,6 +56,12 @@ bool MouseKeyboardManagerGlfw::isPressed(Keyboard::Key key) const {
     return glfwGetKey(static_cast<GLFWwindow*>(_window->getNativeHandler()), Keyboard::fromKeyToGlfw[static_cast<uint16_t>(key)]) == GLFW_PRESS;
 }
 
+glm::vec2 MouseKeyboardManagerGlfw::getMousePosition() const {
+    double x, y;
+	glfwGetCursorPos(static_cast<GLFWwindow*>(_window->getNativeHandler()), &x, &y);
+    return glm::vec2{ x, y };
+}
+
 void MouseKeyboardManagerGlfw::setKeyboardCallback(Keyboard::Callback callback) const {
     static Keyboard::Callback keyCallback = callback;
     glfwSetKeyCallback(static_cast<GLFWwindow*>(_window->getNativeHandler()), [](GLFWwindow* win, int key, int scancode, int action, int mods) {
