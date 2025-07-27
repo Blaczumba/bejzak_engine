@@ -1,7 +1,7 @@
 #pragma once
 
+#include "common/object/object.h"
 #include "common/util/geometry.h"
-#include "vulkan_wrapper/object/object.h"
 
 #include <array>
 #include <memory>

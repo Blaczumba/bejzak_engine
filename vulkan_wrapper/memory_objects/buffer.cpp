@@ -1,6 +1,5 @@
 #include "buffer.h"
 
-#include "lib/macros/status_macros.h"
 #include "vulkan_wrapper/memory_objects/buffers.h"
 #include "common/util/vertex_builder.h"
 

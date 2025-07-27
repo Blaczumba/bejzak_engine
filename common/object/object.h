@@ -1,6 +1,5 @@
 #pragma once
 
-#include "vulkan_wrapper/descriptor_set/descriptor_set.h"
 #include "common/entity_component_system/entity/entity.h"
 #include "common/util/geometry.h"
 

@@ -75,15 +75,17 @@ endif()
 
 add_library(${ENGINE_NAME} INTERFACE)
 target_link_libraries(${ENGINE_NAME} INTERFACE
-        Instance
+        Instance AssetManager
         Surface DebugMessenger
         PhysicalDevice MemoryAllocator
         LogicalDevice Renderpass
         Swapchain Buffer CommandBuffer
         Framebuffer Pipeline OBJLoader
         TinyGLTFLoader DescriptorSet
+        Scene
+
         CommonCamera CommonECS
-        Object CommonPrimitives AssetManager
+        CommonObject CommonPrimitives
 )
 
 if (ANDROID)

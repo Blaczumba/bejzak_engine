@@ -1,7 +1,6 @@
 #include "shader_program.h"
 
 #include "vulkan_wrapper/descriptor_set/descriptor_set_layout.h"
-#include "lib/macros/status_macros.h"
 #include "vulkan_wrapper/logical_device/logical_device.h"
 #include "vulkan_wrapper/pipeline/input_description.h"
 #include "common/util/primitives.h"

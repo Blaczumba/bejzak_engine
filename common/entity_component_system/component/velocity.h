@@ -12,5 +12,5 @@ class VelocityComponent {
 public:
 	float dx, dy;
 
-	static constexpr std::enable_if_t < componentID < MAX_COMPONENTS, ComponentType> getComponentID() { return componentID; }
+	static constexpr std::enable_if_t<componentID < MAX_COMPONENTS, ComponentType> getComponentID() { return componentID; }
 };

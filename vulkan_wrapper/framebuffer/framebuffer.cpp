@@ -2,7 +2,6 @@
 
 #include "vulkan_wrapper/command_buffer/command_buffer.h"
 #include "lib/buffer/buffer.h"
-#include "lib/macros/status_macros.h"
 #include "vulkan_wrapper/logical_device/logical_device.h"
 #include "vulkan_wrapper/swapchain/swapchain.h"
 

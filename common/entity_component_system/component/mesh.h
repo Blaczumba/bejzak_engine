@@ -2,11 +2,10 @@
 
 #include "common/entity_component_system/entity/entity.h"
 #include "common/util/geometry.h"
-#include "vulkan_wrapper/memory_objects/buffer.h"
 
 #include <memory>
 
-class Buffer;
+class Buffer;	// TODO: do not use vulkan specifi things in this directory
 
 class MeshComponent {
 	static constexpr ComponentType componentID = 2;
