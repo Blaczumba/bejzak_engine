@@ -1,4 +1,4 @@
-add_library(CommonCamera camera.h fps_camera.h fps_camera.cpp)
+add_library(CommonCamera camera.h fps_camera.h fps_camera.cpp "projection.h"  "orthographic_projection.h" "perspective_projection.h" "orthographic_projection.cpp" "perspective_projection.cpp")
 
 target_link_libraries(CommonCamera PUBLIC CommonWindow)
 

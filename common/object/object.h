@@ -3,11 +3,10 @@
 #include "common/entity_component_system/entity/entity.h"
 #include "common/util/geometry.h"
 
-#include <algorithm>
-#include <memory>
-#include <string_view>
-
 #include <glm/glm.hpp>
+
+#include <string_view>
+#include <vector>
 
 class Object {
     Entity _entity;
