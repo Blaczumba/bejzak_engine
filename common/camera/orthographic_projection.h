@@ -5,7 +5,9 @@
 class OrthographicProjection : public Projection {
 public:
     OrthographicProjection(float left, float right, float bottom, float top, float nearZ, float farZ);
+
     void updateMatrix() override;
+
     const glm::mat4& getMatrix() const override;
 
     void setBounds(float left, float right, float bottom, float top);
