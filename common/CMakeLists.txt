@@ -1,3 +1,5 @@
 add_subdirectory(input_manager)
 add_subdirectory(window)
 add_subdirectory(camera)
+add_subdirectory(entity_component_system)
+add_subdirectory(util)

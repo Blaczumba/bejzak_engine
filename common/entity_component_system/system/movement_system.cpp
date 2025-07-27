@@ -1,7 +1,7 @@
 #include "movement_system.h"
 
-#include "vulkan_wrapper/entity_component_system/component/position.h"
-#include "vulkan_wrapper/entity_component_system/component/velocity.h"
+#include "common/entity_component_system/component/position.h"
+#include "common/entity_component_system/component/velocity.h"
 
 #include <chrono>
 #include <iostream>

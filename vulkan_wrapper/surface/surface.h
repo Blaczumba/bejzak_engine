@@ -1,7 +1,7 @@
 #pragma once
 
+#include "common/status/status.h"
 #include "vulkan_wrapper/instance/instance.h"
-#include "vulkan_wrapper/status/status.h"
 #include "common/window/window.h"
 
 #include "vulkan/vulkan.h"

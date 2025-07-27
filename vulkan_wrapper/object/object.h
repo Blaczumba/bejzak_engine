@@ -1,8 +1,8 @@
 #pragma once
 
 #include "vulkan_wrapper/descriptor_set/descriptor_set.h"
-#include "vulkan_wrapper/entity_component_system/entity/entity.h"
-#include "vulkan_wrapper/primitives/geometry.h"
+#include "common/entity_component_system/entity/entity.h"
+#include "common/util/geometry.h"
 
 #include <algorithm>
 #include <memory>

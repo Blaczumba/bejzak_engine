@@ -1,7 +1,7 @@
 #pragma once
 
+#include "common/status/status.h"
 #include "vulkan_wrapper/memory_allocator/memory_allocator.h"
-#include "vulkan_wrapper/status/status.h"
 
 #include <vulkan/vulkan.h>
 

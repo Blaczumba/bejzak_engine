@@ -5,7 +5,7 @@
 #include "lib/buffer/buffer.h"
 #include "vulkan_wrapper/logical_device/logical_device.h"
 #include "vulkan_wrapper/pipeline/pipeline.h"
-#include "vulkan_wrapper/status/status.h"
+#include "common/status/status.h"
 
 #include <algorithm>
 #include <array>

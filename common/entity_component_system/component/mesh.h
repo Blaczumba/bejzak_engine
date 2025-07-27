@@ -1,11 +1,12 @@
 #pragma once
 
-#include "vulkan_wrapper/descriptor_set/bindless_descriptor_set_writer.h"
-#include "vulkan_wrapper/entity_component_system/entity/entity.h"
+#include "common/entity_component_system/entity/entity.h"
+#include "common/util/geometry.h"
 #include "vulkan_wrapper/memory_objects/buffer.h"
-#include "vulkan_wrapper/primitives/geometry.h"
 
 #include <memory>
+
+class Buffer;
 
 class MeshComponent {
 	static constexpr ComponentType componentID = 2;

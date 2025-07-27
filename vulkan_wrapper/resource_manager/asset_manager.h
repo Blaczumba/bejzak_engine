@@ -1,11 +1,11 @@
 #pragma once
 
+#include "common/status/status.h"
+#include "common/util/geometry.h"
+#include "common/util/primitives.h"
 #include "vulkan_wrapper/logical_device/logical_device.h"
 #include "vulkan_wrapper/memory_objects/buffer.h"
 #include "vulkan_wrapper/model_loader/image_loader/image_loader.h"
-#include "vulkan_wrapper/primitives/geometry.h"
-#include "vulkan_wrapper/primitives/primitives.h"
-#include "vulkan_wrapper/status/status.h"
 
 #include <algorithm>
 #include <future>

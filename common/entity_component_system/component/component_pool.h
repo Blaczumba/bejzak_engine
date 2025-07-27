@@ -1,6 +1,6 @@
 #pragma once
 
-#include "vulkan_wrapper/entity_component_system/entity/entity.h"
+#include "common/entity_component_system/entity/entity.h"
 
 #include <array>
 #include <optional>

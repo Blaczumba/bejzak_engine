@@ -1,6 +1,6 @@
 #include "vertex_builder.h"
 
-#include "vulkan_wrapper/status/status.h"
+#include "common/status/status.h"
 
 // Function to build interleaved vertex data for position and texture coordinates
 ErrorOr<lib::Buffer<VertexPT>> buildInterleavingVertexData(std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords) {

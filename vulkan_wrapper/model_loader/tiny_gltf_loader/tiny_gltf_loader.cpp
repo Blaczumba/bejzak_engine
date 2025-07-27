@@ -2,8 +2,8 @@
 
 #include "lib/buffer/shared_buffer.h"
 #include "vulkan_wrapper/model_loader/model_loader.h"
-#include "vulkan_wrapper/primitives/primitives.h"
-#include "vulkan_wrapper/status/status.h"
+#include "common/util/primitives.h"
+#include "common/status/status.h"
 
 #define TINYGLTF_IMPLEMENTATION
 #define TINYGLTF_NO_EXTERNAL_IMAGE

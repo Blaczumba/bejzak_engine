@@ -1,7 +1,7 @@
 #pragma once
 
+#include "common/status/status.h"
 #include "vulkan_wrapper/model_loader/model_loader.h"
-#include "vulkan_wrapper/status/status.h"
 
 #include <string>
 #include <string_view>

@@ -2,7 +2,7 @@
 
 #include "lib/buffer/buffer.h"
 #include "vulkan_wrapper/render_pass/render_pass.h"
-#include "vulkan_wrapper/status/status.h"
+#include "common/status/status.h"
 
 #include <vulkan/vulkan.h>
 

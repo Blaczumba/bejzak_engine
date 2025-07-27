@@ -1,7 +1,7 @@
 #pragma once
 
 #include "lib/buffer/buffer.h"
-#include "vulkan_wrapper/status/status.h"
+#include "common/status/status.h"
 #include "primitives.h"
 
 #include <string_view>

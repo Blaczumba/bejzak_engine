@@ -1,5 +1,5 @@
 #pragma once
-#include "vulkan_wrapper/primitives/primitives.h"
+#include "common/util/primitives.h"
 
 #include <vulkan/vulkan.h>
 

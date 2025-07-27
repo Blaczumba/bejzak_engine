@@ -1,7 +1,7 @@
 #pragma once
 
+#include "common/status/status.h"
 #include "vulkan_wrapper/memory_objects/image.h"
-#include "vulkan_wrapper/status/status.h"
 
 #include <ktx.h>
 #include <stb_image/stb_image.h>

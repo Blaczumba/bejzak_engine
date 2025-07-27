@@ -2,7 +2,7 @@
 
 #include "lib/macros/status_macros.h"
 #include "vulkan_wrapper/memory_objects/buffers.h"
-#include "vulkan_wrapper/primitives/vertex_builder.h"
+#include "common/util/vertex_builder.h"
 
 #include <glm/glm.hpp>
 

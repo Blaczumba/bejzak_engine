@@ -1,8 +1,8 @@
 #pragma once
 
-#include "vulkan_wrapper/descriptor_set/descriptor_set_layout.h"
+#include "common/status/status.h"
 #include "lib/buffer/buffer.h"
-#include "vulkan_wrapper/status/status.h"
+#include "vulkan_wrapper/descriptor_set/descriptor_set_layout.h"
 
 #include <vulkan/vulkan.h>
 

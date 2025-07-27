@@ -1,7 +1,7 @@
 #pragma once
 
-#include "vulkan_wrapper/entity_component_system/component/component_pool.h"
-#include "vulkan_wrapper/entity_component_system/entity/entity_manager.h"
+#include "common/entity_component_system/component/component_pool.h"
+#include "common/entity_component_system/entity/entity_manager.h"
 
 #include <array>
 #include <bitset>

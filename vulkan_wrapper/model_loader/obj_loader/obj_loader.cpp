@@ -1,7 +1,8 @@
 #include "obj_loader.h"
+
+#include "common/util/primitives.h"
 #include "lib/buffer/shared_buffer.h"
 #include "vulkan_wrapper/model_loader/model_loader.h"
-#include "vulkan_wrapper/primitives/primitives.h"
 
 #include <tinyobjloader/tiny_obj_loader.h>
 

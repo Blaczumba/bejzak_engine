@@ -1,8 +1,8 @@
 #pragma once
 
+#include "common/status/status.h"
 #include "vulkan_wrapper/logical_device/logical_device.h"
 #include "vulkan_wrapper/framebuffer/framebuffer.h"
-#include "vulkan_wrapper/status/status.h"
 
 #include <vulkan/vulkan.h>
 

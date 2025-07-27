@@ -4,7 +4,7 @@
 #include "lib/macros/status_macros.h"
 #include "vulkan_wrapper/logical_device/logical_device.h"
 #include "vulkan_wrapper/pipeline/input_description.h"
-#include "vulkan_wrapper/primitives/primitives.h"
+#include "common/util/primitives.h"
 
 #include <algorithm>
 #include <iterator>
