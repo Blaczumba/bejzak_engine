@@ -63,6 +63,9 @@ elseif(UNIX)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -DNDEBUG")
 endif()
 
+include_directories(${PROJECT_SOURCE_DIR}/external/glm)
+include_directories(${PROJECT_SOURCE_DIR}/external/)
+
 add_subdirectory(lib)
 add_subdirectory(common)
 
@@ -79,7 +82,7 @@ target_link_libraries(${ENGINE_NAME} INTERFACE
         Swapchain Buffer CommandBuffer
         Framebuffer Pipeline OBJLoader
         TinyGLTFLoader DescriptorSet
-        Camera Entity
+        CommonCamera Entity
         ComponentSystem ECSRegistry
         Object Primitives AssetManager
 )

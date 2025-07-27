@@ -9,7 +9,6 @@
 #include <vulkan/vulkan.h>
 
 #include <cstdint>
-#include <numeric>
 #include <vector>
 #include <unordered_map>
 #include <unordered_set>
