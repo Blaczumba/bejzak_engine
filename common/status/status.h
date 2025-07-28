@@ -18,6 +18,7 @@ enum class EngineError : uint32_t {
     FLAG_NOT_SPECIFIED
 };
 
+// Holds either an integer error code (VkResult, HRESULT) or an EngineError.
 using ErrorType = std::variant<int, EngineError>;
 
 template<typename T>

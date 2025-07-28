@@ -2,6 +2,8 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
+#include <algorithm>
+
 Camera::Camera(const std::shared_ptr<Projection>& projection, glm::vec3 position, float moveSpeed, float mouseSensitivity)
 	: _projection(projection), _position(position), _mouseXPos(0.0f), _mouseYPos(0.0f),
     _moveSpeed(moveSpeed), _mouseSensitivity(mouseSensitivity),
@@ -55,7 +57,7 @@ void Camera::updateFromKeyboard(const MouseKeyboardManager& mouseKeyboardManager
 	const glm::vec2 mousePos = mouseKeyboardManager.getMousePosition();
     _yaw += (mousePos.x - _mouseXPos) * _mouseSensitivity;
     _pitch -= (mousePos.y - _mouseYPos) * _mouseSensitivity;
-    _pitch = std::fmaxf(std::fminf(_pitch, glm::half_pi<float>() - glm::epsilon<float>()), -glm::half_pi<float>() + glm::epsilon<float>()); // constrain pitch
+	_pitch = std::clamp(_pitch, -glm::half_pi<float>() + glm::epsilon<float>(), glm::half_pi<float>() - glm::epsilon<float>()); // constrain pitch
     rotate(_yaw, _pitch);
 
 	_mouseXPos = mousePos.x;
