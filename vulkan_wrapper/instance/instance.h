@@ -12,12 +12,13 @@
 class Instance {
 	VkInstance _instance;
 
-	Instance(VkInstance instance);
-
+    Instance(VkInstance instance);
 public:
 	~Instance();
 
 	static ErrorOr<std::unique_ptr<Instance>> create(std::string_view engineName, std::span<const char* const> requiredExtensions);
+
+    static ErrorOr<std::unique_ptr<Instance>> createFromInitialized(VkInstance instance);
 
 	VkInstance getVkInstance() const;
 

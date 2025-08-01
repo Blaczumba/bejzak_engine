@@ -85,6 +85,13 @@ ErrorOr<std::unique_ptr<Instance>> Instance::create(std::string_view engineName,
     return std::unique_ptr<Instance>(new Instance(instance));
 }
 
+ErrorOr<std::unique_ptr<Instance>> Instance::createFromInitialized(VkInstance instance) {
+    if (instance != VK_NULL_HANDLE) {
+        return std::unique_ptr<Instance>(new Instance(instance));
+    }
+    return Error(EngineError::NULLPTR_REFERENCE);
+}
+
 VkInstance Instance::getVkInstance() const {
     return _instance;
 }

@@ -10,7 +10,7 @@
 #include <span>
 #include <string_view>
 
-namespace oxr {
+namespace xrw {
 
 struct AndroidData {
   void *application_vm;
@@ -29,4 +29,4 @@ class AndroidPlatform : public Platform {
   XrInstanceCreateInfoAndroidKHR _instance_create_info_android;
 };
 
-} // oxr
+} // xrw

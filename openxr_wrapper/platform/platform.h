@@ -5,7 +5,7 @@
 #include <span>
 #include <string_view>
 
-namespace oxr {
+namespace xrw {
 
 class Platform {
  public:
@@ -16,4 +16,4 @@ class Platform {
   virtual ~Platform() = default;
 };
 
-} // oxr
+} // xrw
