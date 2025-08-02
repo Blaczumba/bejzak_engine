@@ -10,10 +10,11 @@ namespace lib {
 template<typename T>
 class Buffer {
 	std::unique_ptr<T[]> _buffer;
-	size_t _size;
+	size_t _size = 0;
 
 public:
-	Buffer() : _size(0) {}
+    Buffer() = default;
+
 	explicit Buffer(size_t size) : _buffer(std::make_unique_for_overwrite<T[]>(size)), _size(size) {}
 
 	Buffer(const Buffer& other) : Buffer(other._size) {
@@ -85,15 +86,19 @@ public:
     }
 
     const T* data() const { return _buffer.get(); }
+
     T* data() { return _buffer.get(); }
 
     const T* begin() const { return _buffer.get(); }
+
     T* begin() { return _buffer.get(); }
 
     const T* end() const { return std::next(_buffer.get(), _size); }
+
     T* end() { return std::next(_buffer.get(), _size); }
 
     const T* cbegin() const { return _buffer.get(); }
+
     const T* cend() const { return std::next(_buffer.get(), _size); }
 
 	size_t size() const { return _size; }

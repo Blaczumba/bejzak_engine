@@ -4,23 +4,39 @@
 #include "common/window/window_glfw.h"
 #endif
 
-Surface::Surface(VkSurfaceKHR surface, const Instance& instance, const Window& window) : _surface(surface), _instance(instance), _window(window) {}
+Surface::Surface(VkSurfaceKHR surface, const Instance& instance, const Window& window) : _surface(surface), _instance(&instance), _window(&window) {}
 
-ErrorOr<std::unique_ptr<Surface>> Surface::create(const Instance& instance, Window* window) {
+ErrorOr<Surface> Surface::create(const Instance& instance, const Window& window) {
 #if (defined(WIN32) || defined(__unix__)) && !defined(ANDROID)
-	if (dynamic_cast<WindowGlfw*>(window) != nullptr) {
+	if (dynamic_cast<const WindowGlfw*>(&window) != nullptr) {
 		VkSurfaceKHR surface;
-		if (VkResult result = glfwCreateWindowSurface(instance.getVkInstance(), static_cast<GLFWwindow*>(window->getNativeHandler()), nullptr, &surface); result != VK_SUCCESS) {
+		if (VkResult result = glfwCreateWindowSurface(instance.getVkInstance(), static_cast<GLFWwindow*>(window.getNativeHandler()), nullptr, &surface); result != VK_SUCCESS) {
 			return Error(result);
 		}
-		return std::unique_ptr<Surface>(new Surface(surface, instance, *window));
+		return Surface(surface, instance, window);
 	}
 #endif
 	return Error(EngineError::NOT_RECOGNIZED_TYPE);
 }
 
+Surface::Surface(Surface&& other) noexcept
+	: _surface(std::exchange(other._surface, VK_NULL_HANDLE)),
+	_instance(std::exchange(other._instance, nullptr)), _window(std::exchange(other._window, nullptr)) { }
+
+Surface& Surface::operator=(Surface&& other) noexcept {
+	if (this == &other) {
+		return *this;
+	}
+	_surface = std::exchange(other._surface, VK_NULL_HANDLE);
+	_instance = std::exchange(other._instance, nullptr);
+	_window = std::exchange(other._window, nullptr);
+	return *this;
+}
+
 Surface::~Surface() {
-	vkDestroySurfaceKHR(_instance.getVkInstance(), _surface, nullptr);
+	if (_surface != VK_NULL_HANDLE) {
+		vkDestroySurfaceKHR(_instance->getVkInstance(), _surface, nullptr);
+	}
 }
 
 VkSurfaceKHR Surface::getVkSurface() const {
@@ -28,9 +44,9 @@ VkSurfaceKHR Surface::getVkSurface() const {
 }
 
 const Instance& Surface::getInstance() const {
-	return _instance;
+	return *_instance;
 }
 
 const Window& Surface::getWindow() const {
-	return _window;
+	return *_window;
 }

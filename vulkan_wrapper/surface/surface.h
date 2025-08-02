@@ -12,7 +12,13 @@ class Surface {
 	Surface(VkSurfaceKHR surface, const Instance& instance, const Window& window);
 
 public:
-	static ErrorOr<std::unique_ptr<Surface>> create(const Instance& instance, Window* window);
+	Surface() = default;
+
+	static ErrorOr<Surface> create(const Instance& instance, const Window& window);
+
+	Surface(Surface&& other) noexcept;
+
+	Surface& operator=(Surface&& other) noexcept;
 
 	~Surface();
 
@@ -23,10 +29,7 @@ public:
 	const Window& getWindow() const;
 
 private:
-	VkSurfaceKHR _surface;
-	const Instance& _instance;
-	const Window& _window;
-
-	// TODO remove
-	friend class WindowGlfw;
+	VkSurfaceKHR _surface = VK_NULL_HANDLE;
+	const Instance* _instance = nullptr;
+	const Window* _window = nullptr;
 };

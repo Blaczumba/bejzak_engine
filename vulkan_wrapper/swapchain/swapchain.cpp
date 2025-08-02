@@ -22,16 +22,27 @@ Swapchain::Swapchain(const VkSwapchainKHR swapchain, const LogicalDevice& logica
 }
 
 Swapchain::Swapchain(Swapchain&& swapchain) noexcept
-    : _swapchain(std::exchange(swapchain._swapchain, VK_NULL_HANDLE)), _logicalDevice(swapchain._logicalDevice),
-    _surfaceFormat(swapchain._surfaceFormat), _extent(swapchain._extent), _images(std::move(swapchain._images)),
-    _views(std::move(swapchain._views)) { }
+    : _swapchain(std::exchange(swapchain._swapchain, VK_NULL_HANDLE)),
+    _logicalDevice(std::exchange(swapchain._logicalDevice, nullptr)),
+    _surfaceFormat(swapchain._surfaceFormat), _extent(swapchain._extent),
+    _images(std::move(swapchain._images)), _views(std::move(swapchain._views)) { }
+
+void Swapchain::tryDestroySwapchain() {
+    for (const VkImageView view : _views) {
+        vkDestroyImageView(_logicalDevice->getVkDevice(), view, nullptr);
+    }
+    if (_swapchain != VK_NULL_HANDLE) {
+        vkDestroySwapchainKHR(_logicalDevice->getVkDevice(), _swapchain, nullptr);
+    }
+}
 
 Swapchain& Swapchain::operator=(Swapchain&& other) noexcept {
     if (this == &other) {
         return *this;
     }
+	tryDestroySwapchain();
     _swapchain = std::exchange(other._swapchain, VK_NULL_HANDLE);
-    _logicalDevice = other._logicalDevice;
+    _logicalDevice = std::exchange(other._logicalDevice, nullptr);
     _surfaceFormat = other._surfaceFormat;
     _extent = other._extent;
     _images = std::move(other._images);
@@ -40,13 +51,7 @@ Swapchain& Swapchain::operator=(Swapchain&& other) noexcept {
 }
 
 Swapchain::~Swapchain() {
-    const VkDevice device = _logicalDevice->getVkDevice();
-    for (const VkImageView view : _views) {
-        vkDestroyImageView(device, view, nullptr);
-    }
-    if (_swapchain != VK_NULL_HANDLE) {
-        vkDestroySwapchainKHR(device, _swapchain, nullptr);
-	}
+    tryDestroySwapchain();
 }
 
 const VkSwapchainKHR Swapchain::getVkSwapchain() const {
