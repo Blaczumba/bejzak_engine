@@ -8,7 +8,7 @@
 #include <span>
 
 Swapchain::Swapchain(const VkSwapchainKHR swapchain, const LogicalDevice& logicalDevice, VkSurfaceFormatKHR surfaceFormat, VkExtent2D extent, uint32_t imageCount)
-	: _swapchain(swapchain), _logicalDevice(logicalDevice), _surfaceFormat(surfaceFormat), _extent(extent), _images(imageCount), _views(imageCount) {
+	: _swapchain(swapchain), _logicalDevice(&logicalDevice), _surfaceFormat(surfaceFormat), _extent(extent), _images(imageCount), _views(imageCount) {
     vkGetSwapchainImagesKHR(logicalDevice.getVkDevice(), swapchain, &imageCount, _images.data());
     std::transform(_images.cbegin(), _images.cend(), _views.begin(),
         [&](const VkImage image) {
@@ -21,12 +21,32 @@ Swapchain::Swapchain(const VkSwapchainKHR swapchain, const LogicalDevice& logica
         });
 }
 
+Swapchain::Swapchain(Swapchain&& swapchain) noexcept
+    : _swapchain(std::exchange(swapchain._swapchain, VK_NULL_HANDLE)), _logicalDevice(swapchain._logicalDevice),
+    _surfaceFormat(swapchain._surfaceFormat), _extent(swapchain._extent), _images(std::move(swapchain._images)),
+    _views(std::move(swapchain._views)) { }
+
+Swapchain& Swapchain::operator=(Swapchain&& other) noexcept {
+    if (this == &other) {
+        return *this;
+    }
+    _swapchain = std::exchange(other._swapchain, VK_NULL_HANDLE);
+    _logicalDevice = other._logicalDevice;
+    _surfaceFormat = other._surfaceFormat;
+    _extent = other._extent;
+    _images = std::move(other._images);
+    _views = std::move(other._views);
+	return *this;
+}
+
 Swapchain::~Swapchain() {
-    const VkDevice device = _logicalDevice.getVkDevice();
+    const VkDevice device = _logicalDevice->getVkDevice();
     for (const VkImageView view : _views) {
         vkDestroyImageView(device, view, nullptr);
     }
-    vkDestroySwapchainKHR(device, _swapchain, nullptr);
+    if (_swapchain != VK_NULL_HANDLE) {
+        vkDestroySwapchainKHR(device, _swapchain, nullptr);
+	}
 }
 
 const VkSwapchainKHR Swapchain::getVkSwapchain() const {
@@ -53,7 +73,7 @@ const VkImageView Swapchain::getSwapchainVkImageView(size_t index) const {
 }
 
 VkResult Swapchain::acquireNextImage(VkSemaphore presentCompleteSemaphore, uint32_t* imageIndex) const {
-    return vkAcquireNextImageKHR(_logicalDevice.getVkDevice(), _swapchain, UINT64_MAX, presentCompleteSemaphore, nullptr, imageIndex);
+    return vkAcquireNextImageKHR(_logicalDevice->getVkDevice(), _swapchain, UINT64_MAX, presentCompleteSemaphore, nullptr, imageIndex);
 }
 
 VkResult Swapchain::present(uint32_t imageIndex, VkSemaphore waitSemaphore) const {
@@ -66,7 +86,7 @@ VkResult Swapchain::present(uint32_t imageIndex, VkSemaphore waitSemaphore) cons
         .pImageIndices = &imageIndex,
     };
 
-    return vkQueuePresentKHR(_logicalDevice.getPresentVkQueue(), &presentInfo);
+    return vkQueuePresentKHR(_logicalDevice->getPresentVkQueue(), &presentInfo);
 }
 
 SwapchainBuilder& SwapchainBuilder::withOldSwapchain(VkSwapchainKHR oldSwapchain) {
@@ -120,7 +140,7 @@ namespace {
 
 }   // namespace
 
-ErrorOr<std::unique_ptr<Swapchain>> SwapchainBuilder::build(const LogicalDevice& logicalDevice, VkExtent2D extent) {
+ErrorOr<Swapchain> SwapchainBuilder::build(const LogicalDevice& logicalDevice, VkExtent2D extent) {
     const SwapChainSupportDetails swapChainSupport = logicalDevice.getPhysicalDevice().getSwapchainSupportDetails();
     uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
     if (swapChainSupport.capabilities.maxImageCount > 0 && imageCount > swapChainSupport.capabilities.maxImageCount) {
@@ -161,5 +181,5 @@ ErrorOr<std::unique_ptr<Swapchain>> SwapchainBuilder::build(const LogicalDevice&
         vkDestroySwapchainKHR(logicalDevice.getVkDevice(), swapchain, nullptr);
         return Error(result);
 	}
-    return std::make_unique<Swapchain>(swapchain, logicalDevice, surfaceFormat, extent, imageCount);
+    return Swapchain(swapchain, logicalDevice, surfaceFormat, extent, imageCount);
 }

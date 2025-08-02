@@ -6,13 +6,12 @@
 
 #include <vulkan/vulkan.h>
 
-#include <memory>
 #include <optional>
 #include <vector>
 
 class Swapchain {
-	VkSwapchainKHR _swapchain;
-	const LogicalDevice& _logicalDevice;
+	VkSwapchainKHR _swapchain = VK_NULL_HANDLE;
+	const LogicalDevice* _logicalDevice = nullptr;
 
 	VkSurfaceFormatKHR _surfaceFormat;
 	VkExtent2D _extent;
@@ -20,7 +19,13 @@ class Swapchain {
 	lib::Buffer<VkImageView> _views;
 
 public:
+	Swapchain() = default;
+
 	Swapchain(VkSwapchainKHR swapchain, const LogicalDevice& logicalDevice, VkSurfaceFormatKHR format, VkExtent2D extent, uint32_t imageCount);
+
+	Swapchain(Swapchain&& other) noexcept;
+
+	Swapchain& operator=(Swapchain&& other) noexcept;
 
 	~Swapchain();
 
@@ -54,5 +59,5 @@ public:
 	SwapchainBuilder& withImageArrayLayers(uint32_t layers);
 	SwapchainBuilder& withCompositeAlpha(VkCompositeAlphaFlagBitsKHR compositeAlpha);
 	SwapchainBuilder& withClipped(VkBool32 clipped);
-	ErrorOr<std::unique_ptr<Swapchain>> build(const LogicalDevice& logicalDevice, VkExtent2D extent);
+	ErrorOr<Swapchain> build(const LogicalDevice& logicalDevice, VkExtent2D extent);
 };
