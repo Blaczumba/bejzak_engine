@@ -7,6 +7,7 @@
 #include <vulkan/vulkan.h>
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 class Swapchain {
@@ -18,11 +19,8 @@ class Swapchain {
 	lib::Buffer<VkImage> _images;
 	lib::Buffer<VkImageView> _views;
 
-	Swapchain(const VkSwapchainKHR swapchain, const LogicalDevice& logicalDevice, VkSurfaceFormatKHR format, VkExtent2D extent, uint32_t imageCount);
-
 public:
-	// If we want to recreate the swapchain use this factory method and pass an old (currently existing) swapchain.
-	static ErrorOr<std::unique_ptr<Swapchain>> create(const LogicalDevice& logicalDevice, VkSwapchainKHR oldSwapchain = nullptr);
+	Swapchain(VkSwapchainKHR swapchain, const LogicalDevice& logicalDevice, VkSurfaceFormatKHR format, VkExtent2D extent, uint32_t imageCount);
 
 	~Swapchain();
 
@@ -39,4 +37,22 @@ public:
 	VkResult acquireNextImage(VkSemaphore presentCompleteSemaphore, uint32_t* imageIndex) const;
 
 	VkResult present(uint32_t imageIndex, VkSemaphore waitSemaphore) const;
+};
+
+class SwapchainBuilder {
+	VkSwapchainKHR _oldSwapchain = nullptr;
+	VkFormat _preferredFormat = VK_FORMAT_B8G8R8A8_SRGB;
+	VkPresentModeKHR _preferredPresentMode = VK_PRESENT_MODE_FIFO_KHR;
+	uint32_t imageArrayLayers = 1;
+	VkCompositeAlphaFlagBitsKHR _compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+	VkBool32 _clipped = VK_TRUE;
+
+public:
+	SwapchainBuilder& withOldSwapchain(VkSwapchainKHR oldSwapchain);
+	SwapchainBuilder& withPreferredFormat(VkFormat format);
+	SwapchainBuilder& withPreferredPresentMode(VkPresentModeKHR presentMode);
+	SwapchainBuilder& withImageArrayLayers(uint32_t layers);
+	SwapchainBuilder& withCompositeAlpha(VkCompositeAlphaFlagBitsKHR compositeAlpha);
+	SwapchainBuilder& withClipped(VkBool32 clipped);
+	ErrorOr<std::unique_ptr<Swapchain>> build(const LogicalDevice& logicalDevice, VkExtent2D extent);
 };
