@@ -17,9 +17,7 @@ Texture::Texture(const LogicalDevice& logicalDevice, Texture::Type type, VkImage
 
 }
 
-Texture::Texture() : _image(VK_NULL_HANDLE), _view(VK_NULL_HANDLE), _sampler(VK_NULL_HANDLE) {
-
-}
+Texture::Texture() : _image(VK_NULL_HANDLE), _view(VK_NULL_HANDLE), _sampler(VK_NULL_HANDLE) {}
 
 Texture::Texture(Texture&& texture) noexcept
     : _type(texture._type), _allocation(texture._allocation), _image(std::exchange(texture._image, VK_NULL_HANDLE)), 

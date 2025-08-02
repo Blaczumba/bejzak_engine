@@ -238,9 +238,7 @@ SingleTimeCommandBuffer::SingleTimeCommandBuffer(const CommandPool& commandPool,
         .sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO
     };
 
-    if (vkCreateFence(device, &fenceInfo, nullptr, &_fence) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create SingleTimeCommandBuffer fence!");
-    }
+    vkCreateFence(device, &fenceInfo, nullptr, &_fence);
 
     const VkCommandBufferAllocateInfo allocInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -249,9 +247,7 @@ SingleTimeCommandBuffer::SingleTimeCommandBuffer(const CommandPool& commandPool,
         .commandBufferCount = 1
     };
 
-    if (vkAllocateCommandBuffers(device, &allocInfo, &_commandBuffer) != VK_SUCCESS) {
-        throw std::runtime_error("failed to allocate command buffers!");
-    }
+    vkAllocateCommandBuffers(device, &allocInfo, &_commandBuffer);
 
     const VkCommandBufferBeginInfo beginInfo = {
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -264,7 +260,6 @@ SingleTimeCommandBuffer::SingleTimeCommandBuffer(const CommandPool& commandPool,
 SingleTimeCommandBuffer::~SingleTimeCommandBuffer() {
     const LogicalDevice& logicalDevice = _commandPool.getLogicalDevice();
     const VkDevice device = logicalDevice.getVkDevice();
-    const VkQueue queue = logicalDevice.getVkQueue(_queueType);
 
     vkEndCommandBuffer(_commandBuffer);
 
@@ -274,7 +269,7 @@ SingleTimeCommandBuffer::~SingleTimeCommandBuffer() {
         .pCommandBuffers = &_commandBuffer
     };
 
-    vkQueueSubmit(queue, 1, &submitInfo, _fence);
+    vkQueueSubmit(logicalDevice.getVkQueue(_queueType), 1, &submitInfo, _fence);
     vkWaitForFences(device, 1, &_fence, VK_TRUE, UINT64_MAX);
     vkDestroyFence(device, _fence, nullptr);
 

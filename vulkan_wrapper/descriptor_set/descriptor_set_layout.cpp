@@ -2,9 +2,7 @@
 
 #include "vulkan_wrapper/logical_device/logical_device.h"
 
-DescriptorSetLayout::DescriptorSetLayout(const LogicalDevice& logicalDevice, VkDescriptorSetLayout layout) : _logicalDevice(&logicalDevice), _descriptorSetLayout(layout) {
-
-}
+DescriptorSetLayout::DescriptorSetLayout(const LogicalDevice& logicalDevice, VkDescriptorSetLayout layout) : _logicalDevice(&logicalDevice), _descriptorSetLayout(layout) {}
 
 DescriptorSetLayout::DescriptorSetLayout(DescriptorSetLayout&& layout) noexcept
     : _descriptorSetLayout(std::exchange(layout._descriptorSetLayout, VK_NULL_HANDLE)), _logicalDevice(layout._logicalDevice) {
