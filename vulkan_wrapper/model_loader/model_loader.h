@@ -12,9 +12,9 @@
 #include <vector>
 
 template<typename IndexT>
-std::enable_if_t<std::is_unsigned<IndexT>::value, lib::Buffer<uint8_t>> processIndices(std::span<const IndexT> srcIndices, IndexType indexType) {
-	lib::Buffer<uint8_t> indices(srcIndices.size() * static_cast<size_t>(indexType));
-	uint8_t* data = indices.data();
+std::enable_if_t<std::is_unsigned<IndexT>::value, lib::Buffer<std::byte>> processIndices(std::span<const IndexT> srcIndices, IndexType indexType) {
+	lib::Buffer<std::byte> indices(srcIndices.size() * static_cast<size_t>(indexType));
+	std::byte* data = indices.data();
 	for (const IndexT& index : srcIndices) {
 		std::memcpy(data, &index, static_cast<size_t>(indexType));
 		data += static_cast<size_t>(indexType);
@@ -27,7 +27,7 @@ struct VertexData {
 	lib::SharedBuffer<glm::vec2> textureCoordinates;
 	lib::SharedBuffer<glm::vec3> normals;
 	lib::SharedBuffer<glm::vec3> tangents;
-	lib::SharedBuffer<uint8_t> indices;
+	lib::SharedBuffer<std::byte> indices;
 	IndexType indexType;
 
 	glm::mat4 model;

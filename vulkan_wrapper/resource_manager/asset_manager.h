@@ -36,10 +36,10 @@ public:
 	void loadImage2DAsync(const std::string& filePath);
 	void loadImageCubemapAsync(const std::string& filePath);
 
-	void loadVertexDataInterleavingAsync(const std::string& name, std::span<const uint8_t> indices, uint8_t indexSize, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents);
+	void loadVertexDataInterleavingAsync(const std::string& name, std::span<const std::byte> indices, uint8_t indexSize, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents);
 
 	template<typename VertexType>
-	void loadVertexDataAsync(const std::string& filePath, std::span<const uint8_t> indices, uint8_t indexSize, std::span<const VertexType> vertices);
+	void loadVertexDataAsync(const std::string& filePath, std::span<const std::byte> indices, uint8_t indexSize, std::span<const VertexType> vertices);
 
 	ErrorOr<std::reference_wrapper<const ImageData>> getImageData(const std::string& filePath);
 	ErrorOr<std::reference_wrapper<const VertexData>> getVertexData(const std::string& filePath);
@@ -57,7 +57,7 @@ private:
 };
 
 template<typename Type>
-void AssetManager::loadVertexDataAsync(const std::string& filePath, std::span<const uint8_t> indices, uint8_t indexSize, std::span<const Type> vertices) {
+void AssetManager::loadVertexDataAsync(const std::string& filePath, std::span<const std::byte> indices, uint8_t indexSize, std::span<const Type> vertices) {
 	if (_awaitingVertexDataResources.contains(filePath)) {
 		return;
 	}
@@ -71,7 +71,7 @@ void AssetManager::loadVertexDataAsync(const std::string& filePath, std::span<co
 		if (!indexBuffer.has_value()) [[unlikely]] {
 			return ErrorOr<VertexData>(Error(indexBuffer.error()));
 		}
-		indexBuffer->copyData<uint8_t>(indices);
+		indexBuffer->copyData(indices);
 		return ErrorOr<VertexData>(VertexData{ Buffer(), std::move(indexBuffer.value()), getIndexType(indexSize), std::move(vertexBuffer.value())});
 	}));
 	_awaitingVertexDataResources.emplace(filePath, std::move(future));

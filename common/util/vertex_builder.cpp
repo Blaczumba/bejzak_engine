@@ -45,7 +45,7 @@ ErrorOr<lib::Buffer<VertexPTNT>> buildInterleavingVertexData(std::span<const glm
     return vertices;
 }
 
-Status buildInterleavingVertexData(std::span<uint8_t> output, std::span<const glm::vec3> positions) {
+Status buildInterleavingVertexData(std::span<std::byte> output, std::span<const glm::vec3> positions) {
     if (positions.size() != output.size() / sizeof(glm::vec3)) [[unlikely]] {
         return Error(EngineError::SIZE_MISMATCH);
     }
@@ -54,7 +54,7 @@ Status buildInterleavingVertexData(std::span<uint8_t> output, std::span<const gl
     return StatusOk();
 }
 
-Status buildInterleavingVertexData(std::span<uint8_t> output, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords) {
+Status buildInterleavingVertexData(std::span<std::byte> output, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords) {
     static constexpr size_t vertexSize = sizeof(glm::vec3) + sizeof(glm::vec2);
     if (output.size() != positions.size() * vertexSize || positions.size() != texCoords.size()) [[unlikely]] {
         return Error(EngineError::SIZE_MISMATCH);
@@ -71,7 +71,7 @@ Status buildInterleavingVertexData(std::span<uint8_t> output, std::span<const gl
     return StatusOk();
 }
 
-Status buildInterleavingVertexData(std::span<uint8_t> output, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<const glm::vec3> normals) {
+Status buildInterleavingVertexData(std::span<std::byte> output, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<const glm::vec3> normals) {
     static constexpr size_t vertexSize = sizeof(glm::vec3) + sizeof(glm::vec2) + sizeof(glm::vec3);
     if (output.size() != positions.size() * vertexSize || positions.size() != texCoords.size() || positions.size() != normals.size()) [[unlikely]] {
         return Error(EngineError::SIZE_MISMATCH);
@@ -89,7 +89,7 @@ Status buildInterleavingVertexData(std::span<uint8_t> output, std::span<const gl
     return StatusOk();
 }
 
-Status buildInterleavingVertexData(std::span<uint8_t> output, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents) {
+Status buildInterleavingVertexData(std::span<std::byte> output, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents) {
     static constexpr size_t vertexSize = sizeof(glm::vec3) + sizeof(glm::vec2) + sizeof(glm::vec3) + sizeof(glm::vec3);
     if (output.size() != positions.size() * vertexSize || positions.size() != texCoords.size() || positions.size() != normals.size() || positions.size() != tangents.size()) [[unlikely]] {
         return Error(EngineError::SIZE_MISMATCH);

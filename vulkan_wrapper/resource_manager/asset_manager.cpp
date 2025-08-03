@@ -18,7 +18,7 @@ void AssetManager::loadImageAsync(const std::string& filePath, std::function<Err
         auto stagingBuffer = Buffer::createStagingBuffer(_logicalDevice, resource->size);
         if (!stagingBuffer.has_value()) [[unlikely]]
             return ErrorOr<ImageData>(Error(stagingBuffer.error()));
-        stagingBuffer->copyData(std::span(static_cast<const uint8_t*>(resource->data), resource->size));
+        stagingBuffer->copyData(std::span(static_cast<const std::byte*>(resource->data), resource->size));
         ImageLoader::deallocateResources(*resource);
         return ErrorOr<ImageData>(ImageData(std::move(*stagingBuffer), std::move(resource->dimensions)));
     });
@@ -33,7 +33,7 @@ void AssetManager::loadImageCubemapAsync(const std::string& filePath) {
 	loadImageAsync(filePath, ImageLoader::loadCubemapImage);
 }
 
-void AssetManager::loadVertexDataInterleavingAsync(const std::string& name, std::span<const uint8_t> indices, uint8_t indexSize, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents) {
+void AssetManager::loadVertexDataInterleavingAsync(const std::string& name, std::span<const std::byte> indices, uint8_t indexSize, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords, std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents) {
     if (_awaitingVertexDataResources.contains(name)) {
         return;
     }
@@ -56,7 +56,7 @@ void AssetManager::loadVertexDataInterleavingAsync(const std::string& name, std:
         if (!indexBuffer.has_value()) [[unlikely]] {
             return ErrorOr<VertexData>(Error(indexBuffer.error()));
         }
-        if (Status copyStatus = indexBuffer->copyData<uint8_t>(indices); !copyStatus.has_value()) [[unlikely]] {
+        if (Status copyStatus = indexBuffer->copyData(indices); !copyStatus.has_value()) [[unlikely]] {
             return ErrorOr<VertexData>(Error(copyStatus.error()));
         }
         return ErrorOr<VertexData>(VertexData(std::move(vertexBuffer.value()), std::move(indexBuffer.value()), getIndexType(indexSize), std::move(vertexBufferPositions.value())));

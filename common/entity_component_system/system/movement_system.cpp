@@ -14,9 +14,6 @@ void MovementSystem::update(float deltaTime) {
 //        [deltaTime](PositionComponent& pos, VelocityComponent& vel) {
 //            pos.x += vel.dx * deltaTime;
 //            pos.y += vel.dy * deltaTime;
-//
-//            //std::cout << "Entity " << entity << " moved to ("
-//            //    << pos.x << ", " << pos.y << ")\n";
 //        }
 //    );
 }

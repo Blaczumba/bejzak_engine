@@ -47,7 +47,7 @@ std::span<const unsigned char> processAttribute(const tinygltf::Model& model, st
     return std::span<const unsigned char>(&buffer.data[accessor.byteOffset + bufferView.byteOffset], accessor.count);
 }
 
-lib::Buffer<uint8_t> createIndices(const tinygltf::Model& model, const tinygltf::Primitive& primitive, IndexType* indexType) {
+lib::Buffer<std::byte> createIndices(const tinygltf::Model& model, const tinygltf::Primitive& primitive, IndexType* indexType) {
     const tinygltf::Accessor& accessor = model.accessors[primitive.indices];
     const tinygltf::BufferView& bufferView = model.bufferViews[accessor.bufferView];
     const tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
@@ -64,7 +64,7 @@ lib::Buffer<uint8_t> createIndices(const tinygltf::Model& model, const tinygltf:
     case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
         return processIndices(std::span(reinterpret_cast<const uint32_t*>(&buffer.data[offset]), indicesCount), *indexType);
     }
-    return lib::Buffer<uint8_t>{};
+    return lib::Buffer<std::byte>{};
 }
 
 template<typename IndexType>
@@ -86,11 +86,11 @@ std::enable_if_t<std::is_unsigned<IndexType>::value, lib::Buffer<glm::vec3>> pro
     return tangents;
 }
 
-lib::Buffer<glm::vec3> createTangents(IndexType indexType, std::span<const uint8_t> indicesBytes, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords) {
+lib::Buffer<glm::vec3> createTangents(IndexType indexType, std::span<const std::byte> indicesBytes, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords) {
     const size_t indicesCount = indicesBytes.size() / static_cast<size_t>(indexType);
     switch (indexType) {
     case IndexType::UINT8:
-        return processTangents(indicesBytes, positions, texCoords);
+        return processTangents(std::span(reinterpret_cast<const uint8_t*>(indicesBytes.data()), indicesCount), positions, texCoords);
     case IndexType::UINT16:
         return processTangents(std::span(reinterpret_cast<const uint16_t*>(indicesBytes.data()), indicesCount), positions, texCoords);
     case IndexType::UINT32:
@@ -142,7 +142,7 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, const
         }
 
         // Load indices
-        lib::SharedBuffer<uint8_t> indicesBytes;
+        lib::SharedBuffer<std::byte> indicesBytes;
         IndexType indexType = IndexType::NONE;
         if (primitive.indices >= 0) {
             indicesBytes = createIndices(model, primitive, &indexType);

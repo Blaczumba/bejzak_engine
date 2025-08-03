@@ -9,7 +9,7 @@ EntityManager::EntityManager() {
 }
 
 Entity EntityManager::createEntity() {
-    Entity entity = _availableEntities.back();
+    const Entity entity = _availableEntities.back();
     _availableEntities.pop_back();
     return entity;
 }

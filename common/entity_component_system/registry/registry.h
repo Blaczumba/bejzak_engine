@@ -34,7 +34,7 @@ public:
 
 	template<typename Component>
 	void addComponent(Entity entity, Component&& component) {
-		if (!_componentsData[Component::getComponentID()]) {
+		if (!_componentsData[Component::getComponentID()]) [[unlikely]] {
 			_componentsData[Component::getComponentID()] = std::make_unique<ComponentPoolImpl<Component>>();
 		}
 		static_cast<ComponentPoolImpl<Component>*>(_componentsData[Component::getComponentID()].get())->addComponent(entity, std::move(component));
@@ -43,7 +43,7 @@ public:
 
 	template<typename Component>
 	Component& getComponent(Entity entity) {
-		if (!_componentsData[Component::getComponentID()]) {
+		if (!_componentsData[Component::getComponentID()]) [[unlikely]] {
 			_componentsData[Component::getComponentID()] = std::make_unique<ComponentPoolImpl<Component>>();
 		}
 		_signatures[entity].set(Component::getComponentID());
