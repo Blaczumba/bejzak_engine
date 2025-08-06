@@ -26,10 +26,6 @@ public:
 	
 	static ErrorOr<Texture> create2DImage(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkBuffer stagingBuffer, const ImageDimensions& dimensions, VkFormat format, float samplerAnisotropy);
 	
-	static ErrorOr<Texture> create2DShadowmap(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, uint32_t width, uint32_t height, VkFormat format);
-	
-	static ErrorOr<Texture> createCubemap(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkBuffer stagingBuffer, const ImageDimensions& dimensions, VkFormat format, float samplerAnisotropy);
-
 	void transitionLayout(VkCommandBuffer commandBuffer, VkImageLayout newLayout);
 
 	VkImage getVkImage() const;
@@ -62,15 +58,13 @@ private:
 
 	friend class TextureBuilder;
 
-	static ErrorOr<Texture> createImage(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, const ImageParameters& imageParams, const SamplerParameters& samplerParams);
-
-	static ErrorOr<Texture> createImageSampler(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkImageLayout dstLayout, const ImageParameters& imageParams, const SamplerParameters& samplerParams);
-
 	static ErrorOr<Texture> createMipmapImage(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, const ImageParameters& imageParams, const SamplerParameters& samplerParams);
 };
 
 class TextureBuilder {
 public:
+	TextureBuilder& withLayout(VkImageLayout layout);
+
 	TextureBuilder& withFormat(VkFormat format);
 
 	TextureBuilder& withExtent(uint32_t width, uint32_t height);
@@ -122,5 +116,5 @@ public:
 private:
 	ImageParameters _imageParameters;
 	SamplerParameters _samplerParameters;
-	VkImageLayout _imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+	VkImageLayout _imageLayout = VK_IMAGE_LAYOUT_GENERAL;
 };

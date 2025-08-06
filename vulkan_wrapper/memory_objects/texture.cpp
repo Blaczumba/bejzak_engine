@@ -84,24 +84,6 @@ Texture::~Texture() {
     }
 }
 
-ErrorOr<Texture> Texture::create2DShadowmap(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, uint32_t width, uint32_t height, VkFormat format) {
-    const ImageParameters imageParams = {
-        .format = format,
-        .width = width,
-        .height = height,
-        .aspect = VK_IMAGE_ASPECT_DEPTH_BIT,
-        .usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT
-    };
-    const SamplerParameters samplerParams = {
-        .addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
-        .addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
-        .addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER,
-        .compareOp = VK_COMPARE_OP_LESS_OR_EQUAL,
-        .borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE
-    };
-    return createImageSampler(logicalDevice, commandBuffer, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, imageParams, samplerParams);
-}
-
 ErrorOr<Texture> Texture::create2DImage(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkBuffer stagingBuffer, const ImageDimensions& dimensions, VkFormat format, float samplerAnisotropy) {
     const ImageParameters imageParams = {
         .format = format,
@@ -117,23 +99,6 @@ ErrorOr<Texture> Texture::create2DImage(const LogicalDevice& logicalDevice, VkCo
         .maxLod = static_cast<float>(dimensions.mipLevels)
     };
     return createMipmapImage(logicalDevice, commandBuffer, stagingBuffer, dimensions.copyRegions, imageParams, samplerParams);
-}
-
-ErrorOr<Texture> Texture::createCubemap(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkBuffer stagingBuffer, const ImageDimensions& dimensions, VkFormat format, float samplerAnisotropy) {
-    const ImageParameters imageParams = {
-        .format = format,
-        .width = dimensions.width,
-        .height = dimensions.height,
-        .aspect = VK_IMAGE_ASPECT_COLOR_BIT,
-        .mipLevels = dimensions.mipLevels,
-        .usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-        .layerCount = 6,
-    };
-    const SamplerParameters samplerParams = {
-        .maxAnisotropy = samplerAnisotropy,
-        .maxLod = static_cast<float>(dimensions.mipLevels)
-    };
-    return createImage(logicalDevice, commandBuffer, stagingBuffer, dimensions.copyRegions, imageParams, samplerParams);
 }
 
 VkImage Texture::getVkImage() const {
@@ -173,27 +138,6 @@ static inline ErrorOr<VkImage> allocate(Allocation& allocation, const ImageParam
     return std::visit(ImageCreator{ allocation, imageParameters }, memoryAllocator);
 }
 
-ErrorOr<Texture> Texture::createImage(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, const ImageParameters& imageParams, const SamplerParameters& samplerParams) {
-    Allocation allocation;
-    ASSIGN_OR_RETURN(const VkImage image, allocate(allocation, imageParams, logicalDevice.getMemoryAllocator()));
-    const VkImageView view = logicalDevice.createImageView(image, imageParams);
-    const VkSampler sampler = logicalDevice.createSampler(samplerParams);
-    const VkImageLayout dstLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    transitionImageLayout(commandBuffer, image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, imageParams.aspect, imageParams.mipLevels, imageParams.layerCount);
-    copyBufferToImage(commandBuffer, copyBuffer, image, copyRegions);
-    transitionImageLayout(commandBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dstLayout, imageParams.aspect, imageParams.mipLevels, imageParams.layerCount);
-    return Texture(logicalDevice, image, allocation, dstLayout, imageParams, view, sampler, samplerParams);
-}
-
-ErrorOr<Texture> Texture::createImageSampler(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkImageLayout dstLayout, const ImageParameters& imageParams, const SamplerParameters& samplerParams) {
-    const VkSampler sampler = logicalDevice.createSampler(samplerParams);
-    Allocation allocation;
-    ASSIGN_OR_RETURN(const VkImage image, allocate(allocation, imageParams, logicalDevice.getMemoryAllocator()));
-    const VkImageView view = logicalDevice.createImageView(image, imageParams);
-    transitionImageLayout(commandBuffer, image, VK_IMAGE_LAYOUT_UNDEFINED, dstLayout, imageParams.aspect, imageParams.mipLevels, imageParams.layerCount);
-    return Texture(logicalDevice, image, allocation, dstLayout, imageParams, view, sampler, samplerParams);
-}
-
 ErrorOr<Texture> Texture::createMipmapImage(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, const ImageParameters& imageParams, const SamplerParameters& samplerParams) {
     Allocation allocation;
     ASSIGN_OR_RETURN(const VkImage image, allocate(allocation, imageParams, logicalDevice.getMemoryAllocator()));
@@ -203,6 +147,11 @@ ErrorOr<Texture> Texture::createMipmapImage(const LogicalDevice& logicalDevice, 
     copyBufferToImage(commandBuffer, copyBuffer, image, copyRegions);
     generateImageMipmaps(commandBuffer, image, imageParams.format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, imageParams.width, imageParams.height, imageParams.mipLevels, imageParams.layerCount);
     return Texture(logicalDevice, image, allocation, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, imageParams, view, sampler, samplerParams);
+}
+
+TextureBuilder& TextureBuilder::withLayout(VkImageLayout layout) {
+    _imageLayout = layout;
+    return *this;
 }
 
 TextureBuilder& TextureBuilder::withFormat(VkFormat format) {
@@ -311,41 +260,40 @@ TextureBuilder& TextureBuilder::withUnnormalizedCoordinates(VkBool32 unnormalize
 ErrorOr<Texture> TextureBuilder::buildAttachment(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer) const {
     Allocation allocation;
     ASSIGN_OR_RETURN(const VkImage image, allocate(allocation, _imageParameters, logicalDevice.getMemoryAllocator()));
-    const VkImageView view = logicalDevice.createImageView(image, _imageParameters);
     transitionImageLayout(commandBuffer, image, VK_IMAGE_LAYOUT_UNDEFINED, _imageLayout, _imageParameters.aspect, _imageParameters.mipLevels, _imageParameters.layerCount);
+    const VkImageView view = logicalDevice.createImageView(image, _imageParameters);
     return Texture(logicalDevice, image, allocation, _imageLayout, _imageParameters, view);
 }
 
 ErrorOr<Texture> TextureBuilder::buildImage(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkBuffer copyBuffer, const std::span<const VkBufferImageCopy> copyRegions) const {
     Allocation allocation;
     ASSIGN_OR_RETURN(const VkImage image, allocate(allocation, _imageParameters, logicalDevice.getMemoryAllocator()));
-    const VkImageView view = logicalDevice.createImageView(image, _imageParameters);
-    const VkSampler sampler = logicalDevice.createSampler(_samplerParameters);
-    const VkImageLayout dstLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     transitionImageLayout(commandBuffer, image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _imageParameters.aspect, _imageParameters.mipLevels, _imageParameters.layerCount);
     copyBufferToImage(commandBuffer, copyBuffer, image, copyRegions);
-    transitionImageLayout(commandBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, dstLayout, _imageParameters.aspect, _imageParameters.mipLevels, _imageParameters.layerCount);
-    return Texture(logicalDevice, image, allocation, dstLayout, _imageParameters, view, sampler, _samplerParameters);
+    transitionImageLayout(commandBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _imageLayout, _imageParameters.aspect, _imageParameters.mipLevels, _imageParameters.layerCount);
+    const VkImageView view = logicalDevice.createImageView(image, _imageParameters);
+    const VkSampler sampler = logicalDevice.createSampler(_samplerParameters);
+    return Texture(logicalDevice, image, allocation, _imageLayout, _imageParameters, view, sampler, _samplerParameters);
 }
 
 ErrorOr<Texture> TextureBuilder::buildImageSampler(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer) const {
-	const VkSampler sampler = logicalDevice.createSampler(_samplerParameters);
 	Allocation allocation;
 	ASSIGN_OR_RETURN(const VkImage image, allocate(allocation, _imageParameters, logicalDevice.getMemoryAllocator()));
-	const VkImageView view = logicalDevice.createImageView(image, _imageParameters);
 	transitionImageLayout(commandBuffer, image, VK_IMAGE_LAYOUT_UNDEFINED, _imageLayout, _imageParameters.aspect, _imageParameters.mipLevels, _imageParameters.layerCount);
+	const VkImageView view = logicalDevice.createImageView(image, _imageParameters);
+	const VkSampler sampler = logicalDevice.createSampler(_samplerParameters);
 	return Texture(logicalDevice, image, allocation, _imageLayout, _imageParameters, view, sampler, _samplerParameters);
 }
 
 ErrorOr<Texture> TextureBuilder::buildMipmapImage(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkBuffer copyBuffer, std::span<const VkBufferImageCopy> copyRegions) const {
 	Allocation allocation;
 	ASSIGN_OR_RETURN(const VkImage image, allocate(allocation, _imageParameters, logicalDevice.getMemoryAllocator()));
-	const VkImageView view = logicalDevice.createImageView(image, _imageParameters);
-	const VkSampler sampler = logicalDevice.createSampler(_samplerParameters);
 	transitionImageLayout(commandBuffer, image, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, _imageParameters.aspect, _imageParameters.mipLevels, _imageParameters.layerCount);
 	copyBufferToImage(commandBuffer, copyBuffer, image, copyRegions);
 	generateImageMipmaps(commandBuffer, image, _imageParameters.format, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 		_imageParameters.width, _imageParameters.height, _imageParameters.mipLevels, _imageParameters.layerCount);
+	const VkImageView view = logicalDevice.createImageView(image, _imageParameters);
+	const VkSampler sampler = logicalDevice.createSampler(_samplerParameters);
 	return Texture(logicalDevice, image, allocation,
 		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, _imageParameters, view, sampler, _samplerParameters);
 }

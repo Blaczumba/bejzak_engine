@@ -14,6 +14,7 @@ ErrorOr<Texture> createColorAttachment(const LogicalDevice& logicalDevice, VkCom
         .withFormat(format)
         .withNumSamples(samples)
         .withUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
+        .withLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
         .buildAttachment(logicalDevice, commandBuffer);
 }
 
@@ -34,6 +35,7 @@ ErrorOr<Texture> createDepthAttachment(const LogicalDevice& logicalDevice, VkCom
         .withFormat(format)
         .withNumSamples(samples)
         .withUsage(VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT)
+        .withLayout(hasStencil(format) ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL : VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL)
         .buildAttachment(logicalDevice, commandBuffer);
 }
 
