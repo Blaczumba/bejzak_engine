@@ -13,9 +13,9 @@ class VmaWrapper {
 public:
 	VmaWrapper(VkDevice device, VkPhysicalDevice physicalDevice, VkInstance instance);
 
-	VmaWrapper(const VmaWrapper& allocator) = delete;
+	VmaWrapper(VmaWrapper&& allocator) noexcept;
 
-	VmaWrapper(VmaWrapper&& allocator);
+	VmaWrapper& operator=(VmaWrapper&& allocator) noexcept;
 
 	~VmaWrapper();
 

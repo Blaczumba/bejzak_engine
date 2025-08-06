@@ -31,6 +31,8 @@ public:
 
 	VkExtent2D getVkExtent2D() const;
 
+	VkExtent3D getVkExtent3D() const;
+
 	VkImageLayout getVkImageLayout() const;
 
 private:
@@ -57,7 +59,15 @@ public:
 
 	TextureBuilder& withFormat(VkFormat format);
 
+	TextureBuilder& withExtent(uint32_t width);
+
 	TextureBuilder& withExtent(uint32_t width, uint32_t height);
+
+	TextureBuilder& withExtent(VkExtent2D extent);
+
+	TextureBuilder& withExtent(uint32_t width, uint32_t height, uint32_t depth);
+
+	TextureBuilder& withExtent(VkExtent3D extent);
 
 	TextureBuilder& withAspect(VkImageAspectFlags aspect);
 
@@ -85,7 +95,7 @@ public:
 
 	TextureBuilder& withMaxAnisotropy(float maxAnisotropy);
 
-	TextureBuilder& withCompareOp(std::optional<VkCompareOp> compareOp);
+	TextureBuilder& withCompareOp(VkCompareOp compareOp);
 
 	TextureBuilder& withMinLod(float minLod);
 

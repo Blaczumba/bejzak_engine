@@ -16,6 +16,5 @@ struct BufferDeallocator {
     }
 
     void operator()(auto&&, auto&&) {
-        // throw std::runtime_error(EngineError::NOT_RECOGNIZED_TYPE);
     }
 };

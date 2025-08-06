@@ -6,7 +6,6 @@
 #include "vulkan_wrapper/memory_objects/texture.h"
 #include "vulkan_wrapper/physical_device/physical_device.h"
 
-#include <memory>
 #include <variant>
 
 enum class QueueType : uint8_t {
@@ -19,7 +18,7 @@ enum class QueueType : uint8_t {
 class LogicalDevice {
 	VkDevice _device;
 
-	const PhysicalDevice& _physicalDevice;
+	const PhysicalDevice* _physicalDevice;
 	mutable MemoryAllocator _memoryAllocator;
 
 	VkQueue _graphicsQueue;
@@ -30,11 +29,17 @@ class LogicalDevice {
 	LogicalDevice(VkDevice logicalDevice, const PhysicalDevice& physicalDevice, VkQueue graphicsQueue, VkQueue presentQueue, VkQueue computeQueue, VkQueue transferQueue);
 
 public:
+	LogicalDevice();
+
+	static ErrorOr<LogicalDevice> create(const PhysicalDevice& physicalDevice);
+
+	LogicalDevice(LogicalDevice&& logicalDevice) noexcept;
+
+	LogicalDevice& operator=(LogicalDevice&& logicalDevice) noexcept;
+
 	~LogicalDevice();
 
-	static ErrorOr<std::unique_ptr<LogicalDevice>> create(const PhysicalDevice& physicalDevice);
-
-	VkSampler createSampler(const SamplerParameters& params) const;
+	ErrorOr<VkSampler> createSampler(const SamplerParameters& params) const;
 
 	VkImageView createImageView(VkImage image, const ImageParameters& params) const;
 

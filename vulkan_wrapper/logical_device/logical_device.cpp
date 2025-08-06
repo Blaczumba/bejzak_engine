@@ -11,15 +11,39 @@
 #include <stdexcept>
 
 LogicalDevice::LogicalDevice(VkDevice logicalDevice, const PhysicalDevice& physicalDevice, VkQueue graphicsQueue, VkQueue presentQueue, VkQueue computeQueue, VkQueue transferQueue)
-    : _device(logicalDevice), _physicalDevice(physicalDevice),
-    _memoryAllocator(std::in_place_type<VmaWrapper>, logicalDevice, physicalDevice.getVkPhysicalDevice(), _physicalDevice.getSurface().getInstance().getVkInstance()),
+    : _device(logicalDevice), _physicalDevice(&physicalDevice),
+    _memoryAllocator(std::in_place_type<VmaWrapper>, logicalDevice, physicalDevice.getVkPhysicalDevice(), _physicalDevice->getSurface().getInstance().getVkInstance()),
     _graphicsQueue(graphicsQueue), _presentQueue(presentQueue), _computeQueue(computeQueue), _transferQueue(transferQueue){
+}
+
+LogicalDevice::LogicalDevice() : _device(VK_NULL_HANDLE), _physicalDevice(nullptr), _graphicsQueue(VK_NULL_HANDLE), _presentQueue(VK_NULL_HANDLE), _computeQueue(VK_NULL_HANDLE), _transferQueue(VK_NULL_HANDLE) { }
+
+LogicalDevice::LogicalDevice(LogicalDevice&& logicalDevice) noexcept
+	: _device(std::exchange(logicalDevice._device, VK_NULL_HANDLE)), _physicalDevice(std::exchange(logicalDevice._physicalDevice, nullptr)), _memoryAllocator(std::move(logicalDevice._memoryAllocator)),
+    _graphicsQueue(std::exchange(logicalDevice._graphicsQueue, VK_NULL_HANDLE)), _presentQueue(std::exchange(logicalDevice._presentQueue, VK_NULL_HANDLE)),
+    _computeQueue(std::exchange(logicalDevice._computeQueue, VK_NULL_HANDLE)), _transferQueue(std::exchange(logicalDevice._transferQueue, VK_NULL_HANDLE)) { }
+
+LogicalDevice& LogicalDevice::operator=(LogicalDevice&& logicalDevice) noexcept {
+	if (this == &logicalDevice) {
+		return *this;
+	}
+	// TODO what if _device != VK_NULL_HANDLE
+	_device = std::exchange(logicalDevice._device, VK_NULL_HANDLE);
+	_physicalDevice = std::exchange(logicalDevice._physicalDevice, nullptr);
+	_memoryAllocator = std::move(logicalDevice._memoryAllocator);
+	_graphicsQueue = std::exchange(logicalDevice._graphicsQueue, VK_NULL_HANDLE);
+	_presentQueue = std::exchange(logicalDevice._presentQueue, VK_NULL_HANDLE);
+	_computeQueue = std::exchange(logicalDevice._computeQueue, VK_NULL_HANDLE);
+	_transferQueue = std::exchange(logicalDevice._transferQueue, VK_NULL_HANDLE);
+	return *this;
 }
 
 LogicalDevice::~LogicalDevice() {
     // TODO refactor
-    std::get<VmaWrapper>(_memoryAllocator).destroy();
-    vkDestroyDevice(_device, nullptr);
+	if (_device != VK_NULL_HANDLE) {
+        std::get<VmaWrapper>(_memoryAllocator).destroy();
+        vkDestroyDevice(_device, nullptr);
+	}
 }
 
 template<typename T> 
@@ -30,7 +54,7 @@ void chainExtensionFeature(void** next, T& feature, std::string_view extension, 
     }
 }
 
-ErrorOr<std::unique_ptr<LogicalDevice>> LogicalDevice::create(const PhysicalDevice& physicalDevice) {
+ErrorOr<LogicalDevice> LogicalDevice::create(const PhysicalDevice& physicalDevice) {
     const QueueFamilyIndices indices = physicalDevice.getQueueFamilyIndices();
 
     const std::set<uint32_t> uniqueQueueFamilies = {
@@ -123,7 +147,7 @@ ErrorOr<std::unique_ptr<LogicalDevice>> LogicalDevice::create(const PhysicalDevi
     vkGetDeviceQueue(logicalDevice, *indices.presentFamily, 0, &presentQueue);
     vkGetDeviceQueue(logicalDevice, *indices.computeFamily, 0, &computeQueue);
     vkGetDeviceQueue(logicalDevice, *indices.transferFamily, 0, &transferQueue);
-    return std::unique_ptr<LogicalDevice>(new LogicalDevice(logicalDevice, physicalDevice, graphicsQueue, presentQueue, computeQueue, transferQueue));
+    return LogicalDevice(logicalDevice, physicalDevice, graphicsQueue, presentQueue, computeQueue, transferQueue);
 }
 
 VkImageView LogicalDevice::createImageView(const VkImage image, const ImageParameters& params) const {
@@ -153,7 +177,7 @@ VkImageView LogicalDevice::createImageView(const VkImage image, const ImageParam
     return view;
 }
 
-VkSampler LogicalDevice::createSampler(const SamplerParameters& params) const {
+ErrorOr<VkSampler> LogicalDevice::createSampler(const SamplerParameters& params) const {
     VkSamplerCreateInfo samplerInfo = {
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
         .magFilter = params.magFilter,
@@ -183,8 +207,8 @@ VkSampler LogicalDevice::createSampler(const SamplerParameters& params) const {
     }
 
     VkSampler sampler;
-    if (vkCreateSampler(_device, &samplerInfo, nullptr, &sampler) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create texture sampler!");
+    if (VkResult result = vkCreateSampler(_device, &samplerInfo, nullptr, &sampler); result != VK_SUCCESS) {
+        throw Error(result);
     }
 
     return sampler;
@@ -195,7 +219,7 @@ VkDevice LogicalDevice::getVkDevice() const {
 }
 
 const PhysicalDevice& LogicalDevice::getPhysicalDevice() const {
-    return _physicalDevice;
+    return *_physicalDevice;
 }
 
 MemoryAllocator& LogicalDevice::getMemoryAllocator() const {

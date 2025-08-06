@@ -46,7 +46,7 @@ constexpr PipelineStageInfo destinationStageAndAccessMask(VkImageLayout layout) 
     }
 }
 
-}
+} // namespace
 
 void transitionImageLayout(VkCommandBuffer commandBuffer, VkImage image, VkImageLayout oldLayout, VkImageLayout newLayout, VkImageAspectFlags aspectFlags, uint32_t mipLevels, uint32_t layerCount) {
     const VkImageSubresourceRange range = {

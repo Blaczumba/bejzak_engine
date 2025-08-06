@@ -19,9 +19,15 @@ VmaWrapper::VmaWrapper(VkDevice device, VkPhysicalDevice physicalDevice, VkInsta
 	vmaCreateAllocator(&allocatorCreateInfo, &_allocator);
 }
 
-VmaWrapper::VmaWrapper(VmaWrapper&& allocator) {
-	if (this != &allocator)
-		_allocator = std::exchange(allocator._allocator, nullptr);
+VmaWrapper::VmaWrapper(VmaWrapper&& allocator) noexcept : _allocator(std::exchange(allocator._allocator, nullptr)) { }
+
+VmaWrapper& VmaWrapper::operator=(VmaWrapper&& allocator) noexcept {
+	if (this == &allocator) {
+		return *this;
+	}
+	// TODO what if _allocator != nullptr
+	_allocator = std::exchange(allocator._allocator, nullptr);
+	return *this;
 }
 
 VmaWrapper::~VmaWrapper() {
