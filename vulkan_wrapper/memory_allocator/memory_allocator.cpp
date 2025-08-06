@@ -71,11 +71,7 @@ ErrorOr<VmaWrapper::Image> VmaWrapper::createVkImage(const ImageParameters& para
 		.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 		.imageType = VK_IMAGE_TYPE_2D,
 		.format = params.format,
-		.extent = {
-			.width = params.width,
-			.height = params.height,
-			.depth = 1
-		},
+		.extent = params.extent,
 		.mipLevels = params.mipLevels,
 		.arrayLayers = params.layerCount,
 		.samples = params.numSamples,

@@ -15,8 +15,7 @@ struct ImageDimensions {
 
 struct ImageParameters {
 	VkFormat format = VK_FORMAT_UNDEFINED;
-	uint32_t width = 1;
-	uint32_t height = 1;
+	VkExtent3D extent = { 1, 1, 1 };
 	VkImageAspectFlags aspect = VK_IMAGE_ASPECT_NONE;
 	uint32_t mipLevels = 1;
 	VkSampleCountFlagBits numSamples = VK_SAMPLE_COUNT_1_BIT;

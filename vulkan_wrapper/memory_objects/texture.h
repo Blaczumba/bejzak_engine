@@ -7,10 +7,7 @@
 
 #include <vulkan/vulkan.h>
 
-#include <memory>
-#include <optional>
 #include <span>
-#include <variant>
 
 class LogicalDevice;
 
@@ -24,8 +21,6 @@ public:
 
 	~Texture();
 	
-	static ErrorOr<Texture> create2DImage(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkBuffer stagingBuffer, const ImageDimensions& dimensions, VkFormat format, float samplerAnisotropy);
-	
 	void transitionLayout(VkCommandBuffer commandBuffer, VkImageLayout newLayout);
 
 	VkImage getVkImage() const;
@@ -34,31 +29,26 @@ public:
 
 	VkSampler getVkSampler() const;
 
-	const ImageParameters& getImageParameters() const;
-
-	const SamplerParameters& getSamplerParameters() const;
-
 	VkExtent2D getVkExtent2D() const;
 
 	VkImageLayout getVkImageLayout() const;
 
 private:
-	Texture(const LogicalDevice& logicalDevice, VkImage image, const Allocation allocation, VkImageLayout layout, const ImageParameters& imageParameters, VkImageView view = VK_NULL_HANDLE, VkSampler sampler = VK_NULL_HANDLE, const SamplerParameters& samplerParameters = {});
+	Texture(const LogicalDevice& logicalDevice, VkImage image, const Allocation allocation, VkExtent3D extent, VkImageAspectFlags aspect, uint32_t mipLevels, uint32_t layerCount, VkImageLayout layout, VkImageView view = VK_NULL_HANDLE, VkSampler sampler = VK_NULL_HANDLE);
 
 	Allocation _allocation;
 	VkImage _image;
 	VkImageView _view;
 	VkSampler _sampler;
 	VkImageLayout _layout;
-
-	ImageParameters _imageParameters;
-	SamplerParameters _samplerParameters;
+	VkExtent3D _extent;
+	VkImageAspectFlags _aspect;
+	uint32_t _mipLevels;
+	uint32_t _layerCount;
 
 	const LogicalDevice* _logicalDevice;
 
 	friend class TextureBuilder;
-
-	static ErrorOr<Texture> createMipmapImage(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, const ImageParameters& imageParams, const SamplerParameters& samplerParams);
 };
 
 class TextureBuilder {

@@ -14,8 +14,7 @@ Swapchain::Swapchain(const VkSwapchainKHR swapchain, const LogicalDevice& logica
         [&](const VkImage image) {
         return logicalDevice.createImageView(image, ImageParameters{
                 .format = surfaceFormat.format,
-                .width = extent.width,
-                .height = extent.height,
+                .extent = { extent.width, extent.height, 1 },
                 .aspect = VK_IMAGE_ASPECT_COLOR_BIT,
             });
         });
