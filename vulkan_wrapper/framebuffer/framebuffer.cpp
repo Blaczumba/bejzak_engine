@@ -5,6 +5,41 @@
 
 #include <optional>
 
+namespace {
+
+ErrorOr<Texture> createColorAttachment(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkFormat format, VkSampleCountFlagBits samples, VkExtent2D extent) {
+    return TextureBuilder()
+        .withAspect(VK_IMAGE_ASPECT_COLOR_BIT)
+        .withExtent(extent.width, extent.height)
+        .withFormat(format)
+        .withNumSamples(samples)
+        .withUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
+        .buildAttachment(logicalDevice, commandBuffer);
+}
+
+bool hasStencil(VkFormat format) {
+    static constexpr VkFormat formats[] = {
+        VK_FORMAT_S8_UINT,
+        VK_FORMAT_D16_UNORM_S8_UINT,
+        VK_FORMAT_D24_UNORM_S8_UINT,
+        VK_FORMAT_D32_SFLOAT_S8_UINT
+    };
+    return std::find(std::cbegin(formats), std::cend(formats), format) != std::cend(formats);
+}
+
+ErrorOr<Texture> createDepthAttachment(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkFormat format, VkSampleCountFlagBits samples, VkExtent2D extent) {
+    return TextureBuilder()
+        .withAspect(hasStencil(format) ? VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT : VK_IMAGE_ASPECT_DEPTH_BIT)
+        .withExtent(extent.width, extent.height)
+        .withFormat(format)
+        .withNumSamples(samples)
+        .withUsage(VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT)
+        .buildAttachment(logicalDevice, commandBuffer);
+}
+
+} // namespace
+
+
 ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromSwapchain(VkCommandBuffer commandBuffer, const Renderpass& renderpass, VkExtent2D swapchainExtent, VkImageView swapchainImageView, std::vector<Texture>& attachments) {
     const LogicalDevice& logicalDevice = renderpass.getLogicalDevice();
     std::span<const VkAttachmentDescription> attachmentDescriptions = renderpass.getAttachmentsLayout().getVkAttachmentDescriptions();
@@ -16,13 +51,13 @@ ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromSwapchain(VkCommand
             imageViews.push_back(swapchainImageView);
             break;
         case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL: {
-            ASSIGN_OR_RETURN(Texture attachment, Texture::createColorAttachment(logicalDevice, commandBuffer, description.format, description.samples, swapchainExtent));
+            ASSIGN_OR_RETURN(Texture attachment, createColorAttachment(logicalDevice, commandBuffer, description.format, description.samples, swapchainExtent));
             imageViews.push_back(attachment.getVkImageView());
             attachments.push_back(std::move(attachment));
             break;
         }
         case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL: {
-            ASSIGN_OR_RETURN(Texture attachment, Texture::createDepthAttachment(logicalDevice, commandBuffer, description.format, description.samples, swapchainExtent));
+            ASSIGN_OR_RETURN(Texture attachment, createDepthAttachment(logicalDevice, commandBuffer, description.format, description.samples, swapchainExtent));
             imageViews.push_back(attachment.getVkImageView());
             attachments.push_back(std::move(attachment));
             break;

@@ -9,20 +9,13 @@
 
 #include <memory>
 #include <optional>
+#include <span>
 #include <variant>
 
 class LogicalDevice;
 
 struct Texture {
 public:
-	enum class Type : uint8_t {
-		IMAGE_2D,
-		SHADOWMAP,
-		COLOR_ATTACHMENT,
-		DEPTH_ATTACHMENT,
-		CUBEMAP
-	};
-
 	Texture();
 
 	Texture(Texture&& texture) noexcept;
@@ -36,10 +29,6 @@ public:
 	static ErrorOr<Texture> create2DShadowmap(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, uint32_t width, uint32_t height, VkFormat format);
 	
 	static ErrorOr<Texture> createCubemap(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkBuffer stagingBuffer, const ImageDimensions& dimensions, VkFormat format, float samplerAnisotropy);
-	
-	static ErrorOr<Texture> createColorAttachment(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkFormat format, VkSampleCountFlagBits samples, VkExtent2D extent);
-	
-	static ErrorOr<Texture> createDepthAttachment(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkFormat format, VkSampleCountFlagBits samples, VkExtent2D extent);
 
 	void transitionLayout(VkCommandBuffer commandBuffer, VkImageLayout newLayout);
 
@@ -58,9 +47,7 @@ public:
 	VkImageLayout getVkImageLayout() const;
 
 private:
-	Texture(const LogicalDevice& logicalDevice, Texture::Type type, VkImage image, const Allocation allocation, VkImageLayout layout, const ImageParameters& imageParameters, VkImageView view = VK_NULL_HANDLE, VkSampler sampler = VK_NULL_HANDLE, const SamplerParameters& samplerParameters = {});
-	
-	Type _type;
+	Texture(const LogicalDevice& logicalDevice, VkImage image, const Allocation allocation, VkImageLayout layout, const ImageParameters& imageParameters, VkImageView view = VK_NULL_HANDLE, VkSampler sampler = VK_NULL_HANDLE, const SamplerParameters& samplerParameters = {});
 
 	Allocation _allocation;
 	VkImage _image;
@@ -73,12 +60,67 @@ private:
 
 	const LogicalDevice* _logicalDevice;
 
-	// Helper functions.
-	static ErrorOr<Texture> createAttachment(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkImageLayout dstLayout, Texture::Type type, const ImageParameters& imageParams);
+	friend class TextureBuilder;
 
-	static ErrorOr<Texture> createImage(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, Texture::Type type, VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, const ImageParameters& imageParams, const SamplerParameters& samplerParams);
+	static ErrorOr<Texture> createImage(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, const ImageParameters& imageParams, const SamplerParameters& samplerParams);
 
-	static ErrorOr<Texture> createImageSampler(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkImageLayout dstLayout, Texture::Type type, const ImageParameters& imageParams, const SamplerParameters& samplerParams);
+	static ErrorOr<Texture> createImageSampler(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkImageLayout dstLayout, const ImageParameters& imageParams, const SamplerParameters& samplerParams);
 
 	static ErrorOr<Texture> createMipmapImage(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkBuffer copyBuffer, const std::vector<VkBufferImageCopy>& copyRegions, const ImageParameters& imageParams, const SamplerParameters& samplerParams);
+};
+
+class TextureBuilder {
+public:
+	TextureBuilder& withFormat(VkFormat format);
+
+	TextureBuilder& withExtent(uint32_t width, uint32_t height);
+
+	TextureBuilder& withAspect(VkImageAspectFlags aspect);
+
+	TextureBuilder& withMipLevels(uint32_t mipLevels);
+
+	TextureBuilder& withNumSamples(VkSampleCountFlagBits numSamples);
+
+	TextureBuilder& withTiling(VkImageTiling tiling);
+
+	TextureBuilder& withUsage(VkImageUsageFlags usage);
+
+	TextureBuilder& withProperties(VkMemoryPropertyFlags properties);
+
+	TextureBuilder& withLayerCount(uint32_t layerCount);
+
+	TextureBuilder& withMagFilter(VkFilter magFilter);
+
+	TextureBuilder& withMinFilter(VkFilter minFilter);
+
+	TextureBuilder& withMipmapMode(VkSamplerMipmapMode mipmapMode);
+
+	TextureBuilder& withAddressModes(VkSamplerAddressMode addressModeU, VkSamplerAddressMode addressModeV, VkSamplerAddressMode addressModeW);
+
+	TextureBuilder& withMipLodBias(float mipLodBias);
+
+	TextureBuilder& withMaxAnisotropy(float maxAnisotropy);
+
+	TextureBuilder& withCompareOp(std::optional<VkCompareOp> compareOp);
+
+	TextureBuilder& withMinLod(float minLod);
+
+	TextureBuilder& withMaxLod(float maxLod);
+
+	TextureBuilder& withBorderColor(VkBorderColor borderColor);
+
+	TextureBuilder& withUnnormalizedCoordinates(VkBool32 unnormalizedCoordinates);
+
+	ErrorOr<Texture> buildAttachment(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer) const;
+
+	ErrorOr<Texture> buildImage(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkBuffer copyBuffer, const std::span<const VkBufferImageCopy> copyRegions) const;
+
+	ErrorOr<Texture> buildImageSampler(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer) const;
+
+	ErrorOr<Texture> buildMipmapImage(const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkBuffer copyBuffer, std::span<const VkBufferImageCopy> copyRegions) const;
+
+private:
+	ImageParameters _imageParameters;
+	SamplerParameters _samplerParameters;
+	VkImageLayout _imageLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 };
