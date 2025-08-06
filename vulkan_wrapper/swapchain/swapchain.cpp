@@ -120,27 +120,27 @@ SwapchainBuilder& SwapchainBuilder::withClipped(VkBool32 clipped) {
 
 namespace {
 
-    VkSurfaceFormatKHR chooseSwapSurfaceFormat(std::span<const VkSurfaceFormatKHR> availableFormats, VkFormat preferredFormat) {
-        auto availableFormat = std::find_if(std::cbegin(availableFormats), std::cend(availableFormats), [=](const auto& format) {
-            return format.format == preferredFormat && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
-        });
-        return (availableFormat != std::cend(availableFormats)) ? *availableFormat : availableFormats[0];
-    }
+VkSurfaceFormatKHR chooseSwapSurfaceFormat(std::span<const VkSurfaceFormatKHR> availableFormats, VkFormat preferredFormat) {
+    auto availableFormat = std::find_if(std::cbegin(availableFormats), std::cend(availableFormats), [=](const auto& format) {
+        return format.format == preferredFormat && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
+    });
+    return (availableFormat != std::cend(availableFormats)) ? *availableFormat : availableFormats[0];
+}
 
-    VkPresentModeKHR chooseSwapPresentMode(std::span<const VkPresentModeKHR> availablePresentModes, VkPresentModeKHR preferredMode) {
-        auto availablePresentMode = std::find(std::cbegin(availablePresentModes), std::cend(availablePresentModes), preferredMode);
-        return (availablePresentMode != std::cend(availablePresentModes)) ? *availablePresentMode : VK_PRESENT_MODE_FIFO_KHR;
-    }
+VkPresentModeKHR chooseSwapPresentMode(std::span<const VkPresentModeKHR> availablePresentModes, VkPresentModeKHR preferredMode) {
+    auto availablePresentMode = std::find(std::cbegin(availablePresentModes), std::cend(availablePresentModes), preferredMode);
+    return (availablePresentMode != std::cend(availablePresentModes)) ? *availablePresentMode : VK_PRESENT_MODE_FIFO_KHR;
+}
 
-    VkExtent2D chooseSwapExtent(Extent2D actualWindowExtent, const VkSurfaceCapabilitiesKHR& capabilities) {
-        if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
-            return capabilities.currentExtent;
-        }
-        return {
-            std::clamp(actualWindowExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
-            std::clamp(actualWindowExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height)
-        };
+VkExtent2D chooseSwapExtent(Extent2D actualWindowExtent, const VkSurfaceCapabilitiesKHR& capabilities) {
+    if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+        return capabilities.currentExtent;
     }
+    return {
+        std::clamp(actualWindowExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width),
+        std::clamp(actualWindowExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height)
+    };
+}
 
 }   // namespace
 

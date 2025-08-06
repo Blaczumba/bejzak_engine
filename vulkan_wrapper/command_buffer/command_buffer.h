@@ -7,6 +7,7 @@
 #include <vulkan/vulkan.h>
 
 #include <memory>
+#include <span>
 
 class PrimaryCommandBuffer;
 class SecondaryCommandBuffer;
@@ -26,7 +27,13 @@ public:
 
 	ErrorOr<std::vector<PrimaryCommandBuffer>> createPrimaryCommandBuffers(uint32_t count) const;
 
+	template<size_t N>
+	ErrorOr<std::array<PrimaryCommandBuffer, N>> createPrimaryCommandBuffers() const;
+
 	ErrorOr<SecondaryCommandBuffer> createSecondaryCommandBuffer() const;
+
+	template<size_t N>
+	ErrorOr<std::array<SecondaryCommandBuffer, N>> createSecondaryCommandBuffers() const;
 
 	ErrorOr<std::vector<SecondaryCommandBuffer>> createSecondaryCommandBuffers(uint32_t count) const;
 
@@ -45,6 +52,8 @@ protected:
 	CommandBuffer(const std::shared_ptr<const CommandPool>& commandPool, VkCommandBuffer commandBuffer);
 
 public:
+	CommandBuffer();
+
 	CommandBuffer(CommandBuffer&&) noexcept;
 
 	CommandBuffer& operator=(CommandBuffer&&) noexcept;
@@ -60,14 +69,17 @@ public:
 };
 
 class PrimaryCommandBuffer : public CommandBuffer {
-	PrimaryCommandBuffer(const std::shared_ptr<const CommandPool>& commandPool, VkCommandBuffer commandBuffer);
-
 public:
 	PrimaryCommandBuffer(PrimaryCommandBuffer&&) noexcept = default;
+
+	PrimaryCommandBuffer(const std::shared_ptr<const CommandPool>& commandPool, VkCommandBuffer commandBuffer);
 
 	PrimaryCommandBuffer& operator=(PrimaryCommandBuffer&&) noexcept = default;
 
 	static ErrorOr<PrimaryCommandBuffer> create(const std::shared_ptr<const CommandPool>& commandPool);
+
+	template<size_t COUNT>
+	static ErrorOr<std::array<PrimaryCommandBuffer, COUNT>> create(const std::shared_ptr<const CommandPool>& commandPool);
 
 	static ErrorOr<std::vector<PrimaryCommandBuffer>> create(const std::shared_ptr<const CommandPool>& commandPool, uint32_t count);
 
@@ -83,14 +95,19 @@ public:
 };
 
 class SecondaryCommandBuffer : public CommandBuffer {
+public:
+	SecondaryCommandBuffer() = default;
+
 	SecondaryCommandBuffer(const std::shared_ptr<const CommandPool>& commandPool, VkCommandBuffer commandBuffer);
 
-public:
 	SecondaryCommandBuffer(SecondaryCommandBuffer&&) noexcept = default;
 
 	SecondaryCommandBuffer& operator=(SecondaryCommandBuffer&&) noexcept = default;
 
 	static ErrorOr<SecondaryCommandBuffer> create(const std::shared_ptr<const CommandPool>& commandPool);
+
+	template<size_t COUNT>
+	static ErrorOr<std::array<SecondaryCommandBuffer, COUNT>> create(const std::shared_ptr<const CommandPool>& commandPool);
 
 	static ErrorOr<std::vector<SecondaryCommandBuffer>> create(const std::shared_ptr<const CommandPool>& commandPool, uint32_t count);
 
@@ -111,3 +128,55 @@ public:
 
 	VkCommandBuffer getCommandBuffer() const;
 };
+
+namespace {
+
+VkResult createCommandBuffers(VkDevice device, VkCommandPool commandPool, VkCommandBufferLevel level, std::span<VkCommandBuffer> outCommandBuffers) {
+	const VkCommandBufferAllocateInfo allocInfo = {
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
+		.commandPool = commandPool,
+		.level = level,
+		.commandBufferCount = static_cast<uint32_t>(outCommandBuffers.size()),
+	};
+	return vkAllocateCommandBuffers(device, &allocInfo, outCommandBuffers.data());
+}
+
+template<typename CommandBufferType, size_t COUNT>
+std::array<CommandBufferType, COUNT> transformCommandBuffers(std::span<const VkCommandBuffer> inCommandBuffers, const std::shared_ptr<const CommandPool>& commandPool) {
+	std::array<CommandBufferType, COUNT> commandBuffers;
+	std::transform(inCommandBuffers.cbegin(), inCommandBuffers.cend(), commandBuffers.begin(),
+		[&commandPool](VkCommandBuffer commandBuffer) {
+		return CommandBufferType(commandPool, commandBuffer);
+	});
+	return commandBuffers;
+}
+
+} // namespace
+
+template<size_t COUNT>
+ErrorOr<std::array<PrimaryCommandBuffer, COUNT>> PrimaryCommandBuffer::create(const std::shared_ptr<const CommandPool>& commandPool) {
+	std::array<VkCommandBuffer, COUNT> commandBuffers;
+	if (VkResult result = createCommandBuffers(commandPool->getLogicalDevice().getVkDevice(), commandPool->getVkCommandPool(), VK_COMMAND_BUFFER_LEVEL_PRIMARY, commandBuffers); result != VK_SUCCESS) {
+		return Error(result);
+	}
+	return transformCommandBuffers<PrimaryCommandBuffer, COUNT>(commandBuffers, commandPool);
+}
+
+template<size_t COUNT>
+static ErrorOr<std::array<SecondaryCommandBuffer, COUNT>> SecondaryCommandBuffer::create(const std::shared_ptr<const CommandPool>& commandPool) {
+	std::array<VkCommandBuffer, COUNT> commandBuffers;
+	if (VkResult result = createCommandBuffers(commandPool->getLogicalDevice().getVkDevice(), commandPool->getVkCommandPool(), VK_COMMAND_BUFFER_LEVEL_SECONDARY, commandBuffers); result != VK_SUCCESS) {
+		return Error(result);
+	}
+	return transformCommandBuffers<SecondaryCommandBuffer, COUNT>(commandBuffers, commandPool);
+}
+
+template<size_t COUNT>
+ErrorOr<std::array<PrimaryCommandBuffer, COUNT>> CommandPool::createPrimaryCommandBuffers() const {
+	return PrimaryCommandBuffer::create<COUNT>(shared_from_this());
+}
+
+template<size_t COUNT>
+ErrorOr<std::array<SecondaryCommandBuffer, COUNT>> CommandPool::createSecondaryCommandBuffers() const {
+	return SecondaryCommandBuffer::create<COUNT>(shared_from_this());
+}

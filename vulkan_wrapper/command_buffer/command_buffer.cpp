@@ -50,6 +50,8 @@ const LogicalDevice& CommandPool::getLogicalDevice() const {
     return _logicalDevice;
 }
 
+CommandBuffer::CommandBuffer() : _commandBuffer(VK_NULL_HANDLE) { }
+
 CommandBuffer::CommandBuffer(const std::shared_ptr<const CommandPool>& commandPool, VkCommandBuffer commandBuffer)
     :_commandPool(commandPool), _commandBuffer(commandBuffer) {}
 
@@ -86,20 +88,6 @@ VkCommandBuffer CommandBuffer::getVkCommandBuffer() const {
 PrimaryCommandBuffer::PrimaryCommandBuffer(const std::shared_ptr<const CommandPool>& commandPool, VkCommandBuffer commandBuffer)
     : CommandBuffer(commandPool, commandBuffer) {}
 
-namespace {
-
-VkResult createCommandBuffers(VkDevice device, VkCommandPool commandPool, VkCommandBufferLevel level, std::span<VkCommandBuffer> outCommandBuffers) {
-    const VkCommandBufferAllocateInfo allocInfo = {
-        .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        .commandPool = commandPool,
-        .level = level,
-        .commandBufferCount = static_cast<uint32_t>(outCommandBuffers.size()),
-    };
-    return vkAllocateCommandBuffers(device, &allocInfo, outCommandBuffers.data());
-}
-
-} // namespace
-
 ErrorOr<PrimaryCommandBuffer> PrimaryCommandBuffer::create(const std::shared_ptr<const CommandPool>& commandPool) {
     VkCommandBuffer commandBuffer;
     if (VkResult result = createCommandBuffers(commandPool->getLogicalDevice().getVkDevice(), commandPool->getVkCommandPool(), VK_COMMAND_BUFFER_LEVEL_PRIMARY, { &commandBuffer, 1 }); result != VK_SUCCESS) {
@@ -109,19 +97,27 @@ ErrorOr<PrimaryCommandBuffer> PrimaryCommandBuffer::create(const std::shared_ptr
     return PrimaryCommandBuffer(commandPool, commandBuffer);
 }
 
+namespace {
+
+template<typename CommandBufferType>
+std::vector<CommandBufferType> transformCommandBuffers(std::span<const VkCommandBuffer> inCommandBuffers, const std::shared_ptr<const CommandPool>& commandPool) {
+    std::vector<CommandBufferType> commandBuffers;
+	commandBuffers.reserve(inCommandBuffers.size());
+    std::transform(inCommandBuffers.cbegin(), inCommandBuffers.cend(), std::back_inserter(commandBuffers),
+        [&commandPool](VkCommandBuffer commandBuffer) {
+        return CommandBufferType(commandPool, commandBuffer);
+    });
+    return commandBuffers;
+}
+
+} // namespace
+
 ErrorOr<std::vector<PrimaryCommandBuffer>> PrimaryCommandBuffer::create(const std::shared_ptr<const CommandPool>& commandPool, uint32_t count) {
     lib::Buffer<VkCommandBuffer> commandBuffers(count);
     if (VkResult result = createCommandBuffers(commandPool->getLogicalDevice().getVkDevice(), commandPool->getVkCommandPool(), VK_COMMAND_BUFFER_LEVEL_PRIMARY, commandBuffers); result != VK_SUCCESS) {
         return Error(result);
     }
-
-	std::vector<PrimaryCommandBuffer> primaryCommandBuffers;
-	primaryCommandBuffers.reserve(count);
-    std::transform(commandBuffers.cbegin(), commandBuffers.cend(), std::back_inserter(primaryCommandBuffers),
-        [&commandPool](VkCommandBuffer commandBuffer) {
-            return PrimaryCommandBuffer(commandPool, commandBuffer);
-		});
-    return primaryCommandBuffers;
+    return transformCommandBuffers<PrimaryCommandBuffer>(commandBuffers, commandPool);
 }
 
 VkResult PrimaryCommandBuffer::begin(uint32_t subpassIndex) const {
@@ -204,15 +200,7 @@ ErrorOr<std::vector<SecondaryCommandBuffer>> SecondaryCommandBuffer::create(cons
     if (VkResult result = createCommandBuffers(commandPool->getLogicalDevice().getVkDevice(), commandPool->getVkCommandPool(), VK_COMMAND_BUFFER_LEVEL_SECONDARY, commandBuffers); result != VK_SUCCESS) {
         return Error(result);
     }
-
-    std::vector<SecondaryCommandBuffer> secondaryCommandBuffers;
-    secondaryCommandBuffers.reserve(count);
-    std::transform(commandBuffers.cbegin(), commandBuffers.cend(), std::back_inserter(secondaryCommandBuffers),
-        [&commandPool](VkCommandBuffer commandBuffer) {
-            return SecondaryCommandBuffer(commandPool, commandBuffer);
-        });
-
-    return secondaryCommandBuffers;
+    return transformCommandBuffers<SecondaryCommandBuffer>(commandBuffers, commandPool);
 }
 
 VkResult SecondaryCommandBuffer::begin(const Framebuffer& framebuffer, const VkCommandBufferInheritanceViewportScissorInfoNV* scissorViewportInheritance, uint32_t subpassIndex) const {
