@@ -3,9 +3,24 @@
 #include "debug_messenger_utils.h"
 #include "vulkan_wrapper/instance/instance.h"
 
-DebugMessenger::DebugMessenger(const Instance& instance, VkDebugUtilsMessengerEXT debugUtilsMessenger) : _instance(instance), _debugUtilsMessenger(debugUtilsMessenger) {}
+DebugMessenger::DebugMessenger(const Instance& instance, VkDebugUtilsMessengerEXT debugUtilsMessenger) : _instance(&instance), _debugUtilsMessenger(debugUtilsMessenger) {}
 
-ErrorOr<std::unique_ptr<DebugMessenger>> DebugMessenger::create(const Instance& instance) {
+DebugMessenger::DebugMessenger() : _debugUtilsMessenger(VK_NULL_HANDLE), _instance(nullptr) { }
+
+DebugMessenger::DebugMessenger(DebugMessenger&& debugMessenger) noexcept
+    : _debugUtilsMessenger(std::exchange(debugMessenger._debugUtilsMessenger, VK_NULL_HANDLE)), _instance(std::exchange(debugMessenger._instance, nullptr)) { }
+
+DebugMessenger& DebugMessenger::operator=(DebugMessenger&& other) noexcept {
+	if (this == &other) {
+		return *this;
+	}
+	// TODO what if _debugUtilsMessenger != VK_NULL_HANDLE
+	_debugUtilsMessenger = std::exchange(other._debugUtilsMessenger, VK_NULL_HANDLE);
+	_instance = std::exchange(other._instance, nullptr);
+	return *this;
+}
+
+ErrorOr<DebugMessenger> DebugMessenger::create(const Instance& instance) {
     static constexpr VkDebugUtilsMessengerCreateInfoEXT createInfo = populateDebugMessengerCreateInfoUtility();
     VkDebugUtilsMessengerEXT debugUtilsMessenger;
     if (auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance.getVkInstance(), "vkCreateDebugUtilsMessengerEXT"); func != nullptr) {
@@ -17,12 +32,15 @@ ErrorOr<std::unique_ptr<DebugMessenger>> DebugMessenger::create(const Instance& 
         return Error(VK_ERROR_EXTENSION_NOT_PRESENT);
     }
 
-    return std::unique_ptr<DebugMessenger>(new DebugMessenger(instance, debugUtilsMessenger));
+    return DebugMessenger(instance, debugUtilsMessenger);
 }
 
 DebugMessenger::~DebugMessenger() {
-    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(_instance.getVkInstance(), "vkDestroyDebugUtilsMessengerEXT");
+	if (_debugUtilsMessenger == VK_NULL_HANDLE) {
+		return;
+	}
+    auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(_instance->getVkInstance(), "vkDestroyDebugUtilsMessengerEXT");
     if (func != nullptr) {
-        func(_instance.getVkInstance(), _debugUtilsMessenger, nullptr);
+        func(_instance->getVkInstance(), _debugUtilsMessenger, nullptr);
     }
 }

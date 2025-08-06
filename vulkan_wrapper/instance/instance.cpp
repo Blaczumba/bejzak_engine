@@ -8,8 +8,23 @@
 
 Instance::Instance(VkInstance instance) : _instance(instance) { }
 
+Instance::Instance() : _instance(VK_NULL_HANDLE) { }
+
+Instance::Instance(Instance&& instance) noexcept : _instance(std::exchange(instance._instance, VK_NULL_HANDLE)) {}
+
+Instance& Instance::operator=(Instance&& instance) noexcept {
+	if (this == &instance) {
+		return *this;
+	}
+	// TODO what if _instance != VK_NULL_HANDLE
+	_instance = std::exchange(instance._instance, VK_NULL_HANDLE);
+	return *this;
+}
+
 Instance::~Instance() {
-    vkDestroyInstance(_instance, nullptr);
+    if (_instance != VK_NULL_HANDLE) {
+        vkDestroyInstance(_instance, nullptr);
+    }
 }
 
 namespace {
@@ -39,7 +54,7 @@ bool checkValidationLayerSupport() {
 
 }
 
-ErrorOr<std::unique_ptr<Instance>> Instance::create(std::string_view engineName, std::span<const char* const> requiredExtensions) {
+ErrorOr<Instance> Instance::create(std::string_view engineName, std::span<const char* const> requiredExtensions) {
 #ifdef VALIDATION_LAYERS_ENABLED
     if (!checkValidationLayerSupport()) {
         return Error(VK_ERROR_FEATURE_NOT_PRESENT);
@@ -82,14 +97,14 @@ ErrorOr<std::unique_ptr<Instance>> Instance::create(std::string_view engineName,
         return Error(result);
     }
 
-    return std::unique_ptr<Instance>(new Instance(instance));
+    return Instance(instance);
 }
 
-ErrorOr<std::unique_ptr<Instance>> Instance::createFromInitialized(VkInstance instance) {
-    if (instance != VK_NULL_HANDLE) {
-        return std::unique_ptr<Instance>(new Instance(instance));
+ErrorOr<Instance> Instance::createFromInitialized(VkInstance instance) {
+    if (instance == VK_NULL_HANDLE) {
+        return Error(EngineError::NULLPTR_REFERENCE);
     }
-    return Error(EngineError::NULLPTR_REFERENCE);
+    return Instance(instance);
 }
 
 VkInstance Instance::getVkInstance() const {
