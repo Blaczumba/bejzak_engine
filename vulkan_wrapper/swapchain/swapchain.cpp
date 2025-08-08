@@ -24,6 +24,7 @@ void Swapchain::tryDestroySwapchain() {
   for (const VkImageView view : _views) {
     vkDestroyImageView(_logicalDevice->getVkDevice(), view, nullptr);
   }
+
   if (_swapchain != VK_NULL_HANDLE) {
     vkDestroySwapchainKHR(_logicalDevice->getVkDevice(), _swapchain, nullptr);
   }
@@ -33,7 +34,9 @@ Swapchain& Swapchain::operator=(Swapchain&& other) noexcept {
   if (this == &other) {
     return *this;
   }
+
   tryDestroySwapchain();
+
   _swapchain = std::exchange(other._swapchain, VK_NULL_HANDLE);
   _logicalDevice = std::exchange(other._logicalDevice, nullptr);
   _surfaceFormat = other._surfaceFormat;
@@ -67,6 +70,7 @@ const VkImageView Swapchain::getSwapchainVkImageView(size_t index) const {
   if (index < _views.size()) {
     return _views[index];
   }
+
   return VK_NULL_HANDLE;
 }
 
@@ -123,6 +127,7 @@ VkSurfaceFormatKHR chooseSwapSurfaceFormat(
         return format.format == preferredFormat
                && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR;
       });
+
   return (availableFormat != std::cend(availableFormats)) ? *availableFormat : availableFormats[0];
 }
 
@@ -130,6 +135,7 @@ VkPresentModeKHR chooseSwapPresentMode(
     std::span<const VkPresentModeKHR> availablePresentModes, VkPresentModeKHR preferredMode) {
   auto availablePresentMode = std::find(
       std::cbegin(availablePresentModes), std::cend(availablePresentModes), preferredMode);
+
   return (availablePresentMode != std::cend(availablePresentModes)) ?
              *availablePresentMode :
              VK_PRESENT_MODE_FIFO_KHR;
@@ -140,6 +146,7 @@ VkExtent2D chooseSwapExtent(
   if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
     return capabilities.currentExtent;
   }
+
   return {std::clamp(actualWindowExtent.width, capabilities.minImageExtent.width,
                      capabilities.maxImageExtent.width),
           std::clamp(actualWindowExtent.height, capabilities.minImageExtent.height,
@@ -152,6 +159,7 @@ ErrorOr<Swapchain> SwapchainBuilder::build(
     const LogicalDevice& logicalDevice, VkSurfaceKHR surface, VkExtent2D extent) {
   const SwapChainSupportDetails swapChainSupport =
       logicalDevice.getPhysicalDevice().getSwapchainSupportDetails();
+
   uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
   if (swapChainSupport.capabilities.maxImageCount > 0
       && imageCount > swapChainSupport.capabilities.maxImageCount) {
@@ -173,10 +181,12 @@ ErrorOr<Swapchain> SwapchainBuilder::build(
     .presentMode = chooseSwapPresentMode(swapChainSupport.presentModes, _preferredPresentMode),
     .clipped = _clipped,
     .oldSwapchain = _oldSwapchain};
+
   const QueueFamilyIndices indices = logicalDevice.getPhysicalDevice().getQueueFamilyIndices();
   if (indices.graphicsFamily != indices.presentFamily) {
     const uint32_t queueFamilyIndices[] = {
       indices.graphicsFamily.value(), indices.presentFamily.value()};
+
     createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
     createInfo.queueFamilyIndexCount = static_cast<uint32_t>(std::size(queueFamilyIndices));
     createInfo.pQueueFamilyIndices = queueFamilyIndices;
@@ -186,9 +196,11 @@ ErrorOr<Swapchain> SwapchainBuilder::build(
 
   VkSwapchainKHR swapchain;
   CHECK_VKCMD(vkCreateSwapchainKHR(logicalDevice.getVkDevice(), &createInfo, nullptr, &swapchain));
+
   vkGetSwapchainImagesKHR(logicalDevice.getVkDevice(), swapchain, &imageCount, nullptr);
   lib::Buffer<VkImage> images(imageCount);
   vkGetSwapchainImagesKHR(logicalDevice.getVkDevice(), swapchain, &imageCount, images.data());
+
   lib::Buffer<VkImageView> views(imageCount);
   for (size_t i = 0; i < images.size(); ++i) {
     ASSIGN_OR_RETURN(
@@ -199,6 +211,7 @@ ErrorOr<Swapchain> SwapchainBuilder::build(
                                    .aspect = VK_IMAGE_ASPECT_COLOR_BIT,
     }));
   }
+
   return Swapchain(
       swapchain, logicalDevice, surfaceFormat.format, extent, std::move(images), std::move(views));
 }
