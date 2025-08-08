@@ -7,8 +7,8 @@
 #include "vulkan_wrapper/logical_device/logical_device.h"
 
 class Swapchain {
-  Swapchain(VkSwapchainKHR swapchain, const LogicalDevice& logicalDevice, VkSurfaceFormatKHR format,
-            VkExtent2D extent, uint32_t imageCount);
+  Swapchain(VkSwapchainKHR swapchain, const LogicalDevice& logicalDevice, VkFormat format,
+            VkExtent2D extent, lib::Buffer<VkImage>&& images, lib::Buffer<VkImageView>&& views);
 
   void tryDestroySwapchain();
 
@@ -39,7 +39,7 @@ private:
   VkSwapchainKHR _swapchain = VK_NULL_HANDLE;
   const LogicalDevice* _logicalDevice = nullptr;
 
-  VkSurfaceFormatKHR _surfaceFormat;
+  VkFormat _surfaceFormat;
   VkExtent2D _extent;
   lib::Buffer<VkImage> _images;
   lib::Buffer<VkImageView> _views;

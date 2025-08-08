@@ -8,23 +8,11 @@
 #include "vulkan_wrapper/physical_device/physical_device.h"
 #include "vulkan_wrapper/util/check.h"
 
-Swapchain::Swapchain(const VkSwapchainKHR swapchain, const LogicalDevice& logicalDevice,
-                     VkSurfaceFormatKHR surfaceFormat, VkExtent2D extent, uint32_t imageCount)
+Swapchain::Swapchain(
+    const VkSwapchainKHR swapchain, const LogicalDevice& logicalDevice, VkFormat surfaceFormat,
+    VkExtent2D extent, lib::Buffer<VkImage>&& images, lib::Buffer<VkImageView>&& views)
   : _swapchain(swapchain), _logicalDevice(&logicalDevice), _surfaceFormat(surfaceFormat),
-    _extent(extent), _images(imageCount), _views(imageCount) {
-  vkGetSwapchainImagesKHR(logicalDevice.getVkDevice(), swapchain, &imageCount, _images.data());
-  std::transform(_images.cbegin(), _images.cend(), _views.begin(), [&](const VkImage image) {
-    // TODO handle error
-    return logicalDevice
-        .createImageView(image,
-                         ImageParameters{
-                           .format = surfaceFormat.format,
-                           .extent = {extent.width, extent.height, 1},
-                           .aspect = VK_IMAGE_ASPECT_COLOR_BIT,
-    })
-        .value();
-  });
-}
+    _extent(extent), _images(std::move(images)), _views(std::move(views)) {}
 
 Swapchain::Swapchain(Swapchain&& swapchain) noexcept
   : _swapchain(std::exchange(swapchain._swapchain, VK_NULL_HANDLE)),
@@ -68,7 +56,7 @@ VkExtent2D Swapchain::getExtent() const {
 }
 
 const VkFormat Swapchain::getVkFormat() const {
-  return _surfaceFormat.format;
+  return _surfaceFormat;
 }
 
 uint32_t Swapchain::getImagesCount() const {
@@ -198,11 +186,25 @@ ErrorOr<Swapchain> SwapchainBuilder::build(
 
   VkSwapchainKHR swapchain;
   CHECK_VKCMD(vkCreateSwapchainKHR(logicalDevice.getVkDevice(), &createInfo, nullptr, &swapchain));
-  if (VkResult result =
-          vkGetSwapchainImagesKHR(logicalDevice.getVkDevice(), swapchain, &imageCount, nullptr);
-      result != VK_SUCCESS) {
-    vkDestroySwapchainKHR(logicalDevice.getVkDevice(), swapchain, nullptr);
-    return Error(result);
-  }
-  return Swapchain(swapchain, logicalDevice, surfaceFormat, extent, imageCount);
+  vkGetSwapchainImagesKHR(logicalDevice.getVkDevice(), swapchain, &imageCount, nullptr);
+  lib::Buffer<VkImage> images(imageCount);
+  vkGetSwapchainImagesKHR(logicalDevice.getVkDevice(), swapchain, &imageCount, images.data());
+  lib::Buffer<VkImageView> views(imageCount);
+  Status status;
+  std::transform(images.cbegin(), images.cend(), views.begin(), [&](const VkImage image) {
+    ErrorOr<VkImageView> localStatus = logicalDevice.createImageView(
+        image, ImageParameters{
+                 .format = surfaceFormat.format,
+                 .extent = {extent.width, extent.height, 1},
+                 .aspect = VK_IMAGE_ASPECT_COLOR_BIT,
+    });
+    if (localStatus.has_value()) {
+      return localStatus.value();
+    }
+    status = Error(localStatus.error());
+    return VkImageView{VK_NULL_HANDLE};
+  });
+  RETURN_IF_ERROR(status);
+  return Swapchain(
+      swapchain, logicalDevice, surfaceFormat.format, extent, std::move(images), std::move(views));
 }
