@@ -17,7 +17,7 @@
 
 class Buffer {
 public:
-    Buffer();
+    Buffer() = default;
 
     Buffer(Buffer&& Buffer) noexcept;
 
@@ -56,11 +56,11 @@ public:
     const VkBuffer& getVkBuffer() const;
 
 private:
-    VkBuffer _buffer;
+    VkBuffer _buffer = VK_NULL_HANDLE;
     Allocation _allocation;
     VkDeviceSize _size;
     VkBufferUsageFlags _usage;
-    void* _mappedMemory;
+    void* _mappedMemory = nullptr;
 
     LogicalDevice* _logicalDevice;
 

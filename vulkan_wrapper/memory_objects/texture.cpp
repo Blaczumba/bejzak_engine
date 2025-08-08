@@ -14,8 +14,6 @@ Texture::Texture(const LogicalDevice& logicalDevice, VkImage image, const Alloca
     : _logicalDevice(&logicalDevice), _image(image), _allocation(allocation),
     _layout(layout), _view(view), _sampler(sampler), _extent(extent), _aspect(aspect), _mipLevels(mipLevels), _layerCount(layerCount) { }
 
-Texture::Texture() : _image(VK_NULL_HANDLE), _view(VK_NULL_HANDLE), _sampler(VK_NULL_HANDLE) {}
-
 Texture::Texture(Texture&& texture) noexcept
     : _allocation(texture._allocation), _image(std::exchange(texture._image, VK_NULL_HANDLE)), 
     _view(std::exchange(texture._view, VK_NULL_HANDLE)), _sampler(std::exchange(texture._sampler, VK_NULL_HANDLE)),

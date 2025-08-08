@@ -16,20 +16,20 @@ enum class QueueType : uint8_t {
 };
 
 class LogicalDevice {
-	VkDevice _device;
+	VkDevice _device = VK_NULL_HANDLE;
 
-	const PhysicalDevice* _physicalDevice;
+	const PhysicalDevice* _physicalDevice = nullptr;
 	mutable MemoryAllocator _memoryAllocator;
 
-	VkQueue _graphicsQueue;
-	VkQueue _presentQueue;
-	VkQueue _computeQueue;
-	VkQueue _transferQueue;
+	VkQueue _graphicsQueue = VK_NULL_HANDLE;
+	VkQueue _presentQueue = VK_NULL_HANDLE;
+	VkQueue _computeQueue = VK_NULL_HANDLE;
+	VkQueue _transferQueue = VK_NULL_HANDLE;
 
 	LogicalDevice(VkDevice logicalDevice, const PhysicalDevice& physicalDevice, VkQueue graphicsQueue, VkQueue presentQueue, VkQueue computeQueue, VkQueue transferQueue);
 
 public:
-	LogicalDevice();
+	LogicalDevice() = default;
 
 	static ErrorOr<LogicalDevice> create(const PhysicalDevice& physicalDevice);
 

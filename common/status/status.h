@@ -16,7 +16,8 @@ enum class EngineError : uint32_t {
     RESOURCE_EXHAUSTED,
     LOAD_FAILURE,
     FLAG_NOT_SPECIFIED,
-    NULLPTR_REFERENCE
+    NULLPTR_REFERENCE,
+    ALREADY_INITIALIZED
 };
 
 // Holds either an integer error code (VkResult, HRESULT) or an EngineError.

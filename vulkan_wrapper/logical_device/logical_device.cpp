@@ -16,8 +16,6 @@ LogicalDevice::LogicalDevice(VkDevice logicalDevice, const PhysicalDevice& physi
     _graphicsQueue(graphicsQueue), _presentQueue(presentQueue), _computeQueue(computeQueue), _transferQueue(transferQueue){
 }
 
-LogicalDevice::LogicalDevice() : _device(VK_NULL_HANDLE), _physicalDevice(nullptr), _graphicsQueue(VK_NULL_HANDLE), _presentQueue(VK_NULL_HANDLE), _computeQueue(VK_NULL_HANDLE), _transferQueue(VK_NULL_HANDLE) { }
-
 LogicalDevice::LogicalDevice(LogicalDevice&& logicalDevice) noexcept
 	: _device(std::exchange(logicalDevice._device, VK_NULL_HANDLE)), _physicalDevice(std::exchange(logicalDevice._physicalDevice, nullptr)), _memoryAllocator(std::move(logicalDevice._memoryAllocator)),
     _graphicsQueue(std::exchange(logicalDevice._graphicsQueue, VK_NULL_HANDLE)), _presentQueue(std::exchange(logicalDevice._presentQueue, VK_NULL_HANDLE)),

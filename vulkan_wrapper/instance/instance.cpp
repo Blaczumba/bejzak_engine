@@ -8,8 +8,6 @@
 
 Instance::Instance(VkInstance instance) : _instance(instance) { }
 
-Instance::Instance() : _instance(VK_NULL_HANDLE) { }
-
 Instance::Instance(Instance&& instance) noexcept : _instance(std::exchange(instance._instance, VK_NULL_HANDLE)) {}
 
 Instance& Instance::operator=(Instance&& instance) noexcept {

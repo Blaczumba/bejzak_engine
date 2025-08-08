@@ -5,8 +5,6 @@
 
 #include <glm/glm.hpp>
 
-Buffer::Buffer() : _buffer(VK_NULL_HANDLE), _mappedMemory(nullptr) {};
-
 Buffer::Buffer(LogicalDevice& logicalDevice, const Allocation allocation, const VkBuffer buffer, VkBufferUsageFlags usage, uint32_t size, void* mappedData)
     : _logicalDevice(&logicalDevice), _allocation(allocation), _buffer(buffer), _usage(usage), _size(size), _mappedMemory(mappedData) {
 }

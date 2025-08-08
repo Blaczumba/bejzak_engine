@@ -10,12 +10,12 @@
 #include <string_view>
 
 class Instance {
-	VkInstance _instance;
+	VkInstance _instance = VK_NULL_HANDLE;
 
     Instance(VkInstance instance);
 
 public:
-	Instance();
+	Instance() = default;
 
 	Instance(Instance&& other) noexcept;
 

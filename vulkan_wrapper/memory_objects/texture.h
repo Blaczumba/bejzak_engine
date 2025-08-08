@@ -13,7 +13,7 @@ class LogicalDevice;
 
 struct Texture {
 public:
-	Texture();
+	Texture() = default;
 
 	Texture(Texture&& texture) noexcept;
 
@@ -38,10 +38,10 @@ public:
 private:
 	Texture(const LogicalDevice& logicalDevice, VkImage image, const Allocation allocation, VkExtent3D extent, VkImageAspectFlags aspect, uint32_t mipLevels, uint32_t layerCount, VkImageLayout layout, VkImageView view = VK_NULL_HANDLE, VkSampler sampler = VK_NULL_HANDLE);
 
+	VkImage _image = VK_NULL_HANDLE;
+	VkImageView _view = VK_NULL_HANDLE;
+	VkSampler _sampler = VK_NULL_HANDLE;
 	Allocation _allocation;
-	VkImage _image;
-	VkImageView _view;
-	VkSampler _sampler;
 	VkImageLayout _layout;
 	VkExtent3D _extent;
 	VkImageAspectFlags _aspect;
