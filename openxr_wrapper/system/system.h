@@ -22,6 +22,8 @@ class System {
   static ErrorOr<std::unique_ptr<System>> create(const Instance& instance);
 
   XrSystemId getXrSystemId() const;
+
+  const Instance& getInstance() const;
 };
 
 } // xrw

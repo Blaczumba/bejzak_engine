@@ -103,7 +103,7 @@ template<typename CommandBufferType>
 std::vector<CommandBufferType> transformCommandBuffers(std::span<const VkCommandBuffer> inCommandBuffers, const std::shared_ptr<const CommandPool>& commandPool) {
     std::vector<CommandBufferType> commandBuffers;
 	commandBuffers.reserve(inCommandBuffers.size());
-    std::transform(inCommandBuffers.cbegin(), inCommandBuffers.cend(), std::back_inserter(commandBuffers),
+    std::transform(std::cbegin(inCommandBuffers), std::cend(inCommandBuffers), std::back_inserter(commandBuffers),
         [&commandPool](VkCommandBuffer commandBuffer) {
         return CommandBufferType(commandPool, commandBuffer);
     });

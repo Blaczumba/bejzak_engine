@@ -144,7 +144,7 @@ VkResult createCommandBuffers(VkDevice device, VkCommandPool commandPool, VkComm
 template<typename CommandBufferType, size_t COUNT>
 std::array<CommandBufferType, COUNT> transformCommandBuffers(std::span<const VkCommandBuffer> inCommandBuffers, const std::shared_ptr<const CommandPool>& commandPool) {
 	std::array<CommandBufferType, COUNT> commandBuffers;
-	std::transform(inCommandBuffers.cbegin(), inCommandBuffers.cend(), commandBuffers.begin(),
+	std::transform(std::cbegin(inCommandBuffers), std::cend(inCommandBuffers), commandBuffers.begin(),
 		[&commandPool](VkCommandBuffer commandBuffer) {
 		return CommandBufferType(commandPool, commandBuffer);
 	});
@@ -163,7 +163,7 @@ ErrorOr<std::array<PrimaryCommandBuffer, COUNT>> PrimaryCommandBuffer::create(co
 }
 
 template<size_t COUNT>
-static ErrorOr<std::array<SecondaryCommandBuffer, COUNT>> SecondaryCommandBuffer::create(const std::shared_ptr<const CommandPool>& commandPool) {
+ErrorOr<std::array<SecondaryCommandBuffer, COUNT>> SecondaryCommandBuffer::create(const std::shared_ptr<const CommandPool>& commandPool) {
 	std::array<VkCommandBuffer, COUNT> commandBuffers;
 	if (VkResult result = createCommandBuffers(commandPool->getLogicalDevice().getVkDevice(), commandPool->getVkCommandPool(), VK_COMMAND_BUFFER_LEVEL_SECONDARY, commandBuffers); result != VK_SUCCESS) {
 		return Error(result);

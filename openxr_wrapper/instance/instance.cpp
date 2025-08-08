@@ -2,6 +2,7 @@
 
 #include "lib/buffer/buffer.h"
 #include "openxr_wrapper/platform/platform.h"
+#include "openxr_wrapper/util/check.h"
 
 #include <algorithm>
 
@@ -35,12 +36,10 @@ ErrorOr<std::unique_ptr<Instance>> Instance::create(std::string_view engineName,
       .enabledExtensionCount = static_cast<uint32_t>(mergedExtensions.size()),
       .enabledExtensionNames = mergedExtensions.data()
   };
-  strcpy(create_info.applicationInfo.applicationName, engineName.data());
+  std::strcpy(create_info.applicationInfo.applicationName, engineName.data());
 
   XrInstance instance;
-  if (XrResult result = xrCreateInstance(&create_info, &instance); result != XR_SUCCESS) {
-    return Error(result);
-  }
+  CHECK_XRCMD(xrCreateInstance(&create_info, &instance));
   return std::unique_ptr<Instance>(new Instance(instance));
 }
 

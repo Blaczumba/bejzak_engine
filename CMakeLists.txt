@@ -92,6 +92,6 @@ if (ANDROID)
     add_subdirectory(openxr_wrapper)
     # target_compile_definitions(${ENGINE_NAME} INTERFACE XR_USE_PLATFORM_ANDROID)
     target_link_libraries(${ENGINE_NAME} INTERFACE
-            OpenxrGraphicsPlugin OpenxrPlatform OpenxrInstance OpenxrSystem
+            OpenxrGraphicsPlugin OpenxrPlatform OpenxrInstance OpenxrSystem OpenxrSession OpenxrSwapchain
     )
 endif ()

@@ -1,6 +1,7 @@
 #include "system.h"
 
 #include "common/status/status.h"
+#include "openxr_wrapper/util/check.h"
 
 #include <openxr/openxr.h>
 
@@ -17,14 +18,16 @@ ErrorOr<std::unique_ptr<System>> System::create(const Instance& instance) {
     };
 
     XrSystemId systemId;
-    if (XrResult result = xrGetSystem(instance.getXrInstance(), &systemInfo, &systemId); result != XR_SUCCESS) {
-        return Error(result);
-    }
+    CHECK_XRCMD(xrGetSystem(instance.getXrInstance(), &systemInfo, &systemId));
     return std::unique_ptr<System>(new System(systemId, instance));
 }
 
 XrSystemId System::getXrSystemId() const {
     return _systemId;
+}
+
+const Instance& System::getInstance() const {
+    return _instance;
 }
 
 } // xrw
