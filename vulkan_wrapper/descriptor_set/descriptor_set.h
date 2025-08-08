@@ -12,7 +12,7 @@
 class DescriptorPool;  // DescriptorPool is forward declared to avoid circular dependency
 
 class DescriptorSet {
-  VkDescriptorSet _descriptorSet;
+  VkDescriptorSet _descriptorSet = VK_NULL_HANDLE;
 
   std::shared_ptr<const DescriptorPool> _descriptorPool;
 

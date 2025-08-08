@@ -9,9 +9,9 @@
 #include "vulkan_wrapper/render_pass/render_pass.h"
 
 class Framebuffer {
-  VkFramebuffer _framebuffer;
+  VkFramebuffer _framebuffer = VK_NULL_HANDLE;
 
-  const Renderpass& _renderpass;
+  const Renderpass* _renderpass;
 
   VkViewport _viewport;
   VkRect2D _scissor;
@@ -20,12 +20,18 @@ class Framebuffer {
               const VkRect2D& scissor);
 
 public:
-  static ErrorOr<std::unique_ptr<Framebuffer>> createFromSwapchain(
+  Framebuffer() = default;
+
+  static ErrorOr<Framebuffer> createFromSwapchain(
       VkCommandBuffer commandBuffer, const Renderpass& renderpass, VkExtent2D swapchainExtent,
       VkImageView swapchainImageView, std::vector<Texture>& attachments);
 
-  static ErrorOr<std::unique_ptr<Framebuffer>> createFromTextures(
+  static ErrorOr<Framebuffer> createFromTextures(
       const Renderpass& renderpass, std::span<const Texture> textures);
+
+  Framebuffer(Framebuffer&& framebuffer) noexcept;
+
+  Framebuffer& operator=(Framebuffer&& framebuffer) noexcept;
 
   ~Framebuffer();
 

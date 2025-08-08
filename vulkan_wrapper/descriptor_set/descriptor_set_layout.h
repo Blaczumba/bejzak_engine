@@ -14,6 +14,8 @@ class DescriptorSetLayout {
   DescriptorSetLayout(const LogicalDevice& logicalDevice, VkDescriptorSetLayout layout);
 
 public:
+  DescriptorSetLayout() = default;
+
   DescriptorSetLayout(DescriptorSetLayout&& layout) noexcept;
 
   DescriptorSetLayout& operator=(DescriptorSetLayout&& layout) noexcept;

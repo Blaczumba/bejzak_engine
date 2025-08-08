@@ -45,7 +45,7 @@ ErrorOr<Texture> createDepthAttachment(
 
 }  // namespace
 
-ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromSwapchain(
+ErrorOr<Framebuffer> Framebuffer::createFromSwapchain(
     VkCommandBuffer commandBuffer, const Renderpass& renderpass, VkExtent2D swapchainExtent,
     VkImageView swapchainImageView, std::vector<Texture>& attachments) {
   const LogicalDevice& logicalDevice = renderpass.getLogicalDevice();
@@ -102,10 +102,10 @@ ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromSwapchain(
     .minDepth = 0.0f,
     .maxDepth = 1.0f};
   const VkRect2D scissor = {.extent = swapchainExtent};
-  return std::unique_ptr<Framebuffer>(new Framebuffer(framebuffer, renderpass, viewport, scissor));
+  return Framebuffer(framebuffer, renderpass, viewport, scissor);
 }
 
-ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromTextures(
+ErrorOr<Framebuffer> Framebuffer::createFromTextures(
     const Renderpass& renderpass, std::span<const Texture> textures) {
   std::vector<VkImageView> imageViews;
   imageViews.reserve(textures.size());
@@ -145,15 +145,30 @@ ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromTextures(
     .maxDepth = 1.0f};
 
   const VkRect2D scissor = {.extent = *extent};
-  return std::unique_ptr<Framebuffer>(new Framebuffer(framebuffer, renderpass, viewport, scissor));
+  return Framebuffer(framebuffer, renderpass, viewport, scissor);
 }
 
 Framebuffer::Framebuffer(VkFramebuffer framebuffer, const Renderpass& renderpass,
                          const VkViewport& viewport, const VkRect2D& scissor)
-  : _framebuffer(framebuffer), _renderpass(renderpass), _viewport(viewport), _scissor(scissor) {}
+  : _framebuffer(framebuffer), _renderpass(&renderpass), _viewport(viewport), _scissor(scissor) {}
+
+Framebuffer::Framebuffer(Framebuffer&& framebuffer) noexcept : _framebuffer(std::exchange(framebuffer._framebuffer, VK_NULL_HANDLE)), _renderpass(std::exchange(framebuffer._renderpass, nullptr)), _viewport(framebuffer._viewport), _scissor(framebuffer._scissor) {}
+
+Framebuffer& Framebuffer::operator=(Framebuffer&& framebuffer) noexcept {
+  if (this == &framebuffer) {
+    return *this;
+  }
+  _framebuffer = std::exchange(framebuffer._framebuffer, VK_NULL_HANDLE);
+  _renderpass = std::exchange(framebuffer._renderpass, nullptr);
+  _viewport = framebuffer._viewport;
+  _scissor = framebuffer._scissor;
+  return *this;
+}
 
 Framebuffer::~Framebuffer() {
-  vkDestroyFramebuffer(_renderpass.getLogicalDevice().getVkDevice(), _framebuffer, nullptr);
+  if (_framebuffer != VK_NULL_HANDLE && _renderpass != nullptr) {
+    vkDestroyFramebuffer(_renderpass->getLogicalDevice().getVkDevice(), _framebuffer, nullptr);
+  }
 }
 
 VkExtent2D Framebuffer::getVkExtent() const {
@@ -169,7 +184,7 @@ const VkRect2D& Framebuffer::getScissor() const {
 }
 
 const Renderpass& Framebuffer::getRenderpass() const {
-  return _renderpass;
+  return *_renderpass;
 }
 
 VkFramebuffer Framebuffer::getVkFramebuffer() const {

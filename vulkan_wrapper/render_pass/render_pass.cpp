@@ -55,16 +55,29 @@ VkSubpassDescription Renderpass::Subpass::getVkSubpassDescription() const {
 }
 
 Renderpass::Renderpass(const LogicalDevice& logicalDevice, const AttachmentLayout& layout)
-  : _logicalDevice(logicalDevice), _attachmentsLayout(layout) {}
+  : _logicalDevice(&logicalDevice), _attachmentsLayout(layout) {}
 
-std::unique_ptr<Renderpass> Renderpass::create(
-    const LogicalDevice& logicalDevice, const AttachmentLayout& layout) {
-  return std::unique_ptr<Renderpass>(new Renderpass(logicalDevice, layout));
+Renderpass::Renderpass(Renderpass&& renderpass) noexcept
+  : _renderpass(std::exchange(renderpass._renderpass, VK_NULL_HANDLE)),
+    _logicalDevice(std::exchange(renderpass._logicalDevice, nullptr)),
+    _attachmentsLayout(std::move(renderpass._attachmentsLayout)),
+    _subpasses(std::move(renderpass._subpasses)), _subpassDepencies(std::move(renderpass._subpassDepencies)) {}
+
+Renderpass& Renderpass::operator=(Renderpass&& renderpass) noexcept {
+  if (this == &renderpass) {
+    return *this;
+  }
+  _renderpass = std::exchange(renderpass._renderpass, VK_NULL_HANDLE);
+  _logicalDevice = std::exchange(renderpass._logicalDevice, nullptr);
+  _attachmentsLayout = std::move(renderpass._attachmentsLayout);
+  _subpasses = std::move(renderpass._subpasses);
+  _subpassDepencies = std::move(renderpass._subpassDepencies);
+  return *this;
 }
 
 Status Renderpass::build() {
   if (_renderpass != VK_NULL_HANDLE) {
-    vkDestroyRenderPass(_logicalDevice.getVkDevice(), _renderpass, nullptr);
+    vkDestroyRenderPass(_logicalDevice->getVkDevice(), _renderpass, nullptr);
   }
 
   std::span<const VkAttachmentDescription> attachmentDescriptions =
@@ -85,12 +98,14 @@ Status Renderpass::build() {
     .pDependencies = _subpassDepencies.data()};
 
   CHECK_VKCMD(
-      vkCreateRenderPass(_logicalDevice.getVkDevice(), &renderPassInfo, nullptr, &_renderpass));
+      vkCreateRenderPass(_logicalDevice->getVkDevice(), &renderPassInfo, nullptr, &_renderpass));
   return StatusOk();
 }
 
 Renderpass::~Renderpass() {
-  vkDestroyRenderPass(_logicalDevice.getVkDevice(), _renderpass, nullptr);
+  if (_renderpass != VK_NULL_HANDLE && _logicalDevice != nullptr) {
+    vkDestroyRenderPass(_logicalDevice->getVkDevice(), _renderpass, nullptr);
+  }
 }
 
 VkRenderPass Renderpass::getVkRenderPass() const {
@@ -123,5 +138,5 @@ void Renderpass::addDependency(
 }
 
 const LogicalDevice& Renderpass::getLogicalDevice() const {
-  return _logicalDevice;
+  return *_logicalDevice;
 }

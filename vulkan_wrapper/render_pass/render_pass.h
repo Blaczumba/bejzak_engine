@@ -46,9 +46,13 @@ class Renderpass {
   };
 
 public:
-  // Allocates memory for object and leaves it in initial state.
-  static std::unique_ptr<Renderpass> create(
-      const LogicalDevice& logicalDevice, const AttachmentLayout& layout);
+  Renderpass() = default;
+
+  Renderpass(const LogicalDevice& logicalDevice, const AttachmentLayout& layout);
+
+  Renderpass(Renderpass&& renderpass) noexcept;
+
+  Renderpass& operator=(Renderpass&& renderpass) noexcept;
 
   ~Renderpass();
 
@@ -69,13 +73,12 @@ public:
   const LogicalDevice& getLogicalDevice() const;
 
 private:
-  Renderpass(const LogicalDevice& logicalDevice, const AttachmentLayout& layout);
 
   VkRenderPass _renderpass = VK_NULL_HANDLE;
+
+  const LogicalDevice* _logicalDevice;
   AttachmentLayout _attachmentsLayout;
 
   std::vector<Subpass> _subpasses;
   std::vector<VkSubpassDependency> _subpassDepencies;
-
-  const LogicalDevice& _logicalDevice;
 };
