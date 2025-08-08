@@ -113,8 +113,7 @@ ErrorOr<LogicalDevice> LogicalDevice::create(const PhysicalDevice& physicalDevic
     .descriptorBindingSampledImageUpdateAfterBind = VK_TRUE,
     .descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE,
     .descriptorBindingPartiallyBound = VK_TRUE,
-    .runtimeDescriptorArray = VK_TRUE,
-  };
+    .runtimeDescriptorArray = VK_TRUE};
 
   chainExtensionFeature(
       &next, descriptorIndexingFeatures, VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME, physicalDevice);
@@ -122,13 +121,11 @@ ErrorOr<LogicalDevice> LogicalDevice::create(const PhysicalDevice& physicalDevic
   const VkPhysicalDeviceFeatures2 deviceFeatures = {
     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
     .pNext = next,
-    .features = {
-                 .geometryShader = VK_TRUE,
+    .features = {.geometryShader = VK_TRUE,
                  .tessellationShader = VK_TRUE,
                  .sampleRateShading = VK_TRUE,
                  .depthClamp = VK_TRUE,
-                 .samplerAnisotropy = VK_TRUE,
-                 }
+                 .samplerAnisotropy = VK_TRUE}
   };
 
   const lib::Buffer<const char*> extensions = physicalDevice.getAvailableExtensions();
@@ -198,8 +195,7 @@ ErrorOr<VkSampler> LogicalDevice::createSampler(const SamplerParameters& params)
     .minLod = params.minLod,
     .maxLod = params.maxLod,
     .borderColor = params.borderColor,
-    .unnormalizedCoordinates = params.unnormalizedCoordinates,
-  };
+    .unnormalizedCoordinates = params.unnormalizedCoordinates};
 
   if (params.maxAnisotropy.has_value()) {
     samplerInfo.anisotropyEnable = VK_TRUE;
