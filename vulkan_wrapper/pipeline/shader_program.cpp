@@ -36,33 +36,31 @@ const std::optional<VkPipelineVertexInputStateCreateInfo>& ShaderProgram::getVkP
     return _vertexInputInfo;
 }
 
-ErrorOr<std::unique_ptr<ShaderProgram>> ShaderProgramManager::createPBRProgram() {
+ErrorOr<std::unique_ptr<ShaderProgram>> ShaderProgramManager::createPBRProgram(const LogicalDevice& logicalDevice) {
     static constexpr std::string_view vertexShaderPath = "shader_pbr.vert.spv";
     static constexpr std::string_view fragmentShaderPath = "shader_pbr.frag.spv";
-    RETURN_IF_ERROR(addShader(vertexShaderPath, VK_SHADER_STAGE_VERTEX_BIT));
-    RETURN_IF_ERROR(addShader(fragmentShaderPath, VK_SHADER_STAGE_FRAGMENT_BIT));
+    RETURN_IF_ERROR(addShader(logicalDevice, vertexShaderPath, VK_SHADER_STAGE_VERTEX_BIT));
+    RETURN_IF_ERROR(addShader(logicalDevice, fragmentShaderPath, VK_SHADER_STAGE_FRAGMENT_BIT));
 
     static constexpr VkPushConstantRange pushConstantRanges[] = {
         getPushConstantRange<PushConstantsPBR>(VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)
     };
 
-    ASSIGN_OR_RETURN(DescriptorSetType bindlessLayout, getOrCreateBindlessLayout());
-    ASSIGN_OR_RETURN(DescriptorSetType cameraLayout, getOrCreateCameraLayout());
+    ASSIGN_OR_RETURN(DescriptorSetType bindlessLayout, getOrCreateBindlessLayout(logicalDevice));
+    ASSIGN_OR_RETURN(DescriptorSetType cameraLayout, getOrCreateCameraLayout(logicalDevice));
 
     const VkPipelineVertexInputStateCreateInfo vertexInputInfo = getVkPipelineVertexInputStateCreateInfo<VertexPTNT>();
 
     return std::unique_ptr<ShaderProgram>(new ShaderProgram(*this, { vertexShaderPath, fragmentShaderPath }, { bindlessLayout, cameraLayout }, pushConstantRanges, vertexInputInfo));
 }
 
-ShaderProgramManager::ShaderProgramManager(const LogicalDevice& logicalDevice) : _logicalDevice(logicalDevice) { }
-
-ErrorOr<std::unique_ptr<ShaderProgram>> ShaderProgramManager::createSkyboxProgram() {
+ErrorOr<std::unique_ptr<ShaderProgram>> ShaderProgramManager::createSkyboxProgram(const LogicalDevice& logicalDevice) {
     static constexpr std::string_view vertexShaderPath = "skybox.vert.spv";
     static constexpr std::string_view fragmentShaderPath = "skybox.frag.spv";
-    RETURN_IF_ERROR(addShader(vertexShaderPath, VK_SHADER_STAGE_VERTEX_BIT));
-    RETURN_IF_ERROR(addShader(fragmentShaderPath, VK_SHADER_STAGE_FRAGMENT_BIT));
+    RETURN_IF_ERROR(addShader(logicalDevice, vertexShaderPath, VK_SHADER_STAGE_VERTEX_BIT));
+    RETURN_IF_ERROR(addShader(logicalDevice, fragmentShaderPath, VK_SHADER_STAGE_FRAGMENT_BIT));
 
-    ASSIGN_OR_RETURN(DescriptorSetType bindlessLayout, getOrCreateBindlessLayout());
+    ASSIGN_OR_RETURN(DescriptorSetType bindlessLayout, getOrCreateBindlessLayout(logicalDevice));
 
     const VkPipelineVertexInputStateCreateInfo vertexInputInfo = getVkPipelineVertexInputStateCreateInfo<VertexP>();
 
@@ -73,11 +71,11 @@ ErrorOr<std::unique_ptr<ShaderProgram>> ShaderProgramManager::createSkyboxProgra
     return std::unique_ptr<ShaderProgram>(new ShaderProgram(*this, { vertexShaderPath, fragmentShaderPath }, { bindlessLayout }, pushConstantRanges, vertexInputInfo));
 }
 
-ErrorOr<std::unique_ptr<ShaderProgram>> ShaderProgramManager::createShadowProgram() {
+ErrorOr<std::unique_ptr<ShaderProgram>> ShaderProgramManager::createShadowProgram(const LogicalDevice& logicalDevice) {
     static constexpr std::string_view vertexShaderPath = "shadow.vert.spv";
     static constexpr std::string_view fragmentShaderPath = "shadow.frag.spv";
-    RETURN_IF_ERROR(addShader(vertexShaderPath, VK_SHADER_STAGE_VERTEX_BIT));
-    RETURN_IF_ERROR(addShader(fragmentShaderPath, VK_SHADER_STAGE_FRAGMENT_BIT));
+    RETURN_IF_ERROR(addShader(logicalDevice, vertexShaderPath, VK_SHADER_STAGE_VERTEX_BIT));
+    RETURN_IF_ERROR(addShader(logicalDevice, fragmentShaderPath, VK_SHADER_STAGE_FRAGMENT_BIT));
 
     static constexpr VkPushConstantRange pushConstantRanges[] = {
         getPushConstantRange<PushConstantsShadow>(VK_SHADER_STAGE_VERTEX_BIT)
@@ -102,13 +100,13 @@ const Shader* ShaderProgramManager::getShader(std::string_view shaderPath) const
     return nullptr;
 }
 
-Status ShaderProgramManager::addShader(std::string_view shaderFile, VkShaderStageFlagBits shaderStages) {
-    ASSIGN_OR_RETURN(Shader shader, Shader::create(_logicalDevice, shaderFile, shaderStages));
+Status ShaderProgramManager::addShader(const LogicalDevice& logicalDevice, std::string_view shaderFile, VkShaderStageFlagBits shaderStages) {
+    ASSIGN_OR_RETURN(Shader shader, Shader::create(logicalDevice, shaderFile, shaderStages));
     _shaders.emplace(shaderFile, std::move(shader));
     return StatusOk();
 }
 
-ErrorOr<DescriptorSetType> ShaderProgramManager::getOrCreateBindlessLayout() {
+ErrorOr<DescriptorSetType> ShaderProgramManager::getOrCreateBindlessLayout(const LogicalDevice& logicalDevice) {
     static constexpr DescriptorSetType layoutType = DescriptorSetType::BINDLESS;
     if (auto it = _descriptorSetLayouts.find(layoutType); it != _descriptorSetLayouts.cend()) {
         return it->first;
@@ -129,12 +127,12 @@ ErrorOr<DescriptorSetType> ShaderProgramManager::getOrCreateBindlessLayout() {
     };
     static constexpr VkDescriptorBindingFlags flags{ VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT };
     static constexpr VkDescriptorBindingFlags bindingFlags[] = { flags, flags };
-    ASSIGN_OR_RETURN(DescriptorSetLayout layout, DescriptorSetLayout::create(_logicalDevice, bindings, bindingFlags, VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT));
+    ASSIGN_OR_RETURN(DescriptorSetLayout layout, DescriptorSetLayout::create(logicalDevice, bindings, bindingFlags, VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT));
     _descriptorSetLayouts.emplace(layoutType, std::move(layout));
     return layoutType;
 }
 
-ErrorOr<DescriptorSetType> ShaderProgramManager::getOrCreateCameraLayout() {
+ErrorOr<DescriptorSetType> ShaderProgramManager::getOrCreateCameraLayout(const LogicalDevice& logicalDevice) {
     static constexpr DescriptorSetType layoutType = DescriptorSetType::CAMERA;
     if (auto it = _descriptorSetLayouts.find(layoutType); it != _descriptorSetLayouts.cend()) {
         return it->first;
@@ -147,11 +145,7 @@ ErrorOr<DescriptorSetType> ShaderProgramManager::getOrCreateCameraLayout() {
             .stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT,
         },
     };
-    ASSIGN_OR_RETURN(DescriptorSetLayout layout, DescriptorSetLayout::create(_logicalDevice, bindings));
+    ASSIGN_OR_RETURN(DescriptorSetLayout layout, DescriptorSetLayout::create(logicalDevice, bindings));
     _descriptorSetLayouts.emplace(layoutType, std::move(layout));
     return layoutType;
-}
-
-const LogicalDevice& ShaderProgramManager::getLogicalDevice() const {
-    return _logicalDevice;
 }

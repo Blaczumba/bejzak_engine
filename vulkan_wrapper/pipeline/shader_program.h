@@ -28,29 +28,23 @@ class ShaderProgramManager {
     std::unordered_map<std::string_view, Shader> _shaders;
     std::unordered_map<DescriptorSetType, DescriptorSetLayout> _descriptorSetLayouts;
 
-    const LogicalDevice& _logicalDevice;
-
 public:
-    ShaderProgramManager(const LogicalDevice& logicalDevice);
-
     const Shader* getShader(std::string_view shaderPath) const;
 
     const VkDescriptorSetLayout getVkDescriptorSetLayout(DescriptorSetType type) const;
 
-    ErrorOr<std::unique_ptr<ShaderProgram>> createPBRProgram();
+    ErrorOr<std::unique_ptr<ShaderProgram>> createPBRProgram(const LogicalDevice& _logicalDevice);
 
-    ErrorOr<std::unique_ptr<ShaderProgram>> createSkyboxProgram();
+    ErrorOr<std::unique_ptr<ShaderProgram>> createSkyboxProgram(const LogicalDevice& _logicalDevice);
 
-    ErrorOr<std::unique_ptr<ShaderProgram>> createShadowProgram();
-
-    const LogicalDevice& getLogicalDevice() const;
+    ErrorOr<std::unique_ptr<ShaderProgram>> createShadowProgram(const LogicalDevice& _logicalDevice);
 
 private:
-    Status addShader(std::string_view shaderFile, VkShaderStageFlagBits shaderStages);
+    Status addShader(const LogicalDevice& logicalDevice, std::string_view shaderFile, VkShaderStageFlagBits shaderStages);
 
-    ErrorOr<DescriptorSetType> getOrCreateBindlessLayout();
+    ErrorOr<DescriptorSetType> getOrCreateBindlessLayout(const LogicalDevice& logicalDevice);
 
-    ErrorOr<DescriptorSetType> getOrCreateCameraLayout();
+    ErrorOr<DescriptorSetType> getOrCreateCameraLayout(const LogicalDevice& logicalDevice);
 
     template<typename T>
     static constexpr VkPushConstantRange getPushConstantRange(VkShaderStageFlags shaderStages, uint32_t offset = 0) {
