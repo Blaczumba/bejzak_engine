@@ -11,7 +11,7 @@
 class Framebuffer {
   VkFramebuffer _framebuffer = VK_NULL_HANDLE;
 
-  const Renderpass* _renderpass;
+  const Renderpass* _renderpass = nullptr;
 
   VkViewport _viewport;
   VkRect2D _scissor;

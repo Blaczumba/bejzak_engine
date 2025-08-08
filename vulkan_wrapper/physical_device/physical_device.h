@@ -6,7 +6,7 @@
 #include <unordered_set>
 
 #include "common/status/status.h"
-#include "vulkan_wrapper/surface/surface.h"
+#include "vulkan_wrapper/instance/instance.h"
 
 struct QueueFamilyIndices {
   std::optional<uint32_t> graphicsFamily;
@@ -23,23 +23,28 @@ struct SwapChainSupportDetails {
 
 class PhysicalDevice {
   VkPhysicalDevice _device;
+
+  const Instance& _instance;
+
   VkPhysicalDeviceProperties _properties;
+  QueueFamilyIndices _queueFamilyIndices;
+  SwapChainSupportDetails _swapchainSupportDetails;
 
-  const Surface& _surface;
+  const std::unordered_set<std::string_view> _availableRequestedExtensions;
 
-  const std::unordered_set<std::string_view> _availableRequestedExtensions;  // TODO: change to flat
-                                                                             // hash set
-
-  PhysicalDevice(VkPhysicalDevice physicalDevice, const Surface& surface);
+  PhysicalDevice(VkPhysicalDevice physicalDevice, const Instance& instance,
+                 const QueueFamilyIndices& queueFamilyIndices,
+                 const SwapChainSupportDetails& swapchainSupportDetails);
 
 public:
   ~PhysicalDevice() = default;
 
-  static ErrorOr<std::unique_ptr<PhysicalDevice>> create(const Surface& surface);
+  static ErrorOr<std::unique_ptr<PhysicalDevice>> create(
+      const Instance& instance, VkSurfaceKHR surface);
 
   VkPhysicalDevice getVkPhysicalDevice() const;
 
-  const Surface& getSurface() const;
+  const Instance& getInstance() const;
 
   bool hasAvailableExtension(std::string_view extension) const;
 
@@ -49,7 +54,7 @@ public:
 
   lib::Buffer<const char*> getAvailableExtensions() const;
 
-  QueueFamilyIndices getQueueFamilyIndices() const;
+  const QueueFamilyIndices& getQueueFamilyIndices() const;
 
-  SwapChainSupportDetails getSwapchainSupportDetails() const;
+  const SwapChainSupportDetails& getSwapchainSupportDetails() const;
 };

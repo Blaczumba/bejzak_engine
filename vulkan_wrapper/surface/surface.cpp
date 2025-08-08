@@ -6,8 +6,8 @@
   #include "common/window/window_glfw.h"
 #endif
 
-Surface::Surface(VkSurfaceKHR surface, const Instance& instance, const Window& window)
-  : _surface(surface), _instance(&instance), _window(&window) {}
+Surface::Surface(VkSurfaceKHR surface, const Instance& instance)
+  : _surface(surface), _instance(&instance) {}
 
 ErrorOr<Surface> Surface::create(const Instance& instance, const Window& window) {
 #if (defined(WIN32) || defined(__unix__)) && !defined(ANDROID)
@@ -16,7 +16,7 @@ ErrorOr<Surface> Surface::create(const Instance& instance, const Window& window)
     CHECK_VKCMD(glfwCreateWindowSurface(
         instance.getVkInstance(), static_cast<GLFWwindow*>(window.getNativeHandler()), nullptr,
         &surface));
-    return Surface(surface, instance, window);
+    return Surface(surface, instance);
   }
 #endif
   return Error(EngineError::NOT_RECOGNIZED_TYPE);
@@ -24,8 +24,7 @@ ErrorOr<Surface> Surface::create(const Instance& instance, const Window& window)
 
 Surface::Surface(Surface&& other) noexcept
   : _surface(std::exchange(other._surface, VK_NULL_HANDLE)),
-    _instance(std::exchange(other._instance, nullptr)),
-    _window(std::exchange(other._window, nullptr)) {}
+    _instance(std::exchange(other._instance, nullptr)) {}
 
 Surface& Surface::operator=(Surface&& other) noexcept {
   if (this == &other) {
@@ -33,7 +32,6 @@ Surface& Surface::operator=(Surface&& other) noexcept {
   }
   _surface = std::exchange(other._surface, VK_NULL_HANDLE);
   _instance = std::exchange(other._instance, nullptr);
-  _window = std::exchange(other._window, nullptr);
   return *this;
 }
 
@@ -45,12 +43,4 @@ Surface::~Surface() {
 
 VkSurfaceKHR Surface::getVkSurface() const {
   return _surface;
-}
-
-const Instance& Surface::getInstance() const {
-  return *_instance;
-}
-
-const Window& Surface::getWindow() const {
-  return *_window;
 }

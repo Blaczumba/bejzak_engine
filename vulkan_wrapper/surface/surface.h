@@ -8,7 +8,7 @@
 #include "vulkan_wrapper/instance/instance.h"
 
 class Surface {
-  Surface(VkSurfaceKHR surface, const Instance& instance, const Window& window);
+  Surface(VkSurfaceKHR surface, const Instance& instance);
 
 public:
   Surface() = default;
@@ -23,12 +23,7 @@ public:
 
   VkSurfaceKHR getVkSurface() const;
 
-  const Instance& getInstance() const;
-
-  const Window& getWindow() const;
-
 private:
   VkSurfaceKHR _surface = VK_NULL_HANDLE;
   const Instance* _instance = nullptr;
-  const Window* _window = nullptr;
 };

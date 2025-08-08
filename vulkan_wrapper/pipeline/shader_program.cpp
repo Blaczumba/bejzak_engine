@@ -15,16 +15,35 @@ ShaderProgram::ShaderProgram(
     std::initializer_list<DescriptorSetType> descriptorSetLayouts,
     std::span<const VkPushConstantRange> pushConstantRange,
     std::optional<VkPipelineVertexInputStateCreateInfo> vertexInputInfo)
-  : _shaderProgramManager(shaderProgramManager), _shaders(shaders),
+  : _shaderProgramManager(&shaderProgramManager), _shaders(shaders),
     _descriptorSetLayouts(descriptorSetLayouts),
     _pushConstants(std::cbegin(pushConstantRange), std::cend(pushConstantRange)),
     _vertexInputInfo(vertexInputInfo) {}
+
+ShaderProgram::ShaderProgram(ShaderProgram&& shaderProgram) noexcept
+  : _descriptorSetLayouts(std::move(shaderProgram._descriptorSetLayouts)),
+    _shaders(std::move(shaderProgram._shaders)),
+    _pushConstants(std::move(shaderProgram._pushConstants)),
+    _vertexInputInfo(shaderProgram._vertexInputInfo),
+    _shaderProgramManager(std::exchange(shaderProgram._shaderProgramManager, nullptr)) {}
+
+ShaderProgram& ShaderProgram::operator=(ShaderProgram&& shaderProgram) noexcept {
+  if (this == &shaderProgram) {
+    return *this;
+  }
+  _descriptorSetLayouts = std::move(shaderProgram._descriptorSetLayouts);
+  _shaders = std::move(shaderProgram._shaders);
+  _pushConstants = std::move(shaderProgram._pushConstants);
+  _vertexInputInfo = shaderProgram._vertexInputInfo;
+  _shaderProgramManager = std::exchange(shaderProgram._shaderProgramManager, nullptr);
+  return *this;
+}
 
 lib::Buffer<VkDescriptorSetLayout> ShaderProgram::getVkDescriptorSetLayouts() const {
   lib::Buffer<VkDescriptorSetLayout> layouts(_descriptorSetLayouts.size());
   std::transform(_descriptorSetLayouts.cbegin(), _descriptorSetLayouts.cend(), layouts.begin(),
                  [this](DescriptorSetType layoutType) {
-                   return _shaderProgramManager.getVkDescriptorSetLayout(layoutType);
+                   return _shaderProgramManager->getVkDescriptorSetLayout(layoutType);
                  });
   return layouts;
 }
@@ -34,7 +53,7 @@ ShaderProgram::getVkPipelineShaderStageCreateInfos() const {
   lib::Buffer<VkPipelineShaderStageCreateInfo> shaders(_shaders.size());
   std::transform(
       _shaders.cbegin(), _shaders.cend(), shaders.begin(), [this](std::string_view shaderPath) {
-        return _shaderProgramManager.getShader(shaderPath)->getVkPipelineStageCreateInfo();
+        return _shaderProgramManager->getShader(shaderPath)->getVkPipelineStageCreateInfo();
       });
   return shaders;
 }
@@ -52,8 +71,7 @@ ShaderProgram::getVkPipelineVertexInputStateCreateInfo() const {
   return _vertexInputInfo;
 }
 
-ErrorOr<std::unique_ptr<ShaderProgram>> ShaderProgramManager::createPBRProgram(
-    const LogicalDevice& logicalDevice) {
+ErrorOr<ShaderProgram> ShaderProgramManager::createPBRProgram(const LogicalDevice& logicalDevice) {
   static constexpr std::string_view vertexShaderPath = "shader_pbr.vert.spv";
   static constexpr std::string_view fragmentShaderPath = "shader_pbr.frag.spv";
   RETURN_IF_ERROR(addShader(logicalDevice, vertexShaderPath, VK_SHADER_STAGE_VERTEX_BIT));
@@ -69,12 +87,11 @@ ErrorOr<std::unique_ptr<ShaderProgram>> ShaderProgramManager::createPBRProgram(
   const VkPipelineVertexInputStateCreateInfo vertexInputInfo =
       getVkPipelineVertexInputStateCreateInfo<VertexPTNT>();
 
-  return std::unique_ptr<ShaderProgram>(
-      new ShaderProgram(*this, {vertexShaderPath, fragmentShaderPath},
-                        {bindlessLayout, cameraLayout}, pushConstantRanges, vertexInputInfo));
+  return ShaderProgram(*this, {vertexShaderPath, fragmentShaderPath},
+                       {bindlessLayout, cameraLayout}, pushConstantRanges, vertexInputInfo);
 }
 
-ErrorOr<std::unique_ptr<ShaderProgram>> ShaderProgramManager::createSkyboxProgram(
+ErrorOr<ShaderProgram> ShaderProgramManager::createSkyboxProgram(
     const LogicalDevice& logicalDevice) {
   static constexpr std::string_view vertexShaderPath = "skybox.vert.spv";
   static constexpr std::string_view fragmentShaderPath = "skybox.frag.spv";
@@ -90,12 +107,11 @@ ErrorOr<std::unique_ptr<ShaderProgram>> ShaderProgramManager::createSkyboxProgra
     getPushConstantRange<PushConstantsSkybox>(
         VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)};
 
-  return std::unique_ptr<ShaderProgram>(
-      new ShaderProgram(*this, {vertexShaderPath, fragmentShaderPath}, {bindlessLayout},
-                        pushConstantRanges, vertexInputInfo));
+  return ShaderProgram(*this, {vertexShaderPath, fragmentShaderPath}, {bindlessLayout},
+                       pushConstantRanges, vertexInputInfo);
 }
 
-ErrorOr<std::unique_ptr<ShaderProgram>> ShaderProgramManager::createShadowProgram(
+ErrorOr<ShaderProgram> ShaderProgramManager::createShadowProgram(
     const LogicalDevice& logicalDevice) {
   static constexpr std::string_view vertexShaderPath = "shadow.vert.spv";
   static constexpr std::string_view fragmentShaderPath = "shadow.frag.spv";
@@ -108,8 +124,8 @@ ErrorOr<std::unique_ptr<ShaderProgram>> ShaderProgramManager::createShadowProgra
   const VkPipelineVertexInputStateCreateInfo vertexInputInfo =
       getVkPipelineVertexInputStateCreateInfo<VertexP>();
 
-  return std::unique_ptr<ShaderProgram>(new ShaderProgram(
-      *this, {vertexShaderPath, fragmentShaderPath}, {}, pushConstantRanges, vertexInputInfo));
+  return ShaderProgram(
+      *this, {vertexShaderPath, fragmentShaderPath}, {}, pushConstantRanges, vertexInputInfo);
 }
 
 const VkDescriptorSetLayout ShaderProgramManager::getVkDescriptorSetLayout(

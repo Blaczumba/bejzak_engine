@@ -73,10 +73,9 @@ public:
   const LogicalDevice& getLogicalDevice() const;
 
 private:
-
   VkRenderPass _renderpass = VK_NULL_HANDLE;
 
-  const LogicalDevice* _logicalDevice;
+  const LogicalDevice* _logicalDevice = nullptr;
   AttachmentLayout _attachmentsLayout;
 
   std::vector<Subpass> _subpasses;

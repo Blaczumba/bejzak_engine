@@ -32,11 +32,11 @@ public:
 
   const VkDescriptorSetLayout getVkDescriptorSetLayout(DescriptorSetType type) const;
 
-  ErrorOr<std::unique_ptr<ShaderProgram>> createPBRProgram(const LogicalDevice& _logicalDevice);
+  ErrorOr<ShaderProgram> createPBRProgram(const LogicalDevice& _logicalDevice);
 
-  ErrorOr<std::unique_ptr<ShaderProgram>> createSkyboxProgram(const LogicalDevice& _logicalDevice);
+  ErrorOr<ShaderProgram> createSkyboxProgram(const LogicalDevice& _logicalDevice);
 
-  ErrorOr<std::unique_ptr<ShaderProgram>> createShadowProgram(const LogicalDevice& _logicalDevice);
+  ErrorOr<ShaderProgram> createShadowProgram(const LogicalDevice& _logicalDevice);
 
 private:
   Status addShader(const LogicalDevice& logicalDevice, std::string_view shaderFile,
@@ -68,22 +68,28 @@ private:
 
 class ShaderProgram {
 protected:
-  std::vector<DescriptorSetType> _descriptorSetLayouts;  // TODO:
-                                                         // std::inplace_vector<DescriptorSetType,
-                                                         // 4>
+  std::vector<DescriptorSetType> _descriptorSetLayouts;  // TODO: std::inplace_vector
   std::vector<std::string_view> _shaders;
   std::vector<VkPushConstantRange> _pushConstants;
 
   std::optional<VkPipelineVertexInputStateCreateInfo> _vertexInputInfo;
 
-  const ShaderProgramManager& _shaderProgramManager;
+  const ShaderProgramManager* _shaderProgramManager;
 
 public:
+  ShaderProgram() = default;
+
   ShaderProgram(const ShaderProgramManager& shaderProgramManager,
                 std::initializer_list<std::string_view> shaders,
                 std::initializer_list<DescriptorSetType> descriptorSetLayouts,
                 std::span<const VkPushConstantRange> pushConstantRange,
                 std::optional<VkPipelineVertexInputStateCreateInfo> vertexInputInfo = std::nullopt);
+
+  ShaderProgram(ShaderProgram&& shaderProgram) noexcept;
+
+  ShaderProgram& operator=(ShaderProgram&& shaderProgram) noexcept;
+
+  virtual ~ShaderProgram() = default;
 
   lib::Buffer<VkPipelineShaderStageCreateInfo> getVkPipelineShaderStageCreateInfos() const;
 

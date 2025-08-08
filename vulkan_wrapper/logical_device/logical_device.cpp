@@ -16,7 +16,7 @@ LogicalDevice::LogicalDevice(
   : _device(logicalDevice), _physicalDevice(&physicalDevice),
     _memoryAllocator(
         std::in_place_type<VmaWrapper>, logicalDevice, physicalDevice.getVkPhysicalDevice(),
-        _physicalDevice->getSurface().getInstance().getVkInstance()),
+        physicalDevice.getInstance().getVkInstance()),
     _graphicsQueue(graphicsQueue), _presentQueue(presentQueue), _computeQueue(computeQueue),
     _transferQueue(transferQueue) {}
 

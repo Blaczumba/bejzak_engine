@@ -148,7 +148,7 @@ VkPresentModeKHR chooseSwapPresentMode(
 }
 
 VkExtent2D chooseSwapExtent(
-    Extent2D actualWindowExtent, const VkSurfaceCapabilitiesKHR& capabilities) {
+    VkExtent2D actualWindowExtent, const VkSurfaceCapabilitiesKHR& capabilities) {
   if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
     return capabilities.currentExtent;
   }
@@ -160,7 +160,8 @@ VkExtent2D chooseSwapExtent(
 
 }  // namespace
 
-ErrorOr<Swapchain> SwapchainBuilder::build(const LogicalDevice& logicalDevice, VkExtent2D extent) {
+ErrorOr<Swapchain> SwapchainBuilder::build(
+    const LogicalDevice& logicalDevice, VkSurfaceKHR surface, VkExtent2D extent) {
   const SwapChainSupportDetails swapChainSupport =
       logicalDevice.getPhysicalDevice().getSwapchainSupportDetails();
   uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
@@ -172,11 +173,11 @@ ErrorOr<Swapchain> SwapchainBuilder::build(const LogicalDevice& logicalDevice, V
       chooseSwapSurfaceFormat(swapChainSupport.formats, _preferredFormat);
   VkSwapchainCreateInfoKHR createInfo = {
     .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
-    .surface = logicalDevice.getPhysicalDevice().getSurface().getVkSurface(),
+    .surface = surface,
     .minImageCount = imageCount,
     .imageFormat = surfaceFormat.format,
     .imageColorSpace = surfaceFormat.colorSpace,
-    .imageExtent = extent,
+    .imageExtent = chooseSwapExtent(extent, swapChainSupport.capabilities),
     .imageArrayLayers = imageArrayLayers,
     .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
     .preTransform = swapChainSupport.capabilities.currentTransform,
@@ -185,9 +186,9 @@ ErrorOr<Swapchain> SwapchainBuilder::build(const LogicalDevice& logicalDevice, V
     .clipped = _clipped,
     .oldSwapchain = _oldSwapchain};
   const QueueFamilyIndices indices = logicalDevice.getPhysicalDevice().getQueueFamilyIndices();
-  const uint32_t queueFamilyIndices[] = {
-    indices.graphicsFamily.value(), indices.presentFamily.value()};
   if (indices.graphicsFamily != indices.presentFamily) {
+    const uint32_t queueFamilyIndices[] = {
+      indices.graphicsFamily.value(), indices.presentFamily.value()};
     createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
     createInfo.queueFamilyIndexCount = static_cast<uint32_t>(std::size(queueFamilyIndices));
     createInfo.pQueueFamilyIndices = queueFamilyIndices;

@@ -152,7 +152,10 @@ Framebuffer::Framebuffer(VkFramebuffer framebuffer, const Renderpass& renderpass
                          const VkViewport& viewport, const VkRect2D& scissor)
   : _framebuffer(framebuffer), _renderpass(&renderpass), _viewport(viewport), _scissor(scissor) {}
 
-Framebuffer::Framebuffer(Framebuffer&& framebuffer) noexcept : _framebuffer(std::exchange(framebuffer._framebuffer, VK_NULL_HANDLE)), _renderpass(std::exchange(framebuffer._renderpass, nullptr)), _viewport(framebuffer._viewport), _scissor(framebuffer._scissor) {}
+Framebuffer::Framebuffer(Framebuffer&& framebuffer) noexcept
+  : _framebuffer(std::exchange(framebuffer._framebuffer, VK_NULL_HANDLE)),
+    _renderpass(std::exchange(framebuffer._renderpass, nullptr)), _viewport(framebuffer._viewport),
+    _scissor(framebuffer._scissor) {}
 
 Framebuffer& Framebuffer::operator=(Framebuffer&& framebuffer) noexcept {
   if (this == &framebuffer) {

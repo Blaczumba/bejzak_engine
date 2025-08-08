@@ -99,23 +99,26 @@ SwapChainSupportDetails querySwapchainSupportDetails(
 
 }  // namespace
 
-PhysicalDevice::PhysicalDevice(VkPhysicalDevice physicalDevice, const Surface& surface)
-  : _device(physicalDevice), _surface(surface),
-    _availableRequestedExtensions(checkDeviceExtensionSupport(physicalDevice)) {
+PhysicalDevice::PhysicalDevice(VkPhysicalDevice physicalDevice, const Instance& instance,
+                               const QueueFamilyIndices& queueFamilyIndices,
+                               const SwapChainSupportDetails& swapchainSupportDetails)
+  : _device(physicalDevice), _instance(instance),
+    _availableRequestedExtensions(checkDeviceExtensionSupport(physicalDevice)),
+    _queueFamilyIndices(queueFamilyIndices), _swapchainSupportDetails(swapchainSupportDetails) {
   vkGetPhysicalDeviceProperties(_device, &_properties);
 }
 
-ErrorOr<std::unique_ptr<PhysicalDevice>> PhysicalDevice::create(const Surface& surface) {
-  const VkSurfaceKHR surf = surface.getVkSurface();
-
-  ASSIGN_OR_RETURN(const lib::Buffer<VkPhysicalDevice> devices,
-                   surface.getInstance().getAvailablePhysicalDevices());
+ErrorOr<std::unique_ptr<PhysicalDevice>> PhysicalDevice::create(
+    const Instance& instance, VkSurfaceKHR surface) {
+  ASSIGN_OR_RETURN(
+      const lib::Buffer<VkPhysicalDevice> devices, instance.getAvailablePhysicalDevices());
   for (const auto device : devices) {
-    const QueueFamilyIndices& indices = findQueueFamilyIncides(device, surf);
-    const SwapChainSupportDetails swapChainSupport = querySwapchainSupportDetails(device, surf);
+    const QueueFamilyIndices queueFamilyIndices = findQueueFamilyIncides(device, surface);
+    const SwapChainSupportDetails swapchainSupportDetails =
+        querySwapchainSupportDetails(device, surface);
 
     const bool swapChainAdequate =
-        !swapChainSupport.formats.empty() && !swapChainSupport.presentModes.empty();
+        !swapchainSupportDetails.formats.empty() && !swapchainSupportDetails.presentModes.empty();
 
     VkPhysicalDeviceFeatures supportedFeatures;
     vkGetPhysicalDeviceFeatures(device, &supportedFeatures);
@@ -125,12 +128,14 @@ ErrorOr<std::unique_ptr<PhysicalDevice>> PhysicalDevice::create(const Surface& s
     const bool discreteGPU = (properties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU);
 
     if (lib::cont_all_of(
-            std::initializer_list{areQueueFamilyIndicesComplete(indices), swapChainAdequate,
-                                  static_cast<bool>(supportedFeatures.samplerAnisotropy)},
+            std::initializer_list{
+              areQueueFamilyIndicesComplete(queueFamilyIndices), swapChainAdequate,
+              static_cast<bool>(supportedFeatures.samplerAnisotropy)},
             [](bool condition) {
               return condition;
             })) {
-      return std::unique_ptr<PhysicalDevice>(new PhysicalDevice(device, surface));
+      return std::unique_ptr<PhysicalDevice>(
+          new PhysicalDevice(device, instance, queueFamilyIndices, swapchainSupportDetails));
     }
   }
   return Error(EngineError::NOT_FOUND);
@@ -140,8 +145,8 @@ VkPhysicalDevice PhysicalDevice::getVkPhysicalDevice() const {
   return _device;
 }
 
-const Surface& PhysicalDevice::getSurface() const {
-  return _surface;
+const Instance& PhysicalDevice::getInstance() const {
+  return _instance;
 }
 
 bool PhysicalDevice::hasAvailableExtension(std::string_view extension) const {
@@ -166,10 +171,10 @@ lib::Buffer<const char*> PhysicalDevice::getAvailableExtensions() const {
   return extensions;
 }
 
-QueueFamilyIndices PhysicalDevice::getQueueFamilyIndices() const {
-  return findQueueFamilyIncides(_device, _surface.getVkSurface());
+const QueueFamilyIndices& PhysicalDevice::getQueueFamilyIndices() const {
+  return _queueFamilyIndices;
 }
 
-SwapChainSupportDetails PhysicalDevice::getSwapchainSupportDetails() const {
-  return querySwapchainSupportDetails(_device, _surface.getVkSurface());
+const SwapChainSupportDetails& PhysicalDevice::getSwapchainSupportDetails() const {
+  return _swapchainSupportDetails;
 }

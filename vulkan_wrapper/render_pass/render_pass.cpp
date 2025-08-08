@@ -61,7 +61,8 @@ Renderpass::Renderpass(Renderpass&& renderpass) noexcept
   : _renderpass(std::exchange(renderpass._renderpass, VK_NULL_HANDLE)),
     _logicalDevice(std::exchange(renderpass._logicalDevice, nullptr)),
     _attachmentsLayout(std::move(renderpass._attachmentsLayout)),
-    _subpasses(std::move(renderpass._subpasses)), _subpassDepencies(std::move(renderpass._subpassDepencies)) {}
+    _subpasses(std::move(renderpass._subpasses)),
+    _subpassDepencies(std::move(renderpass._subpassDepencies)) {}
 
 Renderpass& Renderpass::operator=(Renderpass&& renderpass) noexcept {
   if (this == &renderpass) {
