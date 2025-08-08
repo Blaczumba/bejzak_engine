@@ -1,10 +1,11 @@
 #include "descriptor_pool.h"
-
-#include "lib/buffer/buffer.h"
-#include "vulkan_wrapper/logical_device/logical_device.h"
 #include "descriptor_set.h"
 #include "descriptor_set_layout.h"
+
 #include "common/status/status.h"
+#include "lib/buffer/buffer.h"
+#include "vulkan_wrapper/logical_device/logical_device.h"
+#include "vulkan_wrapper/util/check.h"
 
 DescriptorPool::DescriptorPool(VkDescriptorPool descriptorPool, const LogicalDevice& logicalDevice, uint32_t maxNumSets)
 	: _descriptorPool(descriptorPool), _logicalDevice(logicalDevice), _maxNumSets(maxNumSets), _allocatedSets(0) {}
@@ -15,9 +16,9 @@ DescriptorPool::~DescriptorPool() {
 
 ErrorOr<std::unique_ptr<DescriptorPool>> DescriptorPool::create(const LogicalDevice& logicalDevice, uint32_t maxNumSets, VkDescriptorPoolCreateFlags flags) {
 	static constexpr VkDescriptorPoolSize poolSizes[] = {
-		{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
-		{VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
-		{VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 100},
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000 },
+		{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 100 },
 	};
 
 	const VkDescriptorPoolCreateInfo poolInfo = {
@@ -29,9 +30,7 @@ ErrorOr<std::unique_ptr<DescriptorPool>> DescriptorPool::create(const LogicalDev
 	};
 
 	VkDescriptorPool descriptorPool;
-	if (VkResult result = vkCreateDescriptorPool(logicalDevice.getVkDevice(), &poolInfo, nullptr, &descriptorPool); result != VK_SUCCESS) {
-		return Error(result);
-	}
+	CHECK_VKCMD(vkCreateDescriptorPool(logicalDevice.getVkDevice(), &poolInfo, nullptr, &descriptorPool));
 	return std::unique_ptr<DescriptorPool>(new DescriptorPool(descriptorPool, logicalDevice, maxNumSets));
 }
 

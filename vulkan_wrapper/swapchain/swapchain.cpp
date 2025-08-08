@@ -2,6 +2,7 @@
 
 #include "vulkan_wrapper/logical_device/logical_device.h"
 #include "vulkan_wrapper/physical_device/physical_device.h"
+#include "vulkan_wrapper/util/check.h"
 
 #include <algorithm>
 #include <limits>
@@ -12,11 +13,12 @@ Swapchain::Swapchain(const VkSwapchainKHR swapchain, const LogicalDevice& logica
     vkGetSwapchainImagesKHR(logicalDevice.getVkDevice(), swapchain, &imageCount, _images.data());
     std::transform(_images.cbegin(), _images.cend(), _views.begin(),
         [&](const VkImage image) {
+		// TODO handle error
         return logicalDevice.createImageView(image, ImageParameters{
                 .format = surfaceFormat.format,
                 .extent = { extent.width, extent.height, 1 },
                 .aspect = VK_IMAGE_ASPECT_COLOR_BIT,
-            });
+            }).value();
         });
 }
 
@@ -178,9 +180,7 @@ ErrorOr<Swapchain> SwapchainBuilder::build(const LogicalDevice& logicalDevice, V
     }
 
     VkSwapchainKHR swapchain;
-    if (VkResult result = vkCreateSwapchainKHR(logicalDevice.getVkDevice(), &createInfo, nullptr, &swapchain); result != VK_SUCCESS) {
-        return Error(result);
-    }
+	CHECK_VKCMD(vkCreateSwapchainKHR(logicalDevice.getVkDevice(), &createInfo, nullptr, &swapchain));
     if (VkResult result = vkGetSwapchainImagesKHR(logicalDevice.getVkDevice(), swapchain, &imageCount, nullptr); result != VK_SUCCESS) {
         vkDestroySwapchainKHR(logicalDevice.getVkDevice(), swapchain, nullptr);
         return Error(result);

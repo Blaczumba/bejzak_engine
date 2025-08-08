@@ -1,5 +1,7 @@
 #include "surface.h"
 
+#include "vulkan_wrapper/util/check.h"
+
 #if (defined(WIN32) || defined(__unix__)) && !defined(ANDROID)
 #include "common/window/window_glfw.h"
 #endif
@@ -10,9 +12,7 @@ ErrorOr<Surface> Surface::create(const Instance& instance, const Window& window)
 #if (defined(WIN32) || defined(__unix__)) && !defined(ANDROID)
 	if (dynamic_cast<const WindowGlfw*>(&window) != nullptr) {
 		VkSurfaceKHR surface;
-		if (VkResult result = glfwCreateWindowSurface(instance.getVkInstance(), static_cast<GLFWwindow*>(window.getNativeHandler()), nullptr, &surface); result != VK_SUCCESS) {
-			return Error(result);
-		}
+		CHECK_VKCMD(glfwCreateWindowSurface(instance.getVkInstance(), static_cast<GLFWwindow*>(window.getNativeHandler()), nullptr, &surface));
 		return Surface(surface, instance, window);
 	}
 #endif

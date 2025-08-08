@@ -5,6 +5,7 @@
 #include "lib/buffer/buffer.h"
 #include "vulkan_wrapper/logical_device/logical_device.h"
 #include "vulkan_wrapper/pipeline/pipeline.h"
+#include "vulkan_wrapper/util/check.h"
 #include "common/status/status.h"
 
 #include <algorithm>
@@ -41,9 +42,7 @@ ErrorOr<DescriptorSet> DescriptorSet::create(const std::shared_ptr<const Descrip
     };
 
     VkDescriptorSet descriptorSet;
-    if (VkResult result = vkAllocateDescriptorSets(descriptorPool->getLogicalDevice().getVkDevice(), &allocInfo, &descriptorSet); result != VK_SUCCESS) {
-        return Error(result);
-    }
+	CHECK_VKCMD(vkAllocateDescriptorSets(descriptorPool->getLogicalDevice().getVkDevice(), &allocInfo, &descriptorSet));
     return DescriptorSet(descriptorSet, descriptorPool);
 }
 
@@ -57,9 +56,7 @@ ErrorOr<std::vector<DescriptorSet>> DescriptorSet::create(const std::shared_ptr<
     };
 
     lib::Buffer<VkDescriptorSet> descriptorSets(numSets);
-    if (VkResult result = vkAllocateDescriptorSets(descriptorPool->getLogicalDevice().getVkDevice(), &allocInfo, descriptorSets.data()); result != VK_SUCCESS) {
-        return Error(result);
-    }
+	CHECK_VKCMD(vkAllocateDescriptorSets(descriptorPool->getLogicalDevice().getVkDevice(), &allocInfo, descriptorSets.data()));
 
     std::vector<DescriptorSet> descSets;
     descSets.reserve(descriptorSets.size());

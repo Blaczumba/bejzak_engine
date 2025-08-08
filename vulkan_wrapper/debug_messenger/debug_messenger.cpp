@@ -2,6 +2,7 @@
 
 #include "debug_messenger_utils.h"
 #include "vulkan_wrapper/instance/instance.h"
+#include "vulkan_wrapper/util/check.h"
 
 DebugMessenger::DebugMessenger(const Instance& instance, VkDebugUtilsMessengerEXT debugUtilsMessenger) : _instance(&instance), _debugUtilsMessenger(debugUtilsMessenger) {}
 
@@ -24,9 +25,7 @@ ErrorOr<DebugMessenger> DebugMessenger::create(const Instance& instance) {
     static constexpr VkDebugUtilsMessengerCreateInfoEXT createInfo = populateDebugMessengerCreateInfoUtility();
     VkDebugUtilsMessengerEXT debugUtilsMessenger;
     if (auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance.getVkInstance(), "vkCreateDebugUtilsMessengerEXT"); func != nullptr) {
-        if (VkResult result = func(instance.getVkInstance(), &createInfo, nullptr, &debugUtilsMessenger); result != VK_SUCCESS) {
-            return Error(result);
-        }
+		CHECK_VKCMD(func(instance.getVkInstance(), &createInfo, nullptr, &debugUtilsMessenger));
     }
     else {
         return Error(VK_ERROR_EXTENSION_NOT_PRESENT);

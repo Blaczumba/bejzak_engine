@@ -1,7 +1,8 @@
 #include "logical_device.h"
 
-#include "vulkan_wrapper/instance/extensions.h"
 #include "lib/buffer/buffer.h"
+#include "vulkan_wrapper/instance/extensions.h"
+#include "vulkan_wrapper/util/check.h"
 
 #include <vulkan/vulkan.h>
 
@@ -136,9 +137,7 @@ ErrorOr<LogicalDevice> LogicalDevice::create(const PhysicalDevice& physicalDevic
     };
 
     VkDevice logicalDevice;
-    if (VkResult result = vkCreateDevice(physicalDevice.getVkPhysicalDevice(), &createInfo, nullptr, &logicalDevice); result != VK_SUCCESS) {
-        return Error(result);
-    }
+    CHECK_VKCMD(vkCreateDevice(physicalDevice.getVkPhysicalDevice(), &createInfo, nullptr, &logicalDevice));
 
     VkQueue graphicsQueue, presentQueue, computeQueue, transferQueue;
     vkGetDeviceQueue(logicalDevice, *indices.graphicsFamily, 0, &graphicsQueue);
@@ -148,7 +147,7 @@ ErrorOr<LogicalDevice> LogicalDevice::create(const PhysicalDevice& physicalDevic
     return LogicalDevice(logicalDevice, physicalDevice, graphicsQueue, presentQueue, computeQueue, transferQueue);
 }
 
-VkImageView LogicalDevice::createImageView(const VkImage image, const ImageParameters& params) const {
+ErrorOr<VkImageView> LogicalDevice::createImageView(const VkImage image, const ImageParameters& params) const {
     const VkImageSubresourceRange range = {
         .aspectMask = params.aspect,
         .baseMipLevel = 0,
@@ -168,10 +167,7 @@ VkImageView LogicalDevice::createImageView(const VkImage image, const ImageParam
     };
 
     VkImageView view;
-    if (vkCreateImageView(_device, &viewInfo, nullptr, &view) != VK_SUCCESS) {
-        throw std::runtime_error("failed to create image view!");
-    }
-
+    CHECK_VKCMD(vkCreateImageView(_device, &viewInfo, nullptr, &view));
     return view;
 }
 
@@ -205,10 +201,7 @@ ErrorOr<VkSampler> LogicalDevice::createSampler(const SamplerParameters& params)
     }
 
     VkSampler sampler;
-    if (VkResult result = vkCreateSampler(_device, &samplerInfo, nullptr, &sampler); result != VK_SUCCESS) {
-        throw Error(result);
-    }
-
+    CHECK_VKCMD(vkCreateSampler(_device, &samplerInfo, nullptr, &sampler));
     return sampler;
 }
 

@@ -2,6 +2,7 @@
 
 #include "vulkan_wrapper/instance/extensions.h"
 #include "vulkan_wrapper/debug_messenger/debug_messenger_utils.h"
+#include "vulkan_wrapper/util/check.h"
 
 #include <string_view>
 #include <unordered_set>
@@ -91,10 +92,7 @@ ErrorOr<Instance> Instance::create(std::string_view engineName, std::span<const 
     };
 
     VkInstance instance;
-    if (VkResult result = vkCreateInstance(&createInfo, nullptr, &instance); result != VK_SUCCESS) {
-        return Error(result);
-    }
-
+	CHECK_VKCMD(vkCreateInstance(&createInfo, nullptr, &instance));
     return Instance(instance);
 }
 

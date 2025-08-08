@@ -1,6 +1,7 @@
 #include "render_pass.h"
 
 #include "vulkan_wrapper/render_pass/attachment_layout.h"
+#include "vulkan_wrapper/util/check.h"
 
 #include <algorithm>
 #include <iterator>
@@ -74,10 +75,7 @@ Status Renderpass::build() {
         .pDependencies = _subpassDepencies.data()
     };
 
-    if (VkResult result = vkCreateRenderPass(_logicalDevice.getVkDevice(), &renderPassInfo, nullptr, &_renderpass); result != VK_SUCCESS) {
-        return Error(result);
-    }
-
+	CHECK_VKCMD(vkCreateRenderPass(_logicalDevice.getVkDevice(), &renderPassInfo, nullptr, &_renderpass));
     return StatusOk();
 }
 

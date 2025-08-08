@@ -2,6 +2,7 @@
 
 #include "lib/buffer/buffer.h"
 #include "vulkan_wrapper/logical_device/logical_device.h"
+#include "vulkan_wrapper/util/check.h"
 
 #include <filesystem>
 #include <fstream>
@@ -39,10 +40,7 @@ ErrorOr<Shader> Shader::create(const LogicalDevice& logicalDevice, std::string_v
     };
 
     VkShaderModule shaderModule;
-
-    if (VkResult result = vkCreateShaderModule(logicalDevice.getVkDevice(), &createInfo, nullptr, &shaderModule); result != VK_SUCCESS) {
-        return Error(result);
-    }
+	CHECK_VKCMD(vkCreateShaderModule(logicalDevice.getVkDevice(), &createInfo, nullptr, &shaderModule));
     return Shader(shaderModule, logicalDevice, shaderStage);
 }
 

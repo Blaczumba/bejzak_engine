@@ -41,7 +41,7 @@ public:
 
 	ErrorOr<VkSampler> createSampler(const SamplerParameters& params) const;
 
-	VkImageView createImageView(VkImage image, const ImageParameters& params) const;
+	ErrorOr<VkImageView> createImageView(VkImage image, const ImageParameters& params) const;
 
 	VkDevice getVkDevice() const;
 

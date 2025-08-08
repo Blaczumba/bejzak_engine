@@ -1,6 +1,7 @@
 #include "descriptor_set_layout.h"
 
 #include "vulkan_wrapper/logical_device/logical_device.h"
+#include "vulkan_wrapper/util/check.h"
 
 DescriptorSetLayout::DescriptorSetLayout(const LogicalDevice& logicalDevice, VkDescriptorSetLayout layout) : _logicalDevice(&logicalDevice), _descriptorSetLayout(layout) {}
 
@@ -41,9 +42,7 @@ ErrorOr<DescriptorSetLayout> DescriptorSetLayout::create(const LogicalDevice& lo
     };
 
     VkDescriptorSetLayout descriptorSetLayout;
-    if (VkResult result = vkCreateDescriptorSetLayout(logicalDevice.getVkDevice(), &layoutInfo, nullptr, &descriptorSetLayout); result != VK_SUCCESS) {
-        return Error(result);
-    }
+	CHECK_VKCMD(vkCreateDescriptorSetLayout(logicalDevice.getVkDevice(), &layoutInfo, nullptr, &descriptorSetLayout));
     return DescriptorSetLayout(logicalDevice, descriptorSetLayout);
 }
 

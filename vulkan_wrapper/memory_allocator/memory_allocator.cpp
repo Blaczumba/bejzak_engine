@@ -1,5 +1,7 @@
-#include "vulkan_wrapper/memory_objects/texture.h"
 #include "memory_allocator.h"
+
+#include "vulkan_wrapper/memory_objects/image.h"
+#include "vulkan_wrapper/util/check.h"
 
 #define VMA_IMPLEMENTATION
 #include <vma/vk_mem_alloc.h>
@@ -57,10 +59,7 @@ ErrorOr<VmaWrapper::Buffer> VmaWrapper::createVkBuffer(VkDeviceSize size, VkBuff
 	VkBuffer buffer;
 	VmaAllocation allocation;
 	VmaAllocationInfo allocationInfo;
-	if (VkResult result = vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo, &buffer, &allocation, &allocationInfo); result != VK_SUCCESS) {
-		return Error(result);
-		
-	};
+	CHECK_VKCMD(vmaCreateBuffer(_allocator, &bufferInfo, &vmaallocInfo, &buffer, &allocation, &allocationInfo));
 	return VmaWrapper::Buffer{ buffer, allocation, allocationInfo.pMappedData };
 }
 
@@ -97,9 +96,7 @@ ErrorOr<VmaWrapper::Image> VmaWrapper::createVkImage(const ImageParameters& para
 
 	VmaAllocation allocation;
 	VkImage image;
-	if (VkResult result = vmaCreateImage(_allocator, &imageInfo, &vmaAllocInfo, &image, &allocation, nullptr); result != VK_SUCCESS) {
-		return Error(result);
-	}
+	CHECK_VKCMD(vmaCreateImage(_allocator, &imageInfo, &vmaAllocInfo, &image, &allocation, nullptr));
 	return VmaWrapper::Image{ image, allocation };
 }
 

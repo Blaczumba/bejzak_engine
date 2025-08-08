@@ -2,6 +2,7 @@
 
 #include "lib/buffer/buffer.h"
 #include "vulkan_wrapper/logical_device/logical_device.h"
+#include "vulkan_wrapper/util/check.h"
 
 #include <optional>
 
@@ -80,9 +81,7 @@ ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromSwapchain(VkCommand
     };
 
     VkFramebuffer framebuffer;
-    if (VkResult result = vkCreateFramebuffer(renderpass.getLogicalDevice().getVkDevice(), &framebufferInfo, nullptr, &framebuffer); result != VK_SUCCESS) {
-        return Error(result);
-    }
+    CHECK_VKCMD(vkCreateFramebuffer(renderpass.getLogicalDevice().getVkDevice(), &framebufferInfo, nullptr, &framebuffer));
 
     const VkViewport viewport = {
         .width = static_cast<float>(swapchainExtent.width),
@@ -124,9 +123,7 @@ ErrorOr<std::unique_ptr<Framebuffer>> Framebuffer::createFromTextures(const Rend
     };
 
     VkFramebuffer framebuffer;
-    if (VkResult result = vkCreateFramebuffer(renderpass.getLogicalDevice().getVkDevice(), &framebufferInfo, nullptr, &framebuffer); result != VK_SUCCESS) {
-        return Error(result);
-    }
+	CHECK_VKCMD(vkCreateFramebuffer(renderpass.getLogicalDevice().getVkDevice(), &framebufferInfo, nullptr, &framebuffer));
 
     const VkViewport viewport = {
         .width = static_cast<float>(extent->width),
