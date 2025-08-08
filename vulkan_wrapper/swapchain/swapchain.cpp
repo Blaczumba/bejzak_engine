@@ -190,21 +190,15 @@ ErrorOr<Swapchain> SwapchainBuilder::build(
   lib::Buffer<VkImage> images(imageCount);
   vkGetSwapchainImagesKHR(logicalDevice.getVkDevice(), swapchain, &imageCount, images.data());
   lib::Buffer<VkImageView> views(imageCount);
-  Status status;
-  std::transform(images.cbegin(), images.cend(), views.begin(), [&](const VkImage image) {
-    ErrorOr<VkImageView> localStatus = logicalDevice.createImageView(
-        image, ImageParameters{
-                 .format = surfaceFormat.format,
-                 .extent = {extent.width, extent.height, 1},
-                 .aspect = VK_IMAGE_ASPECT_COLOR_BIT,
-    });
-    if (localStatus.has_value()) {
-      return localStatus.value();
-    }
-    status = Error(localStatus.error());
-    return VkImageView{VK_NULL_HANDLE};
-  });
-  RETURN_IF_ERROR(status);
+  for (size_t i = 0; i < images.size(); ++i) {
+    ASSIGN_OR_RETURN(
+        views[i], logicalDevice.createImageView(
+                      images[i], ImageParameters{
+                                   .format = surfaceFormat.format,
+                                   .extent = {extent.width, extent.height, 1},
+                                   .aspect = VK_IMAGE_ASPECT_COLOR_BIT,
+    }));
+  }
   return Swapchain(
       swapchain, logicalDevice, surfaceFormat.format, extent, std::move(images), std::move(views));
 }
