@@ -27,13 +27,13 @@ public:
 
 	ErrorOr<std::vector<PrimaryCommandBuffer>> createPrimaryCommandBuffers(uint32_t count) const;
 
-	template<size_t N>
-	ErrorOr<std::array<PrimaryCommandBuffer, N>> createPrimaryCommandBuffers() const;
+	template<size_t COUNT>
+	ErrorOr<std::array<PrimaryCommandBuffer, COUNT>> createPrimaryCommandBuffers() const;
 
 	ErrorOr<SecondaryCommandBuffer> createSecondaryCommandBuffer() const;
 
-	template<size_t N>
-	ErrorOr<std::array<SecondaryCommandBuffer, N>> createSecondaryCommandBuffers() const;
+	template<size_t COUNT>
+	ErrorOr<std::array<SecondaryCommandBuffer, COUNT>> createSecondaryCommandBuffers() const;
 
 	ErrorOr<std::vector<SecondaryCommandBuffer>> createSecondaryCommandBuffers(uint32_t count) const;
 
@@ -51,9 +51,9 @@ protected:
 
 	CommandBuffer(const std::shared_ptr<const CommandPool>& commandPool, VkCommandBuffer commandBuffer);
 
-public:
 	CommandBuffer();
 
+public:
 	CommandBuffer(CommandBuffer&&) noexcept;
 
 	CommandBuffer& operator=(CommandBuffer&&) noexcept;
