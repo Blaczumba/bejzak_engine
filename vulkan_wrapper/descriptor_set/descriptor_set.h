@@ -1,38 +1,41 @@
 #pragma once
 
+#include <memory>
+#include <span>
+#include <vector>
+#include <vulkan/vulkan.h>
+
 #include "common/status/status.h"
 #include "lib/buffer/buffer.h"
 #include "vulkan_wrapper/descriptor_set/descriptor_set_layout.h"
 
-#include <vulkan/vulkan.h>
-
-#include <memory>
-#include <span>
-#include <vector>
-
-class DescriptorPool; // DescriptorPool is forward declared to avoid circular dependency
+class DescriptorPool;  // DescriptorPool is forward declared to avoid circular dependency
 
 class DescriptorSet {
-	VkDescriptorSet _descriptorSet;
+  VkDescriptorSet _descriptorSet;
 
-	std::shared_ptr<const DescriptorPool> _descriptorPool;
+  std::shared_ptr<const DescriptorPool> _descriptorPool;
 
-	DescriptorSet(VkDescriptorSet descriptorSet, const std::shared_ptr<const DescriptorPool>& descriptorPool);
+  DescriptorSet(
+      VkDescriptorSet descriptorSet, const std::shared_ptr<const DescriptorPool>& descriptorPool);
 
 public:
-	DescriptorSet() = default;
+  DescriptorSet() = default;
 
-	DescriptorSet(DescriptorSet&& descriptorSet) noexcept;
+  DescriptorSet(DescriptorSet&& descriptorSet) noexcept;
 
-	DescriptorSet& operator=(DescriptorSet&& DescriptorSet) noexcept;
+  DescriptorSet& operator=(DescriptorSet&& DescriptorSet) noexcept;
 
-	~DescriptorSet() = default;
+  ~DescriptorSet() = default;
 
-	static ErrorOr<DescriptorSet> create(const std::shared_ptr<const DescriptorPool>& descriptorPool, VkDescriptorSetLayout layout);
+  static ErrorOr<DescriptorSet> create(
+      const std::shared_ptr<const DescriptorPool>& descriptorPool, VkDescriptorSetLayout layout);
 
-	static ErrorOr<std::vector<DescriptorSet>> create(const std::shared_ptr<const DescriptorPool>& descriptorPool, VkDescriptorSetLayout layout, uint32_t numSets);
+  static ErrorOr<std::vector<DescriptorSet>> create(
+      const std::shared_ptr<const DescriptorPool>& descriptorPool, VkDescriptorSetLayout layout,
+      uint32_t numSets);
 
-	VkDescriptorSet getVkDescriptorSet() const;
+  VkDescriptorSet getVkDescriptorSet() const;
 
-	const DescriptorPool& getDescriptorPool() const;
+  const DescriptorPool& getDescriptorPool() const;
 };

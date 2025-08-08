@@ -1,12 +1,11 @@
 #pragma once
 
-#include "common/status/status.h"
-#include "openxr_wrapper/system/system.h"
-#include "openxr_wrapper/platform/platform.h"
-
+#include <memory>
 #include <openxr/openxr.h>
 
-#include <memory>
+#include "common/status/status.h"
+#include "openxr_wrapper/platform/platform.h"
+#include "openxr_wrapper/system/system.h"
 
 namespace xrw {
 
@@ -17,14 +16,15 @@ class Session {
 
   Session(XrSession session, const System& instance);
 
- public:
+public:
   ~Session() = default;
 
-  static ErrorOr<std::unique_ptr<Session>> create(const System& instance, GraphicsPlugin& graphicsPlugin);
+  static ErrorOr<std::unique_ptr<Session>> create(
+      const System& instance, GraphicsPlugin& graphicsPlugin);
 
   XrSession getXrSession() const;
 
   const System& getSystem() const;
 };
 
-} // xrw
+}  // namespace xrw

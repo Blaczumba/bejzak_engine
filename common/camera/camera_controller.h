@@ -4,5 +4,6 @@
 
 class MouseKeyboardCameraController {
 public:
-    virtual void updateFromKeyboard(const MouseKeyboardManager& mouseKeyboardManager, float deltaTime) = 0;
+  virtual void updateFromKeyboard(
+      const MouseKeyboardManager& mouseKeyboardManager, float deltaTime) = 0;
 };

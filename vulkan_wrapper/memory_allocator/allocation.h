@@ -1,10 +1,9 @@
 #pragma once
 
-#include "memory_allocator.h"
-
+#include <variant>
 #include <vma/vk_mem_alloc.h>
 
-#include <variant>
+#include "memory_allocator.h"
 
 using MemoryAllocator = std::variant<std::monostate, VmaWrapper>;
 using Allocation = std::variant<std::monostate, VmaAllocation>;

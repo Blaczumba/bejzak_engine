@@ -1,44 +1,43 @@
 #pragma once
 
-#include "common/util/index_buffer_index.h"
-#include "lib/buffer/shared_buffer.h"
-
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
-
 #include <memory>
 #include <string>
 #include <vector>
 
-template<typename IndexT>
-std::enable_if_t<std::is_unsigned<IndexT>::value, lib::Buffer<std::byte>> processIndices(std::span<const IndexT> srcIndices, IndexType indexType) {
-	lib::Buffer<std::byte> indices(srcIndices.size() * static_cast<size_t>(indexType));
-	std::byte* data = indices.data();
-	for (const IndexT& index : srcIndices) {
-		std::memcpy(data, &index, static_cast<size_t>(indexType));
-		data += static_cast<size_t>(indexType);
-	}
-	return indices;
+#include "common/util/index_buffer_index.h"
+#include "lib/buffer/shared_buffer.h"
+
+template <typename IndexT>
+std::enable_if_t<std::is_unsigned<IndexT>::value, lib::Buffer<std::byte>> processIndices(
+    std::span<const IndexT> srcIndices, IndexType indexType) {
+  lib::Buffer<std::byte> indices(srcIndices.size() * static_cast<size_t>(indexType));
+  std::byte* data = indices.data();
+  for (const IndexT& index : srcIndices) {
+    std::memcpy(data, &index, static_cast<size_t>(indexType));
+    data += static_cast<size_t>(indexType);
+  }
+  return indices;
 }
 
 struct VertexData {
-	lib::SharedBuffer<glm::vec3> positions;
-	lib::SharedBuffer<glm::vec2> textureCoordinates;
-	lib::SharedBuffer<glm::vec3> normals;
-	lib::SharedBuffer<glm::vec3> tangents;
-	lib::SharedBuffer<std::byte> indices;
-	IndexType indexType;
+  lib::SharedBuffer<glm::vec3> positions;
+  lib::SharedBuffer<glm::vec2> textureCoordinates;
+  lib::SharedBuffer<glm::vec3> normals;
+  lib::SharedBuffer<glm::vec3> tangents;
+  lib::SharedBuffer<std::byte> indices;
+  IndexType indexType;
 
-	glm::mat4 model;
+  glm::mat4 model;
 
-	std::string diffuseTexture;
-	std::string normalTexture;
-	std::string metallicRoughnessTexture;
-
+  std::string diffuseTexture;
+  std::string normalTexture;
+  std::string metallicRoughnessTexture;
 };
 
 class ModelLoader {
 public:
-	~ModelLoader() = default;
+  ~ModelLoader() = default;
 };

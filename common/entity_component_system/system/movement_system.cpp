@@ -1,19 +1,19 @@
 #include "movement_system.h"
 
-#include "common/entity_component_system/component/position.h"
-#include "common/entity_component_system/component/velocity.h"
-
 #include <chrono>
 #include <iostream>
 #include <tuple>
 
+#include "common/entity_component_system/component/position.h"
+#include "common/entity_component_system/component/velocity.h"
+
 MovementSystem::MovementSystem(Registry* reg) : registry(reg) {}
 
 void MovementSystem::update(float deltaTime) {
-//    registry->updateComponents<PositionComponent, VelocityComponent>(
-//        [deltaTime](PositionComponent& pos, VelocityComponent& vel) {
-//            pos.x += vel.dx * deltaTime;
-//            pos.y += vel.dy * deltaTime;
-//        }
-//    );
+  //    registry->updateComponents<PositionComponent, VelocityComponent>(
+  //        [deltaTime](PositionComponent& pos, VelocityComponent& vel) {
+  //            pos.x += vel.dx * deltaTime;
+  //            pos.y += vel.dy * deltaTime;
+  //        }
+  //    );
 }

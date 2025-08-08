@@ -1,40 +1,42 @@
 #pragma once
 
-#include "descriptor_set.h"
-#include "descriptor_set_layout.h"
-
-#include "common/status/status.h"
-#include "lib/buffer/buffer.h"
-#include "vulkan_wrapper/logical_device/logical_device.h"
-
-#include <vulkan/vulkan.h>
-
 #include <memory>
 #include <stdexcept>
 #include <unordered_map>
 #include <vector>
+#include <vulkan/vulkan.h>
+
+#include "common/status/status.h"
+#include "descriptor_set.h"
+#include "descriptor_set_layout.h"
+#include "lib/buffer/buffer.h"
+#include "vulkan_wrapper/logical_device/logical_device.h"
 
 class DescriptorPool : public std::enable_shared_from_this<const DescriptorPool> {
-	VkDescriptorPool _descriptorPool;
-	const uint32_t _maxNumSets;
-	mutable uint32_t _allocatedSets;
+  VkDescriptorPool _descriptorPool;
+  const uint32_t _maxNumSets;
+  mutable uint32_t _allocatedSets;
 
-	const LogicalDevice& _logicalDevice;
+  const LogicalDevice& _logicalDevice;
 
-	DescriptorPool(VkDescriptorPool descriptorPool, const LogicalDevice& logicalDevice, uint32_t maxNumSets);
+  DescriptorPool(
+      VkDescriptorPool descriptorPool, const LogicalDevice& logicalDevice, uint32_t maxNumSets);
 
 public:
-	~DescriptorPool();
+  ~DescriptorPool();
 
-	static ErrorOr<std::unique_ptr<DescriptorPool>> create(const LogicalDevice& logicalDevice, uint32_t maxNumSets, VkDescriptorPoolCreateFlags flags = {});
+  static ErrorOr<std::unique_ptr<DescriptorPool>> create(
+      const LogicalDevice& logicalDevice, uint32_t maxNumSets,
+      VkDescriptorPoolCreateFlags flags = {});
 
-	VkDescriptorPool getVkDescriptorPool() const;
+  VkDescriptorPool getVkDescriptorPool() const;
 
-	ErrorOr<DescriptorSet> createDesriptorSet(VkDescriptorSetLayout layout) const;
+  ErrorOr<DescriptorSet> createDesriptorSet(VkDescriptorSetLayout layout) const;
 
-	ErrorOr<std::vector<DescriptorSet>> createDesriptorSets(VkDescriptorSetLayout layout, uint32_t numSets) const;
+  ErrorOr<std::vector<DescriptorSet>> createDesriptorSets(
+      VkDescriptorSetLayout layout, uint32_t numSets) const;
 
-	bool maxSetsReached() const;
+  bool maxSetsReached() const;
 
-	const LogicalDevice& getLogicalDevice() const;
+  const LogicalDevice& getLogicalDevice() const;
 };

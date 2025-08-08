@@ -1,16 +1,16 @@
 #pragma once
 
-#include "entity.h"
-
 #include <vector>
+
+#include "entity.h"
 
 class EntityManager {
 private:
-    std::vector<Entity> _availableEntities;
+  std::vector<Entity> _availableEntities;
 
 public:
-    EntityManager();
+  EntityManager();
 
-    Entity createEntity();
-    void destroyEntity(Entity entity);
+  Entity createEntity();
+  void destroyEntity(Entity entity);
 };

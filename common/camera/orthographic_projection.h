@@ -4,19 +4,19 @@
 
 class OrthographicProjection : public Projection {
 public:
-    OrthographicProjection(float left, float right, float bottom, float top, float nearZ, float farZ);
+  OrthographicProjection(float left, float right, float bottom, float top, float nearZ, float farZ);
 
-    void updateMatrix() override;
+  void updateMatrix() override;
 
-    const glm::mat4& getMatrix() const override;
+  const glm::mat4& getMatrix() const override;
 
-    void setBounds(float left, float right, float bottom, float top);
+  void setBounds(float left, float right, float bottom, float top);
 
-    void setNear(float nearZ);
+  void setNear(float nearZ);
 
-    void setFar(float farZ);
+  void setFar(float farZ);
 
 private:
-    float _left, _right, _bottom, _top, _zNear, _zFar;
-    glm::mat4 _matrix;
+  float _left, _right, _bottom, _top, _zNear, _zFar;
+  glm::mat4 _matrix;
 };

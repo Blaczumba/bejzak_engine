@@ -1,61 +1,62 @@
 #pragma once
 
+#include <variant>
+
 #include "common/status/status.h"
 #include "vulkan_wrapper/memory_allocator/allocation.h"
 #include "vulkan_wrapper/memory_allocator/memory_allocator.h"
 #include "vulkan_wrapper/memory_objects/texture.h"
 #include "vulkan_wrapper/physical_device/physical_device.h"
 
-#include <variant>
-
 enum class QueueType : uint8_t {
-	GRAPHICS = 0,
-	PRESENT,
-	COMPUTE,
-	TRANSFER
+  GRAPHICS = 0,
+  PRESENT,
+  COMPUTE,
+  TRANSFER
 };
 
 class LogicalDevice {
-	VkDevice _device = VK_NULL_HANDLE;
+  VkDevice _device = VK_NULL_HANDLE;
 
-	const PhysicalDevice* _physicalDevice = nullptr;
-	mutable MemoryAllocator _memoryAllocator;
+  const PhysicalDevice* _physicalDevice = nullptr;
+  mutable MemoryAllocator _memoryAllocator;
 
-	VkQueue _graphicsQueue = VK_NULL_HANDLE;
-	VkQueue _presentQueue = VK_NULL_HANDLE;
-	VkQueue _computeQueue = VK_NULL_HANDLE;
-	VkQueue _transferQueue = VK_NULL_HANDLE;
+  VkQueue _graphicsQueue = VK_NULL_HANDLE;
+  VkQueue _presentQueue = VK_NULL_HANDLE;
+  VkQueue _computeQueue = VK_NULL_HANDLE;
+  VkQueue _transferQueue = VK_NULL_HANDLE;
 
-	LogicalDevice(VkDevice logicalDevice, const PhysicalDevice& physicalDevice, VkQueue graphicsQueue, VkQueue presentQueue, VkQueue computeQueue, VkQueue transferQueue);
+  LogicalDevice(VkDevice logicalDevice, const PhysicalDevice& physicalDevice, VkQueue graphicsQueue,
+                VkQueue presentQueue, VkQueue computeQueue, VkQueue transferQueue);
 
 public:
-	LogicalDevice() = default;
+  LogicalDevice() = default;
 
-	static ErrorOr<LogicalDevice> create(const PhysicalDevice& physicalDevice);
+  static ErrorOr<LogicalDevice> create(const PhysicalDevice& physicalDevice);
 
-	LogicalDevice(LogicalDevice&& logicalDevice) noexcept;
+  LogicalDevice(LogicalDevice&& logicalDevice) noexcept;
 
-	LogicalDevice& operator=(LogicalDevice&& logicalDevice) noexcept;
+  LogicalDevice& operator=(LogicalDevice&& logicalDevice) noexcept;
 
-	~LogicalDevice();
+  ~LogicalDevice();
 
-	ErrorOr<VkSampler> createSampler(const SamplerParameters& params) const;
+  ErrorOr<VkSampler> createSampler(const SamplerParameters& params) const;
 
-	ErrorOr<VkImageView> createImageView(VkImage image, const ImageParameters& params) const;
+  ErrorOr<VkImageView> createImageView(VkImage image, const ImageParameters& params) const;
 
-	VkDevice getVkDevice() const;
+  VkDevice getVkDevice() const;
 
-	const PhysicalDevice& getPhysicalDevice() const;
+  const PhysicalDevice& getPhysicalDevice() const;
 
-	MemoryAllocator& getMemoryAllocator() const;
+  MemoryAllocator& getMemoryAllocator() const;
 
-	VkQueue getVkQueue(QueueType queueType) const;
+  VkQueue getVkQueue(QueueType queueType) const;
 
-	VkQueue getGraphicsVkQueue() const;
+  VkQueue getGraphicsVkQueue() const;
 
-	VkQueue getPresentVkQueue() const;
+  VkQueue getPresentVkQueue() const;
 
-	VkQueue getComputeVkQueue() const;
+  VkQueue getComputeVkQueue() const;
 
-	VkQueue getTransferVkQueue() const;
+  VkQueue getTransferVkQueue() const;
 };

@@ -1,16 +1,17 @@
 #pragma once
 
-#include "common/entity_component_system/entity/entity.h"
-
+#include <glm/glm.hpp>
 #include <memory>
 
-#include <glm/glm.hpp>
+#include "common/entity_component_system/entity/entity.h"
 
 class PositionComponent {
-	static constexpr ComponentType componentID = 6;
+  static constexpr ComponentType componentID = 6;
 
 public:
-	float x, y;
+  float x, y;
 
-	static constexpr std::enable_if_t<componentID < MAX_COMPONENTS, ComponentType> getComponentID() { return componentID; }
+  static constexpr std::enable_if_t < componentID<MAX_COMPONENTS, ComponentType> getComponentID() {
+    return componentID;
+  }
 };

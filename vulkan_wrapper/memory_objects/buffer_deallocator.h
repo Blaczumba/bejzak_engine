@@ -1,20 +1,18 @@
 #pragma once
 
+#include <stdexcept>
+#include <vector>
+#include <vulkan/vulkan.h>
+
 #include "common/status/status.h"
 #include "vulkan_wrapper/memory_allocator/memory_allocator.h"
 
-#include <vulkan/vulkan.h>
-
-#include <vector>
-#include <stdexcept>
-
 struct BufferDeallocator {
-    const VkBuffer buffer;
+  const VkBuffer buffer;
 
-    void operator()(VmaWrapper& allocator, const VmaAllocation allocation) {
-        allocator.destroyVkBuffer(buffer, allocation);
-    }
+  void operator()(VmaWrapper& allocator, const VmaAllocation allocation) {
+    allocator.destroyVkBuffer(buffer, allocation);
+  }
 
-    void operator()(auto&&, auto&&) {
-    }
+  void operator()(auto&&, auto&&) {}
 };

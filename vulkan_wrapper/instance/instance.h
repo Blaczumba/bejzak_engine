@@ -1,33 +1,33 @@
 #pragma once
 
-#include "common/status/status.h"
-#include "lib/buffer/buffer.h"
-
-#include <vulkan/vulkan.h>
-
 #include <memory>
 #include <span>
 #include <string_view>
+#include <vulkan/vulkan.h>
+
+#include "common/status/status.h"
+#include "lib/buffer/buffer.h"
 
 class Instance {
-	VkInstance _instance = VK_NULL_HANDLE;
+  VkInstance _instance = VK_NULL_HANDLE;
 
-    Instance(VkInstance instance);
+  Instance(VkInstance instance);
 
 public:
-	Instance() = default;
+  Instance() = default;
 
-	Instance(Instance&& other) noexcept;
+  Instance(Instance&& other) noexcept;
 
-	Instance& operator=(Instance&& other) noexcept;
+  Instance& operator=(Instance&& other) noexcept;
 
-	~Instance();
+  ~Instance();
 
-	static ErrorOr<Instance> create(std::string_view engineName, std::span<const char* const> requiredExtensions);
+  static ErrorOr<Instance> create(
+      std::string_view engineName, std::span<const char* const> requiredExtensions);
 
-    static ErrorOr<Instance> createFromInitialized(VkInstance instance);
+  static ErrorOr<Instance> createFromInitialized(VkInstance instance);
 
-	VkInstance getVkInstance() const;
+  VkInstance getVkInstance() const;
 
-	ErrorOr<lib::Buffer<VkPhysicalDevice>> getAvailablePhysicalDevices() const;
+  ErrorOr<lib::Buffer<VkPhysicalDevice>> getAvailablePhysicalDevices() const;
 };

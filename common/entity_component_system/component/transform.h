@@ -1,16 +1,17 @@
 #pragma once
 
-#include "common/entity_component_system/entity/entity.h"
-
+#include <glm/glm.hpp>
 #include <memory>
 
-#include <glm/glm.hpp>
+#include "common/entity_component_system/entity/entity.h"
 
 class TransformComponent {
-	static constexpr ComponentType componentID = 4;
+  static constexpr ComponentType componentID = 4;
 
 public:
-	glm::mat4 model;
+  glm::mat4 model;
 
-	static constexpr std::enable_if_t<componentID < MAX_COMPONENTS, ComponentType> getComponentID() { return componentID; }
+  static constexpr std::enable_if_t < componentID<MAX_COMPONENTS, ComponentType> getComponentID() {
+    return componentID;
+  }
 };

@@ -1,11 +1,10 @@
 #pragma once
 
-#include "common/status/status.h"
-#include "openxr_wrapper/instance/instance.h"
-
+#include <memory>
 #include <openxr/openxr.h>
 
-#include <memory>
+#include "common/status/status.h"
+#include "openxr_wrapper/instance/instance.h"
 
 namespace xrw {
 
@@ -16,7 +15,7 @@ class System {
 
   System(XrSystemId systemId, const Instance& instance);
 
- public:
+public:
   ~System() = default;
 
   static ErrorOr<std::unique_ptr<System>> create(const Instance& instance);
@@ -26,4 +25,4 @@ class System {
   const Instance& getInstance() const;
 };
 
-} // xrw
+}  // namespace xrw
