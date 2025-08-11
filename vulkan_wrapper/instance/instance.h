@@ -23,7 +23,8 @@ public:
   ~Instance();
 
   static ErrorOr<Instance> create(
-      std::string_view engineName, std::span<const char* const> requiredExtensions);
+      std::string_view engineName, std::span<const char* const> requiredExtensions,
+      PFN_vkDebugUtilsMessengerCallbackEXT debugCallback);
 
   static ErrorOr<Instance> createFromInitialized(VkInstance instance);
 

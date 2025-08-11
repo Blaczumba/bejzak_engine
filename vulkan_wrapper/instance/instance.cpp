@@ -55,7 +55,8 @@ bool checkValidationLayerSupport() {
 }  // namespace
 
 ErrorOr<Instance> Instance::create(
-    std::string_view engineName, std::span<const char* const> requiredExtensions) {
+    std::string_view engineName, std::span<const char* const> requiredExtensions,
+    PFN_vkDebugUtilsMessengerCallbackEXT debugCallback) {
 #ifdef VALIDATION_LAYERS_ENABLED
   if (!checkValidationLayerSupport()) {
     return Error(VK_ERROR_FEATURE_NOT_PRESENT);
@@ -71,10 +72,8 @@ ErrorOr<Instance> Instance::create(
     .apiVersion = VK_API_VERSION_1_0};
 
 #ifdef VALIDATION_LAYERS_ENABLED
-  static constexpr VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo =
-      populateDebugMessengerCreateInfoUtility();
-#else
-  VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo{};
+  VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo =
+      populateDebugMessengerCreateInfoUtility(debugCallback);
 #endif  // VALIDATION_LAYERS_ENABLED
 
   const VkInstanceCreateInfo createInfo = {

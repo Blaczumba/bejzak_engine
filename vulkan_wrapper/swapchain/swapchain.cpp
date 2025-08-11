@@ -165,8 +165,10 @@ ErrorOr<Swapchain> SwapchainBuilder::build(
       && imageCount > swapChainSupport.capabilities.maxImageCount) {
     imageCount = swapChainSupport.capabilities.maxImageCount;
   }
+
   const VkSurfaceFormatKHR surfaceFormat =
       chooseSwapSurfaceFormat(swapChainSupport.formats, _preferredFormat);
+
   VkSwapchainCreateInfoKHR createInfo = {
     .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
     .surface = surface,
@@ -183,6 +185,7 @@ ErrorOr<Swapchain> SwapchainBuilder::build(
     .oldSwapchain = _oldSwapchain};
 
   const QueueFamilyIndices indices = logicalDevice.getPhysicalDevice().getQueueFamilyIndices();
+
   if (indices.graphicsFamily != indices.presentFamily) {
     const uint32_t queueFamilyIndices[] = {
       indices.graphicsFamily.value(), indices.presentFamily.value()};

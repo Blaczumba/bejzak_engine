@@ -20,7 +20,8 @@ public:
 
   DebugMessenger& operator=(DebugMessenger&& debugMessenger) noexcept;
 
-  static ErrorOr<DebugMessenger> create(const Instance& instance);
+  static ErrorOr<DebugMessenger> create(
+      const Instance& instance, PFN_vkDebugUtilsMessengerCallbackEXT debugCallback);
 
   ~DebugMessenger();
 };
