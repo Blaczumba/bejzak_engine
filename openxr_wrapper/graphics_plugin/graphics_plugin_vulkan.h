@@ -9,7 +9,7 @@
 #include "vulkan_wrapper/debug_messenger/debug_messenger.h"
 #include "vulkan_wrapper/instance/instance.h"
 #include "vulkan_wrapper/physical_device/physical_device.h"
-// #include "vulkan_wrapper/logical_device/logical_device.h"
+#include "vulkan_wrapper/logical_device/logical_device.h"
 
 namespace xrw {
 
@@ -37,7 +37,7 @@ private:
   DebugMessenger _debugMessenger;
 #endif
   std::unique_ptr<PhysicalDevice> _physicalDevice;
-  // LogicalDevice _logicalDevice;
+  LogicalDevice _logicalDevice;
 };
 
 }  // namespace xrw

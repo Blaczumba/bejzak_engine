@@ -15,6 +15,7 @@
 #include "vulkan_wrapper/debug_messenger/debug_messenger_utils.h"
 #include "vulkan_wrapper/instance/extensions.h"
 #include "vulkan_wrapper/util/check.h"
+#include "vulkan_wrapper/logical_device/extensions_connector.h"
 
 namespace xrw {
 
@@ -176,6 +177,78 @@ ErrorOr<std::unique_ptr<PhysicalDevice>> createPhysicalDevice(
   return PhysicalDevice::wrap(physicalDevice, instance);
 }
 
+ErrorOr<LogicalDevice> createLogicalDevice(XrInstance xrInstance, XrSystemId systemId, const PhysicalDevice& physicalDevice) {
+  const QueueFamilyIndices& indices = physicalDevice.getQueueFamilyIndices();
+  const std::set<uint32_t> uniqueQueueFamilies = {*indices.graphicsFamily, *indices.presentFamily,
+                                                  *indices.computeFamily, *indices.transferFamily};
+
+  float queuePriority = 1.0f;
+  lib::Buffer<VkDeviceQueueCreateInfo> queueCreateInfos(uniqueQueueFamilies.size());
+  std::transform(uniqueQueueFamilies.cbegin(), uniqueQueueFamilies.cend(), queueCreateInfos.begin(),
+                 [&queuePriority](uint32_t queueFamilyIndex) {
+                   return VkDeviceQueueCreateInfo{
+                       VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+                       nullptr,
+                       0,
+                       queueFamilyIndex,
+                       1,
+                       &queuePriority};
+                 });
+
+  DeviceFeatures deviceFeatures;
+  chainExtensionIndexTypeUint8(deviceFeatures, physicalDevice);
+  chainExtensionBufferDeviceAddress(deviceFeatures, physicalDevice);
+  chainExtensionInheritedViewportScissor(deviceFeatures, physicalDevice);
+  chainExtensionDescriptorIndexing(deviceFeatures, physicalDevice);
+
+  const VkPhysicalDeviceFeatures2 deviceFeaturesInfo = {
+      .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
+      .pNext = deviceFeatures.next,
+      .features = {.geometryShader = VK_TRUE,
+          .tessellationShader = VK_TRUE,
+          .sampleRateShading = VK_TRUE,
+          .depthClamp = VK_TRUE,
+          .samplerAnisotropy = VK_TRUE}
+  };
+
+  const VkDeviceCreateInfo deviceCreateInfo = {
+      .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
+      .pNext = &deviceFeaturesInfo,
+      .queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size()),
+      .pQueueCreateInfos = queueCreateInfos.data(),
+#ifdef VALIDATION_LAYERS_ENABLED
+      .enabledLayerCount = static_cast<uint32_t>(validationLayers.size()),
+      .ppEnabledLayerNames = validationLayers.data(),
+#endif  // VALIDATION_LAYERS_ENABLED
+      .enabledExtensionCount = 0,
+      .ppEnabledExtensionNames = nullptr
+  };
+
+  const XrVulkanDeviceCreateInfoKHR vulkan_device_create_info_khr = {
+      .type = XR_TYPE_VULKAN_DEVICE_CREATE_INFO_KHR,
+      .systemId = systemId,
+      .pfnGetInstanceProcAddr = &vkGetInstanceProcAddr,
+      .vulkanPhysicalDevice = physicalDevice.getVkPhysicalDevice(),
+      .vulkanCreateInfo = &deviceCreateInfo
+  };
+
+  PFN_xrCreateVulkanDeviceKHR pfnXrCreateVulkanDeviceKhr = nullptr;
+  CHECK_XRCMD(xrGetInstanceProcAddr(xrInstance, "xrCreateVulkanDeviceKHR",
+                                    reinterpret_cast<PFN_xrVoidFunction *>(&pfnXrCreateVulkanDeviceKhr)));
+  if (pfnXrCreateVulkanDeviceKhr == nullptr) {
+    return Error(EngineError::NOT_FOUND);
+  }
+
+  VkResult vulkanDeviceCreateResult = VK_SUCCESS;
+  VkDevice logicalDevice;
+  CHECK_XRCMD(pfnXrCreateVulkanDeviceKhr(xrInstance,
+                                              &vulkan_device_create_info_khr,
+                                              &logicalDevice,
+                                              &vulkanDeviceCreateResult));
+  CHECK_VKCMD(vulkanDeviceCreateResult);
+  return LogicalDevice::wrap(logicalDevice, physicalDevice);
+}
+
 }  // namespace
 
 Status GraphicsPluginVulkan::initialize(XrInstance xrInstance, XrSystemId systemId) {
@@ -187,6 +260,7 @@ Status GraphicsPluginVulkan::initialize(XrInstance xrInstance, XrSystemId system
   ASSIGN_OR_RETURN(_debugMessenger, DebugMessenger::create(_instance, _debugCallback));
 #endif
   ASSIGN_OR_RETURN(_physicalDevice, createPhysicalDevice(xrInstance, systemId, _instance));
+  ASSIGN_OR_RETURN(_logicalDevice, createLogicalDevice(xrInstance, systemId, *_physicalDevice));
   return StatusOk();
 }
 
