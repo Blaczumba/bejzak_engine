@@ -15,7 +15,6 @@ class Swapchain {
 
 public:
 
-
 private:
   XrSwapchain _swapchain;
   const Session& session;

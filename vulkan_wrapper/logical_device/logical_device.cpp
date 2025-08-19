@@ -6,23 +6,22 @@
 #include <stdexcept>
 #include <vulkan/vulkan.h>
 
+#include "extensions_connector.h"
 #include "lib/buffer/buffer.h"
 #include "vulkan_wrapper/instance/extensions.h"
 #include "vulkan_wrapper/util/check.h"
 
-LogicalDevice::LogicalDevice(
-    VkDevice logicalDevice, const PhysicalDevice& physicalDevice)
+LogicalDevice::LogicalDevice(VkDevice logicalDevice, const PhysicalDevice& physicalDevice)
   : _device(logicalDevice), _physicalDevice(&physicalDevice),
     _memoryAllocator(
         std::in_place_type<VmaWrapper>, logicalDevice, physicalDevice.getVkPhysicalDevice(),
-        physicalDevice.getInstance().getVkInstance())
-        {
+        physicalDevice.getInstance().getVkInstance()) {
   const QueueFamilyIndices& queueFamilyIndices = physicalDevice.getQueueFamilyIndices();
   vkGetDeviceQueue(logicalDevice, *queueFamilyIndices.graphicsFamily, 0, &_graphicsQueue);
   vkGetDeviceQueue(logicalDevice, *queueFamilyIndices.presentFamily, 0, &_presentQueue);
   vkGetDeviceQueue(logicalDevice, *queueFamilyIndices.computeFamily, 0, &_computeQueue);
   vkGetDeviceQueue(logicalDevice, *queueFamilyIndices.transferFamily, 0, &_transferQueue);
-        }
+}
 
 LogicalDevice::LogicalDevice(LogicalDevice&& logicalDevice) noexcept
   : _device(std::exchange(logicalDevice._device, VK_NULL_HANDLE)),
@@ -83,47 +82,15 @@ ErrorOr<LogicalDevice> LogicalDevice::create(const PhysicalDevice& physicalDevic
                      &queuePriority};
                  });
 
-  void* next = nullptr;
+  DeviceFeatures deviceFeatures;
+  chainExtensionIndexTypeUint8(deviceFeatures, physicalDevice);
+  chainExtensionBufferDeviceAddress(deviceFeatures, physicalDevice);
+  chainExtensionInheritedViewportScissor(deviceFeatures, physicalDevice);
+  chainExtensionDescriptorIndexing(deviceFeatures, physicalDevice);
 
-  VkPhysicalDeviceIndexTypeUint8FeaturesEXT uint8IndexFeatures = {
-    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INDEX_TYPE_UINT8_FEATURES_EXT,
-    .indexTypeUint8 = VK_TRUE};
-
-  chainExtensionFeature(
-      &next, uint8IndexFeatures, VK_EXT_INDEX_TYPE_UINT8_EXTENSION_NAME, physicalDevice);
-
-  VkPhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddressFeatures = {
-    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
-    .bufferDeviceAddress = VK_TRUE};
-
-  chainExtensionFeature(&next, bufferDeviceAddressFeatures,
-                        VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME, physicalDevice);
-
-  VkPhysicalDeviceInheritedViewportScissorFeaturesNV viewportScissorsFeatures = {
-    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INHERITED_VIEWPORT_SCISSOR_FEATURES_NV,
-    .inheritedViewportScissor2D = VK_TRUE
-  };
-
-  chainExtensionFeature(&next, viewportScissorsFeatures,
-                        VK_NV_INHERITED_VIEWPORT_SCISSOR_EXTENSION_NAME, physicalDevice);
-
-  VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexingFeatures = {
-    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
-    .shaderUniformBufferArrayNonUniformIndexing = VK_TRUE,
-    .shaderSampledImageArrayNonUniformIndexing = VK_TRUE,
-    .shaderStorageBufferArrayNonUniformIndexing = VK_TRUE,
-    .descriptorBindingUniformBufferUpdateAfterBind = VK_TRUE,
-    .descriptorBindingSampledImageUpdateAfterBind = VK_TRUE,
-    .descriptorBindingStorageBufferUpdateAfterBind = VK_TRUE,
-    .descriptorBindingPartiallyBound = VK_TRUE,
-    .runtimeDescriptorArray = VK_TRUE};
-
-  chainExtensionFeature(
-      &next, descriptorIndexingFeatures, VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME, physicalDevice);
-
-  const VkPhysicalDeviceFeatures2 deviceFeatures = {
+  const VkPhysicalDeviceFeatures2 deviceFeaturesInfo = {
     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-    .pNext = next,
+    .pNext = deviceFeatures.next,
     .features = {.geometryShader = VK_TRUE,
                  .tessellationShader = VK_TRUE,
                  .sampleRateShading = VK_TRUE,
@@ -135,7 +102,7 @@ ErrorOr<LogicalDevice> LogicalDevice::create(const PhysicalDevice& physicalDevic
 
   const VkDeviceCreateInfo createInfo = {
     .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-    .pNext = &deviceFeatures,
+    .pNext = &deviceFeaturesInfo,
     .queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size()),
     .pQueueCreateInfos = queueCreateInfos.data(),
 #ifdef VALIDATION_LAYERS_ENABLED
@@ -152,8 +119,7 @@ ErrorOr<LogicalDevice> LogicalDevice::create(const PhysicalDevice& physicalDevic
   CHECK_VKCMD(
       vkCreateDevice(physicalDevice.getVkPhysicalDevice(), &createInfo, nullptr, &logicalDevice));
 
-  return LogicalDevice(
-      logicalDevice, physicalDevice);
+  return LogicalDevice(logicalDevice, physicalDevice);
 }
 
 ErrorOr<LogicalDevice> LogicalDevice::wrap(VkDevice device, const PhysicalDevice& physicalDevice) {

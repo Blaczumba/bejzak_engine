@@ -1,16 +1,15 @@
 #pragma once
 
-#include <openxr/openxr.h>
 #include <memory>
+#include <openxr/openxr.h>
 #include <span>
 
 #include "common/status/status.h"
 #include "graphics_plugin.h"
-
-#include "vulkan_wrapper/instance/instance.h"
 #include "vulkan_wrapper/debug_messenger/debug_messenger.h"
+#include "vulkan_wrapper/instance/instance.h"
 #include "vulkan_wrapper/physical_device/physical_device.h"
-//#include "vulkan_wrapper/logical_device/logical_device.h"
+// #include "vulkan_wrapper/logical_device/logical_device.h"
 
 namespace xrw {
 
@@ -31,12 +30,12 @@ public:
 
   Status initialize(XrInstance xrInstance, XrSystemId systemId) override;
 
- private:
+private:
   Instance _instance;
   PFN_vkDebugUtilsMessengerCallbackEXT _debugCallback;
 #ifdef VALIDATION_LAYERS_ENABLED
   DebugMessenger _debugMessenger;
-# endif
+#endif
   std::unique_ptr<PhysicalDevice> _physicalDevice;
   // LogicalDevice _logicalDevice;
 };

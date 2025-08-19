@@ -164,12 +164,13 @@ ErrorOr<std::unique_ptr<PhysicalDevice>> PhysicalDevice::create(
   return Error(EngineError::NOT_FOUND);
 }
 
-ErrorOr<std::unique_ptr<PhysicalDevice>> PhysicalDevice::wrap(VkPhysicalDevice physicalDevice, const Instance& instance) {
+ErrorOr<std::unique_ptr<PhysicalDevice>> PhysicalDevice::wrap(
+    VkPhysicalDevice physicalDevice, const Instance& instance) {
   if (physicalDevice == VK_NULL_HANDLE) {
     return Error(EngineError::NULLPTR_REFERENCE);
   }
-  return std::unique_ptr<PhysicalDevice>(new PhysicalDevice(physicalDevice, instance,
-                                                             findQueueFamilyIncides(physicalDevice)));
+  return std::unique_ptr<PhysicalDevice>(
+      new PhysicalDevice(physicalDevice, instance, findQueueFamilyIncides(physicalDevice)));
 }
 
 VkPhysicalDevice PhysicalDevice::getVkPhysicalDevice() const {

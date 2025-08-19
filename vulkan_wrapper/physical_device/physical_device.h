@@ -42,7 +42,8 @@ public:
   static ErrorOr<std::unique_ptr<PhysicalDevice>> create(
       const Instance& instance, VkSurfaceKHR surface);
 
-  static ErrorOr<std::unique_ptr<PhysicalDevice>> wrap(VkPhysicalDevice physicalDevice, const Instance& instance);
+  static ErrorOr<std::unique_ptr<PhysicalDevice>> wrap(
+      VkPhysicalDevice physicalDevice, const Instance& instance);
 
   VkPhysicalDevice getVkPhysicalDevice() const;
 
