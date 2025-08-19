@@ -26,13 +26,14 @@ class LogicalDevice {
   VkQueue _computeQueue = VK_NULL_HANDLE;
   VkQueue _transferQueue = VK_NULL_HANDLE;
 
-  LogicalDevice(VkDevice logicalDevice, const PhysicalDevice& physicalDevice, VkQueue graphicsQueue,
-                VkQueue presentQueue, VkQueue computeQueue, VkQueue transferQueue);
+  LogicalDevice(VkDevice logicalDevice, const PhysicalDevice& physicalDevice);
 
 public:
   LogicalDevice() = default;
 
   static ErrorOr<LogicalDevice> create(const PhysicalDevice& physicalDevice);
+
+  static ErrorOr<LogicalDevice> wrap(VkDevice device, const PhysicalDevice& physicalDevice);
 
   LogicalDevice(LogicalDevice&& logicalDevice) noexcept;
 

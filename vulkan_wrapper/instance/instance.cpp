@@ -96,7 +96,7 @@ ErrorOr<Instance> Instance::create(
   return Instance(instance);
 }
 
-ErrorOr<Instance> Instance::createFromInitialized(VkInstance instance) {
+ErrorOr<Instance> Instance::wrap(VkInstance instance) {
   if (instance == VK_NULL_HANDLE) {
     return Error(EngineError::NULLPTR_REFERENCE);
   }

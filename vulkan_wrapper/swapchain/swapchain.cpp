@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <optional>
 #include <span>
 
 #include "vulkan_wrapper/logical_device/logical_device.h"
@@ -157,17 +158,20 @@ VkExtent2D chooseSwapExtent(
 
 ErrorOr<Swapchain> SwapchainBuilder::build(
     const LogicalDevice& logicalDevice, VkSurfaceKHR surface, VkExtent2D extent) {
-  const SwapChainSupportDetails swapChainSupport =
+  const std::optional<SwapChainSupportDetails>& swapChainSupport =
       logicalDevice.getPhysicalDevice().getSwapchainSupportDetails();
+  if (!swapChainSupport.has_value()) {
+    return Error(EngineError::NULLPTR_REFERENCE);
+  }
 
-  uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
-  if (swapChainSupport.capabilities.maxImageCount > 0
-      && imageCount > swapChainSupport.capabilities.maxImageCount) {
-    imageCount = swapChainSupport.capabilities.maxImageCount;
+  uint32_t imageCount = swapChainSupport->capabilities.minImageCount + 1;
+  if (swapChainSupport->capabilities.maxImageCount > 0
+      && imageCount > swapChainSupport->capabilities.maxImageCount) {
+    imageCount = swapChainSupport->capabilities.maxImageCount;
   }
 
   const VkSurfaceFormatKHR surfaceFormat =
-      chooseSwapSurfaceFormat(swapChainSupport.formats, _preferredFormat);
+      chooseSwapSurfaceFormat(swapChainSupport->formats, _preferredFormat);
 
   VkSwapchainCreateInfoKHR createInfo = {
     .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
@@ -175,12 +179,12 @@ ErrorOr<Swapchain> SwapchainBuilder::build(
     .minImageCount = imageCount,
     .imageFormat = surfaceFormat.format,
     .imageColorSpace = surfaceFormat.colorSpace,
-    .imageExtent = chooseSwapExtent(extent, swapChainSupport.capabilities),
+    .imageExtent = chooseSwapExtent(extent, swapChainSupport->capabilities),
     .imageArrayLayers = imageArrayLayers,
     .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-    .preTransform = swapChainSupport.capabilities.currentTransform,
+    .preTransform = swapChainSupport->capabilities.currentTransform,
     .compositeAlpha = _compositeAlpha,
-    .presentMode = chooseSwapPresentMode(swapChainSupport.presentModes, _preferredPresentMode),
+    .presentMode = chooseSwapPresentMode(swapChainSupport->presentModes, _preferredPresentMode),
     .clipped = _clipped,
     .oldSwapchain = _oldSwapchain};
 

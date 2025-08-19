@@ -60,6 +60,9 @@ ErrorOr<Swapchain> build(const Session& session, const GraphicsPlugin& graphicsP
   lib::Buffer<XrViewConfigurationView> configurationViews(viewCount);
   CHECK_XRCMD(xrEnumerateViewConfigurationViews(
       instance, systemId, viewConfigType, viewCount, &viewCount, configurationViews.data()));
+
+  // lib::Buffer<XrView>
+  return Error(EngineError::NOT_FOUND);
 }
 
 }  // namespace xrw

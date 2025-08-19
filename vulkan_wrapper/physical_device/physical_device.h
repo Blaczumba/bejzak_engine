@@ -28,19 +28,21 @@ class PhysicalDevice {
 
   VkPhysicalDeviceProperties _properties;
   QueueFamilyIndices _queueFamilyIndices;
-  SwapChainSupportDetails _swapchainSupportDetails;
+  std::optional<SwapChainSupportDetails> _swapchainSupportDetails;
 
   const std::unordered_set<std::string_view> _availableRequestedExtensions;
 
   PhysicalDevice(VkPhysicalDevice physicalDevice, const Instance& instance,
                  const QueueFamilyIndices& queueFamilyIndices,
-                 const SwapChainSupportDetails& swapchainSupportDetails);
+                 std::optional<SwapChainSupportDetails> swapchainSupportDetails = std::nullopt);
 
 public:
   ~PhysicalDevice() = default;
 
   static ErrorOr<std::unique_ptr<PhysicalDevice>> create(
       const Instance& instance, VkSurfaceKHR surface);
+
+  static ErrorOr<std::unique_ptr<PhysicalDevice>> wrap(VkPhysicalDevice physicalDevice, const Instance& instance);
 
   VkPhysicalDevice getVkPhysicalDevice() const;
 
@@ -56,5 +58,5 @@ public:
 
   const QueueFamilyIndices& getQueueFamilyIndices() const;
 
-  const SwapChainSupportDetails& getSwapchainSupportDetails() const;
+  const std::optional<SwapChainSupportDetails>& getSwapchainSupportDetails() const;
 };

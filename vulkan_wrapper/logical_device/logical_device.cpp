@@ -11,14 +11,18 @@
 #include "vulkan_wrapper/util/check.h"
 
 LogicalDevice::LogicalDevice(
-    VkDevice logicalDevice, const PhysicalDevice& physicalDevice, VkQueue graphicsQueue,
-    VkQueue presentQueue, VkQueue computeQueue, VkQueue transferQueue)
+    VkDevice logicalDevice, const PhysicalDevice& physicalDevice)
   : _device(logicalDevice), _physicalDevice(&physicalDevice),
     _memoryAllocator(
         std::in_place_type<VmaWrapper>, logicalDevice, physicalDevice.getVkPhysicalDevice(),
-        physicalDevice.getInstance().getVkInstance()),
-    _graphicsQueue(graphicsQueue), _presentQueue(presentQueue), _computeQueue(computeQueue),
-    _transferQueue(transferQueue) {}
+        physicalDevice.getInstance().getVkInstance())
+        {
+  const QueueFamilyIndices& queueFamilyIndices = physicalDevice.getQueueFamilyIndices();
+  vkGetDeviceQueue(logicalDevice, *queueFamilyIndices.graphicsFamily, 0, &_graphicsQueue);
+  vkGetDeviceQueue(logicalDevice, *queueFamilyIndices.presentFamily, 0, &_presentQueue);
+  vkGetDeviceQueue(logicalDevice, *queueFamilyIndices.computeFamily, 0, &_computeQueue);
+  vkGetDeviceQueue(logicalDevice, *queueFamilyIndices.transferFamily, 0, &_transferQueue);
+        }
 
 LogicalDevice::LogicalDevice(LogicalDevice&& logicalDevice) noexcept
   : _device(std::exchange(logicalDevice._device, VK_NULL_HANDLE)),
@@ -62,8 +66,7 @@ void chainExtensionFeature(
 }
 
 ErrorOr<LogicalDevice> LogicalDevice::create(const PhysicalDevice& physicalDevice) {
-  const QueueFamilyIndices indices = physicalDevice.getQueueFamilyIndices();
-
+  const QueueFamilyIndices& indices = physicalDevice.getQueueFamilyIndices();
   const std::set<uint32_t> uniqueQueueFamilies = {*indices.graphicsFamily, *indices.presentFamily,
                                                   *indices.computeFamily, *indices.transferFamily};
 
@@ -98,7 +101,7 @@ ErrorOr<LogicalDevice> LogicalDevice::create(const PhysicalDevice& physicalDevic
 
   VkPhysicalDeviceInheritedViewportScissorFeaturesNV viewportScissorsFeatures = {
     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INHERITED_VIEWPORT_SCISSOR_FEATURES_NV,
-    .inheritedViewportScissor2D = VK_TRUE,
+    .inheritedViewportScissor2D = VK_TRUE
   };
 
   chainExtensionFeature(&next, viewportScissorsFeatures,
@@ -149,13 +152,15 @@ ErrorOr<LogicalDevice> LogicalDevice::create(const PhysicalDevice& physicalDevic
   CHECK_VKCMD(
       vkCreateDevice(physicalDevice.getVkPhysicalDevice(), &createInfo, nullptr, &logicalDevice));
 
-  VkQueue graphicsQueue, presentQueue, computeQueue, transferQueue;
-  vkGetDeviceQueue(logicalDevice, *indices.graphicsFamily, 0, &graphicsQueue);
-  vkGetDeviceQueue(logicalDevice, *indices.presentFamily, 0, &presentQueue);
-  vkGetDeviceQueue(logicalDevice, *indices.computeFamily, 0, &computeQueue);
-  vkGetDeviceQueue(logicalDevice, *indices.transferFamily, 0, &transferQueue);
   return LogicalDevice(
-      logicalDevice, physicalDevice, graphicsQueue, presentQueue, computeQueue, transferQueue);
+      logicalDevice, physicalDevice);
+}
+
+ErrorOr<LogicalDevice> LogicalDevice::wrap(VkDevice device, const PhysicalDevice& physicalDevice) {
+  if (device == VK_NULL_HANDLE) {
+    return Error(EngineError::NULLPTR_REFERENCE);
+  }
+  return LogicalDevice(device, physicalDevice);
 }
 
 ErrorOr<VkImageView> LogicalDevice::createImageView(

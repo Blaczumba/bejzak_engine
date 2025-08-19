@@ -26,7 +26,7 @@ public:
       std::string_view engineName, std::span<const char* const> requiredExtensions,
       PFN_vkDebugUtilsMessengerCallbackEXT debugCallback);
 
-  static ErrorOr<Instance> createFromInitialized(VkInstance instance);
+  static ErrorOr<Instance> wrap(VkInstance instance);
 
   VkInstance getVkInstance() const;
 

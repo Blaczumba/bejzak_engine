@@ -41,16 +41,20 @@ bool areQueueFamilyIndicesComplete(const QueueFamilyIndices& indices) {
          && indices.computeFamily.has_value() && indices.transferFamily.has_value();
 }
 
-QueueFamilyIndices findQueueFamilyIncides(VkPhysicalDevice device, VkSurfaceKHR surface) {
+lib::Buffer<VkQueueFamilyProperties> getQueueFamilyProperties(VkPhysicalDevice device) {
   uint32_t queueFamilyCount = 0;
   vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
 
   lib::Buffer<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
   vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
+  return queueFamilies;
+}
 
+QueueFamilyIndices findQueueFamilyIncides(VkPhysicalDevice device, VkSurfaceKHR surface) {
+  lib::Buffer<VkQueueFamilyProperties> queueFamilies = getQueueFamilyProperties(device);
   QueueFamilyIndices indices;
 
-  for (uint32_t i = 0; i < queueFamilies.size() && !areQueueFamilyIndicesComplete(indices); i++) {
+  for (uint32_t i = 0; i < queueFamilies.size() && !areQueueFamilyIndicesComplete(indices); ++i) {
     if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
       indices.graphicsFamily = i;
     }
@@ -69,7 +73,26 @@ QueueFamilyIndices findQueueFamilyIncides(VkPhysicalDevice device, VkSurfaceKHR 
       indices.presentFamily = i;
     }
   }
+  return indices;
+}
 
+QueueFamilyIndices findQueueFamilyIncides(VkPhysicalDevice device) {
+  lib::Buffer<VkQueueFamilyProperties> queueFamilies = getQueueFamilyProperties(device);
+  QueueFamilyIndices indices;
+
+  for (uint32_t i = 0; i < queueFamilies.size() && !areQueueFamilyIndicesComplete(indices); ++i) {
+    if (queueFamilies[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+      indices.graphicsFamily = indices.presentFamily = i;
+    }
+
+    if (queueFamilies[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
+      indices.computeFamily = i;
+    }
+
+    if (queueFamilies[i].queueFlags & VK_QUEUE_TRANSFER_BIT) {
+      indices.transferFamily = i;
+    }
+  }
   return indices;
 }
 
@@ -101,7 +124,7 @@ SwapChainSupportDetails querySwapchainSupportDetails(
 
 PhysicalDevice::PhysicalDevice(VkPhysicalDevice physicalDevice, const Instance& instance,
                                const QueueFamilyIndices& queueFamilyIndices,
-                               const SwapChainSupportDetails& swapchainSupportDetails)
+                               std::optional<SwapChainSupportDetails> swapchainSupportDetails)
   : _device(physicalDevice), _instance(instance),
     _availableRequestedExtensions(checkDeviceExtensionSupport(physicalDevice)),
     _queueFamilyIndices(queueFamilyIndices), _swapchainSupportDetails(swapchainSupportDetails) {
@@ -141,6 +164,14 @@ ErrorOr<std::unique_ptr<PhysicalDevice>> PhysicalDevice::create(
   return Error(EngineError::NOT_FOUND);
 }
 
+ErrorOr<std::unique_ptr<PhysicalDevice>> PhysicalDevice::wrap(VkPhysicalDevice physicalDevice, const Instance& instance) {
+  if (physicalDevice == VK_NULL_HANDLE) {
+    return Error(EngineError::NULLPTR_REFERENCE);
+  }
+  return std::unique_ptr<PhysicalDevice>(new PhysicalDevice(physicalDevice, instance,
+                                                             findQueueFamilyIncides(physicalDevice)));
+}
+
 VkPhysicalDevice PhysicalDevice::getVkPhysicalDevice() const {
   return _device;
 }
@@ -175,6 +206,6 @@ const QueueFamilyIndices& PhysicalDevice::getQueueFamilyIndices() const {
   return _queueFamilyIndices;
 }
 
-const SwapChainSupportDetails& PhysicalDevice::getSwapchainSupportDetails() const {
+const std::optional<SwapChainSupportDetails>& PhysicalDevice::getSwapchainSupportDetails() const {
   return _swapchainSupportDetails;
 }
