@@ -17,6 +17,11 @@ public:
 
 	explicit Buffer(size_t size) : _buffer(std::make_unique_for_overwrite<T[]>(size)), _size(size) {}
 
+    // TODO what if value is not trivial
+    Buffer(size_t size, T value) : Buffer(size) {
+      std::fill(_buffer.get(), std::next(_buffer.get(), size), value);
+    }
+
 	Buffer(const Buffer& other) : Buffer(other._size) {
         // TODO if sizes are equal then do not allocate memory
 		std::copy(other._buffer.get(), other._buffer.get() + _size, _buffer.get());

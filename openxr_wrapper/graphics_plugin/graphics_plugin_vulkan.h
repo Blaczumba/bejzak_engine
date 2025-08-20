@@ -1,11 +1,12 @@
 #pragma once
 
+#include <vulkan/vulkan.h>  // Vulkan needs to be included before openxr_platform.h
+
 #include <memory>
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
 #include <span>
 #include <unordered_map>
-#include <vulkan/vulkan.h>  // Vulkan needs to be included before openxr_platform.h
 
 #include "common/status/status.h"
 #include "graphics_plugin.h"
@@ -33,8 +34,7 @@ public:
   ErrorOr<int64_t> selectSwapchainFormat(std::span<const int64_t> runtimeFormats) const override;
 
   Status createSwapchainViews(
-      XrSwapchain swapchain, std::span<const XrSwapchainImageBaseHeader> images, int64_t format,
-      uint32_t width, uint32_t height) override;
+      XrSwapchain swapchain, std::span<const XrSwapchainImageBaseHeader> images, int64_t format) override;
 
   Status initialize(XrInstance xrInstance, XrSystemId systemId) override;
 

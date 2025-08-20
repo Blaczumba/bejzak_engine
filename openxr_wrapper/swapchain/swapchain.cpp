@@ -60,7 +60,7 @@ ErrorOr<std::vector<Swapchain>> SwapchainBuilder::buildStereo(
   uint32_t viewCount = 0;
   CHECK_XRCMD(xrEnumerateViewConfigurationViews(
       instance, systemId, viewConfigType, 0, &viewCount, nullptr));
-  lib::Buffer<XrViewConfigurationView> configurationViews(viewCount);
+  lib::Buffer<XrViewConfigurationView> configurationViews(viewCount, XrViewConfigurationView{XR_TYPE_VIEW_CONFIGURATION_VIEW});
   CHECK_XRCMD(xrEnumerateViewConfigurationViews(
       instance, systemId, viewConfigType, viewCount, &viewCount, configurationViews.data()));
 

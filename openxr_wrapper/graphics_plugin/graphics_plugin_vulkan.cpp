@@ -52,8 +52,7 @@ ErrorOr<int64_t> GraphicsPluginVulkan::selectSwapchainFormat(
 }
 
 Status GraphicsPluginVulkan::createSwapchainViews(
-    XrSwapchain swapchain, std::span<const XrSwapchainImageBaseHeader> images, int64_t format,
-    uint32_t width, uint32_t height) {
+    XrSwapchain swapchain, std::span<const XrSwapchainImageBaseHeader> images, int64_t format) {
   lib::Buffer<VkImageView>& imageViews = _swapchainImageViews[swapchain] =
       lib::Buffer<VkImageView>(images.size());
   for (size_t i = 0; i < images.size(); ++i) {
@@ -64,7 +63,6 @@ Status GraphicsPluginVulkan::createSwapchainViews(
         _logicalDevice.createImageView(
             image.image, ImageParameters{
                            .format = static_cast<VkFormat>(format),
-                           .extent = {width, height, 1},
                            .aspect = VK_IMAGE_ASPECT_COLOR_BIT,
     }));
   }

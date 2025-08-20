@@ -20,6 +20,10 @@ ErrorOr<std::unique_ptr<Session>> Session::create(
   return std::unique_ptr<Session>(new Session(session, system));
 }
 
+XrSession Session::getXrSession() const {
+  return _session;
+}
+
 const System& Session::getSystem() const {
   return _system;
 }
