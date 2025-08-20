@@ -211,12 +211,10 @@ ErrorOr<Swapchain> SwapchainBuilder::build(
   lib::Buffer<VkImageView> views(imageCount);
   for (size_t i = 0; i < images.size(); ++i) {
     ASSIGN_OR_RETURN(
-        views[i], logicalDevice.createImageView(
-                      images[i], ImageParameters{
-                                   .format = surfaceFormat.format,
-                                   .extent = {extent.width, extent.height, 1},
-                                   .aspect = VK_IMAGE_ASPECT_COLOR_BIT,
-    }));
+        views[i], logicalDevice.createImageView(images[i], ImageParameters{
+                                                             .format = surfaceFormat.format,
+                                                             .aspect = VK_IMAGE_ASPECT_COLOR_BIT,
+                                                           }));
   }
 
   return Swapchain(

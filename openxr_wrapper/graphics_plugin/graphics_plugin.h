@@ -20,7 +20,9 @@ public:
 
   virtual ErrorOr<int64_t> selectSwapchainFormat(std::span<const int64_t> runtimeFormats) const = 0;
 
-  virtual Status createSwapchainViews(XrSwapchain swapchain, std::span<const XrSwapchainImageBaseHeader> images, int64_t format, uint32_t width, uint32_t height) = 0;
+  virtual Status createSwapchainViews(
+      XrSwapchain swapchain, std::span<const XrSwapchainImageBaseHeader> images, int64_t format,
+      uint32_t width, uint32_t height) = 0;
 
   virtual Status initialize(XrInstance xrInstance, XrSystemId systemId) = 0;
 };

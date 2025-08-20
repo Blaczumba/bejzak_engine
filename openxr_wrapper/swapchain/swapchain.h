@@ -5,16 +5,18 @@
 #include <vector>
 
 #include "common/status/status.h"
+#include "lib/buffer/buffer.h"
 #include "openxr_wrapper/graphics_plugin/graphics_plugin.h"
 #include "openxr_wrapper/session/session.h"
 #include "openxr_wrapper/system/system.h"
-#include "lib/buffer/buffer.h"
 
 namespace xrw {
 
 class Swapchain {
 public:
-  Swapchain(XrSwapchain swapchain, XrViewConfigurationType configType, uint32_t width, uint32_t height, int64_t format, lib::Buffer<XrSwapchainImageBaseHeader>&& images, const Session& session);
+  Swapchain(XrSwapchain swapchain, XrViewConfigurationType configType, uint32_t width,
+            uint32_t height, int64_t format, lib::Buffer<XrSwapchainImageBaseHeader>&& images,
+            const Session& session);
 
 private:
   XrSwapchain _swapchain;
@@ -42,7 +44,8 @@ public:
 
   SwapchainBuilder& withUsage(XrSwapchainUsageFlags usage);
 
-  ErrorOr<std::vector<Swapchain>> buildStereo(const Session& session, const GraphicsPlugin& graphicsPlugin);
+  ErrorOr<std::vector<Swapchain>> buildStereo(
+      const Session& session, const GraphicsPlugin& graphicsPlugin);
 
 private:
   uint32_t _arraySize = 1;
