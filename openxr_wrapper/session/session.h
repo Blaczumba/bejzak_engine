@@ -20,7 +20,7 @@ public:
   ~Session() = default;
 
   static ErrorOr<std::unique_ptr<Session>> create(
-      const System& instance, GraphicsPlugin& graphicsPlugin);
+      const System& system, GraphicsPlugin& graphicsPlugin);
 
   XrSession getXrSession() const;
 

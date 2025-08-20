@@ -55,15 +55,6 @@ LogicalDevice::~LogicalDevice() {
   }
 }
 
-template <typename T>
-void chainExtensionFeature(
-    void** next, T& feature, std::string_view extension, const PhysicalDevice& physicalDevice) {
-  if (physicalDevice.hasAvailableExtension(extension)) {
-    feature.pNext = *next;
-    *next = (void*)&feature;
-  }
-}
-
 ErrorOr<LogicalDevice> LogicalDevice::create(const PhysicalDevice& physicalDevice) {
   const QueueFamilyIndices& indices = physicalDevice.getQueueFamilyIndices();
   const std::set<uint32_t> uniqueQueueFamilies = {*indices.graphicsFamily, *indices.presentFamily,
@@ -108,8 +99,6 @@ ErrorOr<LogicalDevice> LogicalDevice::create(const PhysicalDevice& physicalDevic
 #ifdef VALIDATION_LAYERS_ENABLED
     .enabledLayerCount = static_cast<uint32_t>(validationLayers.size()),
     .ppEnabledLayerNames = validationLayers.data(),
-#else
-    .enabledLayerCount = 0,
 #endif  // VALIDATION_LAYERS_ENABLED
     .enabledExtensionCount = static_cast<uint32_t>(extensions.size()),
     .ppEnabledExtensionNames = extensions.data(),

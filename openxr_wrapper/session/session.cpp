@@ -1,7 +1,6 @@
 #include "session.h"
 
 #include "common/status/status.h"
-#include "openxr_wrapper/platform/platform.h"
 #include "openxr_wrapper/system/system.h"
 #include "openxr_wrapper/util/check.h"
 

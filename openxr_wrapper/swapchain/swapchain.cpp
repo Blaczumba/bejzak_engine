@@ -6,18 +6,17 @@
 
 namespace xrw {
 
+Swapchain::Swapchain(XrSwapchain swapchain, XrViewConfigurationType configType, uint32_t width, uint32_t height, int64_t format, lib::Buffer<XrSwapchainImageBaseHeader>&& images, const Session& session)
+  : _swapchain(swapchain), _configType(configType), _width(width), _height(height), _format(format), _images(std::move(images)), _session(session) {}
+
 SwapchainBuilder& SwapchainBuilder::withArraySize(uint32_t arraySize) {
   _arraySize = arraySize;
   return *this;
 }
 
-SwapchainBuilder& SwapchainBuilder::withExtent(int32_t width, int32_t height) {
-  _extent = {width, height};
-  return *this;
-}
-
-SwapchainBuilder& SwapchainBuilder::withExtent(XrExtent2Di extent) {
-  _extent = extent;
+SwapchainBuilder& SwapchainBuilder::withExtent(uint32_t width, uint32_t height) {
+  _width = width;
+  _height = height;
   return *this;
 }
 
@@ -41,7 +40,7 @@ SwapchainBuilder& SwapchainBuilder::withUsage(XrSwapchainUsageFlags usage) {
   return *this;
 }
 
-ErrorOr<Swapchain> build(const Session& session, const GraphicsPlugin& graphicsPlugin) {
+ErrorOr<std::vector<Swapchain>> SwapchainBuilder::buildStereo(const Session& session, const GraphicsPlugin& graphicsPlugin) {
   uint32_t formatCount = 0;
   CHECK_XRCMD(xrEnumerateSwapchainFormats(session.getXrSession(), 0, &formatCount, nullptr));
   lib::Buffer<int64_t> swapchainFormats(formatCount);
@@ -61,8 +60,32 @@ ErrorOr<Swapchain> build(const Session& session, const GraphicsPlugin& graphicsP
   CHECK_XRCMD(xrEnumerateViewConfigurationViews(
       instance, systemId, viewConfigType, viewCount, &viewCount, configurationViews.data()));
 
-  // lib::Buffer<XrView>
-  return Error(EngineError::NOT_FOUND);
+  std::vector<Swapchain> swapchains;
+  for (const XrViewConfigurationView& configView : configurationViews) {
+    const XrSwapchainCreateInfo swapchainCreateInfo = {
+        .type = XR_TYPE_SWAPCHAIN_CREATE_INFO,
+        .usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT,
+        .format = format,
+        .sampleCount = configView.recommendedSwapchainSampleCount,
+        .width = configView.recommendedImageRectWidth,
+        .height = configView.recommendedImageRectHeight,
+        .faceCount = 1,
+        .arraySize = 1,
+        .mipCount = 1
+    };
+
+    XrSwapchain swapchain;
+    CHECK_XRCMD(xrCreateSwapchain(session.getXrSession(), &swapchainCreateInfo, &swapchain));
+
+    uint32_t imageCount;
+    CHECK_XRCMD(xrEnumerateSwapchainImages(swapchain, 0, &imageCount, nullptr));
+
+    lib::Buffer<XrSwapchainImageBaseHeader> images(imageCount);
+    CHECK_XRCMD(xrEnumerateSwapchainImages(swapchain,imageCount, &imageCount, images.data()));
+
+    swapchains.emplace_back(swapchain, viewConfigType, configView.recommendedImageRectWidth, configView.recommendedImageRectHeight, format, std::move(images), session);
+  }
+  return swapchains;
 }
 
 }  // namespace xrw

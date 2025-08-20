@@ -16,6 +16,7 @@
 #include "vulkan_wrapper/instance/extensions.h"
 #include "vulkan_wrapper/util/check.h"
 #include "vulkan_wrapper/logical_device/extensions_connector.h"
+#include "vulkan_wrapper/command_buffer/command_buffer.h"
 
 namespace xrw {
 
@@ -28,7 +29,7 @@ std::span<const char* const> GraphicsPluginVulkan::getOpenXrInstanceExtensions()
 }
 
 const XrBaseInStructure* GraphicsPluginVulkan::getGraphicsBinding() const {
-  return nullptr;
+  return reinterpret_cast <const XrBaseInStructure *>(&_graphicsBinding);
 }
 
 XrSwapchainImageBaseHeader* GraphicsPluginVulkan::allocateSwapchainImageStructs(
@@ -48,6 +49,22 @@ ErrorOr<int64_t> GraphicsPluginVulkan::selectSwapchainFormat(
     return *it;
   }
   return Error(EngineError::NOT_FOUND);
+}
+
+Status GraphicsPluginVulkan::createSwapchainViews(XrSwapchain swapchain, std::span<const XrSwapchainImageBaseHeader> images, int64_t format, uint32_t width, uint32_t height) {
+  lib::Buffer<VkImageView>& imageViews = _swapchainImageViews[swapchain] = lib::Buffer<VkImageView>(images.size());
+  for (size_t i = 0; i < images.size(); ++i) {
+    const XrSwapchainImageVulkanKHR& image =
+        reinterpret_cast<const XrSwapchainImageVulkanKHR&>(images[i]);
+    ASSIGN_OR_RETURN(
+        imageViews[i], _logicalDevice.createImageView(
+        image.image, ImageParameters{
+            .format = static_cast<VkFormat>(format),
+            .extent = {width, height, 1},
+            .aspect = VK_IMAGE_ASPECT_COLOR_BIT,
+        }));
+  }
+  return StatusOk();
 }
 
 namespace {
@@ -261,6 +278,16 @@ Status GraphicsPluginVulkan::initialize(XrInstance xrInstance, XrSystemId system
 #endif
   ASSIGN_OR_RETURN(_physicalDevice, createPhysicalDevice(xrInstance, systemId, _instance));
   ASSIGN_OR_RETURN(_logicalDevice, createLogicalDevice(xrInstance, systemId, *_physicalDevice));
+
+  _graphicsBinding = XrGraphicsBindingVulkanKHR {
+      .type = XR_TYPE_GRAPHICS_BINDING_VULKAN2_KHR,
+      .instance = _instance.getVkInstance(),
+      .physicalDevice = _physicalDevice->getVkPhysicalDevice(),
+      .device = _logicalDevice.getVkDevice(),
+      .queueFamilyIndex = *_physicalDevice->getQueueFamilyIndices().graphicsFamily
+  };
+
+  ASSIGN_OR_RETURN(_singleTimeCommandPool, CommandPool::create(_logicalDevice));
   return StatusOk();
 }
 
