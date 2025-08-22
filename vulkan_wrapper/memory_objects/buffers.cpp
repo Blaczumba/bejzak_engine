@@ -97,8 +97,8 @@ void copyBufferToImage(VkCommandBuffer commandBuffer, VkBuffer buffer, VkImage i
                          .mipLevel = 0,
                          .baseArrayLayer = 0,
                          .layerCount = 1},
-    .imageOffset = {.x = 0, .y = 0, .z = 0},
-    .imageExtent = {.width = width, .height = height, .depth = 1},
+    .imageOffset = {0, 0, 0},
+    .imageExtent = {width, height, 1},
   };
 
   vkCmdCopyBufferToImage(
@@ -122,8 +122,8 @@ void copyImageToBuffer(VkCommandBuffer commandBuffer, VkImage image, VkImageLayo
                          .mipLevel = 0,
                          .baseArrayLayer = 0,
                          .layerCount = 1},
-    .imageOffset = {.x = 0, .y = 0, .z = 0},
-    .imageExtent = {.width = width, .height = height, .depth = 1},
+    .imageOffset = {0, 0, 0},
+    .imageExtent = {width, height, 1},
   };
 
   vkCmdCopyImageToBuffer(commandBuffer, image, layout, buffer, 1, &region);
@@ -132,27 +132,16 @@ void copyImageToBuffer(VkCommandBuffer commandBuffer, VkImage image, VkImageLayo
 void copyImageToImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImage dstImage,
                       VkExtent2D srcSize, VkExtent2D dstSize, VkImageAspectFlagBits aspect) {
   const VkOffset3D srcBlitSize = {
-    .x = static_cast<int32_t>(srcSize.width), .y = static_cast<int32_t>(srcSize.height), .z = 1};
+    static_cast<int32_t>(srcSize.width), static_cast<int32_t>(srcSize.height), 1};
 
   const VkOffset3D dstBlitSize = {
-    .x = static_cast<int32_t>(dstSize.width), .y = static_cast<int32_t>(dstSize.height), .z = 1};
+    static_cast<int32_t>(dstSize.width), static_cast<int32_t>(dstSize.height), 1};
 
   const VkImageBlit imageBlitRegion = {
-    .srcSubresource =
-        {
-                         .aspectMask = static_cast<VkImageAspectFlags>(aspect),
-                         .layerCount = 1,
-                         },
-    .srcOffsets =
-        {
-                         {},
-                         srcBlitSize, },
-    .dstSubresource =
-        {
-                         .aspectMask = static_cast<VkImageAspectFlags>(aspect),
-                         .layerCount = 1,
-                         },
-    .dstOffsets = {{}, dstBlitSize}
+    .srcSubresource = {.aspectMask = static_cast<VkImageAspectFlags>(aspect), .layerCount = 1},
+    .srcOffsets = {{},                                                    srcBlitSize    },
+    .dstSubresource = {.aspectMask = static_cast<VkImageAspectFlags>(aspect), .layerCount = 1},
+    .dstOffsets = {{},                                                    dstBlitSize    }
   };
 
   vkCmdBlitImage(commandBuffer, srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstImage,
@@ -164,7 +153,7 @@ void copyImageToImage(VkCommandBuffer commandBuffer, VkImage srcImage, VkImage d
   const VkImageCopy imageCopyRegion = {
     .srcSubresource = {.aspectMask = static_cast<VkImageAspectFlags>(aspect), .layerCount = 1},
     .dstSubresource = {.aspectMask = static_cast<VkImageAspectFlags>(aspect), .layerCount = 1},
-    .extent = {.width = extent.width, .height = extent.height, .depth = 1}
+    .extent = {extent.width, extent.height, 1}
   };
 
   vkCmdCopyImage(commandBuffer, srcImage, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, dstImage,
@@ -178,12 +167,10 @@ void generateImageMipmaps(
   VkImageMemoryBarrier barrier = {
     .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER,
     .image = image,
-    .subresourceRange = {
-                         .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+    .subresourceRange = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                          .levelCount = 1,
                          .baseArrayLayer = 0,
-                         .layerCount = layerCount,
-                         }
+                         .layerCount = layerCount}
   };
 
   int32_t mipWidth = texWidth;

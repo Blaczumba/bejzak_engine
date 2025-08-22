@@ -119,23 +119,22 @@ ErrorOr<LogicalDevice> LogicalDevice::wrap(VkDevice device, const PhysicalDevice
 }
 
 ErrorOr<VkImageView> LogicalDevice::createImageView(
-    const VkImage image, const ImageParameters& params) const {
-  const VkImageSubresourceRange range = {
-    .aspectMask = params.aspect,
-    .baseMipLevel = 0,
-    .levelCount = params.mipLevels,
-    .baseArrayLayer = 0,
-    .layerCount = params.layerCount};
-
+    const VkImage image, VkFormat format, VkImageAspectFlags aspect, uint32_t mipLevels,
+    uint32_t layerCount) const {
   const VkImageViewType viewType =
-      (params.layerCount == 6) ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D;
+      (layerCount == 6) ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D;
 
   const VkImageViewCreateInfo viewInfo = {
     .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
     .image = image,
     .viewType = viewType,
-    .format = params.format,
-    .subresourceRange = range};
+    .format = format,
+    .subresourceRange = {.aspectMask = aspect,
+                         .baseMipLevel = 0,
+                         .levelCount = mipLevels,
+                         .baseArrayLayer = 0,
+                         .layerCount = layerCount}
+  };
 
   VkImageView view;
   CHECK_VKCMD(vkCreateImageView(_device, &viewInfo, nullptr, &view));

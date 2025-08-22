@@ -17,7 +17,6 @@ public:
 
 	explicit Buffer(size_t size) : _buffer(std::make_unique_for_overwrite<T[]>(size)), _size(size) {}
 
-    // TODO what if value is not trivial
     Buffer(size_t size, T value) : Buffer(size) {
       std::fill(_buffer.get(), std::next(_buffer.get(), size), value);
     }
@@ -41,7 +40,7 @@ public:
         std::copy(init.begin(), init.end(), _buffer.get());
     }
 
-    Buffer(std::span<const T> buffer) : Buffer(buffer.data(), buffer.size()) {}
+    Buffer(std::span<const T> buffer) : Buffer(std::cbegin(buffer), std::cend(buffer)) {}
 
 	Buffer(Buffer&& other) noexcept : _buffer(std::move(other._buffer)), _size(std::exchange(other._size, 0)) {}
 

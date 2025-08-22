@@ -14,7 +14,12 @@ class SharedBuffer {
 
 public:
     SharedBuffer() : _size(0) {}
+
     explicit SharedBuffer(size_t size) : _buffer(std::make_shared_for_overwrite<T[]>(size)), _size(size) {}
+
+    SharedBuffer(size_t size, T value) : SharedBuffer(size) {
+      std::fill(_buffer.get(), std::next(_buffer.get(), size), value);
+    }
 
     SharedBuffer(SharedBuffer& other) : _buffer(other._buffer), _size(other._size) {}
 
