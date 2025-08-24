@@ -46,8 +46,7 @@ public:
 
   SwapchainBuilder& withUsage(XrSwapchainUsageFlags usage);
 
-  ErrorOr<std::vector<Swapchain>> build(
-      const Session& session, GraphicsPlugin& graphicsPlugin);
+  ErrorOr<std::vector<Swapchain>> build(const Session& session, GraphicsPlugin& graphicsPlugin);
 
 private:
   uint32_t _arraySize = 1;

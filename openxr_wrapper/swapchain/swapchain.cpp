@@ -2,14 +2,13 @@
 
 #include "common/status/status.h"
 #include "lib/buffer/buffer.h"
-#include "openxr_wrapper/util/check.h"
 #include "openxr_wrapper/graphics_plugin/graphics_plugin.h"
+#include "openxr_wrapper/util/check.h"
 
 namespace xrw {
 
-Swapchain::Swapchain(
-    XrSwapchain swapchain, XrViewConfigurationType configType, uint32_t width, uint32_t height,
-    int64_t format, const Session& session)
+Swapchain::Swapchain(XrSwapchain swapchain, XrViewConfigurationType configType, uint32_t width,
+                     uint32_t height, int64_t format, const Session& session)
   : _swapchain(swapchain), _configType(configType), _width(width), _height(height), _format(format),
     _session(session) {}
 
@@ -91,9 +90,8 @@ ErrorOr<std::vector<Swapchain>> SwapchainBuilder::build(
 
     RETURN_IF_ERROR(graphicsPlugin.createSwapchainContext(swapchain, format));
 
-    swapchains.emplace_back(
-        swapchain, _viewConfigType, configView.recommendedImageRectWidth,
-        configView.recommendedImageRectHeight, format, session);
+    swapchains.emplace_back(swapchain, _viewConfigType, configView.recommendedImageRectWidth,
+                            configView.recommendedImageRectHeight, format, session);
   }
   return swapchains;
 }

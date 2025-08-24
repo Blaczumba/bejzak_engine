@@ -1,7 +1,6 @@
 #pragma once
 
 #include <vulkan/vulkan.h>  // Vulkan needs to be included before openxr_platform.h
-
 #include <memory>
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
@@ -22,7 +21,7 @@ class GraphicsPluginVulkan : public GraphicsPlugin {
 public:
   GraphicsPluginVulkan(PFN_vkDebugUtilsMessengerCallbackEXT debugCallback);
 
-  ~GraphicsPluginVulkan() override = default;
+  ~GraphicsPluginVulkan() override;
 
   std::span<const char* const> getOpenXrInstanceExtensions() const override;
 
@@ -33,9 +32,7 @@ public:
 
   ErrorOr<int64_t> selectSwapchainFormat(std::span<const int64_t> runtimeFormats) const override;
 
-  Status createSwapchainContext(
-      XrSwapchain swapchain,
-      int64_t format) override;
+  Status createSwapchainContext(XrSwapchain swapchain, int64_t format) override;
 
   Status initialize(XrInstance xrInstance, XrSystemId systemId) override;
 

@@ -23,13 +23,20 @@ namespace xrw {
 GraphicsPluginVulkan::GraphicsPluginVulkan(PFN_vkDebugUtilsMessengerCallbackEXT debugCallback)
   : _debugCallback(debugCallback) {}
 
+GraphicsPluginVulkan::~GraphicsPluginVulkan() {
+  for (const auto& [swapchain, context] : _swapchainImageViews) {
+    for (VkImageView view : context.views) {
+      vkDestroyImageView(_logicalDevice.getVkDevice(), view, nullptr);
+    }
+  }
+}
+
 std::span<const char* const> GraphicsPluginVulkan::getOpenXrInstanceExtensions() const {
   static constexpr std::array instanceExtensions = {XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME};
   return instanceExtensions;
 }
 
 const XrBaseInStructure* GraphicsPluginVulkan::getGraphicsBinding() const {
-
   return reinterpret_cast<const XrBaseInStructure*>(&_graphicsBinding);
 }
 
@@ -52,20 +59,21 @@ ErrorOr<int64_t> GraphicsPluginVulkan::selectSwapchainFormat(
   return Error(EngineError::NOT_FOUND);
 }
 
-Status GraphicsPluginVulkan::createSwapchainContext(
-    XrSwapchain swapchain, int64_t format) {
+Status GraphicsPluginVulkan::createSwapchainContext(XrSwapchain swapchain, int64_t format) {
   SwapchainContext& context = _swapchainImageViews[swapchain];
   uint32_t imageCount;
   CHECK_XRCMD(xrEnumerateSwapchainImages(swapchain, 0, &imageCount, nullptr));
-  context.images =  lib::Buffer<XrSwapchainImageVulkanKHR>(imageCount, {.type = XR_TYPE_SWAPCHAIN_IMAGE_VULKAN_KHR});
-  CHECK_XRCMD(xrEnumerateSwapchainImages(swapchain, imageCount, &imageCount, reinterpret_cast<XrSwapchainImageBaseHeader*>(context.images.data())));
+  context.images = lib::Buffer<XrSwapchainImageVulkanKHR>(
+      imageCount, {.type = XR_TYPE_SWAPCHAIN_IMAGE_VULKAN_KHR});
+  CHECK_XRCMD(xrEnumerateSwapchainImages(
+      swapchain, imageCount, &imageCount,
+      reinterpret_cast<XrSwapchainImageBaseHeader*>(context.images.data())));
 
-  lib::Buffer<VkImageView>& imageViews = _swapchainImageViews[swapchain].views =
-      lib::Buffer<VkImageView>(imageCount);
+  context.views = lib::Buffer<VkImageView>(imageCount);
   for (size_t i = 0; i < imageCount; ++i) {
-    ASSIGN_OR_RETURN(
-        imageViews[i], _logicalDevice.createImageView(context.images[i].image, static_cast<VkFormat>(format),
-                                                      VK_IMAGE_ASPECT_COLOR_BIT, 1, 1));
+    ASSIGN_OR_RETURN(context.views[i], _logicalDevice.createImageView(
+                                           context.images[i].image, static_cast<VkFormat>(format),
+                                           VK_IMAGE_ASPECT_COLOR_BIT, 1, 1));
   }
   return StatusOk();
 }

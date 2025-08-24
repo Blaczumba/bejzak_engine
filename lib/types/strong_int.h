@@ -8,38 +8,54 @@ namespace lib {
 
 template <typename T, typename Tag>
 class StrongInt {
-    static_assert(std::is_integral<T>::value, "StrongInt must be instantiated with an integer type");
+  static_assert(std::is_integral<T>::value, "StrongInt must be instantiated with an integer type");
 
-    T value_;
+  T value_;
 
 public:
-    explicit StrongInt(T value) : value_(value) {}
+  explicit StrongInt(T value) : value_(value) {}
 
-    T value() const { return value_; }
+  T value() const {
+    return value_;
+  }
 
-    explicit operator T() const { return value_; }
+  explicit operator T() const {
+    return value_;
+  }
 
-    bool operator==(const StrongInt& other) const { return value_ == other.value_; }
-    bool operator!=(const StrongInt& other) const { return value_ != other.value_; }
-    bool operator<(const StrongInt& other) const { return value_ < other.value_; }
-    bool operator<=(const StrongInt& other) const { return value_ <= other.value_; }
-    bool operator>(const StrongInt& other) const { return value_ > other.value_; }
-    bool operator>=(const StrongInt& other) const { return value_ >= other.value_; }
+  bool operator==(const StrongInt& other) const {
+    return value_ == other.value_;
+  }
+  bool operator!=(const StrongInt& other) const {
+    return value_ != other.value_;
+  }
+  bool operator<(const StrongInt& other) const {
+    return value_ < other.value_;
+  }
+  bool operator<=(const StrongInt& other) const {
+    return value_ <= other.value_;
+  }
+  bool operator>(const StrongInt& other) const {
+    return value_ > other.value_;
+  }
+  bool operator>=(const StrongInt& other) const {
+    return value_ >= other.value_;
+  }
 
-    StrongInt& operator+=(const StrongInt& other) {
-        value_ += other.value_;
-        return *this;
-    }
-    StrongInt& operator-=(const StrongInt& other) {
-        value_ -= other.value_;
-        return *this;
-    }
-    StrongInt operator+(const StrongInt& other) const {
-        return StrongInt(value_ + other.value_);
-    }
-    StrongInt operator-(const StrongInt& other) const {
-        return StrongInt(value_ - other.value_);
-    }
+  StrongInt& operator+=(const StrongInt& other) {
+    value_ += other.value_;
+    return *this;
+  }
+  StrongInt& operator-=(const StrongInt& other) {
+    value_ -= other.value_;
+    return *this;
+  }
+  StrongInt operator+(const StrongInt& other) const {
+    return StrongInt(value_ + other.value_);
+  }
+  StrongInt operator-(const StrongInt& other) const {
+    return StrongInt(value_ - other.value_);
+  }
 };
 
-} // lib
+}  // namespace lib
