@@ -8,8 +8,8 @@ if (Vulkan_FOUND)
     target_link_libraries(OpenxrGraphicsPluginVulkan PUBLIC Vulkan::Vulkan OpenXR::headers)
     target_link_libraries(OpenxrGraphicsPluginVulkan PUBLIC Instance DebugMessenger LogicalDevice CommandBuffer)
 
-    target_include_directories(OpenxrGraphicsPluginVulkan PRIVATE ${PROJECT_SOURCE_DIR})
-    target_include_directories(OpenxrGraphicsPluginVulkan PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
+    target_include_directories(OpenxrGraphicsPluginVulkan PUBLIC ${PROJECT_SOURCE_DIR})
+    target_include_directories(OpenxrGraphicsPluginVulkan PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
     target_compile_definitions(OpenxrGraphicsPluginVulkan PRIVATE XR_USE_GRAPHICS_API_VULKAN)
 

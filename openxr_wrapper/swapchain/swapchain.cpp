@@ -3,14 +3,19 @@
 #include "common/status/status.h"
 #include "lib/buffer/buffer.h"
 #include "openxr_wrapper/util/check.h"
+#include "openxr_wrapper/graphics_plugin/graphics_plugin.h"
 
 namespace xrw {
 
 Swapchain::Swapchain(
     XrSwapchain swapchain, XrViewConfigurationType configType, uint32_t width, uint32_t height,
-    int64_t format, lib::Buffer<XrSwapchainImageBaseHeader>&& images, const Session& session)
+    int64_t format, const Session& session)
   : _swapchain(swapchain), _configType(configType), _width(width), _height(height), _format(format),
-    _images(std::move(images)), _session(session) {}
+    _session(session) {}
+
+XrSwapchain Swapchain::getSwapchain() const {
+  return _swapchain;
+}
 
 SwapchainBuilder& SwapchainBuilder::withArraySize(uint32_t arraySize) {
   _arraySize = arraySize;
@@ -33,8 +38,13 @@ SwapchainBuilder& SwapchainBuilder::withFaceCount(uint32_t faceCount) {
   return *this;
 }
 
-SwapchainBuilder& SwapchainBuilder::sampleCount(uint32_t sampleCount) {
+SwapchainBuilder& SwapchainBuilder::withSampleCount(uint32_t sampleCount) {
   _sampleCount = sampleCount;
+  return *this;
+}
+
+SwapchainBuilder& SwapchainBuilder::withViewConfigType(XrViewConfigurationType viewConfigType) {
+  _viewConfigType = viewConfigType;
   return *this;
 }
 
@@ -43,8 +53,8 @@ SwapchainBuilder& SwapchainBuilder::withUsage(XrSwapchainUsageFlags usage) {
   return *this;
 }
 
-ErrorOr<std::vector<Swapchain>> SwapchainBuilder::buildStereo(
-    const Session& session, const GraphicsPlugin& graphicsPlugin) {
+ErrorOr<std::vector<Swapchain>> SwapchainBuilder::build(
+    const Session& session, GraphicsPlugin& graphicsPlugin) {
   uint32_t formatCount = 0;
   CHECK_XRCMD(xrEnumerateSwapchainFormats(session.getXrSession(), 0, &formatCount, nullptr));
   lib::Buffer<int64_t> swapchainFormats(formatCount);
@@ -55,14 +65,13 @@ ErrorOr<std::vector<Swapchain>> SwapchainBuilder::buildStereo(
 
   const XrInstance instance = session.getSystem().getInstance().getXrInstance();
   const XrSystemId systemId = session.getSystem().getXrSystemId();
-  static constexpr XrViewConfigurationType viewConfigType =
-      XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
   uint32_t viewCount = 0;
   CHECK_XRCMD(xrEnumerateViewConfigurationViews(
-      instance, systemId, viewConfigType, 0, &viewCount, nullptr));
-  lib::Buffer<XrViewConfigurationView> configurationViews(viewCount, XrViewConfigurationView{XR_TYPE_VIEW_CONFIGURATION_VIEW});
+      instance, systemId, _viewConfigType, 0, &viewCount, nullptr));
+  lib::Buffer<XrViewConfigurationView> configurationViews(
+      viewCount, XrViewConfigurationView{XR_TYPE_VIEW_CONFIGURATION_VIEW});
   CHECK_XRCMD(xrEnumerateViewConfigurationViews(
-      instance, systemId, viewConfigType, viewCount, &viewCount, configurationViews.data()));
+      instance, systemId, _viewConfigType, viewCount, &viewCount, configurationViews.data()));
 
   std::vector<Swapchain> swapchains;
   for (const XrViewConfigurationView& configView : configurationViews) {
@@ -80,15 +89,11 @@ ErrorOr<std::vector<Swapchain>> SwapchainBuilder::buildStereo(
     XrSwapchain swapchain;
     CHECK_XRCMD(xrCreateSwapchain(session.getXrSession(), &swapchainCreateInfo, &swapchain));
 
-    uint32_t imageCount;
-    CHECK_XRCMD(xrEnumerateSwapchainImages(swapchain, 0, &imageCount, nullptr));
-
-    lib::Buffer<XrSwapchainImageBaseHeader> images(imageCount);
-    CHECK_XRCMD(xrEnumerateSwapchainImages(swapchain, imageCount, &imageCount, images.data()));
+    RETURN_IF_ERROR(graphicsPlugin.createSwapchainContext(swapchain, format));
 
     swapchains.emplace_back(
-        swapchain, viewConfigType, configView.recommendedImageRectWidth,
-        configView.recommendedImageRectHeight, format, std::move(images), session);
+        swapchain, _viewConfigType, configView.recommendedImageRectWidth,
+        configView.recommendedImageRectHeight, format, session);
   }
   return swapchains;
 }

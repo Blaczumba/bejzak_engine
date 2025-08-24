@@ -15,13 +15,13 @@ namespace xrw {
 class Swapchain {
 public:
   Swapchain(XrSwapchain swapchain, XrViewConfigurationType configType, uint32_t width,
-            uint32_t height, int64_t format, lib::Buffer<XrSwapchainImageBaseHeader>&& images,
-            const Session& session);
+            uint32_t height, int64_t format, const Session& session);
+
+  XrSwapchain getSwapchain() const;
 
 private:
   XrSwapchain _swapchain;
   XrViewConfigurationType _configType;
-  lib::Buffer<XrSwapchainImageBaseHeader> _images;
 
   const Session& _session;
 
@@ -40,12 +40,14 @@ public:
 
   SwapchainBuilder& withFaceCount(uint32_t faceCount);
 
-  SwapchainBuilder& sampleCount(uint32_t sampleCount);
+  SwapchainBuilder& withSampleCount(uint32_t sampleCount);
+
+  SwapchainBuilder& withViewConfigType(XrViewConfigurationType viewConfigType);
 
   SwapchainBuilder& withUsage(XrSwapchainUsageFlags usage);
 
-  ErrorOr<std::vector<Swapchain>> buildStereo(
-      const Session& session, const GraphicsPlugin& graphicsPlugin);
+  ErrorOr<std::vector<Swapchain>> build(
+      const Session& session, GraphicsPlugin& graphicsPlugin);
 
 private:
   uint32_t _arraySize = 1;
@@ -55,6 +57,7 @@ private:
   uint32_t _mipCount = 1;
   uint32_t _faceCount = 1;
   uint32_t _sampleCount = 1;
+  XrViewConfigurationType _viewConfigType = XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
   XrSwapchainUsageFlags _usage;
 };
 

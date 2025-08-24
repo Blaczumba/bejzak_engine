@@ -33,8 +33,9 @@ public:
 
   ErrorOr<int64_t> selectSwapchainFormat(std::span<const int64_t> runtimeFormats) const override;
 
-  Status createSwapchainViews(
-      XrSwapchain swapchain, std::span<const XrSwapchainImageBaseHeader> images, int64_t format) override;
+  Status createSwapchainContext(
+      XrSwapchain swapchain,
+      int64_t format) override;
 
   Status initialize(XrInstance xrInstance, XrSystemId systemId) override;
 
@@ -43,13 +44,16 @@ private:
 
   Instance _instance;
   PFN_vkDebugUtilsMessengerCallbackEXT _debugCallback;
-#ifdef VALIDATION_LAYERS_ENABLED
   DebugMessenger _debugMessenger;
-#endif
   std::unique_ptr<PhysicalDevice> _physicalDevice;
   LogicalDevice _logicalDevice;
 
-  std::unordered_map<XrSwapchain, lib::Buffer<VkImageView>> _swapchainImageViews;
+  struct SwapchainContext {
+    lib::Buffer<XrSwapchainImageVulkanKHR> images;
+    lib::Buffer<VkImageView> views;
+  };
+
+  std::unordered_map<XrSwapchain, SwapchainContext> _swapchainImageViews;
 
   std::unique_ptr<CommandPool> _singleTimeCommandPool;
 };

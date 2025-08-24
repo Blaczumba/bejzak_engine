@@ -29,6 +29,7 @@ std::span<const char* const> GraphicsPluginVulkan::getOpenXrInstanceExtensions()
 }
 
 const XrBaseInStructure* GraphicsPluginVulkan::getGraphicsBinding() const {
+
   return reinterpret_cast<const XrBaseInStructure*>(&_graphicsBinding);
 }
 
@@ -51,20 +52,20 @@ ErrorOr<int64_t> GraphicsPluginVulkan::selectSwapchainFormat(
   return Error(EngineError::NOT_FOUND);
 }
 
-Status GraphicsPluginVulkan::createSwapchainViews(
-    XrSwapchain swapchain, std::span<const XrSwapchainImageBaseHeader> images, int64_t format) {
-  lib::Buffer<VkImageView>& imageViews = _swapchainImageViews[swapchain] =
-      lib::Buffer<VkImageView>(images.size());
-  for (size_t i = 0; i < images.size(); ++i) {
-    const XrSwapchainImageVulkanKHR& image =
-        reinterpret_cast<const XrSwapchainImageVulkanKHR&>(images[i]);
+Status GraphicsPluginVulkan::createSwapchainContext(
+    XrSwapchain swapchain, int64_t format) {
+  SwapchainContext& context = _swapchainImageViews[swapchain];
+  uint32_t imageCount;
+  CHECK_XRCMD(xrEnumerateSwapchainImages(swapchain, 0, &imageCount, nullptr));
+  context.images =  lib::Buffer<XrSwapchainImageVulkanKHR>(imageCount, {.type = XR_TYPE_SWAPCHAIN_IMAGE_VULKAN_KHR});
+  CHECK_XRCMD(xrEnumerateSwapchainImages(swapchain, imageCount, &imageCount, reinterpret_cast<XrSwapchainImageBaseHeader*>(context.images.data())));
+
+  lib::Buffer<VkImageView>& imageViews = _swapchainImageViews[swapchain].views =
+      lib::Buffer<VkImageView>(imageCount);
+  for (size_t i = 0; i < imageCount; ++i) {
     ASSIGN_OR_RETURN(
-        imageViews[i],
-        _logicalDevice.createImageView(
-            image.image, ImageParameters{
-                           .format = static_cast<VkFormat>(format),
-                           .aspect = VK_IMAGE_ASPECT_COLOR_BIT,
-    }));
+        imageViews[i], _logicalDevice.createImageView(context.images[i].image, static_cast<VkFormat>(format),
+                                                      VK_IMAGE_ASPECT_COLOR_BIT, 1, 1));
   }
   return StatusOk();
 }
