@@ -18,7 +18,7 @@ void AABB::extend(const AABB& other) {
   upperCorner.z = std::max(upperCorner.z, other.upperCorner.z);
 }
 
-AABB createAABBfromVertices(const std::vector<glm::vec3>& vertices, const glm::mat4& transform) {
+AABB createAABBfromVertices(std::span<const glm::vec3> vertices, const glm::mat4& transform) {
   AABB volume = {
     .lowerCorner = {std::numeric_limits<float>::max(), std::numeric_limits<float>::max(),
                     std::numeric_limits<float>::max()},
@@ -43,23 +43,17 @@ AABB createAABBfromVertices(const std::vector<glm::vec3>& vertices, const glm::m
 }
 
 std::array<glm::vec4, NUM_CUBE_FACES> extractFrustumPlanes(const glm::mat4& VP) {
-  std::array<glm::vec4, NUM_CUBE_FACES> planes = {
-    glm::vec4(VP[0][3] + VP[0][0], VP[1][3] + VP[1][0], VP[2][3] + VP[2][0], VP[3][3] + VP[3][0]),
-    glm::vec4(VP[0][3] - VP[0][0], VP[1][3] - VP[1][0], VP[2][3] - VP[2][0], VP[3][3] - VP[3][0]),
-    glm::vec4(VP[0][3] + VP[0][1], VP[1][3] + VP[1][1], VP[2][3] + VP[2][1], VP[3][3] + VP[3][1]),
-    glm::vec4(VP[0][3] - VP[0][1], VP[1][3] - VP[1][1], VP[2][3] - VP[2][1], VP[3][3] - VP[3][1]),
-    glm::vec4(VP[0][3] + VP[0][2], VP[1][3] + VP[1][2], VP[2][3] + VP[2][2], VP[3][3] + VP[3][2]),
-    glm::vec4(VP[0][3] - VP[0][2], VP[1][3] - VP[1][2], VP[2][3] - VP[2][2], VP[3][3] - VP[3][2])};
-
-  for (size_t i = 0; i < NUM_CUBE_FACES; ++i) {
-    glm::normalize(planes[i]);
-  }
-
-  return planes;
+  return std::array<glm::vec4, NUM_CUBE_FACES> {
+    glm::normalize(glm::vec4(VP[0][3] + VP[0][0], VP[1][3] + VP[1][0], VP[2][3] + VP[2][0], VP[3][3] + VP[3][0])),
+    glm::normalize(glm::vec4(VP[0][3] - VP[0][0], VP[1][3] - VP[1][0], VP[2][3] - VP[2][0], VP[3][3] - VP[3][0])),
+    glm::normalize(glm::vec4(VP[0][3] + VP[0][1], VP[1][3] + VP[1][1], VP[2][3] + VP[2][1], VP[3][3] + VP[3][1])),
+    glm::normalize(glm::vec4(VP[0][3] - VP[0][1], VP[1][3] - VP[1][1], VP[2][3] - VP[2][1], VP[3][3] - VP[3][1])),
+    glm::normalize(glm::vec4(VP[0][3] + VP[0][2], VP[1][3] + VP[1][2], VP[2][3] + VP[2][2], VP[3][3] + VP[3][2])),
+    glm::normalize(glm::vec4(VP[0][3] - VP[0][2], VP[1][3] - VP[1][2], VP[2][3] - VP[2][2], VP[3][3] - VP[3][2]))};
 }
 
-bool AABB::intersectsFrustum(const std::array<glm::vec4, NUM_CUBE_FACES>& planes) const {
-  for (const auto& plane : planes) {
+bool AABB::intersectsFrustum(std::span<const glm::vec4> planes) const {
+  for (const glm::vec4& plane : planes) {
     glm::vec3 normal(plane.x, plane.y, plane.z);
     glm::vec3 positiveVertex =
         glm::vec3((plane.x >= 0.0f) ? upperCorner.x : lowerCorner.x,

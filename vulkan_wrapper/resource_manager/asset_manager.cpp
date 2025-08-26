@@ -5,24 +5,22 @@
 using ImageData = AssetManager::ImageData;
 using VertexData = AssetManager::VertexData;
 
-AssetManager::AssetManager(LogicalDevice& logicalDevice) : _logicalDevice(logicalDevice) {}
-
 void AssetManager::loadImageAsync(
-    const std::string& filePath,
+    LogicalDevice& logicalDevice, const std::string& filePath,
     std::function<ErrorOr<ImageResource>(std::string_view)>&& loadingFunction) {
   if (_awaitingImageResources.contains(filePath)) {
     return;
   }
-  auto future = std::async(
-      std::launch::async,
-      [this, filePath, loadingFunction = std::move(loadingFunction)]() {  // TODO:
-                                                                          // boost::asio::post,
-                                                                          // boost::asio::use_future
+  auto future =
+      std::async(std::launch::async, [this, logicalDevice = std::ref(logicalDevice), filePath,
+                                      loadingFunction = std::move(loadingFunction)]() {  // TODO:
+        // boost::asio::post,
+        // boost::asio::use_future
         ErrorOr<ImageResource> resource = loadingFunction(filePath);
         if (!resource.has_value()) [[unlikely]] {
           return ErrorOr<ImageData>(Error(resource.error()));
         }
-        auto stagingBuffer = Buffer::createStagingBuffer(_logicalDevice, resource->size);
+        auto stagingBuffer = Buffer::createStagingBuffer(logicalDevice, resource->size);
         if (!stagingBuffer.has_value()) [[unlikely]] {
           return ErrorOr<ImageData>(Error(stagingBuffer.error()));
         }
@@ -35,54 +33,57 @@ void AssetManager::loadImageAsync(
   _awaitingImageResources.emplace(filePath, std::move(future));
 }
 
-void AssetManager::loadImage2DAsync(const std::string& filePath) {
-  loadImageAsync(filePath, ImageLoader::load2DImage);
+void AssetManager::loadImage2DAsync(LogicalDevice& logicalDevice, const std::string& filePath) {
+  loadImageAsync(logicalDevice, filePath, ImageLoader::load2DImage);
 }
 
-void AssetManager::loadImageCubemapAsync(const std::string& filePath) {
-  loadImageAsync(filePath, ImageLoader::loadCubemapImage);
+void AssetManager::loadImageCubemapAsync(
+    LogicalDevice& logicalDevice, const std::string& filePath) {
+  loadImageAsync(logicalDevice, filePath, ImageLoader::loadCubemapImage);
 }
 
 void AssetManager::loadVertexDataInterleavingAsync(
-    const std::string& name, std::span<const std::byte> indices, uint8_t indexSize,
-    std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords,
+    LogicalDevice& logicalDevice, const std::string& name, std::span<const std::byte> indices,
+    uint8_t indexSize, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords,
     std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents) {
   if (_awaitingVertexDataResources.contains(name)) {
     return;
   }
-  auto future = std::async(std::launch::async, [this, indices, indexSize, positions, texCoords,
-                                                normals, tangents]() {  // TODO: boost::asio::post,
-                                                                        // boost::asio::use_future
-    auto vertexBuffer =
-        Buffer::createStagingBuffer(_logicalDevice, positions.size() * sizeof(VertexPTNT));
-    if (!vertexBuffer.has_value()) [[unlikely]] {
-      return ErrorOr<VertexData>(Error(vertexBuffer.error()));
-    }
-    if (Status copyStatus =
-            vertexBuffer->copyDataInterleaving(positions, texCoords, normals, tangents);
-        !copyStatus.has_value()) [[unlikely]] {
-      return ErrorOr<VertexData>(Error(copyStatus.error()));
-    }
-    auto vertexBufferPositions =
-        Buffer::createStagingBuffer(_logicalDevice, positions.size() * sizeof(glm::vec3));
-    if (!vertexBufferPositions.has_value()) [[unlikely]] {
-      return ErrorOr<VertexData>(Error(vertexBufferPositions.error()));
-    }
-    if (Status copyStatus = vertexBufferPositions->copyData(positions); !copyStatus.has_value())
-        [[unlikely]] {
-      return ErrorOr<VertexData>(Error(copyStatus.error()));
-    }
-    auto indexBuffer = Buffer::createStagingBuffer(_logicalDevice, indices.size());
-    if (!indexBuffer.has_value()) [[unlikely]] {
-      return ErrorOr<VertexData>(Error(indexBuffer.error()));
-    }
-    if (Status copyStatus = indexBuffer->copyData(indices); !copyStatus.has_value()) [[unlikely]] {
-      return ErrorOr<VertexData>(Error(copyStatus.error()));
-    }
-    return ErrorOr<VertexData>(
-        VertexData(std::move(vertexBuffer.value()), std::move(indexBuffer.value()),
-                   getIndexType(indexSize), std::move(vertexBufferPositions.value())));
-  });
+  auto future = std::async(
+      std::launch::async, [this, logicalDevice = std::ref(logicalDevice), indices, indexSize,
+                           positions, texCoords, normals, tangents]() {  // TODO: boost::asio::post,
+                                                                         // boost::asio::use_future
+        auto vertexBuffer =
+            Buffer::createStagingBuffer(logicalDevice, positions.size() * sizeof(VertexPTNT));
+        if (!vertexBuffer.has_value()) [[unlikely]] {
+          return ErrorOr<VertexData>(Error(vertexBuffer.error()));
+        }
+        if (Status copyStatus =
+                vertexBuffer->copyDataInterleaving(positions, texCoords, normals, tangents);
+            !copyStatus.has_value()) [[unlikely]] {
+          return ErrorOr<VertexData>(Error(copyStatus.error()));
+        }
+        auto vertexBufferPositions =
+            Buffer::createStagingBuffer(logicalDevice, positions.size() * sizeof(glm::vec3));
+        if (!vertexBufferPositions.has_value()) [[unlikely]] {
+          return ErrorOr<VertexData>(Error(vertexBufferPositions.error()));
+        }
+        if (Status copyStatus = vertexBufferPositions->copyData(positions); !copyStatus.has_value())
+            [[unlikely]] {
+          return ErrorOr<VertexData>(Error(copyStatus.error()));
+        }
+        auto indexBuffer = Buffer::createStagingBuffer(logicalDevice, indices.size());
+        if (!indexBuffer.has_value()) [[unlikely]] {
+          return ErrorOr<VertexData>(Error(indexBuffer.error()));
+        }
+        if (Status copyStatus = indexBuffer->copyData(indices); !copyStatus.has_value())
+            [[unlikely]] {
+          return ErrorOr<VertexData>(Error(copyStatus.error()));
+        }
+        return ErrorOr<VertexData>(
+            VertexData(std::move(vertexBuffer.value()), std::move(indexBuffer.value()),
+                       getIndexType(indexSize), std::move(vertexBufferPositions.value())));
+      });
   _awaitingVertexDataResources.emplace(name, std::move(future));
 }
 

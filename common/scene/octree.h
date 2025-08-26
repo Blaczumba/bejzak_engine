@@ -15,7 +15,7 @@ class OctreeNode {
   std::vector<const Object*> _objects;
 
 public:
-  enum class Subvolume : size_t {
+  enum class Subvolume : uint8_t {
     LOWER_LEFT_FRONT = 0,
     LOWER_RIGHT_FRONT,
     UPPER_LEFT_FRONT,
