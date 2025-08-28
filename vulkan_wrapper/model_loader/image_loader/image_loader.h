@@ -5,7 +5,6 @@
 #include <stb_image/stb_image.h>
 #include <string_view>
 #include <variant>
-#include <vector>
 #include <vulkan/vulkan.h>
 
 #include "common/status/status.h"
@@ -20,7 +19,7 @@ struct ImageResource {
 
 class ImageLoader {
 public:
-  static ErrorOr<ImageResource> loadCubemapImage(std::string_view imagePath);
-  static ErrorOr<ImageResource> load2DImage(std::string_view imagePath);
+  static ErrorOr<ImageResource> loadCubemapImage(std::span<const std::byte> imagePath);
+  static ErrorOr<ImageResource> load2DImage(std::span<const std::byte> imagePath);
   static void deallocateResources(ImageResource& resource);
 };

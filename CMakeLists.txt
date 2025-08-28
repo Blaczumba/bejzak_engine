@@ -85,7 +85,7 @@ target_link_libraries(${ENGINE_NAME} INTERFACE
 
         CommonCamera CommonECS
         CommonObject CommonPrimitives
-        CommonScene
+        CommonScene CommonStandardFileLoader
 )
 
 if (ANDROID)

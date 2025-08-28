@@ -2,12 +2,15 @@
 
 #define STB_IMAGE_IMPLEMENTATION
 #include <cmath>
+#include <span>
 #include <stb_image/stb_image.h>
 #include <vector>
 
-ErrorOr<ImageResource> ImageLoader::load2DImage(std::string_view imagePath) {
+ErrorOr<ImageResource> ImageLoader::load2DImage(std::span<const std::byte> imageData) {
   int width, height, channels;
-  stbi_uc* pixels = stbi_load(imagePath.data(), &width, &height, &channels, STBI_rgb_alpha);
+  stbi_uc* pixels = stbi_load_from_memory(
+      reinterpret_cast<const stbi_uc*>(imageData.data()), static_cast<int>(imageData.size()),
+      &width, &height, &channels, STBI_rgb_alpha);
   if (!pixels) {
     return Error(EngineError::LOAD_FAILURE);
   }
@@ -31,10 +34,11 @@ ErrorOr<ImageResource> ImageLoader::load2DImage(std::string_view imagePath) {
   };
 }
 
-ErrorOr<ImageResource> ImageLoader::loadCubemapImage(std::string_view imagePath) {
+ErrorOr<ImageResource> ImageLoader::loadCubemapImage(std::span<const std::byte> imageData) {
   ktxTexture* ktxTexture;
-  if (ktxResult result = ktxTexture_CreateFromNamedFile(
-          imagePath.data(), KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT, &ktxTexture);
+  if (ktxResult result = ktxTexture_CreateFromMemory(
+          reinterpret_cast<const ktx_uint8_t*>(imageData.data()), imageData.size(),
+          KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT, &ktxTexture);
       result != KTX_SUCCESS) {
     return Error(EngineError::LOAD_FAILURE);
   }

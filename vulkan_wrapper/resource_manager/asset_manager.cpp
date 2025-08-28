@@ -5,9 +5,12 @@
 using ImageData = AssetManager::ImageData;
 using VertexData = AssetManager::VertexData;
 
+AssetManager::AssetManager(std::unique_ptr<FileLoader>&& fileLoader)
+  : _fileLoader(std::move(fileLoader)) {}
+
 void AssetManager::loadImageAsync(
     LogicalDevice& logicalDevice, const std::string& filePath,
-    std::function<ErrorOr<ImageResource>(std::string_view)>&& loadingFunction) {
+    std::function<ErrorOr<ImageResource>(std::span<const std::byte>)>&& loadingFunction) {
   if (_awaitingImageResources.contains(filePath)) {
     return;
   }
@@ -16,14 +19,21 @@ void AssetManager::loadImageAsync(
                                       loadingFunction = std::move(loadingFunction)]() {  // TODO:
         // boost::asio::post,
         // boost::asio::use_future
-        ErrorOr<ImageResource> resource = loadingFunction(filePath);
+        ErrorOr<lib::Buffer<std::byte>> fileData = _fileLoader->loadFile(filePath);
+        if (!fileData.has_value()) [[unlikely]] {
+          return ErrorOr<ImageData>(Error(fileData.error()));
+        }
+
+        ErrorOr<ImageResource> resource = loadingFunction(*fileData);
         if (!resource.has_value()) [[unlikely]] {
           return ErrorOr<ImageData>(Error(resource.error()));
         }
+
         auto stagingBuffer = Buffer::createStagingBuffer(logicalDevice, resource->size);
         if (!stagingBuffer.has_value()) [[unlikely]] {
           return ErrorOr<ImageData>(Error(stagingBuffer.error()));
         }
+
         stagingBuffer->copyData(
             std::span(static_cast<const std::byte*>(resource->data), resource->size));
         ImageLoader::deallocateResources(*resource);

@@ -10,6 +10,7 @@
 #include <unordered_map>
 #include <unordered_set>
 
+#include "common/file/file_loader.h"
 #include "common/status/status.h"
 #include "common/util/geometry.h"
 #include "common/util/primitives.h"
@@ -20,7 +21,7 @@
 
 class AssetManager {
 public:
-  AssetManager() = default;
+  AssetManager(std::unique_ptr<FileLoader>&& fileLoader);
 
   ~AssetManager() = default;
 
@@ -54,7 +55,9 @@ public:
 
 private:
   void loadImageAsync(LogicalDevice& logicalDevice, const std::string& filePath,
-                      std::function<ErrorOr<ImageResource>(std::string_view)>&& loadingFunction);
+                      std::function<ErrorOr<ImageResource>(std::span<const std::byte>)>&& loadingFunction);
+
+  std::unique_ptr<FileLoader> _fileLoader;
 
   std::unordered_map<std::string, VertexData> _vertexDataResources;
   std::unordered_map<std::string, std::future<ErrorOr<VertexData>>> _awaitingVertexDataResources;
