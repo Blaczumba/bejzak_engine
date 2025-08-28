@@ -27,16 +27,15 @@ public:
 
   const XrBaseInStructure* getGraphicsBinding() const override;
 
-  XrSwapchainImageBaseHeader* allocateSwapchainImageStructs(
-      uint32_t capacity, const XrSwapchainCreateInfo& swapchain_create_info) override;
-
   ErrorOr<int64_t> selectSwapchainFormat(std::span<const int64_t> runtimeFormats) const override;
 
   Status createSwapchainContext(XrSwapchain swapchain, int64_t format) override;
 
+  ErrorOr<XrSwapchainImageBaseHeader*> getSwapchainImages(XrSwapchain swapchain) override;
+
   Status initialize(XrInstance xrInstance, XrSystemId systemId) override;
 
-private:
+protected:
   XrGraphicsBindingVulkanKHR _graphicsBinding;
 
   Instance _instance;
@@ -50,7 +49,7 @@ private:
     lib::Buffer<VkImageView> views;
   };
 
-  std::unordered_map<XrSwapchain, SwapchainContext> _swapchainImageViews;
+  std::unordered_map<XrSwapchain, SwapchainContext> _swapchainImageContexts;
 
   std::unique_ptr<CommandPool> _singleTimeCommandPool;
 };

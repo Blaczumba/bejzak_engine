@@ -24,7 +24,7 @@ GraphicsPluginVulkan::GraphicsPluginVulkan(PFN_vkDebugUtilsMessengerCallbackEXT 
   : _debugCallback(debugCallback) {}
 
 GraphicsPluginVulkan::~GraphicsPluginVulkan() {
-  for (const auto& [swapchain, context] : _swapchainImageViews) {
+  for (const auto& [swapchain, context] : _swapchainImageContexts) {
     for (VkImageView view : context.views) {
       vkDestroyImageView(_logicalDevice.getVkDevice(), view, nullptr);
     }
@@ -38,11 +38,6 @@ std::span<const char* const> GraphicsPluginVulkan::getOpenXrInstanceExtensions()
 
 const XrBaseInStructure* GraphicsPluginVulkan::getGraphicsBinding() const {
   return reinterpret_cast<const XrBaseInStructure*>(&_graphicsBinding);
-}
-
-XrSwapchainImageBaseHeader* GraphicsPluginVulkan::allocateSwapchainImageStructs(
-    uint32_t capacity, const XrSwapchainCreateInfo& swapchain_create_info) {
-  return nullptr;
 }
 
 ErrorOr<int64_t> GraphicsPluginVulkan::selectSwapchainFormat(
@@ -60,7 +55,7 @@ ErrorOr<int64_t> GraphicsPluginVulkan::selectSwapchainFormat(
 }
 
 Status GraphicsPluginVulkan::createSwapchainContext(XrSwapchain swapchain, int64_t format) {
-  SwapchainContext& context = _swapchainImageViews[swapchain];
+  SwapchainContext& context = _swapchainImageContexts[swapchain];
   uint32_t imageCount;
   CHECK_XRCMD(xrEnumerateSwapchainImages(swapchain, 0, &imageCount, nullptr));
   context.images = lib::Buffer<XrSwapchainImageVulkanKHR>(
@@ -76,6 +71,13 @@ Status GraphicsPluginVulkan::createSwapchainContext(XrSwapchain swapchain, int64
                                            VK_IMAGE_ASPECT_COLOR_BIT, 1, 1));
   }
   return StatusOk();
+}
+
+ErrorOr<XrSwapchainImageBaseHeader*> GraphicsPluginVulkan::getSwapchainImages(XrSwapchain swapchain) {
+  if (auto it = _swapchainImageContexts.find(swapchain); it != _swapchainImageContexts.cend()) [[likely]] {
+    return reinterpret_cast<XrSwapchainImageBaseHeader*>(it->second.images.data());
+  }
+  return Error(EngineError::NOT_FOUND);
 }
 
 namespace {

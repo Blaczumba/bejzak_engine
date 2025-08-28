@@ -19,6 +19,8 @@ public:
 
   XrSwapchain getSwapchain() const;
 
+  XrExtent2Di getXrExtent2Di() const;
+
 private:
   XrSwapchain _swapchain;
   XrViewConfigurationType _configType;

@@ -16,6 +16,10 @@ XrSwapchain Swapchain::getSwapchain() const {
   return _swapchain;
 }
 
+XrExtent2Di Swapchain::getXrExtent2Di() const {
+  return { static_cast<int32_t>(_width), static_cast<int32_t>(_height) };
+}
+
 SwapchainBuilder& SwapchainBuilder::withArraySize(uint32_t arraySize) {
   _arraySize = arraySize;
   return *this;
