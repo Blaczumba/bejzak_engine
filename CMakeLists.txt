@@ -95,5 +95,7 @@ if (ANDROID)
             OpenxrGraphicsPlugin OpenxrPlatform OpenxrInstance
             OpenxrSystem OpenxrSession OpenxrSwapchain
             OpenxrSpace
+
+            CommonAndroidFileLoader
     )
 endif ()

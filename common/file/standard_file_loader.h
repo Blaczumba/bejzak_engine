@@ -1,3 +1,5 @@
+#pragma once
+
 #include "file_loader.h"
 
 #include "lib/buffer/buffer.h"
