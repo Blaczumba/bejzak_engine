@@ -43,13 +43,19 @@ AABB createAABBfromVertices(std::span<const glm::vec3> vertices, const glm::mat4
 }
 
 std::array<glm::vec4, NUM_CUBE_FACES> extractFrustumPlanes(const glm::mat4& VP) {
-  return std::array<glm::vec4, NUM_CUBE_FACES> {
-    glm::normalize(glm::vec4(VP[0][3] + VP[0][0], VP[1][3] + VP[1][0], VP[2][3] + VP[2][0], VP[3][3] + VP[3][0])),
-    glm::normalize(glm::vec4(VP[0][3] - VP[0][0], VP[1][3] - VP[1][0], VP[2][3] - VP[2][0], VP[3][3] - VP[3][0])),
-    glm::normalize(glm::vec4(VP[0][3] + VP[0][1], VP[1][3] + VP[1][1], VP[2][3] + VP[2][1], VP[3][3] + VP[3][1])),
-    glm::normalize(glm::vec4(VP[0][3] - VP[0][1], VP[1][3] - VP[1][1], VP[2][3] - VP[2][1], VP[3][3] - VP[3][1])),
-    glm::normalize(glm::vec4(VP[0][3] + VP[0][2], VP[1][3] + VP[1][2], VP[2][3] + VP[2][2], VP[3][3] + VP[3][2])),
-    glm::normalize(glm::vec4(VP[0][3] - VP[0][2], VP[1][3] - VP[1][2], VP[2][3] - VP[2][2], VP[3][3] - VP[3][2]))};
+  return std::array<glm::vec4, NUM_CUBE_FACES>{
+    glm::normalize(glm::vec4(
+        VP[0][3] + VP[0][0], VP[1][3] + VP[1][0], VP[2][3] + VP[2][0], VP[3][3] + VP[3][0])),
+    glm::normalize(glm::vec4(
+        VP[0][3] - VP[0][0], VP[1][3] - VP[1][0], VP[2][3] - VP[2][0], VP[3][3] - VP[3][0])),
+    glm::normalize(glm::vec4(
+        VP[0][3] + VP[0][1], VP[1][3] + VP[1][1], VP[2][3] + VP[2][1], VP[3][3] + VP[3][1])),
+    glm::normalize(glm::vec4(
+        VP[0][3] - VP[0][1], VP[1][3] - VP[1][1], VP[2][3] - VP[2][1], VP[3][3] - VP[3][1])),
+    glm::normalize(glm::vec4(
+        VP[0][3] + VP[0][2], VP[1][3] + VP[1][2], VP[2][3] + VP[2][2], VP[3][3] + VP[3][2])),
+    glm::normalize(glm::vec4(
+        VP[0][3] - VP[0][2], VP[1][3] - VP[1][2], VP[2][3] - VP[2][2], VP[3][3] - VP[3][2]))};
 }
 
 bool AABB::intersectsFrustum(std::span<const glm::vec4> planes) const {

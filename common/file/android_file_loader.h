@@ -1,15 +1,14 @@
 #pragma once
 
-#include "file_loader.h"
-
 #include <android/asset_manager.h>
 #include <sstream>
 
-#include "lib/buffer/buffer.h"
 #include "common/status/status.h"
+#include "file_loader.h"
+#include "lib/buffer/buffer.h"
 
 class AndroidFileLoader : public FileLoader {
- public:
+public:
   AndroidFileLoader(AAssetManager* assetManager);
 
   ~AndroidFileLoader() override = default;
@@ -18,6 +17,6 @@ class AndroidFileLoader : public FileLoader {
 
   ErrorOr<std::istringstream> loadFileToStringStream(std::string_view filePath) const override;
 
- private:
+private:
   AAssetManager* _assetManager;
 };

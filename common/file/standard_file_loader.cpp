@@ -1,9 +1,9 @@
 #include "standard_file_loader.h"
 
-#include "lib/buffer/buffer.h"
-
 #include <fstream>
 #include <string_view>
+
+#include "lib/buffer/buffer.h"
 
 ErrorOr<lib::Buffer<std::byte>> StandardFileLoader::loadFileToBuffer(
     std::string_view filePath) const {
@@ -27,5 +27,6 @@ ErrorOr<std::istringstream> StandardFileLoader::loadFileToStringStream(
     std::string_view filePath) const {
   // TODO: write directly to std::string without copying.
   ASSIGN_OR_RETURN(const lib::Buffer<std::byte> buffer, loadFileToBuffer(filePath));
-  return std::istringstream(std::string(reinterpret_cast<const char*>(buffer.cbegin()), reinterpret_cast<const char*>(buffer.cend())));
+  return std::istringstream(std::string(reinterpret_cast<const char*>(buffer.cbegin()),
+                                        reinterpret_cast<const char*>(buffer.cend())));
 }

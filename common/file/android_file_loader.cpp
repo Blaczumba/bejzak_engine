@@ -2,10 +2,10 @@
 
 #include <android/asset_manager.h>
 
-#include "lib/buffer/buffer.h"
 #include "common/status/status.h"
+#include "lib/buffer/buffer.h"
 
-AndroidFileLoader::AndroidFileLoader(AAssetManager *assetManager) : _assetManager(assetManager) {}
+AndroidFileLoader::AndroidFileLoader(AAssetManager* assetManager) : _assetManager(assetManager) {}
 
 ErrorOr<lib::Buffer<std::byte>> AndroidFileLoader::loadFileToBuffer(
     std::string_view filePath) const {

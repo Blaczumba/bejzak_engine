@@ -1,13 +1,12 @@
 #pragma once
 
-#include "file_loader.h"
-
-#include "lib/buffer/buffer.h"
-
 #include <cstddef>
-#include <sstream>
 #include <memory>
+#include <sstream>
 #include <string_view>
+
+#include "file_loader.h"
+#include "lib/buffer/buffer.h"
 
 class StandardFileLoader : public FileLoader {
 public:
@@ -16,5 +15,4 @@ public:
   ErrorOr<std::istringstream> loadFileToStringStream(std::string_view filePath) const override;
 
   ~StandardFileLoader() override = default;
-
 };

@@ -2,10 +2,10 @@
 
 #include <algorithm>
 #include <iterator>
+#include <sstream>
 #include <stdexcept>
 #include <tinyobjloader/tiny_obj_loader.h>
 #include <unordered_map>
-#include <sstream>
 
 #include "common/util/primitives.h"
 #include "lib/buffer/shared_buffer.h"
@@ -46,9 +46,9 @@ ErrorOr<VertexData> loadObj(const std::string& filePath) {
     return Error(EngineError::LOAD_FAILURE);
   }
 
-  //std::istringstream objStream;
+  // std::istringstream objStream;
 
-  //tinyobj::LoadObj(&attrib, &shapes, &materials, &warning, &error, &objStream);
+  // tinyobj::LoadObj(&attrib, &shapes, &materials, &warning, &error, &objStream);
 
   std::unordered_map<Indices, int, Indices::Hash> mp;
   for (const tinyobj::shape_t& shape : shapes) {
