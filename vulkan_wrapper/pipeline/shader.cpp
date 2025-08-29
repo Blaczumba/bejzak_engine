@@ -1,44 +1,23 @@
 #include "shader.h"
 
-#include <filesystem>
-#include <fstream>
+#include <span>
 #include <string_view>
 
 #include "lib/buffer/buffer.h"
 #include "vulkan_wrapper/logical_device/logical_device.h"
 #include "vulkan_wrapper/util/check.h"
 
-namespace {
-
-ErrorOr<lib::Buffer<char>> readFile(std::string_view filename) {
-  std::ifstream file(
-      std::filesystem::path(SHADERS_PATH) / filename, std::ios::ate | std::ios::binary);
-  if (!file.is_open()) {
-    return Error(EngineError::LOAD_FAILURE);
-  }
-
-  const size_t fileSize = static_cast<size_t>(file.tellg());
-  lib::Buffer<char> buffer(fileSize);
-
-  file.seekg(0);
-  file.read(buffer.data(), fileSize);
-  return buffer;
-}
-
-}  // namespace
-
 Shader::Shader(VkShaderModule shaderModule, const LogicalDevice& logicalDevice,
                VkShaderStageFlagBits shaderStage)
   : _shaderModule(shaderModule), _logicalDevice(&logicalDevice), _shaderStage(shaderStage) {}
 
-ErrorOr<Shader> Shader::create(const LogicalDevice& logicalDevice, std::string_view shaderPath,
-                               VkShaderStageFlagBits shaderStage) {
-  ASSIGN_OR_RETURN(const lib::Buffer<char> shaderCode, readFile(shaderPath));
-
+ErrorOr<Shader> Shader::create(
+    const LogicalDevice& logicalDevice, std::span<const std::byte> shaderData,
+    VkShaderStageFlagBits shaderStage) {
   VkShaderModuleCreateInfo createInfo = {
     .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
-    .codeSize = shaderCode.size(),
-    .pCode = reinterpret_cast<const uint32_t*>(shaderCode.data())};
+    .codeSize = shaderData.size(),
+    .pCode = reinterpret_cast<const uint32_t*>(shaderData.data())};
 
   VkShaderModule shaderModule;
   CHECK_VKCMD(

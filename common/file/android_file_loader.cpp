@@ -7,7 +7,7 @@
 
 AndroidFileLoader::AndroidFileLoader(AAssetManager *assetManager) : _assetManager(assetManager) {}
 
-ErrorOr<lib::Buffer<std::byte>> AndroidFileLoader::loadFile(
+ErrorOr<lib::Buffer<std::byte>> AndroidFileLoader::loadFileToBuffer(
     std::string_view filePath) const {
   AAsset* asset = AAssetManager_open(_assetManager, filePath.data(), AASSET_MODE_BUFFER);
   if (!asset) {
@@ -26,4 +26,11 @@ ErrorOr<lib::Buffer<std::byte>> AndroidFileLoader::loadFile(
   }
 
   return buffer;
+}
+
+ErrorOr<std::istringstream> AndroidFileLoader::loadFileToStringStream(
+    std::string_view filePath) const {
+  ASSIGN_OR_RETURN(const lib::Buffer<std::byte> buffer, loadFileToBuffer(filePath));
+  return std::istringstream(std::string(reinterpret_cast<const char*>(buffer.cbegin()),
+                                        reinterpret_cast<const char*>(buffer.cend())));
 }

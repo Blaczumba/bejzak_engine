@@ -1,6 +1,7 @@
 #include "shader_program.h"
 
 #include <algorithm>
+#include <filesystem>
 #include <iterator>
 #include <memory>
 
@@ -70,6 +71,32 @@ const std::optional<VkPipelineVertexInputStateCreateInfo>&
 ShaderProgram::getVkPipelineVertexInputStateCreateInfo() const {
   return _vertexInputInfo;
 }
+
+ShaderProgramManager::ShaderProgramManager(const std::shared_ptr<FileLoader>& fileLoader)
+  : _fileLoader(fileLoader) {}
+
+namespace {
+
+template <typename T>
+constexpr VkPushConstantRange getPushConstantRange(
+    VkShaderStageFlags shaderStages, uint32_t offset = 0) {
+  return VkPushConstantRange{.stageFlags = shaderStages, .offset = offset, .size = sizeof(T)};
+}
+
+template <typename VertexType>
+VkPipelineVertexInputStateCreateInfo getVkPipelineVertexInputStateCreateInfo() {
+  static constexpr VkVertexInputBindingDescription bindingDescription =
+      getBindingDescription<VertexType>();
+  static constexpr auto attributeDescriptions = getAttributeDescriptions<VertexType>();
+  return VkPipelineVertexInputStateCreateInfo{
+    .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
+    .vertexBindingDescriptionCount = 1,
+    .pVertexBindingDescriptions = &bindingDescription,
+    .vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size()),
+    .pVertexAttributeDescriptions = attributeDescriptions.data()};
+}
+
+}  // namespace
 
 ErrorOr<ShaderProgram> ShaderProgramManager::createPBRProgram(const LogicalDevice& logicalDevice) {
   static constexpr std::string_view vertexShaderPath = "shader_pbr.vert.spv";
@@ -146,7 +173,14 @@ const Shader* ShaderProgramManager::getShader(std::string_view shaderPath) const
 Status ShaderProgramManager::addShader(
     const LogicalDevice& logicalDevice, std::string_view shaderFile,
     VkShaderStageFlagBits shaderStages) {
-  ASSIGN_OR_RETURN(Shader shader, Shader::create(logicalDevice, shaderFile, shaderStages));
+  if (_shaders.contains(shaderFile)) {
+    return StatusOk();
+  }
+
+  ASSIGN_OR_RETURN(
+      lib::Buffer<std::byte> shaderData,
+      _fileLoader->loadFileToBuffer((std::filesystem::path(SHADERS_PATH) / shaderFile).string()));
+  ASSIGN_OR_RETURN(Shader shader, Shader::create(logicalDevice, shaderData, shaderStages));
   _shaders.emplace(shaderFile, std::move(shader));
   return StatusOk();
 }

@@ -21,7 +21,7 @@
 
 class AssetManager {
 public:
-  AssetManager(std::unique_ptr<FileLoader>&& fileLoader);
+  AssetManager(const std::shared_ptr<FileLoader>& fileLoader);
 
   ~AssetManager() = default;
 
@@ -54,10 +54,11 @@ public:
   ErrorOr<std::reference_wrapper<const VertexData>> getVertexData(const std::string& filePath);
 
 private:
-  void loadImageAsync(LogicalDevice& logicalDevice, const std::string& filePath,
-                      std::function<ErrorOr<ImageResource>(std::span<const std::byte>)>&& loadingFunction);
+  void loadImageAsync(
+      LogicalDevice& logicalDevice, const std::string& filePath,
+      std::function<ErrorOr<ImageResource>(std::span<const std::byte>)>&& loadingFunction);
 
-  std::unique_ptr<FileLoader> _fileLoader;
+  std::shared_ptr<FileLoader> _fileLoader;
 
   std::unordered_map<std::string, VertexData> _vertexDataResources;
   std::unordered_map<std::string, std::future<ErrorOr<VertexData>>> _awaitingVertexDataResources;

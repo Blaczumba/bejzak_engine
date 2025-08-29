@@ -5,8 +5,8 @@
 using ImageData = AssetManager::ImageData;
 using VertexData = AssetManager::VertexData;
 
-AssetManager::AssetManager(std::unique_ptr<FileLoader>&& fileLoader)
-  : _fileLoader(std::move(fileLoader)) {}
+AssetManager::AssetManager(const std::shared_ptr<FileLoader>& fileLoader)
+  : _fileLoader(fileLoader) {}
 
 void AssetManager::loadImageAsync(
     LogicalDevice& logicalDevice, const std::string& filePath,
@@ -19,7 +19,7 @@ void AssetManager::loadImageAsync(
                                       loadingFunction = std::move(loadingFunction)]() {  // TODO:
         // boost::asio::post,
         // boost::asio::use_future
-        ErrorOr<lib::Buffer<std::byte>> fileData = _fileLoader->loadFile(filePath);
+        ErrorOr<lib::Buffer<std::byte>> fileData = _fileLoader->loadFileToBuffer(filePath);
         if (!fileData.has_value()) [[unlikely]] {
           return ErrorOr<ImageData>(Error(fileData.error()));
         }

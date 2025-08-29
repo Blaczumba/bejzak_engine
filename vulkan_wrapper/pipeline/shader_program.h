@@ -7,6 +7,7 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
+#include "common/file/file_loader.h"
 #include "common/status/status.h"
 #include "common/util/primitives.h"
 #include "input_description.h"
@@ -24,10 +25,11 @@ enum class DescriptorSetType : uint8_t {
 };
 
 class ShaderProgramManager {
-  std::unordered_map<std::string_view, Shader> _shaders;
-  std::unordered_map<DescriptorSetType, DescriptorSetLayout> _descriptorSetLayouts;
-
 public:
+  ShaderProgramManager(const std::shared_ptr<FileLoader>& fileLoader);
+
+  ~ShaderProgramManager() = default;
+
   const Shader* getShader(std::string_view shaderPath) const;
 
   const VkDescriptorSetLayout getVkDescriptorSetLayout(DescriptorSetType type) const;
@@ -39,36 +41,22 @@ public:
   ErrorOr<ShaderProgram> createShadowProgram(const LogicalDevice& _logicalDevice);
 
 private:
+  std::shared_ptr<FileLoader> _fileLoader;
+
+  std::unordered_map<std::string_view, Shader> _shaders;
+  std::unordered_map<DescriptorSetType, DescriptorSetLayout> _descriptorSetLayouts;
+
   Status addShader(const LogicalDevice& logicalDevice, std::string_view shaderFile,
                    VkShaderStageFlagBits shaderStages);
 
   ErrorOr<DescriptorSetType> getOrCreateBindlessLayout(const LogicalDevice& logicalDevice);
 
   ErrorOr<DescriptorSetType> getOrCreateCameraLayout(const LogicalDevice& logicalDevice);
-
-  template <typename T>
-  static constexpr VkPushConstantRange getPushConstantRange(
-      VkShaderStageFlags shaderStages, uint32_t offset = 0) {
-    return VkPushConstantRange{.stageFlags = shaderStages, .offset = offset, .size = sizeof(T)};
-  }
-
-  template <typename VertexType>
-  static VkPipelineVertexInputStateCreateInfo getVkPipelineVertexInputStateCreateInfo() {
-    static constexpr VkVertexInputBindingDescription bindingDescription =
-        getBindingDescription<VertexType>();
-    static constexpr auto attributeDescriptions = getAttributeDescriptions<VertexType>();
-    return VkPipelineVertexInputStateCreateInfo{
-      .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-      .vertexBindingDescriptionCount = 1,
-      .pVertexBindingDescriptions = &bindingDescription,
-      .vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size()),
-      .pVertexAttributeDescriptions = attributeDescriptions.data()};
-  }
 };
 
 class ShaderProgram {
 protected:
-  std::vector<DescriptorSetType> _descriptorSetLayouts;  // TODO: std::inplace_vector
+  std::vector<DescriptorSetType> _descriptorSetLayouts;
   std::vector<std::string_view> _shaders;
   std::vector<VkPushConstantRange> _pushConstants;
 
