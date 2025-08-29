@@ -31,7 +31,7 @@ struct Indices {
   }
 };
 
-ErrorOr<VertexData> loadObj(const std::string& filePath) {
+ErrorOr<VertexData> loadObj(std::istringstream& data) {
   tinyobj::attrib_t attrib;
   std::vector<tinyobj::shape_t> shapes;
   std::vector<tinyobj::material_t> materials;
@@ -42,13 +42,13 @@ ErrorOr<VertexData> loadObj(const std::string& filePath) {
   std::vector<glm::vec2> texCoords;
   std::vector<glm::vec3> normals;
 
-  if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warning, &error, filePath.data())) {
+  // if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warning, &error, filePath.data())) {
+  //   return Error(EngineError::LOAD_FAILURE);
+  // }
+
+  if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warning, &error, &data)) {
     return Error(EngineError::LOAD_FAILURE);
   }
-
-  // std::istringstream objStream;
-
-  // tinyobj::LoadObj(&attrib, &shapes, &materials, &warning, &error, &objStream);
 
   std::unordered_map<Indices, int, Indices::Hash> mp;
   for (const tinyobj::shape_t& shape : shapes) {

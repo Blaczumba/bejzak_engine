@@ -1,9 +1,8 @@
 #pragma once
 
-#include <string>
-#include <string_view>
+#include <sstream>
 
 #include "common/status/status.h"
 #include "vulkan_wrapper/model_loader/model_loader.h"
 
-ErrorOr<VertexData> loadObj(const std::string& filePath);
+ErrorOr<VertexData> loadObj(std::istringstream& data);
