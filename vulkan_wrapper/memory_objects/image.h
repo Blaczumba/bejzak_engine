@@ -4,14 +4,6 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-struct ImageDimensions {
-  uint32_t width;
-  uint32_t height;
-  uint32_t mipLevels;
-  uint32_t layerCount;
-  std::vector<VkBufferImageCopy> copyRegions;
-};
-
 struct ImageParameters {
   VkFormat format = VK_FORMAT_UNDEFINED;
   VkExtent3D extent = {1, 1, 1};

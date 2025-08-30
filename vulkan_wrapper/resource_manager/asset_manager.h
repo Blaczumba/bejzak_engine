@@ -27,7 +27,11 @@ public:
 
   struct ImageData {
     Buffer stagingBuffer;
-    ImageDimensions imageDimensions;
+    uint32_t width;
+    uint32_t height;
+    uint32_t mipLevels;
+    uint32_t layerCount;
+    std::vector<ImageSubresource> copyRegions;
   };
 
   struct VertexData {

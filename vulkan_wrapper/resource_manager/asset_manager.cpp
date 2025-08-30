@@ -37,8 +37,9 @@ void AssetManager::loadImageAsync(
         stagingBuffer->copyData(
             std::span(static_cast<const std::byte*>(resource->data), resource->size));
         ImageLoader::deallocateResources(*resource);
-        return ErrorOr<ImageData>(
-            ImageData(std::move(*stagingBuffer), std::move(resource->dimensions)));
+        return ErrorOr<ImageData>(ImageData(std::move(*stagingBuffer), resource->width,
+            resource->height,resource->mipLevels, resource->layerCount,
+            std::move(resource->subresources)));
       });
   _awaitingImageResources.emplace(filePath, std::move(future));
 }

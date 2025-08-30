@@ -17,21 +17,18 @@ ErrorOr<ImageResource> ImageLoader::load2DImage(std::span<const std::byte> image
 
   return ImageResource{
     .libraryResource = pixels,
-    .dimensions =
-        ImageDimensions{
-                        .width = static_cast<uint32_t>(width),
-                        .height = static_cast<uint32_t>(height),
-                        .mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1,
-                        .layerCount = 1,
-                        .copyRegions = {VkBufferImageCopy{
-            .imageSubresource = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT, .layerCount = 1},
-            .imageExtent = {.width = static_cast<uint32_t>(width),
-                            .height = static_cast<uint32_t>(height),
-                            .depth = 1},
-          }}},
+    .width = static_cast<uint32_t>(width),
+    .height = static_cast<uint32_t>(height),
+    .mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1,
+    .layerCount = 1,
+    .subresources = {ImageSubresource{
+        .layerCount = 1,
+        .width = static_cast<uint32_t>(width),
+        .height = static_cast<uint32_t>(height),
+        .depth = 1,
+    }},
     .data = pixels,
-    .size = static_cast<uint32_t>(4 * width * height)
-  };
+    .size = static_cast<uint32_t>(4 * width * height)};
 }
 
 ErrorOr<ImageResource> ImageLoader::loadCubemapImage(std::span<const std::byte> imageData) {
@@ -45,16 +42,16 @@ ErrorOr<ImageResource> ImageLoader::loadCubemapImage(std::span<const std::byte> 
 
   ImageResource image{
     .libraryResource = ktxTexture,
-    .dimensions = ImageDimensions{.width = ktxTexture->baseWidth,
-                                  .height = ktxTexture->baseHeight,
-                                  .mipLevels = ktxTexture->numLevels,
-                                  .layerCount = 6},
+    .width = ktxTexture->baseWidth,
+    .height = ktxTexture->baseHeight,
+    .mipLevels = ktxTexture->numLevels,
+    .layerCount = 6,
     .data = ktxTexture->pData,
     .size = ktxTexture->dataSize
   };
 
-  for (uint32_t face = 0; face < image.dimensions.layerCount; ++face) {
-    for (uint32_t level = 0; level < image.dimensions.mipLevels; ++level) {
+  for (uint32_t face = 0; face < image.layerCount; ++face) {
+    for (uint32_t level = 0; level < image.mipLevels; ++level) {
       // Calculate offset into staging buffer for the current mip level and face
       ktx_size_t offset;
       if (ktxResult result = ktxTexture_GetImageOffset(ktxTexture, level, 0, face, &offset);
@@ -63,15 +60,15 @@ ErrorOr<ImageResource> ImageLoader::loadCubemapImage(std::span<const std::byte> 
         return Error(EngineError::LOAD_FAILURE);
       }
 
-      image.dimensions.copyRegions.emplace_back(VkBufferImageCopy{
-        .bufferOffset = offset,
-        .imageSubresource = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                             .mipLevel = level,
-                             .baseArrayLayer = face,
-                             .layerCount = 1},
-        .imageExtent = {.width = image.dimensions.width >> level,
-                             .height = image.dimensions.height >> level,
-                             .depth = 1},
+      image.subresources
+          .push_back(ImageSubresource{
+              .offset = offset,
+              .mipLevel = level,
+              .baseArrayLayer = face,
+              .layerCount = 1,
+              .width = image.width >> level,
+              .height = image.height >> level,
+              .depth = 1,
       });
     }
   }
