@@ -8,20 +8,20 @@
 
 class Camera final : public MouseKeyboardCameraController {
 public:
-  Camera(const std::shared_ptr<Projection>& projection, glm::vec3 position, float moveSpeed,
+  Camera(const Projection& projection, glm::vec3 position, float moveSpeed,
          float mouseSensitivity);
 
   glm::mat4 getViewMatrix() const;
 
   const glm::mat4& getProjectionMatrix() const;
 
+  Projection getProjection() const;
+
+  void setProjection(const Projection& projection);
+
   glm::vec3 getPosition() const;
 
   void setPosition(const glm::vec3& pos);
-
-  void setProjection(const std::shared_ptr<Projection>& projection) {
-    _projection = projection;
-  }
 
   void updateFromKeyboard(
       const MouseKeyboardManager& mouseKeyboardManager, float deltaTime) override;
@@ -45,5 +45,6 @@ private:
   float _moveSpeed;
   float _mouseSensitivity;
 
-  std::shared_ptr<Projection> _projection;
+  Projection _projection;
+  glm::mat4 _projectionMatrix{1.0f};
 };

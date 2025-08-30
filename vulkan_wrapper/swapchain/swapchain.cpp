@@ -173,13 +173,14 @@ ErrorOr<Swapchain> SwapchainBuilder::build(
   const VkSurfaceFormatKHR surfaceFormat =
       chooseSwapSurfaceFormat(swapChainSupport->formats, _preferredFormat);
 
+  const VkExtent2D actualExtent = chooseSwapExtent(extent, swapChainSupport->capabilities);
   VkSwapchainCreateInfoKHR createInfo = {
     .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
     .surface = surface,
     .minImageCount = imageCount,
     .imageFormat = surfaceFormat.format,
     .imageColorSpace = surfaceFormat.colorSpace,
-    .imageExtent = chooseSwapExtent(extent, swapChainSupport->capabilities),
+    .imageExtent = actualExtent,
     .imageArrayLayers = imageArrayLayers,
     .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
     .preTransform = swapChainSupport->capabilities.currentTransform,
@@ -215,5 +216,5 @@ ErrorOr<Swapchain> SwapchainBuilder::build(
   }
 
   return Swapchain(
-      swapchain, logicalDevice, surfaceFormat.format, extent, std::move(images), std::move(views));
+      swapchain, logicalDevice, surfaceFormat.format, actualExtent, std::move(images), std::move(views));
 }

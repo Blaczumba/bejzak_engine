@@ -3,19 +3,30 @@
 #include <algorithm>
 #include <glm/gtc/matrix_transform.hpp>
 
-Camera::Camera(const std::shared_ptr<Projection>& projection, glm::vec3 position, float moveSpeed,
+Camera::Camera(const Projection& projection, glm::vec3 position, float moveSpeed,
                float mouseSensitivity)
   : _projection(projection), _position(position), _mouseXPos(0.0f), _mouseYPos(0.0f),
     _moveSpeed(moveSpeed), _mouseSensitivity(mouseSensitivity), _yaw(0.0f), _pitch(0.0f),
     _front{0.0f, 0.0f, -1.0f}, _up{0.0f, 1.0f, 0.0f},
-    _right(glm::normalize(glm::cross(_front, glm::vec3(0.0f, 1.0f, 0.0f)))) {}
+    _right(glm::normalize(glm::cross(_front, glm::vec3(0.0f, 1.0f, 0.0f)))) {
+  std::visit(UpdateProjectionVisitor{_projectionMatrix}, projection);
+}
 
 glm::mat4 Camera::getViewMatrix() const {
   return glm::lookAt(_position, _position + _front, _up);
 }
 
 const glm::mat4& Camera::getProjectionMatrix() const {
-  return _projection->getMatrix();
+  return _projectionMatrix;
+}
+
+Projection Camera::getProjection() const {
+  return _projection;
+}
+
+void Camera::setProjection(const Projection& projection) {
+  _projection = projection;
+  std::visit(UpdateProjectionVisitor{_projectionMatrix}, projection);
 }
 
 glm::vec3 Camera::getPosition() const {
