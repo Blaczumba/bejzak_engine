@@ -6,10 +6,8 @@
 #include <string_view>
 #include <variant>
 #include <vector>
-#include <vulkan/vulkan.h>
 
 #include "common/status/status.h"
-#include "vulkan_wrapper/memory_objects/image.h"
 
 struct ImageSubresource {
   size_t offset;
@@ -34,7 +32,7 @@ struct ImageResource {
 
 class ImageLoader {
 public:
-  static ErrorOr<ImageResource> loadCubemapImage(std::span<const std::byte> imagePath);
-  static ErrorOr<ImageResource> load2DImage(std::span<const std::byte> imagePath);
+  static ErrorOr<ImageResource> loadImageStbi(std::span<const std::byte> imagePath);
+  static ErrorOr<ImageResource> loadImageKtx(std::span<const std::byte> imagePath);
   static void deallocateResources(ImageResource& resource);
 };

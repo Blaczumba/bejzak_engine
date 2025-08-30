@@ -11,12 +11,12 @@
 #include <unordered_set>
 
 #include "common/file/file_loader.h"
+#include "common/model_loader/image_loader/image_loader.h"
 #include "common/status/status.h"
 #include "common/util/geometry.h"
 #include "common/util/primitives.h"
 #include "vulkan_wrapper/logical_device/logical_device.h"
 #include "vulkan_wrapper/memory_objects/buffer.h"
-#include "vulkan_wrapper/model_loader/image_loader/image_loader.h"
 #include "vulkan_wrapper/util/index_buffer_util.h"
 
 class AssetManager {
@@ -41,8 +41,7 @@ public:
     Buffer vertexBufferPositions;
   };
 
-  void loadImage2DAsync(LogicalDevice& logicalDevice, const std::string& filePath);
-  void loadImageCubemapAsync(LogicalDevice& logicalDevice, const std::string& filePath);
+  void loadImageAsync(LogicalDevice& logicalDevice, const std::string& filePath);
 
   void loadVertexDataInterleavingAsync(
       LogicalDevice& logicalDevice, const std::string& name, std::span<const std::byte> indices,
@@ -55,6 +54,7 @@ public:
       uint8_t indexSize, std::span<const VertexType> vertices);
 
   ErrorOr<std::reference_wrapper<const ImageData>> getImageData(const std::string& filePath);
+
   ErrorOr<std::reference_wrapper<const VertexData>> getVertexData(const std::string& filePath);
 
 private:

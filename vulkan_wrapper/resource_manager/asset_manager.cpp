@@ -44,13 +44,12 @@ void AssetManager::loadImageAsync(
   _awaitingImageResources.emplace(filePath, std::move(future));
 }
 
-void AssetManager::loadImage2DAsync(LogicalDevice& logicalDevice, const std::string& filePath) {
-  loadImageAsync(logicalDevice, filePath, ImageLoader::load2DImage);
-}
-
-void AssetManager::loadImageCubemapAsync(
-    LogicalDevice& logicalDevice, const std::string& filePath) {
-  loadImageAsync(logicalDevice, filePath, ImageLoader::loadCubemapImage);
+void AssetManager::loadImageAsync(LogicalDevice& logicalDevice, const std::string& filePath) {
+  if (filePath.ends_with(".ktx") || filePath.ends_with(".ktx2")) {
+    loadImageAsync(logicalDevice, filePath, ImageLoader::loadImageKtx);
+  } else {
+    loadImageAsync(logicalDevice, filePath, ImageLoader::loadImageStbi);
+  }
 }
 
 void AssetManager::loadVertexDataInterleavingAsync(
@@ -92,8 +91,8 @@ void AssetManager::loadVertexDataInterleavingAsync(
           return ErrorOr<VertexData>(Error(copyStatus.error()));
         }
         return ErrorOr<VertexData>(
-            VertexData(std::move(vertexBuffer.value()), std::move(indexBuffer.value()),
-                       getIndexType(indexSize), std::move(vertexBufferPositions.value())));
+            VertexData(std::move(*vertexBuffer), std::move(*indexBuffer),
+                       getIndexType(indexSize), std::move(*vertexBufferPositions)));
       });
   _awaitingVertexDataResources.emplace(name, std::move(future));
 }

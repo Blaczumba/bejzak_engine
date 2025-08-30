@@ -80,12 +80,13 @@ target_link_libraries(${ENGINE_NAME} INTERFACE
         PhysicalDevice MemoryAllocator
         LogicalDevice Renderpass
         Swapchain Buffer CommandBuffer
-        Framebuffer Pipeline ModelLoader
+        Framebuffer Pipeline
         DescriptorSet
 
         CommonCamera CommonECS
         CommonObject CommonPrimitives
         CommonScene CommonStandardFileLoader
+        CommonModelLoader
 )
 
 if (ANDROID)

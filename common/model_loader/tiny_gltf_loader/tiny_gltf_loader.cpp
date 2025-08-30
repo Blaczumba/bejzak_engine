@@ -3,7 +3,7 @@
 #include "common/status/status.h"
 #include "common/util/primitives.h"
 #include "lib/buffer/shared_buffer.h"
-#include "vulkan_wrapper/model_loader/model_loader.h"
+#include "common/model_loader/model_loader.h"
 
 #define TINYGLTF_IMPLEMENTATION
 #define TINYGLTF_NO_EXTERNAL_IMAGE
@@ -84,12 +84,12 @@ std::enable_if_t<std::is_unsigned<IndexType>::value, lib::Buffer<glm::vec3>> pro
   lib::Buffer<glm::vec3> tangents(positions.size());
   for (size_t i = 0; i < indices.size(); i += 3) {
     const glm::vec3& pos0 = positions[indices[i]];
-    glm::vec3 edge1 = positions[indices[i + 1]] - pos0;
-    glm::vec3 edge2 = positions[indices[i + 2]] - pos0;
+    const glm::vec3 edge1 = positions[indices[i + 1]] - pos0;
+    const glm::vec3 edge2 = positions[indices[i + 2]] - pos0;
 
     const glm::vec2& texCoord0 = texCoords[indices[i]];
-    glm::vec2 deltaUV1 = texCoords[indices[i + 1]] - texCoord0;
-    glm::vec2 deltaUV2 = texCoords[indices[i + 2]] - texCoord0;
+    const glm::vec2 deltaUV1 = texCoords[indices[i + 1]] - texCoord0;
+    const glm::vec2 deltaUV2 = texCoords[indices[i + 2]] - texCoord0;
 
     // float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
     tangents[indices[i]] = tangents[indices[i + 1]] = tangents[indices[i + 2]] =

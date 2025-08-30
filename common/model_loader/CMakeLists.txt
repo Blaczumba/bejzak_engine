@@ -1,0 +1,9 @@
+add_subdirectory(obj_loader)
+add_subdirectory(tiny_gltf_loader)
+add_subdirectory(image_loader)
+
+add_library(CommonModelLoader INTERFACE model_loader.h)
+target_link_libraries(CommonModelLoader INTERFACE CommonTinyGltfLoader CommonObjLoader CommonImageLoader)
+
+target_include_directories(CommonModelLoader INTERFACE ${PROJECT_SOURCE_DIR})
+target_include_directories(CommonModelLoader INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})

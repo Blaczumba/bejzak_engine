@@ -6,7 +6,7 @@
 #include <stb_image/stb_image.h>
 #include <vector>
 
-ErrorOr<ImageResource> ImageLoader::load2DImage(std::span<const std::byte> imageData) {
+ErrorOr<ImageResource> ImageLoader::loadImageStbi(std::span<const std::byte> imageData) {
   int width, height, channels;
   stbi_uc* pixels = stbi_load_from_memory(
       reinterpret_cast<const stbi_uc*>(imageData.data()), static_cast<int>(imageData.size()),
@@ -31,7 +31,7 @@ ErrorOr<ImageResource> ImageLoader::load2DImage(std::span<const std::byte> image
     .size = static_cast<uint32_t>(4 * width * height)};
 }
 
-ErrorOr<ImageResource> ImageLoader::loadCubemapImage(std::span<const std::byte> imageData) {
+ErrorOr<ImageResource> ImageLoader::loadImageKtx(std::span<const std::byte> imageData) {
   ktxTexture* ktxTexture;
   if (ktxResult result = ktxTexture_CreateFromMemory(
           reinterpret_cast<const ktx_uint8_t*>(imageData.data()), imageData.size(),
