@@ -8,6 +8,11 @@ OrthographicProjection::OrthographicProjection(
   updateMatrix();
 }
 
+void OrthographicProjection::updateMatrix() {
+  _matrix = glm::ortho(_left, _right, _bottom, _top, _zNear, _zFar);
+  _matrix[1][1] = -_matrix[1][1];  // Flip Y for Vulkan-style clip space
+}
+
 void OrthographicProjection::setBounds(float left, float right, float bottom, float top) {
   _left = left;
   _right = right;
@@ -24,13 +29,4 @@ void OrthographicProjection::setNear(float nearZ) {
 void OrthographicProjection::setFar(float farZ) {
   _zFar = farZ;
   updateMatrix();
-}
-
-void OrthographicProjection::updateMatrix() {
-  _matrix = glm::ortho(_left, _right, _bottom, _top, _zNear, _zFar);
-  _matrix[1][1] = -_matrix[1][1];  // Flip Y for Vulkan-style clip space
-}
-
-const glm::mat4& OrthographicProjection::getMatrix() const {
-  return _matrix;
 }

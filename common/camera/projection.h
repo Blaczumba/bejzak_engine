@@ -4,9 +4,14 @@
 
 class Projection {
 public:
-  virtual const glm::mat4& getMatrix() const = 0;
+  virtual ~Projection() = default;
+
+  const glm::mat4& getMatrix() const {
+    return _matrix;
+  }
 
   virtual void updateMatrix() = 0;
 
-  virtual ~Projection() = default;
+protected:
+  glm::mat4 _matrix = glm::mat4(1.0f);
 };

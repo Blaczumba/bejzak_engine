@@ -7,6 +7,11 @@ PerspectiveProjection::PerspectiveProjection(float fovy, float aspect, float nea
   updateMatrix();
 }
 
+void PerspectiveProjection::updateMatrix() {
+  _matrix = glm::perspective(_fovy, _aspect, _zNear, _zFar);
+  _matrix[1][1] = -_matrix[1][1];  // Flip Y for Vulkan-style clip space
+}
+
 void PerspectiveProjection::setFovy(float fovy) {
   _fovy = fovy;
   updateMatrix();
@@ -25,13 +30,4 @@ void PerspectiveProjection::setNear(float nearZ) {
 void PerspectiveProjection::setFar(float farZ) {
   _zFar = farZ;
   updateMatrix();
-}
-
-void PerspectiveProjection::updateMatrix() {
-  _matrix = glm::perspective(_fovy, _aspect, _zNear, _zFar);
-  _matrix[1][1] = -_matrix[1][1];  // Flip Y for Vulkan-style clip space
-}
-
-const glm::mat4& PerspectiveProjection::getMatrix() const {
-  return _matrix;
 }
