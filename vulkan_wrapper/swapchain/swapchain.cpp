@@ -158,22 +158,19 @@ VkExtent2D chooseSwapExtent(
 
 ErrorOr<Swapchain> SwapchainBuilder::build(
     const LogicalDevice& logicalDevice, VkSurfaceKHR surface, VkExtent2D extent) {
-  const std::optional<SwapChainSupportDetails>& swapChainSupport =
-      logicalDevice.getPhysicalDevice().getSwapchainSupportDetails();
-  if (!swapChainSupport.has_value()) {
-    return Error(EngineError::NULLPTR_REFERENCE);
-  }
+  const SwapChainSupportDetails swapChainSupport =
+      logicalDevice.getPhysicalDevice().getSwapchainSupportDetails(surface);
 
-  uint32_t imageCount = swapChainSupport->capabilities.minImageCount + 1;
-  if (swapChainSupport->capabilities.maxImageCount > 0
-      && imageCount > swapChainSupport->capabilities.maxImageCount) {
-    imageCount = swapChainSupport->capabilities.maxImageCount;
+  uint32_t imageCount = swapChainSupport.capabilities.minImageCount + 1;
+  if (swapChainSupport.capabilities.maxImageCount > 0
+      && imageCount > swapChainSupport.capabilities.maxImageCount) {
+    imageCount = swapChainSupport.capabilities.maxImageCount;
   }
 
   const VkSurfaceFormatKHR surfaceFormat =
-      chooseSwapSurfaceFormat(swapChainSupport->formats, _preferredFormat);
+      chooseSwapSurfaceFormat(swapChainSupport.formats, _preferredFormat);
 
-  const VkExtent2D actualExtent = chooseSwapExtent(extent, swapChainSupport->capabilities);
+  const VkExtent2D actualExtent = chooseSwapExtent(extent, swapChainSupport.capabilities);
   VkSwapchainCreateInfoKHR createInfo = {
     .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
     .surface = surface,
@@ -183,9 +180,9 @@ ErrorOr<Swapchain> SwapchainBuilder::build(
     .imageExtent = actualExtent,
     .imageArrayLayers = imageArrayLayers,
     .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-    .preTransform = swapChainSupport->capabilities.currentTransform,
+    .preTransform = swapChainSupport.capabilities.currentTransform,
     .compositeAlpha = _compositeAlpha,
-    .presentMode = chooseSwapPresentMode(swapChainSupport->presentModes, _preferredPresentMode),
+    .presentMode = chooseSwapPresentMode(swapChainSupport.presentModes, _preferredPresentMode),
     .clipped = _clipped,
     .oldSwapchain = _oldSwapchain};
 
@@ -215,6 +212,6 @@ ErrorOr<Swapchain> SwapchainBuilder::build(
                                                              VK_IMAGE_ASPECT_COLOR_BIT, 1, 1));
   }
 
-  return Swapchain(
-      swapchain, logicalDevice, surfaceFormat.format, actualExtent, std::move(images), std::move(views));
+  return Swapchain(swapchain, logicalDevice, surfaceFormat.format, actualExtent, std::move(images),
+                   std::move(views));
 }

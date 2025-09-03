@@ -123,11 +123,10 @@ SwapChainSupportDetails querySwapchainSupportDetails(
 }  // namespace
 
 PhysicalDevice::PhysicalDevice(VkPhysicalDevice physicalDevice, const Instance& instance,
-                               const QueueFamilyIndices& queueFamilyIndices,
-                               std::optional<SwapChainSupportDetails> swapchainSupportDetails)
+                               const QueueFamilyIndices& queueFamilyIndices)
   : _device(physicalDevice), _instance(instance),
     _availableRequestedExtensions(checkDeviceExtensionSupport(physicalDevice)),
-    _queueFamilyIndices(queueFamilyIndices), _swapchainSupportDetails(swapchainSupportDetails) {
+    _queueFamilyIndices(queueFamilyIndices) {
   vkGetPhysicalDeviceProperties(_device, &_properties);
 }
 
@@ -158,7 +157,7 @@ ErrorOr<std::unique_ptr<PhysicalDevice>> PhysicalDevice::create(
               return condition;
             })) {
       return std::unique_ptr<PhysicalDevice>(
-          new PhysicalDevice(device, instance, queueFamilyIndices, swapchainSupportDetails));
+          new PhysicalDevice(device, instance, queueFamilyIndices));
     }
   }
   return Error(EngineError::NOT_FOUND);
@@ -207,6 +206,7 @@ const QueueFamilyIndices& PhysicalDevice::getQueueFamilyIndices() const {
   return _queueFamilyIndices;
 }
 
-const std::optional<SwapChainSupportDetails>& PhysicalDevice::getSwapchainSupportDetails() const {
-  return _swapchainSupportDetails;
+const SwapChainSupportDetails PhysicalDevice::getSwapchainSupportDetails(
+    VkSurfaceKHR surface) const {
+  return querySwapchainSupportDetails(_device, surface);
 }

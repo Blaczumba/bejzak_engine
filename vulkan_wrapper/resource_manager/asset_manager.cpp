@@ -37,9 +37,9 @@ void AssetManager::loadImageAsync(
         stagingBuffer->copyData(
             std::span(static_cast<const std::byte*>(resource->data), resource->size));
         ImageLoader::deallocateResources(*resource);
-        return ErrorOr<ImageData>(ImageData(std::move(*stagingBuffer), resource->width,
-            resource->height,resource->mipLevels, resource->layerCount,
-            std::move(resource->subresources)));
+        return ErrorOr<ImageData>(ImageData(
+            std::move(*stagingBuffer), resource->width, resource->height, resource->mipLevels,
+            resource->layerCount, std::move(resource->subresources)));
       });
   _awaitingImageResources.emplace(filePath, std::move(future));
 }
@@ -91,8 +91,8 @@ void AssetManager::loadVertexDataInterleavingAsync(
           return ErrorOr<VertexData>(Error(copyStatus.error()));
         }
         return ErrorOr<VertexData>(
-            VertexData(std::move(*vertexBuffer), std::move(*indexBuffer),
-                       getIndexType(indexSize), std::move(*vertexBufferPositions)));
+            VertexData(std::move(*vertexBuffer), std::move(*indexBuffer), getIndexType(indexSize),
+                       std::move(*vertexBufferPositions)));
       });
   _awaitingVertexDataResources.emplace(name, std::move(future));
 }
