@@ -1,7 +1,7 @@
 #pragma once
 
-#include <openxr/openxr.h>
 #include <memory>
+#include <openxr/openxr.h>
 
 #include "common/status/status.h"
 
@@ -10,15 +10,15 @@ namespace xrw {
 class Space {
   Space(XrSpace space);
 
- public:
+public:
   static ErrorOr<std::unique_ptr<Space>> create(XrSession session, XrReferenceSpaceType type);
 
   ~Space();
 
   XrSpace getXrSpace() const;
 
- private:
+private:
   XrSpace _space = XR_NULL_HANDLE;
 };
 
-} // xrw
+}  // namespace xrw

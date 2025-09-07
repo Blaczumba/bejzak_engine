@@ -54,7 +54,8 @@ ErrorOr<int64_t> GraphicsPluginVulkan::selectSwapchainFormat(
   return Error(EngineError::NOT_FOUND);
 }
 
-Status GraphicsPluginVulkan::createSwapchainContext(XrSwapchain swapchain, int64_t format) {
+Status GraphicsPluginVulkan::createSwapchainContext(
+    XrSwapchain swapchain, int64_t format, uint32_t width, uint32_t height) {
   SwapchainContext& context = _swapchainImageContexts[swapchain];
   uint32_t imageCount;
   CHECK_XRCMD(xrEnumerateSwapchainImages(swapchain, 0, &imageCount, nullptr));
@@ -70,11 +71,16 @@ Status GraphicsPluginVulkan::createSwapchainContext(XrSwapchain swapchain, int64
                                            context.images[i].image, static_cast<VkFormat>(format),
                                            VK_IMAGE_ASPECT_COLOR_BIT, 1, 1));
   }
+  context.format = static_cast<VkFormat>(format);
+  context.width = width;
+  context.height = height;
   return StatusOk();
 }
 
-ErrorOr<XrSwapchainImageBaseHeader*> GraphicsPluginVulkan::getSwapchainImages(XrSwapchain swapchain) {
-  if (auto it = _swapchainImageContexts.find(swapchain); it != _swapchainImageContexts.cend()) [[likely]] {
+ErrorOr<XrSwapchainImageBaseHeader*> GraphicsPluginVulkan::getSwapchainImages(
+    XrSwapchain swapchain) {
+  if (auto it = _swapchainImageContexts.find(swapchain); it != _swapchainImageContexts.cend())
+      [[likely]] {
     return reinterpret_cast<XrSwapchainImageBaseHeader*>(it->second.images.data());
   }
   return Error(EngineError::NOT_FOUND);
@@ -298,6 +304,10 @@ Status GraphicsPluginVulkan::initialize(XrInstance xrInstance, XrSystemId system
     .queueFamilyIndex = *_physicalDevice->getQueueFamilyIndices().graphicsFamily};
 
   ASSIGN_OR_RETURN(_singleTimeCommandPool, CommandPool::create(_logicalDevice));
+  return StatusOk();
+}
+
+Status GraphicsPluginVulkan::createResources() {
   return StatusOk();
 }
 

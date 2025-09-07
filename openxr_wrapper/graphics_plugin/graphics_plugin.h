@@ -17,11 +17,14 @@ public:
 
   virtual ErrorOr<int64_t> selectSwapchainFormat(std::span<const int64_t> runtimeFormats) const = 0;
 
-  virtual Status createSwapchainContext(XrSwapchain swapchain, int64_t format) = 0;
+  virtual Status createSwapchainContext(
+      XrSwapchain swapchain, int64_t format, uint32_t width, uint32_t height) = 0;
 
   virtual ErrorOr<XrSwapchainImageBaseHeader*> getSwapchainImages(XrSwapchain swapchain) = 0;
 
   virtual Status initialize(XrInstance xrInstance, XrSystemId systemId) = 0;
+
+  virtual Status createResources() = 0;
 };
 
 }  // namespace xrw

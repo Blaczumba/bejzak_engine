@@ -17,7 +17,7 @@ XrSwapchain Swapchain::getSwapchain() const {
 }
 
 XrExtent2Di Swapchain::getXrExtent2Di() const {
-  return { static_cast<int32_t>(_width), static_cast<int32_t>(_height) };
+  return {static_cast<int32_t>(_width), static_cast<int32_t>(_height)};
 }
 
 SwapchainBuilder& SwapchainBuilder::withArraySize(uint32_t arraySize) {
@@ -92,7 +92,9 @@ ErrorOr<std::vector<Swapchain>> SwapchainBuilder::build(
     XrSwapchain swapchain;
     CHECK_XRCMD(xrCreateSwapchain(session.getXrSession(), &swapchainCreateInfo, &swapchain));
 
-    RETURN_IF_ERROR(graphicsPlugin.createSwapchainContext(swapchain, format));
+    RETURN_IF_ERROR(graphicsPlugin.createSwapchainContext(
+        swapchain, format, configView.recommendedImageRectWidth,
+        configView.recommendedImageRectHeight));
 
     swapchains.emplace_back(swapchain, _viewConfigType, configView.recommendedImageRectWidth,
                             configView.recommendedImageRectHeight, format, session);
