@@ -70,6 +70,8 @@ public:
 
 class PrimaryCommandBuffer : public CommandBuffer {
 public:
+  PrimaryCommandBuffer() = default;
+
   PrimaryCommandBuffer(PrimaryCommandBuffer&&) noexcept = default;
 
   PrimaryCommandBuffer(

@@ -42,6 +42,8 @@ public:
 
   Status createResources() override;
 
+  Status draw(XrSwapchain swapchain) override;
+
 protected:
   XrGraphicsBindingVulkanKHR _graphicsBinding;
 
@@ -52,6 +54,7 @@ protected:
   LogicalDevice _logicalDevice;
 
   static constexpr size_t MAX_FRAMES_IN_FLIGHT = 3;
+  static constexpr size_t MAX_THREADS_IN_POOL = 1;
 
   struct SwapchainContext {
     VkFormat format;
@@ -62,6 +65,12 @@ protected:
     lib::Buffer<Framebuffer> framebuffers;
     std::vector<Texture> attachments;
     std::array<VkFence, MAX_FRAMES_IN_FLIGHT> fences;
+    std::array<VkSemaphore, MAX_FRAMES_IN_FLIGHT> renderFinishedSemaphores;
+    std::array<std::shared_ptr<CommandPool>, MAX_THREADS_IN_POOL + 1>
+        commandPools;
+    std::array<PrimaryCommandBuffer, MAX_FRAMES_IN_FLIGHT> primaryCommandBuffer;
+    std::array<std::array<SecondaryCommandBuffer, MAX_FRAMES_IN_FLIGHT>,
+               MAX_THREADS_IN_POOL> commandBuffers;
   };
 
   std::unordered_map<XrSwapchain, SwapchainContext> _swapchainImageContexts;

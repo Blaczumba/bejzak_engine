@@ -248,6 +248,7 @@ ErrorOr<LogicalDevice> createLogicalDevice(
                  .samplerAnisotropy = VK_TRUE}
   };
 
+  const lib::Buffer<const char*> extensions = physicalDevice.getAvailableExtensions();
   const VkDeviceCreateInfo deviceCreateInfo = {
     .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
     .pNext = &deviceFeaturesInfo,
@@ -257,8 +258,8 @@ ErrorOr<LogicalDevice> createLogicalDevice(
     .enabledLayerCount = static_cast<uint32_t>(validationLayers.size()),
     .ppEnabledLayerNames = validationLayers.data(),
 #endif  // VALIDATION_LAYERS_ENABLED
-    .enabledExtensionCount = 0,
-    .ppEnabledExtensionNames = nullptr};
+      .enabledExtensionCount = static_cast<uint32_t>(extensions.size()),
+      .ppEnabledExtensionNames = extensions.data()};
 
   const XrVulkanDeviceCreateInfoKHR vulkan_device_create_info_khr = {
     .type = XR_TYPE_VULKAN_DEVICE_CREATE_INFO_KHR,
@@ -308,6 +309,10 @@ Status GraphicsPluginVulkan::initialize(XrInstance xrInstance, XrSystemId system
 }
 
 Status GraphicsPluginVulkan::createResources() {
+  return StatusOk();
+}
+
+Status GraphicsPluginVulkan::draw(XrSwapchain swapchain) {
   return StatusOk();
 }
 

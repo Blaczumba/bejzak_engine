@@ -25,6 +25,8 @@ public:
   virtual Status initialize(XrInstance xrInstance, XrSystemId systemId) = 0;
 
   virtual Status createResources() = 0;
+
+  virtual Status draw(XrSwapchain swapchain) = 0;
 };
 
 }  // namespace xrw
