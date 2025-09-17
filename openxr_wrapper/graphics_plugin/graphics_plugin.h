@@ -26,7 +26,7 @@ public:
 
   virtual Status createResources() = 0;
 
-  virtual Status draw(XrSwapchain swapchain, uint32_t swapchain_image_index) = 0;
+  virtual Status draw(const XrCompositionLayerProjectionView& projectionLayerView, uint32_t swapchain_image_index) = 0;
 };
 
 }  // namespace xrw

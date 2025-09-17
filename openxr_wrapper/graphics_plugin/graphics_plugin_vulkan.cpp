@@ -312,7 +312,7 @@ Status GraphicsPluginVulkan::createResources() {
   return StatusOk();
 }
 
-Status GraphicsPluginVulkan::draw(XrSwapchain swapchain, uint32_t swapchain_image_index) {
+Status GraphicsPluginVulkan::draw(const XrCompositionLayerProjectionView& projectionLayerView, uint32_t swapchain_image_index) {
   return StatusOk();
 }
 

@@ -42,7 +42,7 @@ public:
 
   Status createResources() override;
 
-  Status draw(XrSwapchain swapchain, uint32_t swapchain_image_index) override;
+  Status draw(const XrCompositionLayerProjectionView& projectionLayerView, uint32_t swapchain_image_index) override;
 
 protected:
   XrGraphicsBindingVulkanKHR _graphicsBinding;
