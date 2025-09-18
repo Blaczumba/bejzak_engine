@@ -5,6 +5,7 @@ target_include_directories(CommonStandardFileLoader PUBLIC ${CMAKE_CURRENT_SOURC
 
 if (ANDROID)
     add_library(CommonAndroidFileLoader file_loader.h android_file_loader.h android_file_loader.cpp)
+    target_link_libraries(CommonAndroidFileLoader PUBLIC NativeAppGlue android)
 
     target_include_directories(CommonAndroidFileLoader PUBLIC ${PROJECT_SOURCE_DIR})
     target_include_directories(CommonAndroidFileLoader PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

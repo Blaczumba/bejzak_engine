@@ -6,4 +6,5 @@ add_library(CommonModelLoader INTERFACE model_loader.h)
 target_link_libraries(CommonModelLoader INTERFACE CommonTinyGltfLoader CommonObjLoader CommonImageLoader)
 
 target_include_directories(CommonModelLoader INTERFACE ${PROJECT_SOURCE_DIR})
+target_include_directories(CommonModelLoader INTERFACE ${PROJECT_SOURCE_DIR}/external/glm)
 target_include_directories(CommonModelLoader INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})

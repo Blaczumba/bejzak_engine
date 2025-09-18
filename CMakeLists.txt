@@ -97,6 +97,8 @@ if (ANDROID)
             OpenxrSystem OpenxrSession OpenxrSwapchain
             OpenxrSpace
 
+            OpenXR::headers
+
             CommonAndroidFileLoader
     )
 endif ()
