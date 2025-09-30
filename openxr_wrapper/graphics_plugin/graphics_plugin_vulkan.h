@@ -1,8 +1,7 @@
 #pragma once
 
-#include <vulkan/vulkan.h>  // Vulkan needs to be included before openxr_platform.h
-
 #include <memory>
+#include <vulkan/vulkan.h>  // Vulkan needs to be included before openxr_platform.h
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
 #include <span>
@@ -42,7 +41,8 @@ public:
 
   Status createResources() override;
 
-  Status draw(const XrCompositionLayerProjectionView& projectionLayerView, uint32_t swapchain_image_index) override;
+  Status draw(const XrCompositionLayerProjectionView& projectionLayerView,
+              uint32_t swapchain_image_index) override;
 
 protected:
   XrGraphicsBindingVulkanKHR _graphicsBinding;
@@ -66,11 +66,10 @@ protected:
     std::vector<Texture> attachments;
     std::array<VkFence, MAX_FRAMES_IN_FLIGHT> fences;
     std::array<VkSemaphore, MAX_FRAMES_IN_FLIGHT> renderFinishedSemaphores;
-    std::array<std::shared_ptr<CommandPool>, MAX_THREADS_IN_POOL + 1>
-        commandPools;
+    std::array<std::shared_ptr<CommandPool>, MAX_THREADS_IN_POOL + 1> commandPools;
     std::array<PrimaryCommandBuffer, MAX_FRAMES_IN_FLIGHT> primaryCommandBuffer;
-    std::array<std::array<SecondaryCommandBuffer, MAX_FRAMES_IN_FLIGHT>,
-               MAX_THREADS_IN_POOL> commandBuffers;
+    std::array<std::array<SecondaryCommandBuffer, MAX_FRAMES_IN_FLIGHT>, MAX_THREADS_IN_POOL>
+        commandBuffers;
   };
 
   std::unordered_map<XrSwapchain, SwapchainContext> _swapchainImageContexts;

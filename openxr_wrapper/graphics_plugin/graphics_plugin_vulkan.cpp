@@ -258,8 +258,8 @@ ErrorOr<LogicalDevice> createLogicalDevice(
     .enabledLayerCount = static_cast<uint32_t>(validationLayers.size()),
     .ppEnabledLayerNames = validationLayers.data(),
 #endif  // VALIDATION_LAYERS_ENABLED
-      .enabledExtensionCount = static_cast<uint32_t>(extensions.size()),
-      .ppEnabledExtensionNames = extensions.data()};
+    .enabledExtensionCount = static_cast<uint32_t>(extensions.size()),
+    .ppEnabledExtensionNames = extensions.data()};
 
   const XrVulkanDeviceCreateInfoKHR vulkan_device_create_info_khr = {
     .type = XR_TYPE_VULKAN_DEVICE_CREATE_INFO_KHR,
@@ -312,7 +312,8 @@ Status GraphicsPluginVulkan::createResources() {
   return StatusOk();
 }
 
-Status GraphicsPluginVulkan::draw(const XrCompositionLayerProjectionView& projectionLayerView, uint32_t swapchain_image_index) {
+Status GraphicsPluginVulkan::draw(
+    const XrCompositionLayerProjectionView& projectionLayerView, uint32_t swapchain_image_index) {
   return StatusOk();
 }
 
