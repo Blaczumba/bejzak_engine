@@ -2,7 +2,7 @@
 
 #include <cstddef>
 #include <memory>
-#include <sstream>
+#include <string>
 #include <string_view>
 
 #include "file_loader.h"
@@ -12,7 +12,7 @@ class StandardFileLoader : public FileLoader {
 public:
   ErrorOr<lib::Buffer<std::byte>> loadFileToBuffer(std::string_view filePath) const override;
 
-  ErrorOr<std::istringstream> loadFileToStringStream(std::string_view filePath) const override;
+  ErrorOr<std::string> loadFileToString(std::string_view filePath) const override;
 
   ~StandardFileLoader() override = default;
 };

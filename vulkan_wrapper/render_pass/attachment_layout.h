@@ -4,15 +4,11 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-namespace Attachment {
-
-enum class Type : uint8_t {
+enum class AttachmentType : uint8_t {
   COLOR = 0,
   COLOR_RESOLVE,
   DEPTH
 };
-
-}  // namespace Attachment
 
 class AttachmentLayout {
 public:
@@ -21,7 +17,7 @@ public:
   std::span<const VkClearValue> getVkClearValues() const;
   std::span<const VkAttachmentDescription> getVkAttachmentDescriptions() const;
   std::span<const VkImageLayout> getVkSubpassLayouts() const;
-  std::span<const Attachment::Type> getAttachmentsTypes() const;
+  std::span<const AttachmentType> getAttachmentsTypes() const;
 
   uint32_t getColorAttachmentsCount() const;
 
@@ -43,11 +39,5 @@ private:
   std::vector<VkClearValue> _clearValues;
   std::vector<VkAttachmentDescription> _attachmentDescriptions;
   std::vector<VkImageLayout> _subpassImageLayouts;
-  std::vector<Attachment::Type> _attachmentTypes;
-
-  VkAttachmentDescription createDescription(
-      VkFormat format, VkSampleCountFlagBits samples, VkAttachmentLoadOp loadOp,
-      VkAttachmentStoreOp storeOp, VkImageLayout initialLayout, VkImageLayout finalLayout,
-      VkAttachmentLoadOp stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
-      VkAttachmentStoreOp stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE);
+  std::vector<AttachmentType> _attachmentTypes;
 };

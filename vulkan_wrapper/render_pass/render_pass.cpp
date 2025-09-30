@@ -8,21 +8,21 @@
 
 Status Renderpass::Subpass::addOutputAttachment(
     const AttachmentLayout& layout, uint32_t attachmentBinding) {
-  std::span<const Attachment::Type> attachmentTypes = layout.getAttachmentsTypes();
+  std::span<const AttachmentType> attachmentTypes = layout.getAttachmentsTypes();
   if (attachmentTypes.size() <= attachmentBinding) {
     return Error(EngineError::INDEX_OUT_OF_RANGE);
   }
 
   switch (attachmentTypes[attachmentBinding]) {
-    case Attachment::Type::COLOR:
+    case AttachmentType::COLOR:
       _colorAttachmentRefs.emplace_back(
           attachmentBinding, layout.getVkSubpassLayouts()[attachmentBinding]);
       break;
-    case Attachment::Type::COLOR_RESOLVE:
+    case AttachmentType::COLOR_RESOLVE:
       _colorAttachmentResolveRefs.emplace_back(
           attachmentBinding, layout.getVkSubpassLayouts()[attachmentBinding]);
       break;
-    case Attachment::Type::DEPTH:
+    case AttachmentType::DEPTH:
       _depthAttachmentRefs.emplace_back(
           attachmentBinding, layout.getVkSubpassLayouts()[attachmentBinding]);
       break;

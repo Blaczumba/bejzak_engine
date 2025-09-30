@@ -8,8 +8,7 @@
 
 class Camera final : public MouseKeyboardCameraController {
 public:
-  Camera(const Projection& projection, glm::vec3 position, float moveSpeed,
-         float mouseSensitivity);
+  Camera(const Projection& projection, glm::vec3 position, float moveSpeed, float mouseSensitivity);
 
   glm::mat4 getViewMatrix() const;
 

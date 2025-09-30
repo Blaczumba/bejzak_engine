@@ -1,7 +1,7 @@
 #pragma once
 
 #include <android/asset_manager.h>
-#include <sstream>
+#include <string>
 
 #include "common/status/status.h"
 #include "file_loader.h"
@@ -15,7 +15,7 @@ public:
 
   ErrorOr<lib::Buffer<std::byte>> loadFileToBuffer(std::string_view filePath) const override;
 
-  ErrorOr<std::istringstream> loadFileToStringStream(std::string_view filePath) const override;
+  ErrorOr<std::string> loadFileToStringStream(std::string_view filePath) const override;
 
 private:
   AAssetManager* _assetManager;

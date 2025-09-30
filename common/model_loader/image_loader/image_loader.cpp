@@ -22,10 +22,10 @@ ErrorOr<ImageResource> ImageLoader::loadImageStbi(std::span<const std::byte> ima
     .mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1,
     .layerCount = 1,
     .subresources = {ImageSubresource{
-        .layerCount = 1,
-        .width = static_cast<uint32_t>(width),
-        .height = static_cast<uint32_t>(height),
-        .depth = 1,
+      .layerCount = 1,
+      .width = static_cast<uint32_t>(width),
+      .height = static_cast<uint32_t>(height),
+      .depth = 1,
     }},
     .data = pixels,
     .size = static_cast<uint32_t>(4 * width * height)};
@@ -47,8 +47,7 @@ ErrorOr<ImageResource> ImageLoader::loadImageKtx(std::span<const std::byte> imag
     .mipLevels = ktxTexture->numLevels,
     .layerCount = 6,
     .data = ktxTexture->pData,
-    .size = ktxTexture->dataSize
-  };
+    .size = ktxTexture->dataSize};
 
   for (uint32_t face = 0; face < image.layerCount; ++face) {
     for (uint32_t level = 0; level < image.mipLevels; ++level) {
@@ -60,15 +59,14 @@ ErrorOr<ImageResource> ImageLoader::loadImageKtx(std::span<const std::byte> imag
         return Error(EngineError::LOAD_FAILURE);
       }
 
-      image.subresources
-          .push_back(ImageSubresource{
-              .offset = offset,
-              .mipLevel = level,
-              .baseArrayLayer = face,
-              .layerCount = 1,
-              .width = image.width >> level,
-              .height = image.height >> level,
-              .depth = 1,
+      image.subresources.push_back(ImageSubresource{
+        .offset = offset,
+        .mipLevel = level,
+        .baseArrayLayer = face,
+        .layerCount = 1,
+        .width = image.width >> level,
+        .height = image.height >> level,
+        .depth = 1,
       });
     }
   }

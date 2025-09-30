@@ -1,9 +1,9 @@
 #include "tiny_gltf_loader.h"
 
+#include "common/model_loader/model_loader.h"
 #include "common/status/status.h"
 #include "common/util/primitives.h"
 #include "lib/buffer/shared_buffer.h"
-#include "common/model_loader/model_loader.h"
 
 #define TINYGLTF_IMPLEMENTATION
 #define TINYGLTF_NO_EXTERNAL_IMAGE
@@ -200,7 +200,7 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node,
   }
 }
 
-ErrorOr<std::vector<VertexData>> LoadGltf(const std::string& filePath) {
+ErrorOr<std::vector<VertexData>> LoadGltfFromFile(const std::string& filePath) {
   tinygltf::Model model;
   tinygltf::TinyGLTF loader;
 
@@ -211,6 +211,25 @@ ErrorOr<std::vector<VertexData>> LoadGltf(const std::string& filePath) {
   } else {
     return Error(EngineError::LOAD_FAILURE);
   }
+
+  std::vector<VertexData> vertexDataList;
+  for (const tinygltf::Scene& scene : model.scenes) {
+    for (int nodeIndex : scene.nodes) {
+      const tinygltf::Node& node = model.nodes[nodeIndex];
+      ProcessNode(model, node, glm::mat4(1.0f), vertexDataList);
+    }
+  }
+  return vertexDataList;
+}
+
+ErrorOr<std::vector<VertexData>> LoadGltfFromString(
+    const std::string& dataString, const std::string& baseDir) {
+  tinygltf::Model model;
+  tinygltf::TinyGLTF loader;
+  std::string error, warning;
+
+  loader.LoadASCIIFromString(
+      &model, &error, &warning, dataString.data(), dataString.size(), baseDir);
 
   std::vector<VertexData> vertexDataList;
   for (const tinygltf::Scene& scene : model.scenes) {

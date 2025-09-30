@@ -28,9 +28,8 @@ ErrorOr<lib::Buffer<std::byte>> AndroidFileLoader::loadFileToBuffer(
   return buffer;
 }
 
-ErrorOr<std::istringstream> AndroidFileLoader::loadFileToStringStream(
-    std::string_view filePath) const {
+ErrorOr<std::string> AndroidFileLoader::loadFileToStringStream(std::string_view filePath) const {
   ASSIGN_OR_RETURN(const lib::Buffer<std::byte> buffer, loadFileToBuffer(filePath));
-  return std::istringstream(std::string(reinterpret_cast<const char*>(buffer.cbegin()),
-                                        reinterpret_cast<const char*>(buffer.cend())));
+  return std::string(
+      reinterpret_cast<const char*>(buffer.cbegin()), reinterpret_cast<const char*>(buffer.cend()));
 }

@@ -7,9 +7,9 @@
 #include <tinyobjloader/tiny_obj_loader.h>
 #include <unordered_map>
 
+#include "common/model_loader/model_loader.h"
 #include "common/util/primitives.h"
 #include "lib/buffer/shared_buffer.h"
-#include "common/model_loader/model_loader.h"
 
 struct Indices {
   int a;
@@ -31,7 +31,7 @@ struct Indices {
   }
 };
 
-ErrorOr<VertexData> loadObj(std::istringstream& data) {
+ErrorOr<VertexData> loadObj(std::string& data) {
   tinyobj::attrib_t attrib;
   std::vector<tinyobj::shape_t> shapes;
   std::vector<tinyobj::material_t> materials;
@@ -42,7 +42,8 @@ ErrorOr<VertexData> loadObj(std::istringstream& data) {
   std::vector<glm::vec2> texCoords;
   std::vector<glm::vec3> normals;
 
-  if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warning, &error, &data)) {
+  std::istringstream dataStream(data);
+  if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warning, &error, &dataStream)) {
     return Error(EngineError::LOAD_FAILURE);
   }
 

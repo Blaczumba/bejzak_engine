@@ -23,8 +23,7 @@ ErrorOr<lib::Buffer<std::byte>> StandardFileLoader::loadFileToBuffer(
   return buffer;
 }
 
-ErrorOr<std::istringstream> StandardFileLoader::loadFileToStringStream(
-    std::string_view filePath) const {
+ErrorOr<std::string> StandardFileLoader::loadFileToString(std::string_view filePath) const {
   std::ifstream file(filePath.data(), std::ios::ate | std::ios::binary);
 
   if (!file.is_open()) {
@@ -39,5 +38,5 @@ ErrorOr<std::istringstream> StandardFileLoader::loadFileToStringStream(
   file.seekg(0);
   file.read(reinterpret_cast<char*>(buffer.data()), fileSize);
 
-  return std::istringstream(std::move(buffer));
+  return buffer;
 }

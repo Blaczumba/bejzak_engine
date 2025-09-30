@@ -1,8 +1,8 @@
 #pragma once
 
-#include <sstream>
+#include <string>
 
-#include "common/status/status.h"
 #include "common/model_loader/model_loader.h"
+#include "common/status/status.h"
 
-ErrorOr<VertexData> loadObj(std::istringstream& data);
+ErrorOr<VertexData> loadObj(std::string& data);

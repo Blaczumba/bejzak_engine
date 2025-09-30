@@ -3,8 +3,8 @@
 #include <algorithm>
 #include <glm/gtc/matrix_transform.hpp>
 
-Camera::Camera(const Projection& projection, glm::vec3 position, float moveSpeed,
-               float mouseSensitivity)
+Camera::Camera(
+    const Projection& projection, glm::vec3 position, float moveSpeed, float mouseSensitivity)
   : _projection(projection), _position(position), _mouseXPos(0.0f), _mouseYPos(0.0f),
     _moveSpeed(moveSpeed), _mouseSensitivity(mouseSensitivity), _yaw(0.0f), _pitch(0.0f),
     _front{0.0f, 0.0f, -1.0f}, _up{0.0f, 1.0f, 0.0f},
