@@ -5,14 +5,13 @@
 #include "common/util/primitives.h"
 #include "lib/buffer/shared_buffer.h"
 
-#define TINYGLTF_IMPLEMENTATION
-#define TINYGLTF_NO_EXTERNAL_IMAGE
-#define TINYGLTF_NO_STB_IMAGE_WRITE
 #include <map>
 #include <span>
 #include <string>
-#include <tinygltf/tiny_gltf.h>
 #include <vector>
+
+#define TINYGLTF_IMPLEMENTATION
+#include <tinygltf/tiny_gltf.h>
 
 glm::mat4 GetNodeTransform(const tinygltf::Node& node) {
   glm::mat4 mat(1.0f);
@@ -131,7 +130,8 @@ std::string getTextureUri(const tinygltf::Model& model, const tinygltf::Paramete
   return image.uri;
 }
 
-void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node,
+
+    void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node,
                  const glm::mat4& parentTransform, std::vector<VertexData>& vertexDataList) {
   const glm::mat4 currentTransform = parentTransform * GetNodeTransform(node);
 
@@ -198,45 +198,4 @@ void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node,
   for (int childIndex : node.children) {
     ProcessNode(model, model.nodes[childIndex], currentTransform, vertexDataList);
   }
-}
-
-ErrorOr<std::vector<VertexData>> LoadGltfFromFile(const std::string& filePath) {
-  tinygltf::Model model;
-  tinygltf::TinyGLTF loader;
-
-  if (filePath.ends_with(".glb") || filePath.ends_with(".bin")) {
-    loader.LoadBinaryFromFile(&model, nullptr, nullptr, filePath);
-  } else if (filePath.ends_with(".gltf")) {
-    loader.LoadASCIIFromFile(&model, nullptr, nullptr, filePath);
-  } else {
-    return Error(EngineError::LOAD_FAILURE);
-  }
-
-  std::vector<VertexData> vertexDataList;
-  for (const tinygltf::Scene& scene : model.scenes) {
-    for (int nodeIndex : scene.nodes) {
-      const tinygltf::Node& node = model.nodes[nodeIndex];
-      ProcessNode(model, node, glm::mat4(1.0f), vertexDataList);
-    }
-  }
-  return vertexDataList;
-}
-
-ErrorOr<std::vector<VertexData>> LoadGltfFromString(
-    const std::string& dataString, const std::string& baseDir) {
-  tinygltf::Model model;
-  tinygltf::TinyGLTF loader;
-  std::string error, warning;
-
-  loader.LoadASCIIFromString(
-      &model, &error, &warning, dataString.data(), dataString.size(), baseDir);
-
-  std::vector<VertexData> vertexDataList;
-  for (const tinygltf::Scene& scene : model.scenes) {
-    for (int nodeIndex : scene.nodes) {
-      const tinygltf::Node& node = model.nodes[nodeIndex];
-      ProcessNode(model, node, glm::mat4(1.0f), vertexDataList);
-    }
-  }
-  return vertexDataList;
 }

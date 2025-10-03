@@ -5,25 +5,38 @@
 using ImageData = AssetManager::ImageData;
 using VertexData = AssetManager::VertexData;
 
-AssetManager::AssetManager(const std::shared_ptr<FileLoader>& fileLoader)
-  : _fileLoader(fileLoader) {}
+AssetManager::AssetManager(const LogicalDevice& logicalDevice, const std::shared_ptr<FileLoader>& fileLoader)
+  : _logicalDevice(&logicalDevice), _fileLoader(fileLoader) {}
 
-void AssetManager::loadImageAsync(
-    LogicalDevice& logicalDevice, const std::string& filePath,
+AssetManager& AssetManager::operator=(AssetManager&& assetManager) noexcept {
+  if (this == &assetManager) {
+    return *this;
+  }
+
+  _logicalDevice = std::exchange(assetManager._logicalDevice, nullptr);
+  _fileLoader = std::move(assetManager._fileLoader);
+  _vertexDataResources = std::move(assetManager._vertexDataResources);
+  _awaitingVertexDataResources = std::move(assetManager._awaitingVertexDataResources);
+  _imageResources = std::move(assetManager._imageResources);
+  _awaitingImageResources = std::move(assetManager._awaitingImageResources);
+  return *this;
+}
+
+void AssetManager::loadImageAsync(const std::string& filePath,
     std::function<ErrorOr<ImageResource>(std::span<const std::byte>)>&& loadingFunction) {
   if (_awaitingImageResources.contains(filePath)) {
     return;
   }
   auto future = std::async(
       std::launch::async,
-      [this, logicalDevice = std::ref(logicalDevice), filePath,
+      [this, filePath,
        loadingFunction = std::move(loadingFunction)]() -> ErrorOr<ImageData> {  // TODO:
         // boost::asio::post,
         // boost::asio::use_future
         ASSIGN_OR_RETURN(lib::Buffer<std::byte> fileData, _fileLoader->loadFileToBuffer(filePath));
         ASSIGN_OR_RETURN(ImageResource resource, loadingFunction(fileData));
         ASSIGN_OR_RETURN(
-            auto stagingBuffer, Buffer::createStagingBuffer(logicalDevice, resource.size));
+            auto stagingBuffer, Buffer::createStagingBuffer(*_logicalDevice, resource.size));
         RETURN_IF_ERROR(stagingBuffer.copyData(
             std::span(static_cast<const std::byte*>(resource.data), resource.size)));
         ImageLoader::deallocateResources(resource);
@@ -33,16 +46,16 @@ void AssetManager::loadImageAsync(
   _awaitingImageResources.emplace(filePath, std::move(future));
 }
 
-void AssetManager::loadImageAsync(LogicalDevice& logicalDevice, const std::string& filePath) {
+void AssetManager::loadImageAsync(const std::string& filePath) {
   if (filePath.ends_with(".ktx") || filePath.ends_with(".ktx2")) {
-    loadImageAsync(logicalDevice, filePath, ImageLoader::loadImageKtx);
+    loadImageAsync(filePath, ImageLoader::loadImageKtx);
   } else {
-    loadImageAsync(logicalDevice, filePath, ImageLoader::loadImageStbi);
+    loadImageAsync(filePath, ImageLoader::loadImageStbi);
   }
 }
 
 void AssetManager::loadVertexDataInterleavingAsync(
-    LogicalDevice& logicalDevice, const std::string& name, std::span<const std::byte> indices,
+    const std::string& name, std::span<const std::byte> indices,
     uint8_t indexSize, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords,
     std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents) {
   if (_awaitingVertexDataResources.contains(name)) {
@@ -50,19 +63,19 @@ void AssetManager::loadVertexDataInterleavingAsync(
   }
   auto future = std::async(
       std::launch::async,
-      [this, logicalDevice = std::ref(logicalDevice), indices, indexSize, positions, texCoords,
+      [this, indices, indexSize, positions, texCoords,
        normals, tangents]() -> ErrorOr<VertexData> {  // TODO: boost::asio::post,
                                                       // boost::asio::use_future
         ASSIGN_OR_RETURN(
             auto vertexBuffer,
-            Buffer::createStagingBuffer(logicalDevice, positions.size() * sizeof(VertexPTNT)));
+            Buffer::createStagingBuffer(*_logicalDevice, positions.size() * sizeof(VertexPTNT)));
         RETURN_IF_ERROR(vertexBuffer.copyDataInterleaving(positions, texCoords, normals, tangents));
         ASSIGN_OR_RETURN(
             auto vertexBufferPositions,
-            Buffer::createStagingBuffer(logicalDevice, positions.size() * sizeof(glm::vec3)));
+            Buffer::createStagingBuffer(*_logicalDevice, positions.size() * sizeof(glm::vec3)));
         RETURN_IF_ERROR(vertexBufferPositions.copyData(positions));
         ASSIGN_OR_RETURN(
-            auto indexBuffer, Buffer::createStagingBuffer(logicalDevice, indices.size()));
+            auto indexBuffer, Buffer::createStagingBuffer(*_logicalDevice, indices.size()));
         RETURN_IF_ERROR(indexBuffer.copyData(indices));
         return ErrorOr<VertexData>(
             VertexData(std::move(vertexBuffer), std::move(indexBuffer), getIndexType(indexSize),

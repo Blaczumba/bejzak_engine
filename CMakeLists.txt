@@ -84,7 +84,7 @@ target_link_libraries(${ENGINE_NAME} INTERFACE
         DescriptorSet
 
         CommonCamera CommonECS
-        CommonObject CommonPrimitives
+        CommonObject CommonUtil
         CommonScene CommonStandardFileLoader
         CommonModelLoader
 )

@@ -5,7 +5,7 @@
 #include "common/util/vertex_builder.h"
 #include "vulkan_wrapper/memory_objects/buffers.h"
 
-Buffer::Buffer(LogicalDevice& logicalDevice, const Allocation allocation, const VkBuffer buffer,
+Buffer::Buffer(const LogicalDevice& logicalDevice, const Allocation allocation, const VkBuffer buffer,
                VkBufferUsageFlags usage, uint32_t size, void* mappedData)
   : _logicalDevice(&logicalDevice), _allocation(allocation), _buffer(buffer), _usage(usage),
     _size(size), _mappedMemory(mappedData) {}
@@ -110,28 +110,28 @@ struct UniformBufferAllocator {
 
 }  // namespace
 
-ErrorOr<Buffer> Buffer::createVertexBuffer(LogicalDevice& logicalDevice, uint32_t size) {
+ErrorOr<Buffer> Buffer::createVertexBuffer(const LogicalDevice& logicalDevice, uint32_t size) {
   ASSIGN_OR_RETURN(const BufferData bufferData,
                    std::visit(VertexBufferAllocator{size}, logicalDevice.getMemoryAllocator()));
   return Buffer(logicalDevice, bufferData.allocation, bufferData.buffer, bufferData.usage, size,
                 bufferData.mappedMemory);
 }
 
-ErrorOr<Buffer> Buffer::createIndexBuffer(LogicalDevice& logicalDevice, uint32_t size) {
+ErrorOr<Buffer> Buffer::createIndexBuffer(const LogicalDevice& logicalDevice, uint32_t size) {
   ASSIGN_OR_RETURN(const BufferData bufferData,
                    std::visit(IndexBufferAllocator{size}, logicalDevice.getMemoryAllocator()));
   return Buffer(logicalDevice, bufferData.allocation, bufferData.buffer, bufferData.usage, size,
                 bufferData.mappedMemory);
 }
 
-ErrorOr<Buffer> Buffer::createStagingBuffer(LogicalDevice& logicalDevice, uint32_t size) {
+ErrorOr<Buffer> Buffer::createStagingBuffer(const LogicalDevice& logicalDevice, uint32_t size) {
   ASSIGN_OR_RETURN(const BufferData bufferData,
                    std::visit(StagingBufferAllocator{size}, logicalDevice.getMemoryAllocator()));
   return Buffer(logicalDevice, bufferData.allocation, bufferData.buffer, bufferData.usage, size,
                 bufferData.mappedMemory);
 }
 
-ErrorOr<Buffer> Buffer::createUniformBuffer(LogicalDevice& logicalDevice, uint32_t size) {
+ErrorOr<Buffer> Buffer::createUniformBuffer(const LogicalDevice& logicalDevice, uint32_t size) {
   ASSIGN_OR_RETURN(const BufferData bufferData,
                    std::visit(UniformBufferAllocator{size}, logicalDevice.getMemoryAllocator()));
   return Buffer(logicalDevice, bufferData.allocation, bufferData.buffer, bufferData.usage, size,

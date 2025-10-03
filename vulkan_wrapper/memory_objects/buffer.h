@@ -24,13 +24,13 @@ public:
 
   ~Buffer();
 
-  static ErrorOr<Buffer> createVertexBuffer(LogicalDevice& logicalDevice, uint32_t size);
+  static ErrorOr<Buffer> createVertexBuffer(const LogicalDevice& logicalDevice, uint32_t size);
 
-  static ErrorOr<Buffer> createIndexBuffer(LogicalDevice& logicalDevice, uint32_t size);
+  static ErrorOr<Buffer> createIndexBuffer(const LogicalDevice& logicalDevice, uint32_t size);
 
-  static ErrorOr<Buffer> createStagingBuffer(LogicalDevice& logicalDevice, uint32_t size);
+  static ErrorOr<Buffer> createStagingBuffer(const LogicalDevice& logicalDevice, uint32_t size);
 
-  static ErrorOr<Buffer> createUniformBuffer(LogicalDevice& logicalDevice, uint32_t size);
+  static ErrorOr<Buffer> createUniformBuffer(const LogicalDevice& logicalDevice, uint32_t size);
 
   Status copyBuffer(const VkCommandBuffer commandBuffer, const Buffer& srcBuffer,
                     std::optional<VkDeviceSize> size = std::nullopt, VkDeviceSize srcOffset = 0,
@@ -68,9 +68,9 @@ private:
   VkBufferUsageFlags _usage;
   void* _mappedMemory = nullptr;
 
-  LogicalDevice* _logicalDevice;
+  const LogicalDevice* _logicalDevice;
 
-  Buffer(LogicalDevice& logicalDevice, const Allocation allocation, const VkBuffer vertexBuffer,
+  Buffer(const LogicalDevice& logicalDevice, const Allocation allocation, const VkBuffer vertexBuffer,
          VkBufferUsageFlags usage, uint32_t size, void* mappedData = nullptr);
 };
 

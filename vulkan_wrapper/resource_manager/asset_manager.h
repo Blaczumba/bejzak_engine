@@ -15,13 +15,18 @@
 #include "common/status/status.h"
 #include "common/util/geometry.h"
 #include "common/util/primitives.h"
+#include "common/util/asset_manager.h"
 #include "vulkan_wrapper/logical_device/logical_device.h"
 #include "vulkan_wrapper/memory_objects/buffer.h"
 #include "vulkan_wrapper/util/index_buffer_util.h"
 
-class AssetManager {
+class AssetManager : public common::AssetManager<AssetManager> {
 public:
-  AssetManager(const std::shared_ptr<FileLoader>& fileLoader);
+  AssetManager() = default;
+
+  AssetManager(const LogicalDevice& logicalDevice, const std::shared_ptr<FileLoader>& fileLoader);
+
+  AssetManager& operator=(AssetManager&& assetManager) noexcept;
 
   ~AssetManager() = default;
 
@@ -41,16 +46,16 @@ public:
     Buffer vertexBufferPositions;
   };
 
-  void loadImageAsync(LogicalDevice& logicalDevice, const std::string& filePath);
+  void loadImageAsync(const std::string& filePath);
 
   void loadVertexDataInterleavingAsync(
-      LogicalDevice& logicalDevice, const std::string& name, std::span<const std::byte> indices,
+      const std::string& name, std::span<const std::byte> indices,
       uint8_t indexSize, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords,
       std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents);
 
   template <typename VertexType>
   void loadVertexDataAsync(
-      LogicalDevice& logicalDevice, const std::string& filePath, std::span<const std::byte> indices,
+      const std::string& filePath, std::span<const std::byte> indices,
       uint8_t indexSize, std::span<const VertexType> vertices);
 
   ErrorOr<std::reference_wrapper<const ImageData>> getImageData(const std::string& filePath);
@@ -58,9 +63,10 @@ public:
   ErrorOr<std::reference_wrapper<const VertexData>> getVertexData(const std::string& filePath);
 
 private:
-  void loadImageAsync(
-      LogicalDevice& logicalDevice, const std::string& filePath,
+  void loadImageAsync(const std::string& filePath,
       std::function<ErrorOr<ImageResource>(std::span<const std::byte>)>&& loadingFunction);
+
+  const LogicalDevice* _logicalDevice = nullptr;
 
   std::shared_ptr<FileLoader> _fileLoader;
 
@@ -73,22 +79,22 @@ private:
 
 template <typename Type>
 void AssetManager::loadVertexDataAsync(
-    LogicalDevice& logicalDevice, const std::string& filePath, std::span<const std::byte> indices,
+    const std::string& filePath, std::span<const std::byte> indices,
     uint8_t indexSize, std::span<const Type> vertices) {
   if (_awaitingVertexDataResources.contains(filePath)) {
     return;
   }
   auto future = std::async(
-      std::launch::async, ([this, logicalDevice = std::ref(logicalDevice), indices, indexSize,
+      std::launch::async, ([this, indices, indexSize,
                             vertices]() {  // TODO: boost::asio::post,
                                            // boost::asio::use_future
         auto vertexBuffer =
-            Buffer::createStagingBuffer(logicalDevice, vertices.size() * sizeof(Type));
+            Buffer::createStagingBuffer(*_logicalDevice, vertices.size() * sizeof(Type));
         if (!vertexBuffer.has_value()) [[unlikely]] {
           return ErrorOr<VertexData>(Error(vertexBuffer.error()));
         }
         vertexBuffer->copyData(vertices);
-        auto indexBuffer = Buffer::createStagingBuffer(logicalDevice, indices.size());
+        auto indexBuffer = Buffer::createStagingBuffer(*_logicalDevice, indices.size());
         if (!indexBuffer.has_value()) [[unlikely]] {
           return ErrorOr<VertexData>(Error(indexBuffer.error()));
         }
