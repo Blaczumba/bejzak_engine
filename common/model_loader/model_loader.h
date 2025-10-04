@@ -34,6 +34,8 @@ struct VertexData {
   std::string diffuseTexture;
   std::string normalTexture;
   std::string metallicRoughnessTexture;
+
+  std::string vertexResource;
 };
 
 class ModelLoader {
