@@ -70,8 +70,9 @@ private:
 
   const LogicalDevice* _logicalDevice;
 
-  Buffer(const LogicalDevice& logicalDevice, const Allocation allocation, const VkBuffer vertexBuffer,
-         VkBufferUsageFlags usage, uint32_t size, void* mappedData = nullptr);
+  Buffer(const LogicalDevice& logicalDevice, const Allocation allocation,
+         const VkBuffer vertexBuffer, VkBufferUsageFlags usage, uint32_t size,
+         void* mappedData = nullptr);
 };
 
 template <typename T>

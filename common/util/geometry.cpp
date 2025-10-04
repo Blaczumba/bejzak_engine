@@ -100,7 +100,6 @@ std::enable_if_t<std::is_unsigned<IndexType>::value, lib::Buffer<glm::vec3>> pro
 
 }  // namespace
 
-
 ErrorOr<lib::Buffer<glm::vec3>> createTangents(
     uint8_t indexSize, std::span<const std::byte> indicesBytes,
     std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords) {

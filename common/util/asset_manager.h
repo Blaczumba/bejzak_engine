@@ -5,7 +5,6 @@
 #include <span>
 #include <string>
 
-
 namespace common {
 
 using ModelPointer = std::any;
@@ -18,12 +17,11 @@ public:
   }
 
   void loadVertexDataInterleavingAsync(
-      ModelPointer& modelPtr,
-      const std::string& name, std::span<const std::byte> indices, uint8_t indexSize,
-      std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords,
-      std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents) {
+      ModelPointer& modelPtr, const std::string& name, std::span<const std::byte> indices,
+      uint8_t indexSize, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords,
+      std::span<const glm::vec3> normals) {
     static_cast<AssetManagerImpl*>(this)->loadVertexDataInterleavingAsync(
-        modelPtr, name, indices, indexSize, positions, texCoords, normals, tangents);
+        modelPtr, name, indices, indexSize, positions, texCoords, normals);
   }
 
   template <typename VertexType>

@@ -1,13 +1,14 @@
 #include "asset_manager.h"
 
-#include "common/util/geometry.h"
-
 #include <chrono>
+
+#include "common/util/geometry.h"
 
 using ImageData = AssetManager::ImageData;
 using VertexData = AssetManager::VertexData;
 
-AssetManager::AssetManager(const LogicalDevice& logicalDevice, const std::shared_ptr<FileLoader>& fileLoader)
+AssetManager::AssetManager(
+    const LogicalDevice& logicalDevice, const std::shared_ptr<FileLoader>& fileLoader)
   : _logicalDevice(&logicalDevice), _fileLoader(fileLoader) {}
 
 AssetManager& AssetManager::operator=(AssetManager&& assetManager) noexcept {
@@ -24,7 +25,8 @@ AssetManager& AssetManager::operator=(AssetManager&& assetManager) noexcept {
   return *this;
 }
 
-void AssetManager::loadImageAsync(const std::string& filePath,
+void AssetManager::loadImageAsync(
+    const std::string& filePath,
     std::function<ErrorOr<ImageResource>(std::span<const std::byte>)>&& loadingFunction) {
   if (_awaitingImageResources.contains(filePath)) {
     return;
@@ -57,8 +59,7 @@ void AssetManager::loadImageAsync(const std::string& filePath) {
 }
 
 void AssetManager::loadVertexDataInterleavingAsync(
-    common::ModelPointer& modelPtr,
-    const std::string& name, std::span<const std::byte> indices,
+    common::ModelPointer& modelPtr, const std::string& name, std::span<const std::byte> indices,
     uint8_t indexSize, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords,
     std::span<const glm::vec3> normals) {
   if (_awaitingVertexDataResources.contains(name)) {
@@ -68,11 +69,12 @@ void AssetManager::loadVertexDataInterleavingAsync(
       std::launch::async,
       [this, modelPtr, indices, indexSize, positions, texCoords,
        normals]() -> ErrorOr<VertexData> {  // TODO: boost::asio::post,
-                                                      // boost::asio::use_future
+                                            // boost::asio::use_future
         ASSIGN_OR_RETURN(
             auto vertexBuffer,
             Buffer::createStagingBuffer(*_logicalDevice, positions.size() * sizeof(VertexPTNT)));
-        ASSIGN_OR_RETURN(lib::Buffer<glm::vec3> tangents, createTangents(indexSize, indices, positions, texCoords));
+        ASSIGN_OR_RETURN(lib::Buffer<glm::vec3> tangents,
+                         createTangents(indexSize, indices, positions, texCoords));
         RETURN_IF_ERROR(vertexBuffer.copyDataInterleaving(positions, texCoords, normals, tangents));
         ASSIGN_OR_RETURN(
             auto vertexBufferPositions,

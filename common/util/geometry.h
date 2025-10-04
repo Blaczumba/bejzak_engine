@@ -7,9 +7,9 @@
 #include <span>
 #include <vector>
 
+#include "common/status/status.h"
 #include "common/util/index_buffer_index.h"
 #include "lib/buffer/buffer.h"
-#include "common/status/status.h"
 
 constexpr size_t NUM_CUBE_FACES = 6;
 

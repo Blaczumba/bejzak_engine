@@ -5,8 +5,8 @@
 #include "common/util/vertex_builder.h"
 #include "vulkan_wrapper/memory_objects/buffers.h"
 
-Buffer::Buffer(const LogicalDevice& logicalDevice, const Allocation allocation, const VkBuffer buffer,
-               VkBufferUsageFlags usage, uint32_t size, void* mappedData)
+Buffer::Buffer(const LogicalDevice& logicalDevice, const Allocation allocation,
+               const VkBuffer buffer, VkBufferUsageFlags usage, uint32_t size, void* mappedData)
   : _logicalDevice(&logicalDevice), _allocation(allocation), _buffer(buffer), _usage(usage),
     _size(size), _mappedMemory(mappedData) {}
 

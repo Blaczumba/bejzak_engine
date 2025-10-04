@@ -107,31 +107,28 @@ std::span<const unsigned char> processAttribute(
       &buffer.data[accessor.byteOffset + bufferView.byteOffset], accessor.count);
 }
 
-lib::Buffer<std::byte> createIndices(
-    const tinygltf::Model& model, const tinygltf::Primitive& primitive, uint8_t* indexType) {
+std::span<const std::byte> getIndices(
+    const tinygltf::Model& model, const tinygltf::Primitive& primitive, uint8_t* indexSize) {
   const tinygltf::Accessor& accessor = model.accessors[primitive.indices];
   const tinygltf::BufferView& bufferView = model.bufferViews[accessor.bufferView];
   const tinygltf::Buffer& buffer = model.buffers[bufferView.buffer];
 
   size_t indicesCount = accessor.count;
-  *indexType = getMatchingIndexSize(indicesCount);
+  switch (accessor.componentType) { 
+  case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
+    *indexSize = 1;
+    break;
+  case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+    *indexSize = 2;
+    break;
+  case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+    *indexSize = 4;
+    break;
+  }
   const size_t offset = accessor.byteOffset + bufferView.byteOffset;
 
-  switch (accessor.componentType) {
-    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE:
-      return processIndices(
-          std::span(reinterpret_cast<const uint8_t*>(&buffer.data[offset]), indicesCount),
-          *indexType);
-    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-      return processIndices(
-          std::span(reinterpret_cast<const uint16_t*>(&buffer.data[offset]), indicesCount),
-          *indexType);
-    case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-      return processIndices(
-          std::span(reinterpret_cast<const uint32_t*>(&buffer.data[offset]), indicesCount),
-          *indexType);
-  }
-  return lib::Buffer<std::byte>{};
+  return std::span<const std::byte>(
+      reinterpret_cast<const std::byte*>(&buffer.data[offset]), indicesCount * *indexSize);
 }
 
 std::string getTextureUri(const tinygltf::Model& model, const tinygltf::ParameterMap& values,
@@ -161,36 +158,36 @@ Status processNode(common::AssetManager<AssetManagerImpl>& assetManager,
   for (const tinygltf::Primitive& primitive : model->meshes[node.mesh].primitives) {
     const std::map<std::string, int>& attributes = primitive.attributes;
 
-    lib::SharedBuffer<glm::vec3> positions;
     lib::SharedBuffer<glm::vec2> texCoords;
     lib::SharedBuffer<glm::vec3> normals;
 
-    if (std::span<const unsigned char> positionsData =
+    std::span<const unsigned char> positionsData =
             processAttribute(*model, attributes, "POSITION");
-        positionsData.data()) {
-      const glm::vec3* data = reinterpret_cast<const glm::vec3*>(positionsData.data());
-      positions = lib::SharedBuffer<glm::vec3>(data, data + positionsData.size());
-    }
+    const glm::vec3* positionData = reinterpret_cast<const glm::vec3*>(positionsData.data());
 
-    if (std::span<const unsigned char> textureCoordsData =
+    lib::SharedBuffer<glm::vec3> positions(positionData, positionsData.size());
+
+    std::span<const unsigned char> textureCoordsData =
             processAttribute(*model, attributes, "TEXCOORD_0");
-        textureCoordsData.data()) {
-      const glm::vec2* data = reinterpret_cast<const glm::vec2*>(textureCoordsData.data());
-      texCoords = lib::SharedBuffer<glm::vec2>(data, data + textureCoordsData.size());
-    }
+    const glm::vec2* textureData = reinterpret_cast<const glm::vec2*>(textureCoordsData.data());
 
-    if (std::span<const unsigned char> normalsData = processAttribute(*model, attributes, "NORMAL");
-        normalsData.data()) {
-      const glm::vec3* data = reinterpret_cast<const glm::vec3*>(normalsData.data());
-      normals = lib::SharedBuffer<glm::vec3>(data, data + normalsData.size());
-    }
+    std::span<const unsigned char> normalsData = processAttribute(*model, attributes, "NORMAL");
+    const glm::vec3* normalData = reinterpret_cast<const glm::vec3*>(normalsData.data());
+
+    static int wik = 0;
 
     // Load indices
-    lib::SharedBuffer<std::byte> indicesBytes;
-    uint8_t indexSize;
-    if (primitive.indices >= 0) {
-      indicesBytes = createIndices(*model, primitive, &indexSize);
+    if (primitive.indices <= 0) {
+      return Error(EngineError::LOAD_FAILURE);
     }
+    uint8_t indexSize;
+    std::span<const std::byte> indicesBytes = getIndices(*model, primitive, &indexSize);
+
+    std::any modelPtr = model;
+    assetManager.loadVertexDataInterleavingAsync(
+        modelPtr, std::to_string(wik++), indicesBytes, indexSize,
+        std::span(positionData, positionsData.size()),
+        std::span(textureData, textureCoordsData.size()), std::span(normalData, normalsData.size()));
 
     // Load textures
     std::string diffuseTexture;
