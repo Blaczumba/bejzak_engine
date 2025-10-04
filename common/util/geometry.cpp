@@ -73,3 +73,51 @@ bool AABB::intersectsFrustum(std::span<const glm::vec4> planes) const {
 
   return true;
 }
+
+namespace {
+
+template <typename IndexType>
+std::enable_if_t<std::is_unsigned<IndexType>::value, lib::Buffer<glm::vec3>> processTangents(
+    std::span<const IndexType> indices, std::span<const glm::vec3> positions,
+    std::span<const glm::vec2> texCoords) {
+  lib::Buffer<glm::vec3> tangents(positions.size());
+  for (size_t i = 0; i < indices.size(); i += 3) {
+    const glm::vec3& pos0 = positions[indices[i]];
+    const glm::vec3 edge1 = positions[indices[i + 1]] - pos0;
+    const glm::vec3 edge2 = positions[indices[i + 2]] - pos0;
+
+    const glm::vec2& texCoord0 = texCoords[indices[i]];
+    const glm::vec2 deltaUV1 = texCoords[indices[i + 1]] - texCoord0;
+    const glm::vec2 deltaUV2 = texCoords[indices[i + 2]] - texCoord0;
+
+    // float f = 1.0f / (deltaUV1.x * deltaUV2.y - deltaUV2.x * deltaUV1.y);
+    tangents[indices[i]] = tangents[indices[i + 1]] = tangents[indices[i + 2]] =
+        glm::normalize(deltaUV2.y * edge1 - deltaUV1.y * edge2);  // f scale
+    // glm::vec3 bitangent = glm::normalize(-deltaUV2.x * edge1 + deltaUV1.x * edge2); // f scale
+  }
+  return tangents;
+}
+
+}  // namespace
+
+
+ErrorOr<lib::Buffer<glm::vec3>> createTangents(
+    uint8_t indexSize, std::span<const std::byte> indicesBytes,
+    std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords) {
+  const size_t indicesCount = indicesBytes.size() / indexSize;
+  switch (indexSize) {
+    case 1:
+      return processTangents(
+          std::span(reinterpret_cast<const uint8_t*>(indicesBytes.data()), indicesCount), positions,
+          texCoords);
+    case 2:
+      return processTangents(
+          std::span(reinterpret_cast<const uint16_t*>(indicesBytes.data()), indicesCount),
+          positions, texCoords);
+    case 4:
+      return processTangents(
+          std::span(reinterpret_cast<const uint32_t*>(indicesBytes.data()), indicesCount),
+          positions, texCoords);
+  }
+  return Error(EngineError::NOT_RECOGNIZED_TYPE);
+}

@@ -1,5 +1,7 @@
 #include "asset_manager.h"
 
+#include "common/util/geometry.h"
+
 #include <chrono>
 
 using ImageData = AssetManager::ImageData;
@@ -55,20 +57,22 @@ void AssetManager::loadImageAsync(const std::string& filePath) {
 }
 
 void AssetManager::loadVertexDataInterleavingAsync(
+    common::ModelPointer& modelPtr,
     const std::string& name, std::span<const std::byte> indices,
     uint8_t indexSize, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords,
-    std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents) {
+    std::span<const glm::vec3> normals) {
   if (_awaitingVertexDataResources.contains(name)) {
     return;
   }
   auto future = std::async(
       std::launch::async,
-      [this, indices, indexSize, positions, texCoords,
-       normals, tangents]() -> ErrorOr<VertexData> {  // TODO: boost::asio::post,
+      [this, modelPtr, indices, indexSize, positions, texCoords,
+       normals]() -> ErrorOr<VertexData> {  // TODO: boost::asio::post,
                                                       // boost::asio::use_future
         ASSIGN_OR_RETURN(
             auto vertexBuffer,
             Buffer::createStagingBuffer(*_logicalDevice, positions.size() * sizeof(VertexPTNT)));
+        ASSIGN_OR_RETURN(lib::Buffer<glm::vec3> tangents, createTangents(indexSize, indices, positions, texCoords));
         RETURN_IF_ERROR(vertexBuffer.copyDataInterleaving(positions, texCoords, normals, tangents));
         ASSIGN_OR_RETURN(
             auto vertexBufferPositions,

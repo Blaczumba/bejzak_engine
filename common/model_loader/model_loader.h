@@ -12,12 +12,12 @@
 
 template <typename IndexT>
 std::enable_if_t<std::is_unsigned<IndexT>::value, lib::Buffer<std::byte>> processIndices(
-    std::span<const IndexT> srcIndices, IndexType indexType) {
-  lib::Buffer<std::byte> indices(srcIndices.size() * static_cast<size_t>(indexType));
+    std::span<const IndexT> srcIndices, uint8_t indexSize) {
+  lib::Buffer<std::byte> indices(srcIndices.size() * indexSize);
   std::byte* data = indices.data();
   for (const IndexT& index : srcIndices) {
-    std::memcpy(data, &index, static_cast<size_t>(indexType));
-    data += static_cast<size_t>(indexType);
+    std::memcpy(data, &index, indexSize);
+    data += indexSize;
   }
   return indices;
 }
@@ -26,9 +26,8 @@ struct VertexData {
   lib::SharedBuffer<glm::vec3> positions;
   lib::SharedBuffer<glm::vec2> textureCoordinates;
   lib::SharedBuffer<glm::vec3> normals;
-  lib::SharedBuffer<glm::vec3> tangents;
   lib::SharedBuffer<std::byte> indices;
-  IndexType indexType;
+  uint8_t indexSize;
 
   glm::mat4 model;
 

@@ -7,6 +7,10 @@
 #include <span>
 #include <vector>
 
+#include "common/util/index_buffer_index.h"
+#include "lib/buffer/buffer.h"
+#include "common/status/status.h"
+
 constexpr size_t NUM_CUBE_FACES = 6;
 
 struct AABB {
@@ -20,4 +24,9 @@ struct AABB {
 
 AABB createAABBfromVertices(
     std::span<const glm::vec3> vertices, const glm::mat4& transform = glm::mat4(1.0f));
+
 std::array<glm::vec4, NUM_CUBE_FACES> extractFrustumPlanes(const glm::mat4& VP);
+
+ErrorOr<lib::Buffer<glm::vec3>> createTangents(
+    uint8_t indexSize, std::span<const std::byte> indicesBytes,
+    std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords);

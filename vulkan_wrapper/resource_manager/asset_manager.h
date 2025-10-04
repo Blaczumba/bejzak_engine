@@ -49,9 +49,10 @@ public:
   void loadImageAsync(const std::string& filePath);
 
   void loadVertexDataInterleavingAsync(
+      common::ModelPointer& modelPtr,
       const std::string& name, std::span<const std::byte> indices,
       uint8_t indexSize, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords,
-      std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents);
+      std::span<const glm::vec3> normals);
 
   template <typename VertexType>
   void loadVertexDataAsync(
@@ -79,29 +80,22 @@ private:
 
 template <typename Type>
 void AssetManager::loadVertexDataAsync(
-    const std::string& filePath, std::span<const std::byte> indices,
+    const std::string& name, std::span<const std::byte> indices,
     uint8_t indexSize, std::span<const Type> vertices) {
-  if (_awaitingVertexDataResources.contains(filePath)) {
+  if (_awaitingVertexDataResources.contains(name)) {
     return;
   }
   auto future = std::async(
       std::launch::async, ([this, indices, indexSize,
-                            vertices]() {  // TODO: boost::asio::post,
+                            vertices]() -> ErrorOr<VertexData> {  // TODO: boost::asio::post,
                                            // boost::asio::use_future
-        auto vertexBuffer =
-            Buffer::createStagingBuffer(*_logicalDevice, vertices.size() * sizeof(Type));
-        if (!vertexBuffer.has_value()) [[unlikely]] {
-          return ErrorOr<VertexData>(Error(vertexBuffer.error()));
-        }
-        vertexBuffer->copyData(vertices);
-        auto indexBuffer = Buffer::createStagingBuffer(*_logicalDevice, indices.size());
-        if (!indexBuffer.has_value()) [[unlikely]] {
-          return ErrorOr<VertexData>(Error(indexBuffer.error()));
-        }
-        indexBuffer->copyData(indices);
-        return ErrorOr<VertexData>(
-            VertexData{Buffer(), std::move(indexBuffer.value()), getIndexType(indexSize),
-                       std::move(vertexBuffer.value())});
+        ASSIGN_OR_RETURN(auto vertexBuffer,
+            Buffer::createStagingBuffer(*_logicalDevice, vertices.size() * sizeof(Type)));
+        RETURN_IF_ERROR(vertexBuffer.copyData(vertices));
+        ASSIGN_OR_RETURN(auto indexBuffer, Buffer::createStagingBuffer(*_logicalDevice, indices.size()));
+        RETURN_IF_ERROR(indexBuffer.copyData(indices));
+        return VertexData{Buffer(), std::move(indexBuffer), getIndexType(indexSize),
+                       std::move(vertexBuffer)};
       }));
-  _awaitingVertexDataResources.emplace(filePath, std::move(future));
+  _awaitingVertexDataResources.emplace(name, std::move(future));
 }
