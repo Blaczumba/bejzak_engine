@@ -28,8 +28,23 @@ ErrorOr<lib::Buffer<std::byte>> AndroidFileLoader::loadFileToBuffer(
   return buffer;
 }
 
-ErrorOr<std::string> AndroidFileLoader::loadFileToStringStream(std::string_view filePath) const {
-  ASSIGN_OR_RETURN(const lib::Buffer<std::byte> buffer, loadFileToBuffer(filePath));
-  return std::string(
-      reinterpret_cast<const char*>(buffer.cbegin()), reinterpret_cast<const char*>(buffer.cend()));
+ErrorOr<std::string> AndroidFileLoader::loadFileToString(std::string_view filePath) const {
+  AAsset* asset = AAssetManager_open(_assetManager, filePath.data(), AASSET_MODE_BUFFER);
+  if (!asset) {
+    return Error(EngineError::NOT_FOUND);
+  }
+
+  const off_t assetSize = AAsset_getLength(asset);
+  std::string buffer;
+  buffer.resize(assetSize);
+
+  int bytesRead = AAsset_read(asset, buffer.data(), assetSize);
+
+  AAsset_close(asset);
+
+  if (bytesRead != assetSize) {
+    return Error(EngineError::LOAD_FAILURE);
+  }
+
+  return buffer;
 }

@@ -15,7 +15,7 @@ public:
 
   ErrorOr<lib::Buffer<std::byte>> loadFileToBuffer(std::string_view filePath) const override;
 
-  ErrorOr<std::string> loadFileToStringStream(std::string_view filePath) const override;
+  ErrorOr<std::string> loadFileToString(std::string_view filePath) const override;
 
 private:
   AAssetManager* _assetManager;
