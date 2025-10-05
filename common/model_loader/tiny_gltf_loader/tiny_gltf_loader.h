@@ -197,9 +197,9 @@ Status processNode(common::AssetManager<AssetManagerImpl>& assetManager, std::an
 
     // TODO: refactor
     static int objectCounter = 0;
-
+    const std::string objectName = baseDir + std::to_string(objectCounter);
     assetManager.loadVertexDataInterleavingAsync(
-        model, std::to_string(objectCounter), indicesBytes, indexSize,
+        model, objectName, indicesBytes, indexSize,
         std::span(reinterpret_cast<const glm::vec3*>(positionsData.data()), positionsData.size()),
         std::span(reinterpret_cast<const glm::vec2*>(textureCoordsData.data()), textureCoordsData.size()),
         std::span(reinterpret_cast<const glm::vec3*>(normalsData.data()), normalsData.size()));
@@ -211,8 +211,8 @@ Status processNode(common::AssetManager<AssetManagerImpl>& assetManager, std::an
     vertexDataList.emplace_back(
         std::move(positions), lib::SharedBuffer<glm::vec2>{}, lib::SharedBuffer<glm::vec3>{},
         lib::SharedBuffer<std::byte>{},
-        indexSize, currentTransform, std::move(diffuseTexture), std::move(normalTexture), std::move(metallicRoughnessTexture),
-        std::to_string(objectCounter++));
+        indexSize, currentTransform, std::move(diffuseTexture), std::move(normalTexture), std::move(metallicRoughnessTexture), objectName);
+    ++objectCounter;
   }
 
   for (int childIndex : node.children) {
