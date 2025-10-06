@@ -1,5 +1,8 @@
 #pragma once
 
+#ifdef __ANDROID__
+#include <android/asset_manager.h>
+#endif
 #include <any>
 #include <map>
 #include <filesystem>
@@ -15,6 +18,8 @@
 #include "common/util/geometry.h"
 #include "common/util/primitives.h"
 #include "lib/buffer/shared_buffer.h"
+
+void setAssetmanager(AAssetManager *assetManager);
 
 namespace {
 

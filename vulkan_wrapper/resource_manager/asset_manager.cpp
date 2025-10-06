@@ -8,8 +8,8 @@ using ImageData = AssetManager::ImageData;
 using VertexData = AssetManager::VertexData;
 
 AssetManager::AssetManager(
-    const LogicalDevice& logicalDevice, const std::shared_ptr<FileLoader>& fileLoader)
-  : _logicalDevice(&logicalDevice), _fileLoader(fileLoader) {}
+    const LogicalDevice& logicalDevice, const std::shared_ptr<FileLoader>& fileLoader, std::launch launchPolicy)
+  : _logicalDevice(&logicalDevice), _fileLoader(fileLoader), _launchPolicy(launchPolicy) {}
 
 AssetManager& AssetManager::operator=(AssetManager&& assetManager) noexcept {
   if (this == &assetManager) {
@@ -32,7 +32,7 @@ void AssetManager::loadImageAsync(
     return;
   }
   auto future = std::async(
-      std::launch::async,
+      _launchPolicy,
       [this, filePath,
        loadingFunction = std::move(loadingFunction)]() -> ErrorOr<ImageData> {  // TODO:
         // boost::asio::post,
@@ -66,7 +66,7 @@ void AssetManager::loadVertexDataInterleavingAsync(
     return;
   }
   auto future = std::async(
-      std::launch::async,
+      _launchPolicy,
       [this, modelPtr, indices, indexSize, positions, texCoords,
        normals]() -> ErrorOr<VertexData> {  // TODO: boost::asio::post,
                                             // boost::asio::use_future

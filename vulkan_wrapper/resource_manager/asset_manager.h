@@ -24,7 +24,7 @@ class AssetManager : public common::AssetManager<AssetManager> {
 public:
   AssetManager() = default;
 
-  AssetManager(const LogicalDevice& logicalDevice, const std::shared_ptr<FileLoader>& fileLoader);
+  AssetManager(const LogicalDevice& logicalDevice, const std::shared_ptr<FileLoader>& fileLoader, std::launch launchPolicy = std::launch::async);
 
   AssetManager& operator=(AssetManager&& assetManager) noexcept;
 
@@ -68,6 +68,8 @@ private:
       const std::string& filePath,
       std::function<ErrorOr<ImageResource>(std::span<const std::byte>)>&& loadingFunction);
 
+  std::launch _launchPolicy;
+
   const LogicalDevice* _logicalDevice = nullptr;
 
   std::shared_ptr<FileLoader> _fileLoader;
@@ -86,7 +88,7 @@ void AssetManager::loadVertexDataAsync(common::ModelPointer& modelPtr, const std
     return;
   }
   auto future = std::async(
-      std::launch::async, ([this, modelPtr, indices, indexSize,
+      _launchPolicy, ([this, modelPtr, indices, indexSize,
                             vertices]() -> ErrorOr<VertexData> {  // TODO: boost::asio::post,
                                                                   // boost::asio::use_future
         ASSIGN_OR_RETURN(auto vertexBuffer, Buffer::createStagingBuffer(
