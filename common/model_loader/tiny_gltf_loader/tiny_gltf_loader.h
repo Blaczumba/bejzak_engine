@@ -156,8 +156,8 @@ Status processNode(common::AssetManager<AssetManagerImpl>& assetManager, std::an
 
   if (node.mesh < 0) {
     for (int childIndex : node.children) {
-      processNode(assetManager, model, modelRef.nodes[childIndex], currentTransform, vertexDataList,
-                  baseDir);
+      RETURN_IF_ERROR(processNode(assetManager, model, modelRef.nodes[childIndex], currentTransform, vertexDataList,
+                  baseDir));
     }
     return StatusOk();
   }

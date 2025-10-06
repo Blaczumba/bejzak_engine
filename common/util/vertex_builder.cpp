@@ -26,9 +26,7 @@ ErrorOr<lib::Buffer<VertexPTN>> buildInterleavingVertexData(
 
   lib::Buffer<VertexPTN> vertices(positions.size());
   for (size_t i = 0; i < vertices.size(); ++i) {
-    vertices[i].pos = positions[i];
-    vertices[i].texCoord = texCoords[i];
-    vertices[i].normal = normals[i];
+    vertices[i] = VertexPTN{positions[i], texCoords[i], normals[i]};
   }
   return vertices;
 }
@@ -43,10 +41,7 @@ ErrorOr<lib::Buffer<VertexPTNT>> buildInterleavingVertexData(
 
   lib::Buffer<VertexPTNT> vertices(positions.size());
   for (size_t i = 0; i < vertices.size(); ++i) {
-    vertices[i].pos = positions[i];
-    vertices[i].texCoord = texCoords[i];
-    vertices[i].normal = normals[i];
-    vertices[i].tangent = tangents[i];
+    vertices[i] = VertexPTNT{positions[i], texCoords[i], normals[i], tangents[i]};
   }
   return vertices;
 }

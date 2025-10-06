@@ -1,7 +1,5 @@
 #include "asset_manager.h"
 
-#include <chrono>
-
 #include "common/util/geometry.h"
 
 using ImageData = AssetManager::ImageData;
