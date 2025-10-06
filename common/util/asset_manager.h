@@ -27,9 +27,9 @@ public:
   template <typename VertexType>
   void loadVertexDataAsync(
       ModelPointer& modelPtr, const std::string& filePath, std::span<const std::byte> indices,
-                           uint8_t indexSize, std::span<const VertexType> vertices) {
-    static_cast<AssetManagerImpl*>(this)->template loadVertexDataAsync<VertexType>(modelPtr,
-        filePath, indices, indexSize, vertices);
+      uint8_t indexSize, std::span<const VertexType> vertices) {
+    static_cast<AssetManagerImpl*>(this)->template loadVertexDataAsync<VertexType>(
+        modelPtr, filePath, indices, indexSize, vertices);
   }
 };
 

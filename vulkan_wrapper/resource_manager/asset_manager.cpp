@@ -5,8 +5,8 @@
 using ImageData = AssetManager::ImageData;
 using VertexData = AssetManager::VertexData;
 
-AssetManager::AssetManager(
-    const LogicalDevice& logicalDevice, const std::shared_ptr<FileLoader>& fileLoader, std::launch launchPolicy)
+AssetManager::AssetManager(const LogicalDevice& logicalDevice,
+                           const std::shared_ptr<FileLoader>& fileLoader, std::launch launchPolicy)
   : _logicalDevice(&logicalDevice), _fileLoader(fileLoader), _launchPolicy(launchPolicy) {}
 
 AssetManager& AssetManager::operator=(AssetManager&& assetManager) noexcept {

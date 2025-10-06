@@ -1,18 +1,18 @@
 #pragma once
 
-#include <any>
 #include <algorithm>
+#include <any>
 #include <iterator>
+#include <memory>
 #include <sstream>
 #include <stdexcept>
 #include <tinyobjloader/tiny_obj_loader.h>
 #include <unordered_map>
-#include <memory>
 
 #include "common/model_loader/model_loader.h"
 #include "common/status/status.h"
-#include "common/util/primitives.h"
 #include "common/util/asset_manager.h"
+#include "common/util/primitives.h"
 #include "lib/buffer/shared_buffer.h"
 
 struct Indices {
@@ -36,17 +36,18 @@ struct Indices {
 };
 
 template <typename AssetManagerImpl>
-ErrorOr<VertexData> loadObj(common::AssetManager<AssetManagerImpl>& assetManager, const std::string& name, std::string& stringData) {
+ErrorOr<VertexData> loadObj(common::AssetManager<AssetManagerImpl>& assetManager,
+                            const std::string& name, std::string& stringData) {
   tinyobj::attrib_t attrib;
   std::vector<tinyobj::shape_t> shapes;
   std::vector<tinyobj::material_t> materials;
   std::string warning, error;
 
   struct ModelData {
-      std::vector<uint32_t> indices;
-      std::vector<glm::vec3> positions;
-      std::vector<glm::vec2> texCoords;
-      std::vector<glm::vec3> normals;
+    std::vector<uint32_t> indices;
+    std::vector<glm::vec3> positions;
+    std::vector<glm::vec2> texCoords;
+    std::vector<glm::vec3> normals;
   };
 
   std::any modelPtr = std::make_shared<ModelData>();
@@ -70,13 +71,12 @@ ErrorOr<VertexData> loadObj(common::AssetManager<AssetManagerImpl>& assetManager
         const int vertexIndex = 3 * index.vertex_index;
         const int texIndex = 2 * index.texcoord_index;
         const int normalIndex = 3 * index.normal_index;
-        model.positions.emplace_back(
-            attrib.vertices[vertexIndex], attrib.vertices[vertexIndex + 1],
-                               attrib.vertices[vertexIndex + 2]);
+        model.positions.emplace_back(attrib.vertices[vertexIndex], attrib.vertices[vertexIndex + 1],
+                                     attrib.vertices[vertexIndex + 2]);
         model.texCoords.emplace_back(
             attrib.texcoords[texIndex], 1.0f - attrib.texcoords[texIndex + 1]);
         model.normals.emplace_back(attrib.normals[normalIndex], attrib.normals[normalIndex + 1],
-                             attrib.normals[normalIndex + 2]);
+                                   attrib.normals[normalIndex + 2]);
       }
     }
   }

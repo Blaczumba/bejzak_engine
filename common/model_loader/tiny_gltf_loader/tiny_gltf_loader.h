@@ -1,11 +1,11 @@
 #pragma once
 
 #ifdef __ANDROID__
-#include <android/asset_manager.h>
+  #include <android/asset_manager.h>
 #endif
 #include <any>
-#include <map>
 #include <filesystem>
+#include <map>
 #include <memory>
 #include <span>
 #include <string>
@@ -19,7 +19,9 @@
 #include "common/util/primitives.h"
 #include "lib/buffer/shared_buffer.h"
 
-void setAssetmanager(AAssetManager *assetManager);
+#ifdef __ANDROID__
+void setAssetmanager(AAssetManager* assetManager);
+#endif
 
 namespace {
 
@@ -50,7 +52,8 @@ ErrorOr<std::vector<VertexData>> LoadGltfFromFile(
   for (const tinygltf::Scene& scene : modelRef.scenes) {
     for (int nodeIndex : scene.nodes) {
       const tinygltf::Node& node = modelRef.nodes[nodeIndex];
-      RETURN_IF_ERROR(processNode(assetManager, model, node, glm::mat4(1.0f), vertexDataList, baseDir));
+      RETURN_IF_ERROR(
+          processNode(assetManager, model, node, glm::mat4(1.0f), vertexDataList, baseDir));
     }
   }
   return vertexDataList;
@@ -161,8 +164,8 @@ Status processNode(common::AssetManager<AssetManagerImpl>& assetManager, std::an
 
   if (node.mesh < 0) {
     for (int childIndex : node.children) {
-      RETURN_IF_ERROR(processNode(assetManager, model, modelRef.nodes[childIndex], currentTransform, vertexDataList,
-                  baseDir));
+      RETURN_IF_ERROR(processNode(assetManager, model, modelRef.nodes[childIndex], currentTransform,
+                                  vertexDataList, baseDir));
     }
     return StatusOk();
   }
@@ -206,7 +209,8 @@ Status processNode(common::AssetManager<AssetManagerImpl>& assetManager, std::an
     assetManager.loadVertexDataInterleavingAsync(
         model, objectName, indicesBytes, indexSize,
         std::span(reinterpret_cast<const glm::vec3*>(positionsData.data()), positionsData.size()),
-        std::span(reinterpret_cast<const glm::vec2*>(textureCoordsData.data()), textureCoordsData.size()),
+        std::span(
+            reinterpret_cast<const glm::vec2*>(textureCoordsData.data()), textureCoordsData.size()),
         std::span(reinterpret_cast<const glm::vec3*>(normalsData.data()), normalsData.size()));
 
     assetManager.loadImageAsync(baseDir + '/' + diffuseTexture);
@@ -215,8 +219,8 @@ Status processNode(common::AssetManager<AssetManagerImpl>& assetManager, std::an
 
     vertexDataList.emplace_back(
         std::move(positions), lib::SharedBuffer<glm::vec2>{}, lib::SharedBuffer<glm::vec3>{},
-        lib::SharedBuffer<std::byte>{},
-        indexSize, currentTransform, std::move(diffuseTexture), std::move(normalTexture), std::move(metallicRoughnessTexture), objectName);
+        lib::SharedBuffer<std::byte>{}, indexSize, currentTransform, std::move(diffuseTexture),
+        std::move(normalTexture), std::move(metallicRoughnessTexture), objectName);
     ++objectCounter;
   }
 

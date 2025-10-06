@@ -24,7 +24,8 @@ class AssetManager : public common::AssetManager<AssetManager> {
 public:
   AssetManager() = default;
 
-  AssetManager(const LogicalDevice& logicalDevice, const std::shared_ptr<FileLoader>& fileLoader, std::launch launchPolicy = std::launch::async);
+  AssetManager(const LogicalDevice& logicalDevice, const std::shared_ptr<FileLoader>& fileLoader,
+               std::launch launchPolicy = std::launch::async);
 
   AssetManager& operator=(AssetManager&& assetManager) noexcept;
 
@@ -56,8 +57,7 @@ public:
   template <typename VertexType>
   void loadVertexDataAsync(
       common::ModelPointer& modelPtr, const std::string& filePath,
-      std::span<const std::byte> indices,
-                           uint8_t indexSize, std::span<const VertexType> vertices);
+      std::span<const std::byte> indices, uint8_t indexSize, std::span<const VertexType> vertices);
 
   ErrorOr<std::reference_wrapper<const ImageData>> getImageData(const std::string& filePath);
 
@@ -82,15 +82,16 @@ private:
 };
 
 template <typename Type>
-void AssetManager::loadVertexDataAsync(common::ModelPointer& modelPtr, const std::string& name, std::span<const std::byte> indices,
-                                       uint8_t indexSize, std::span<const Type> vertices) {
+void AssetManager::loadVertexDataAsync(
+    common::ModelPointer& modelPtr, const std::string& name, std::span<const std::byte> indices,
+    uint8_t indexSize, std::span<const Type> vertices) {
   if (_awaitingVertexDataResources.contains(name)) {
     return;
   }
   auto future = std::async(
       _launchPolicy, ([this, modelPtr, indices, indexSize,
-                            vertices]() -> ErrorOr<VertexData> {  // TODO: boost::asio::post,
-                                                                  // boost::asio::use_future
+                       vertices]() -> ErrorOr<VertexData> {  // TODO: boost::asio::post,
+                                                             // boost::asio::use_future
         ASSIGN_OR_RETURN(auto vertexBuffer, Buffer::createStagingBuffer(
                                                 *_logicalDevice, vertices.size() * sizeof(Type)));
         RETURN_IF_ERROR(vertexBuffer.copyData(vertices));
