@@ -65,7 +65,6 @@ protected:
     lib::Buffer<Framebuffer> framebuffers;
     std::vector<Texture> attachments;
     std::array<VkFence, MAX_FRAMES_IN_FLIGHT> fences;
-    std::array<VkSemaphore, MAX_FRAMES_IN_FLIGHT> renderFinishedSemaphores;
     std::array<std::shared_ptr<CommandPool>, MAX_THREADS_IN_POOL + 1> commandPools;
     std::array<PrimaryCommandBuffer, MAX_FRAMES_IN_FLIGHT> primaryCommandBuffer;
     std::array<std::array<SecondaryCommandBuffer, MAX_FRAMES_IN_FLIGHT>, MAX_THREADS_IN_POOL>
