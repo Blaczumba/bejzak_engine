@@ -54,7 +54,7 @@ protected:
   LogicalDevice _logicalDevice;
 
   static constexpr size_t MAX_FRAMES_IN_FLIGHT = 3;
-  static constexpr size_t MAX_THREADS_IN_POOL = 1;
+  static constexpr size_t MAX_THREADS_IN_POOL = 2;
 
   struct SwapchainContext {
     VkFormat format;
