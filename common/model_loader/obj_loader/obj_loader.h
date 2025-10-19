@@ -1,7 +1,6 @@
 #pragma once
 
 #include <algorithm>
-#include <any>
 #include <iterator>
 #include <memory>
 #include <sstream>
@@ -50,8 +49,7 @@ ErrorOr<VertexData> loadObj(common::AssetManager<AssetManagerImpl>& assetManager
     std::vector<glm::vec3> normals;
   };
 
-  std::any modelPtr = std::make_shared<ModelData>();
-  ModelData& model = *std::any_cast<std::shared_ptr<ModelData>&>(modelPtr);
+  auto model = std::make_shared<ModelData>();
 
   std::istringstream dataStream(stringData);
   if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warning, &error, &dataStream)) {
@@ -63,20 +61,21 @@ ErrorOr<VertexData> loadObj(common::AssetManager<AssetManagerImpl>& assetManager
     for (const tinyobj::index_t& index : shape.mesh.indices) {
       const Indices idx = Indices{index.vertex_index, index.normal_index, index.texcoord_index};
       if (auto ptr = mp.find(idx); ptr != mp.cend()) {
-        model.indices.push_back(ptr->second);
+        model->indices.push_back(ptr->second);
       } else {
-        mp.insert({idx, static_cast<uint32_t>(model.positions.size())});
+        mp.insert({idx, static_cast<uint32_t>(model->positions.size())});
 
-        model.indices.emplace_back(static_cast<uint32_t>(model.positions.size()));
+        model->indices.emplace_back(static_cast<uint32_t>(model->positions.size()));
         const int vertexIndex = 3 * index.vertex_index;
         const int texIndex = 2 * index.texcoord_index;
         const int normalIndex = 3 * index.normal_index;
-        model.positions.emplace_back(attrib.vertices[vertexIndex], attrib.vertices[vertexIndex + 1],
-                                     attrib.vertices[vertexIndex + 2]);
-        model.texCoords.emplace_back(
+        model->positions.emplace_back(
+            attrib.vertices[vertexIndex], attrib.vertices[vertexIndex + 1],
+            attrib.vertices[vertexIndex + 2]);
+        model->texCoords.emplace_back(
             attrib.texcoords[texIndex], 1.0f - attrib.texcoords[texIndex + 1]);
-        model.normals.emplace_back(attrib.normals[normalIndex], attrib.normals[normalIndex + 1],
-                                   attrib.normals[normalIndex + 2]);
+        model->normals.emplace_back(attrib.normals[normalIndex], attrib.normals[normalIndex + 1],
+                                    attrib.normals[normalIndex + 2]);
       }
     }
   }
@@ -84,15 +83,10 @@ ErrorOr<VertexData> loadObj(common::AssetManager<AssetManagerImpl>& assetManager
   static constexpr uint8_t indexSize = 4;
 
   assetManager.loadVertexDataAsync(
-      modelPtr, name,
-      std::span(reinterpret_cast<const std::byte*>(model.indices.data()),
-                model.indices.size() * indexSize),
-      indexSize, std::span<const glm::vec3>(model.positions.data(), model.positions.size()));
+      model, name,
+      std::span(reinterpret_cast<const std::byte*>(model->indices.data()),
+                model->indices.size() * indexSize),
+      indexSize, std::span<const glm::vec3>(model->positions.data(), model->positions.size()));
 
-  return VertexData{
-    .positions = lib::SharedBuffer<glm::vec3>(),
-    .textureCoordinates = lib::SharedBuffer<glm::vec2>(),
-    .normals = lib::SharedBuffer<glm::vec3>(),
-    .indices = lib::SharedBuffer<std::byte>(),
-    .indexSize = indexSize};
+  return VertexData{.indexSize = indexSize, .vertexResource = name};
 }

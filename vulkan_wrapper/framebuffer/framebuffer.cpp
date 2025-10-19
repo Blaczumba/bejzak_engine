@@ -16,7 +16,7 @@ ErrorOr<Texture> createColorAttachment(
       .withExtent(extent.width, extent.height)
       .withFormat(format)
       .withNumSamples(samples)
-      .withUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT)
+      .withUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
       .withLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
       .buildAttachment(logicalDevice, commandBuffer);
 }

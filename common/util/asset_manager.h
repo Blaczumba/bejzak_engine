@@ -1,13 +1,11 @@
 #pragma once
 
-#include <any>
 #include <glm/glm.hpp>
+#include <memory>
 #include <span>
 #include <string>
 
 namespace common {
-
-using ModelPointer = std::any;
 
 template <typename AssetManagerImpl>
 class AssetManager {
@@ -16,18 +14,19 @@ public:
     static_cast<AssetManagerImpl*>(this)->loadImageAsync(filePath);
   }
 
+  template <typename Model>
   void loadVertexDataInterleavingAsync(
-      ModelPointer& modelPtr, const std::string& name, std::span<const std::byte> indices,
+      std::shared_ptr<Model>& modelPtr, const std::string& name, std::span<const std::byte> indices,
       uint8_t indexSize, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords,
       std::span<const glm::vec3> normals) {
     static_cast<AssetManagerImpl*>(this)->loadVertexDataInterleavingAsync(
         modelPtr, name, indices, indexSize, positions, texCoords, normals);
   }
 
-  template <typename VertexType>
+  template <typename VertexType, typename Model>
   void loadVertexDataAsync(
-      ModelPointer& modelPtr, const std::string& filePath, std::span<const std::byte> indices,
-      uint8_t indexSize, std::span<const VertexType> vertices) {
+      std::shared_ptr<Model>& modelPtr, const std::string& filePath,
+      std::span<const std::byte> indices, uint8_t indexSize, std::span<const VertexType> vertices) {
     static_cast<AssetManagerImpl*>(this)->template loadVertexDataAsync<VertexType>(
         modelPtr, filePath, indices, indexSize, vertices);
   }
