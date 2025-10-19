@@ -3,7 +3,6 @@
 #ifdef __ANDROID__
   #include <android/asset_manager.h>
 #endif
-#include <any>
 #include <filesystem>
 #include <map>
 #include <memory>
@@ -26,32 +25,32 @@ void setAssetmanager(AAssetManager* assetManager);
 namespace {
 
 template <typename AssetManagerImpl>
-Status processNode(common::AssetManager<AssetManagerImpl>& assetManager, std::any& model,
-                   const tinygltf::Node& node, const glm::mat4& parentTransform,
-                   std::vector<VertexData>& vertexDataList, const std::string& baseDir);
+Status processNode(
+    common::AssetManager<AssetManagerImpl>& assetManager, std::shared_ptr<tinygltf::Model>& model,
+    const tinygltf::Node& node, const glm::mat4& parentTransform,
+    std::vector<VertexData>& vertexDataList, const std::string& baseDir);
 
 }  // namespace
 
 template <typename AssetManagerImpl>
 ErrorOr<std::vector<VertexData>> LoadGltfFromFile(
     common::AssetManager<AssetManagerImpl>& assetManager, const std::string& filePath) {
-  std::any model = std::make_shared<tinygltf::Model>();
-  tinygltf::Model& modelRef = *std::any_cast<std::shared_ptr<tinygltf::Model>&>(model);
+  auto model = std::make_shared<tinygltf::Model>();
   tinygltf::TinyGLTF loader;
 
   if (filePath.ends_with(".glb")) {
-    loader.LoadBinaryFromFile(&modelRef, nullptr, nullptr, filePath);
+    loader.LoadBinaryFromFile(model.get(), nullptr, nullptr, filePath);
   } else if (filePath.ends_with(".gltf")) {
-    loader.LoadASCIIFromFile(&modelRef, nullptr, nullptr, filePath);
+    loader.LoadASCIIFromFile(model.get(), nullptr, nullptr, filePath);
   } else {
     return Error(EngineError::LOAD_FAILURE);
   }
 
   const std::string baseDir = std::filesystem::path(filePath).parent_path().string();
   std::vector<VertexData> vertexDataList;
-  for (const tinygltf::Scene& scene : modelRef.scenes) {
+  for (const tinygltf::Scene& scene : model->scenes) {
     for (int nodeIndex : scene.nodes) {
-      const tinygltf::Node& node = modelRef.nodes[nodeIndex];
+      const tinygltf::Node& node = model->nodes[nodeIndex];
       RETURN_IF_ERROR(
           processNode(assetManager, model, node, glm::mat4(1.0f), vertexDataList, baseDir));
     }
@@ -63,18 +62,17 @@ template <typename AssetManagerImpl>
 ErrorOr<std::vector<VertexData>> LoadGltfFromString(
     common::AssetManager<AssetManagerImpl>& assetManager, const std::string& dataString,
     const std::string& baseDir) {
-  std::any model = std::make_shared<tinygltf::Model>();
-  tinygltf::Model& modelRef = *std::any_cast<std::shared_ptr<tinygltf::Model>&>(model);
+  auto model = std::make_shared<tinygltf::Model>();
   tinygltf::TinyGLTF loader;
   std::string error, warning;
 
   loader.LoadASCIIFromString(
-      &modelRef, &error, &warning, dataString.data(), dataString.size(), baseDir);
+      model.get(), &error, &warning, dataString.data(), dataString.size(), baseDir);
 
   std::vector<VertexData> vertexDataList;
-  for (const tinygltf::Scene& scene : modelRef.scenes) {
+  for (const tinygltf::Scene& scene : model->scenes) {
     for (int nodeIndex : scene.nodes) {
-      const tinygltf::Node& node = modelRef.nodes[nodeIndex];
+      const tinygltf::Node& node = model->nodes[nodeIndex];
       RETURN_IF_ERROR(
           processNode(assetManager, model, node, glm::mat4(1.0f), vertexDataList, baseDir));
     }
@@ -156,47 +154,45 @@ std::string getTextureUri(const tinygltf::Model& model, const tinygltf::Paramete
 }
 
 template <typename AssetManagerImpl>
-Status processNode(common::AssetManager<AssetManagerImpl>& assetManager, std::any& model,
-                   const tinygltf::Node& node, const glm::mat4& parentTransform,
-                   std::vector<VertexData>& vertexDataList, const std::string& baseDir) {
-  tinygltf::Model& modelRef = *std::any_cast<std::shared_ptr<tinygltf::Model>&>(model);
+Status processNode(
+    common::AssetManager<AssetManagerImpl>& assetManager, std::shared_ptr<tinygltf::Model>& model,
+    const tinygltf::Node& node, const glm::mat4& parentTransform,
+    std::vector<VertexData>& vertexDataList, const std::string& baseDir) {
   const glm::mat4 currentTransform = parentTransform * GetNodeTransform(node);
 
   if (node.mesh < 0) {
     for (int childIndex : node.children) {
-      RETURN_IF_ERROR(processNode(assetManager, model, modelRef.nodes[childIndex], currentTransform,
+      RETURN_IF_ERROR(processNode(assetManager, model, model->nodes[childIndex], currentTransform,
                                   vertexDataList, baseDir));
     }
     return StatusOk();
   }
 
-  for (const tinygltf::Primitive& primitive : modelRef.meshes[node.mesh].primitives) {
+  for (const tinygltf::Primitive& primitive : model->meshes[node.mesh].primitives) {
     const std::map<std::string, int>& attributes = primitive.attributes;
 
-    std::span<const unsigned char> positionsData =
-        processAttribute(modelRef, attributes, "POSITION");
+    std::span<const unsigned char> positionsData = processAttribute(*model, attributes, "POSITION");
     lib::Buffer<glm::vec3> positions(
         reinterpret_cast<const glm::vec3*>(positionsData.data()), positionsData.size());
 
     std::span<const unsigned char> textureCoordsData =
-        processAttribute(modelRef, attributes, "TEXCOORD_0");
-    std::span<const unsigned char> normalsData = processAttribute(modelRef, attributes, "NORMAL");
+        processAttribute(*model, attributes, "TEXCOORD_0");
+    std::span<const unsigned char> normalsData = processAttribute(*model, attributes, "NORMAL");
 
     if (primitive.indices <= 0) {
       continue;
     }
     uint8_t indexSize;
-    std::span<const std::byte> indicesBytes = getIndices(modelRef, primitive, &indexSize);
+    std::span<const std::byte> indicesBytes = getIndices(*model, primitive, &indexSize);
 
     std::string diffuseTexture;
     std::string metallicRoughnessTexture;
     std::string normalTexture;
     if (primitive.material >= 0) {
-      const tinygltf::Material& material = modelRef.materials[primitive.material];
-      diffuseTexture = getTextureUri(modelRef, material.values, "baseColorTexture");
-      metallicRoughnessTexture =
-          getTextureUri(modelRef, material.values, "metallicRoughnessTexture");
-      normalTexture = getTextureUri(modelRef, material.additionalValues, "normalTexture");
+      const tinygltf::Material& material = model->materials[primitive.material];
+      diffuseTexture = getTextureUri(*model, material.values, "baseColorTexture");
+      metallicRoughnessTexture = getTextureUri(*model, material.values, "metallicRoughnessTexture");
+      normalTexture = getTextureUri(*model, material.additionalValues, "normalTexture");
     }
 
     if (diffuseTexture.empty() || metallicRoughnessTexture.empty() || normalTexture.empty()) {
@@ -224,8 +220,8 @@ Status processNode(common::AssetManager<AssetManagerImpl>& assetManager, std::an
   }
 
   for (int childIndex : node.children) {
-    RETURN_IF_ERROR(processNode(assetManager, model, modelRef.nodes[childIndex], currentTransform,
-                                vertexDataList, baseDir));
+    RETURN_IF_ERROR(processNode(
+        assetManager, model, model->nodes[childIndex], currentTransform, vertexDataList, baseDir));
   }
   return StatusOk();
 }
