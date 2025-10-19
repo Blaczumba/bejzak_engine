@@ -8,6 +8,7 @@
 #include <vector>
 
 #include "common/util/index_buffer_index.h"
+#include "lib/buffer/buffer.h"
 #include "lib/buffer/shared_buffer.h"
 
 template <typename IndexT>
@@ -23,10 +24,7 @@ std::enable_if_t<std::is_unsigned<IndexT>::value, lib::Buffer<std::byte>> proces
 }
 
 struct VertexData {
-  lib::SharedBuffer<glm::vec3> positions;
-  lib::SharedBuffer<glm::vec2> textureCoordinates;
-  lib::SharedBuffer<glm::vec3> normals;
-  lib::SharedBuffer<std::byte> indices;
+  lib::Buffer<glm::vec3> positions;
   uint8_t indexSize;
 
   glm::mat4 model;

@@ -90,9 +90,6 @@ ErrorOr<VertexData> loadObj(common::AssetManager<AssetManagerImpl>& assetManager
       indexSize, std::span<const glm::vec3>(model.positions.data(), model.positions.size()));
 
   return VertexData{
-    .positions = lib::SharedBuffer<glm::vec3>(),
-    .textureCoordinates = lib::SharedBuffer<glm::vec2>(),
-    .normals = lib::SharedBuffer<glm::vec3>(),
-    .indices = lib::SharedBuffer<std::byte>(),
-    .indexSize = indexSize};
+    .indexSize = indexSize,
+    .vertexResource = name};
 }

@@ -175,7 +175,7 @@ Status processNode(common::AssetManager<AssetManagerImpl>& assetManager, std::an
 
     std::span<const unsigned char> positionsData =
         processAttribute(modelRef, attributes, "POSITION");
-    lib::SharedBuffer<glm::vec3> positions(
+    lib::Buffer<glm::vec3> positions(
         reinterpret_cast<const glm::vec3*>(positionsData.data()), positionsData.size());
 
     std::span<const unsigned char> textureCoordsData =
@@ -218,8 +218,7 @@ Status processNode(common::AssetManager<AssetManagerImpl>& assetManager, std::an
     assetManager.loadImageAsync(baseDir + '/' + normalTexture);
 
     vertexDataList.emplace_back(
-        std::move(positions), lib::SharedBuffer<glm::vec2>{}, lib::SharedBuffer<glm::vec3>{},
-        lib::SharedBuffer<std::byte>{}, indexSize, currentTransform, std::move(diffuseTexture),
+        std::move(positions), indexSize, currentTransform, std::move(diffuseTexture),
         std::move(normalTexture), std::move(metallicRoughnessTexture), objectName);
     ++objectCounter;
   }
