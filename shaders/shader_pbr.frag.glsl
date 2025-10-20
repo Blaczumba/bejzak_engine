@@ -33,8 +33,8 @@ const vec3 lightColor = vec3(10.0);
 const float ao = 1.0;
 
 // PCSS
-const int BLOCKER_SEARCH_SAMPLES = 16;
-const int PCF_SAMPLES = 25;
+const int BLOCKER_SEARCH_SAMPLES = 9;
+const int PCF_SAMPLES = 9;
 const float LIGHT_SIZE = 0.5; // tweak per light
 const float MIN_FILTER_SIZE = 2.0 / 2048.0;
 
