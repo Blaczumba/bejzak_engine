@@ -9,7 +9,9 @@
 #include "vulkan_wrapper/logical_device/logical_device.h"
 #include "vulkan_wrapper/render_pass/attachment_layout.h"
 
-class Renderpass {
+class Renderpass;
+
+class RenderpassBuilder {
   class Subpass {
     std::vector<VkAttachmentReference> _inputAttachmentRefs;
     std::vector<VkAttachmentReference> _colorAttachmentRefs;
@@ -27,28 +29,43 @@ class Renderpass {
         const AttachmentLayout& layout, uint32_t attachmentBinding, VkImageLayout imageLayout);
 
     VkSubpassDescription getVkSubpassDescription() const;
-
-    std::span<const VkAttachmentReference> getInputAttachmentRefs() const {
-      return _inputAttachmentRefs;
-    }
-
-    std::span<const VkAttachmentReference> getColorAttachmentRefs() const {
-      return _colorAttachmentRefs;
-    }
-
-    std::span<const VkAttachmentReference> getDepthAttachmentRefs() const {
-      return _depthAttachmentRefs;
-    }
-
-    std::span<const VkAttachmentReference> getColorResolveAttachmentRefs() const {
-      return _colorAttachmentResolveRefs;
-    }
   };
 
 public:
-  Renderpass() = default;
+  RenderpassBuilder(const AttachmentLayout& attachmentLayout);
 
-  Renderpass(const LogicalDevice& logicalDevice, const AttachmentLayout& layout);
+  RenderpassBuilder& addDependency(
+      uint32_t srcSubpassIndex, uint32_t dstSubpassIndex, VkPipelineStageFlags srcStageMask,
+      VkAccessFlags srcAccessMask, VkPipelineStageFlags dstStageMask, VkAccessFlags dstAccessMask);
+
+  RenderpassBuilder& addSubpass(std::initializer_list<uint8_t> outputAttachments,
+                                std::initializer_list<uint8_t> inputAttachments = {});
+
+  RenderpassBuilder& withMultiView(
+      std::initializer_list<uint32_t> viewMask, std::initializer_list<uint32_t> correlationMask);
+
+  ErrorOr<Renderpass> build(const LogicalDevice& logicalDevice);
+
+private:
+  const AttachmentLayout& _attachmentLayout;
+
+  struct MultiViewInfo {
+    std::vector<uint32_t> viewMasks;
+    std::vector<uint32_t> correlationMasks;
+    VkRenderPassMultiviewCreateInfo multiviewCreateInfo;
+  };
+
+  std::optional<MultiViewInfo> _multiViewInfo;
+
+  std::vector<VkSubpassDependency> _subpassDepencies;
+  std::vector<Subpass> _subpasses;
+
+  Status _status;
+};
+
+class Renderpass {
+public:
+  Renderpass() = default;
 
   Renderpass(Renderpass&& renderpass) noexcept;
 
@@ -56,28 +73,20 @@ public:
 
   ~Renderpass();
 
-  // Aggregates subpasses and dependencies and creates VkRenderPass object.
-  Status build();
-
   VkRenderPass getVkRenderPass() const;
 
   const AttachmentLayout& getAttachmentsLayout() const;
 
-  Status addSubpass(std::initializer_list<uint8_t> outputAttachments,
-                    std::initializer_list<uint8_t> inputAttachments = {});
-
-  void addDependency(
-      uint32_t srcSubpassIndex, uint32_t dstSubpassIndex, VkPipelineStageFlags srcStageMask,
-      VkAccessFlags srcAccessMask, VkPipelineStageFlags dstStageMask, VkAccessFlags dstAccessMask);
-
   const LogicalDevice& getLogicalDevice() const;
 
 private:
+  Renderpass(const LogicalDevice& logicalDeivce, VkRenderPass renderpass,
+             const AttachmentLayout& attachmentLayout);
+
   VkRenderPass _renderpass = VK_NULL_HANDLE;
 
   const LogicalDevice* _logicalDevice = nullptr;
   AttachmentLayout _attachmentsLayout;
 
-  std::vector<Subpass> _subpasses;
-  std::vector<VkSubpassDependency> _subpassDepencies;
+  friend class RenderpassBuilder;
 };
