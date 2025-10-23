@@ -86,6 +86,7 @@ ErrorOr<VmaWrapper::Image> VmaWrapper::createVkImage(
     .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
     .initialLayout = layout};
 
+  // TODO: let user decide
   if (params.layerCount == 6) {
     imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
   }

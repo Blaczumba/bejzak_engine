@@ -17,3 +17,7 @@
 #define RETURN_IF_ERROR(status)                                                     \
     if (auto UNIQUE_NAME(_result_) = (status); !UNIQUE_NAME(_result_)) [[unlikely]] \
         return std::unexpected(UNIQUE_NAME(_result_).error())
+
+#define UPDATE_STATUS(statusVar, status)               \
+    if (auto UNIQUE_NAME(_result_) = (status); !UNIQUE_NAME(_result_)) [[unlikely]] \
+        statusVar = std::unexpected(UNIQUE_NAME(_result_).error())
