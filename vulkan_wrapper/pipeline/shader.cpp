@@ -14,7 +14,7 @@ Shader::Shader(VkShaderModule shaderModule, const LogicalDevice& logicalDevice,
 ErrorOr<Shader> Shader::create(
     const LogicalDevice& logicalDevice, std::span<const std::byte> shaderData,
     VkShaderStageFlagBits shaderStage) {
-  VkShaderModuleCreateInfo createInfo = {
+  const VkShaderModuleCreateInfo createInfo = {
     .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
     .codeSize = shaderData.size(),
     .pCode = reinterpret_cast<const uint32_t*>(shaderData.data())};

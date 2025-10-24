@@ -178,7 +178,7 @@ Status ShaderProgramManager::addShader(
   }
 
   ASSIGN_OR_RETURN(
-      lib::Buffer<std::byte> shaderData,
+      const lib::Buffer<std::byte> shaderData,
       _fileLoader->loadFileToBuffer((std::filesystem::path(SHADERS_PATH) / shaderFile).string()));
   ASSIGN_OR_RETURN(Shader shader, Shader::create(logicalDevice, shaderData, shaderStages));
   _shaders.emplace(shaderFile, std::move(shader));
@@ -191,6 +191,7 @@ ErrorOr<DescriptorSetType> ShaderProgramManager::getOrCreateBindlessLayout(
   if (auto it = _descriptorSetLayouts.find(layoutType); it != _descriptorSetLayouts.cend()) {
     return it->first;
   }
+
   static constexpr VkDescriptorSetLayoutBinding bindings[] = {
     {
      .binding = 0,
@@ -205,9 +206,11 @@ ErrorOr<DescriptorSetType> ShaderProgramManager::getOrCreateBindlessLayout(
      .stageFlags = VK_SHADER_STAGE_ALL,
      }
   };
+
   static constexpr VkDescriptorBindingFlags flags{
     VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT};
   static constexpr VkDescriptorBindingFlags bindingFlags[] = {flags, flags};
+
   ASSIGN_OR_RETURN(
       DescriptorSetLayout layout,
       DescriptorSetLayout::create(logicalDevice, bindings, bindingFlags,

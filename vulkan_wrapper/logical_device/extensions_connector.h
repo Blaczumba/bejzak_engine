@@ -8,6 +8,7 @@ struct DeviceFeatures {
   VkPhysicalDeviceBufferDeviceAddressFeatures bufferDeviceAddress;
   VkPhysicalDeviceDescriptorIndexingFeatures descriptorIndexing;
   VkPhysicalDeviceInheritedViewportScissorFeaturesNV inheritedViewportScissor;
+  VkPhysicalDeviceMultiviewFeatures multiview;
 };
 
 void chainExtensionIndexTypeUint8(
@@ -21,3 +22,5 @@ void chainExtensionInheritedViewportScissor(
 
 void chainExtensionDescriptorIndexing(
     DeviceFeatures& deviceFeatures, const PhysicalDevice& physicalDevice);
+
+void chainExtensionMultiview(DeviceFeatures& deviceFeatures, const PhysicalDevice& physicalDevice);

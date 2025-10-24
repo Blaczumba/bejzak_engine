@@ -73,9 +73,10 @@ void VmaWrapper::sendDataToBufferMemory(
 ErrorOr<VmaWrapper::Image> VmaWrapper::createVkImage(
     const ImageParameters& params, VkImageLayout layout, VmaMemoryUsage memoryUsage,
     VmaAllocationCreateFlags flags) {
-  VkImageCreateInfo imageInfo = {
+  const VkImageCreateInfo imageInfo = {
     .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-    .imageType = VK_IMAGE_TYPE_2D,
+    .flags = params.flags,
+    .imageType = params.type,
     .format = params.format,
     .extent = params.extent,
     .mipLevels = params.mipLevels,
@@ -85,11 +86,6 @@ ErrorOr<VmaWrapper::Image> VmaWrapper::createVkImage(
     .usage = params.usage,
     .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
     .initialLayout = layout};
-
-  // TODO: let user decide
-  if (params.layerCount == 6) {
-    imageInfo.flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-  }
 
   const VmaAllocationCreateInfo vmaAllocInfo = {.flags = flags, .usage = memoryUsage};
 

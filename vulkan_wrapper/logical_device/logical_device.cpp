@@ -78,6 +78,7 @@ ErrorOr<LogicalDevice> LogicalDevice::create(const PhysicalDevice& physicalDevic
   chainExtensionBufferDeviceAddress(deviceFeatures, physicalDevice);
   chainExtensionInheritedViewportScissor(deviceFeatures, physicalDevice);
   chainExtensionDescriptorIndexing(deviceFeatures, physicalDevice);
+  chainExtensionMultiview(deviceFeatures, physicalDevice);
 
   const VkPhysicalDeviceFeatures2 deviceFeaturesInfo = {
     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
@@ -118,16 +119,41 @@ ErrorOr<LogicalDevice> LogicalDevice::wrap(VkDevice device, const PhysicalDevice
   return LogicalDevice(device, physicalDevice);
 }
 
-ErrorOr<VkImageView> LogicalDevice::createImageView(
-    const VkImage image, VkFormat format, VkImageAspectFlags aspect, uint32_t mipLevels,
-    uint32_t layerCount) const {
-  const VkImageViewType viewType =
-      (layerCount == 6) ? VK_IMAGE_VIEW_TYPE_CUBE : VK_IMAGE_VIEW_TYPE_2D;
+namespace {
 
+VkImageViewType getImageViewType(VkImageType type, uint32_t layerCount, VkImageCreateFlags flags) {
+  switch (type) {
+    case VK_IMAGE_TYPE_1D:
+      {
+        if (layerCount > 1) {
+          return VK_IMAGE_VIEW_TYPE_1D_ARRAY;
+        }
+        return VK_IMAGE_VIEW_TYPE_1D;
+      }
+    case VK_IMAGE_TYPE_2D:
+      {
+        if (flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT && layerCount == 6) {
+          return VK_IMAGE_VIEW_TYPE_CUBE;
+        }
+        if (layerCount > 1) {
+          return VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+        }
+        return VK_IMAGE_VIEW_TYPE_2D;
+      }
+    case VK_IMAGE_TYPE_3D:
+      return VK_IMAGE_VIEW_TYPE_3D;
+  }
+}
+
+}  // namespace
+
+ErrorOr<VkImageView> LogicalDevice::createImageView(
+    VkImage image, VkImageType type, VkFormat format, VkImageAspectFlags aspect, uint32_t mipLevels,
+    uint32_t layerCount, VkImageCreateFlags flags) const {
   const VkImageViewCreateInfo viewInfo = {
     .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
     .image = image,
-    .viewType = viewType,
+    .viewType = getImageViewType(type, layerCount, flags),
     .format = format,
     .subresourceRange = {.aspectMask = aspect,
                          .baseMipLevel = 0,

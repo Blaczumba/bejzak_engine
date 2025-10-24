@@ -44,8 +44,8 @@ public:
   ErrorOr<VkSampler> createSampler(const SamplerParameters& params) const;
 
   ErrorOr<VkImageView> createImageView(
-      const VkImage image, VkFormat format, VkImageAspectFlags aspect, uint32_t mipLevels,
-      uint32_t layerCount) const;
+      VkImage image, VkImageType type, VkFormat format, VkImageAspectFlags aspect,
+      uint32_t mipLevels, uint32_t layerCount, VkImageCreateFlags flags = 0) const;
 
   VkDevice getVkDevice() const;
 
