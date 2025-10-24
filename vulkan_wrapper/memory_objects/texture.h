@@ -57,6 +57,8 @@ private:
 
 class TextureBuilder {
 public:
+  TextureBuilder& withType(VkImageType type);
+
   TextureBuilder& withLayout(VkImageLayout layout);
 
   TextureBuilder& withFormat(VkFormat format);
@@ -84,6 +86,8 @@ public:
   TextureBuilder& withProperties(VkMemoryPropertyFlags properties);
 
   TextureBuilder& withLayerCount(uint32_t layerCount);
+
+  TextureBuilder& withAdditionalCreateInfoFlags(VkImageCreateFlags flags);
 
   TextureBuilder& withMagFilter(VkFilter magFilter);
 

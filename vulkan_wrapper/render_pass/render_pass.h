@@ -42,7 +42,7 @@ public:
                                 std::initializer_list<uint8_t> inputAttachments = {});
 
   RenderpassBuilder& withMultiView(
-      std::initializer_list<uint32_t> viewMask, std::initializer_list<uint32_t> correlationMask);
+      std::vector<uint32_t>&& viewMask, std::vector<uint32_t>&& correlationMask);
 
   ErrorOr<Renderpass> build(const LogicalDevice& logicalDevice);
 
@@ -50,11 +50,10 @@ private:
   const AttachmentLayout& _attachmentLayout;
 
   struct MultiViewInfo {
+    VkRenderPassMultiviewCreateInfo multiviewCreateInfo;
     std::vector<uint32_t> viewMasks;
     std::vector<uint32_t> correlationMasks;
-    VkRenderPassMultiviewCreateInfo multiviewCreateInfo;
   };
-
   std::optional<MultiViewInfo> _multiViewInfo;
 
   std::vector<VkSubpassDependency> _subpassDepencies;

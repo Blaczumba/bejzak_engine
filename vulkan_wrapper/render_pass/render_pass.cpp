@@ -33,7 +33,17 @@ RenderpassBuilder& RenderpassBuilder::addSubpass(std::initializer_list<uint8_t> 
 }
 
 RenderpassBuilder& RenderpassBuilder::withMultiView(
-    std::initializer_list<uint32_t> viewMask, std::initializer_list<uint32_t> correlationMask) {}
+    std::vector<uint32_t>&& viewMask, std::vector<uint32_t>&& correlationMask) {
+  _multiViewInfo = MultiViewInfo{
+    .multiviewCreateInfo = {.sType = VK_STRUCTURE_TYPE_RENDER_PASS_MULTIVIEW_CREATE_INFO,
+                            .pViewMasks = viewMask.data(),
+                            .correlationMaskCount = static_cast<uint32_t>(correlationMask.size()),
+                            .pCorrelationMasks = correlationMask.data()},
+    .viewMasks = std::move(viewMask),
+    .correlationMasks = std::move(correlationMask)
+  };
+  return *this;
+}
 
 Status RenderpassBuilder::Subpass::addOutputAttachment(
     const AttachmentLayout& layout, uint32_t attachmentBinding) {
@@ -93,8 +103,14 @@ ErrorOr<Renderpass> RenderpassBuilder::build(const LogicalDevice& logicalDevice)
                    return subpass.getVkSubpassDescription();
                  });
 
+  if (_multiViewInfo.has_value()) {
+    _multiViewInfo->multiviewCreateInfo.subpassCount =
+        static_cast<uint32_t>(subpassDescriptions.size());
+  }
+
   const VkRenderPassCreateInfo renderPassInfo = {
     .sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
+    .pNext = _multiViewInfo.has_value() ? &_multiViewInfo->multiviewCreateInfo : nullptr,
     .attachmentCount = static_cast<uint32_t>(attachmentDescriptions.size()),
     .pAttachments = attachmentDescriptions.data(),
     .subpassCount = static_cast<uint32_t>(subpassDescriptions.size()),

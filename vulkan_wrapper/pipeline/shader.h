@@ -4,6 +4,7 @@
 #include <vulkan/vulkan.h>
 
 #include "common/status/status.h"
+#include "lib/buffer/buffer.h"
 
 class LogicalDevice;
 
@@ -11,6 +12,8 @@ class Shader {
   VkShaderModule _shaderModule;
   VkShaderStageFlagBits _shaderStage;
   const LogicalDevice* _logicalDevice;
+  lib::Buffer<std::byte> _specData;
+  lib::Buffer<VkSpecializationMapEntry> _specMapEntries;
 
   Shader(VkShaderModule shaderModule, const LogicalDevice& logicalDevice,
          VkShaderStageFlagBits shaderStage);

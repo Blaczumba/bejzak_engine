@@ -64,3 +64,11 @@ void chainExtensionDescriptorIndexing(
   chainExtensionFeature(&deviceFeatures.next, deviceFeatures.descriptorIndexing,
                         VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME, physicalDevice);
 }
+
+void chainExtensionMultiview(DeviceFeatures& deviceFeatures, const PhysicalDevice& physicalDevice) {
+  deviceFeatures.multiview = VkPhysicalDeviceMultiviewFeatures{
+    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES, .multiview = VK_TRUE};
+
+  chainExtensionFeature(&deviceFeatures.next, deviceFeatures.multiview,
+                        VK_KHR_MULTIVIEW_EXTENSION_NAME, physicalDevice);
+}

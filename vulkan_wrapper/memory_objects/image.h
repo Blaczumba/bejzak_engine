@@ -5,6 +5,7 @@
 #include <vulkan/vulkan.h>
 
 struct ImageParameters {
+  VkImageType type = VK_IMAGE_TYPE_2D;
   VkFormat format = VK_FORMAT_UNDEFINED;
   VkExtent3D extent = {1, 1, 1};
   VkImageAspectFlags aspect = VK_IMAGE_ASPECT_NONE;
@@ -14,6 +15,7 @@ struct ImageParameters {
   VkImageUsageFlags usage = 0;
   VkMemoryPropertyFlags properties = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
   uint32_t layerCount = 1;
+  VkImageCreateFlags flags = 0;
 };
 
 struct SamplerParameters {

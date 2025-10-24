@@ -119,6 +119,11 @@ static inline ErrorOr<VkImage> allocate(
   return std::visit(ImageCreator{allocation, imageParameters}, memoryAllocator);
 }
 
+TextureBuilder& TextureBuilder::withType(VkImageType type) {
+  _imageParameters.type = type;
+  return *this;
+}
+
 TextureBuilder& TextureBuilder::withLayout(VkImageLayout layout) {
   _imageLayout = layout;
   return *this;
@@ -186,6 +191,11 @@ TextureBuilder& TextureBuilder::withProperties(VkMemoryPropertyFlags properties)
 
 TextureBuilder& TextureBuilder::withLayerCount(uint32_t layerCount) {
   _imageParameters.layerCount = layerCount;
+  return *this;
+}
+
+TextureBuilder& TextureBuilder::withAdditionalCreateInfoFlags(VkImageCreateFlags flags) {
+  _imageParameters.flags |= flags;
   return *this;
 }
 
@@ -258,8 +268,9 @@ ErrorOr<Texture> TextureBuilder::buildAttachment(
       _imageParameters.mipLevels, _imageParameters.layerCount);
   ASSIGN_OR_RETURN(
       const VkImageView view,
-      logicalDevice.createImageView(image, _imageParameters.format, _imageParameters.aspect,
-                                    _imageParameters.mipLevels, _imageParameters.layerCount));
+      logicalDevice.createImageView(
+          image, _imageParameters.type, _imageParameters.format, _imageParameters.aspect,
+          _imageParameters.mipLevels, _imageParameters.layerCount, _imageParameters.flags));
   return Texture(logicalDevice, image, allocation, _imageParameters.extent, _imageParameters.aspect,
                  _imageParameters.mipLevels, _imageParameters.layerCount, _imageLayout, view);
 }
@@ -279,8 +290,9 @@ ErrorOr<Texture> TextureBuilder::buildImage(
       _imageParameters.aspect, _imageParameters.mipLevels, _imageParameters.layerCount);
   ASSIGN_OR_RETURN(
       const VkImageView view,
-      logicalDevice.createImageView(image, _imageParameters.format, _imageParameters.aspect,
-                                    _imageParameters.mipLevels, _imageParameters.layerCount));
+      logicalDevice.createImageView(
+          image, _imageParameters.type, _imageParameters.format, _imageParameters.aspect,
+          _imageParameters.mipLevels, _imageParameters.layerCount, _imageParameters.flags));
   ASSIGN_OR_RETURN(const VkSampler sampler, logicalDevice.createSampler(_samplerParameters));
   return Texture(
       logicalDevice, image, allocation, _imageParameters.extent, _imageParameters.aspect,
@@ -297,8 +309,9 @@ ErrorOr<Texture> TextureBuilder::buildImageSampler(
       _imageParameters.mipLevels, _imageParameters.layerCount);
   ASSIGN_OR_RETURN(
       const VkImageView view,
-      logicalDevice.createImageView(image, _imageParameters.format, _imageParameters.aspect,
-                                    _imageParameters.mipLevels, _imageParameters.layerCount));
+      logicalDevice.createImageView(
+          image, _imageParameters.type, _imageParameters.format, _imageParameters.aspect,
+          _imageParameters.mipLevels, _imageParameters.layerCount, _imageParameters.flags));
   ASSIGN_OR_RETURN(const VkSampler sampler, logicalDevice.createSampler(_samplerParameters));
   return Texture(
       logicalDevice, image, allocation, _imageParameters.extent, _imageParameters.aspect,
@@ -321,8 +334,9 @@ ErrorOr<Texture> TextureBuilder::buildMipmapImage(
       _imageParameters.layerCount);
   ASSIGN_OR_RETURN(
       const VkImageView view,
-      logicalDevice.createImageView(image, _imageParameters.format, _imageParameters.aspect,
-                                    _imageParameters.mipLevels, _imageParameters.layerCount));
+      logicalDevice.createImageView(
+          image, _imageParameters.type, _imageParameters.format, _imageParameters.aspect,
+          _imageParameters.mipLevels, _imageParameters.layerCount, _imageParameters.flags));
   ASSIGN_OR_RETURN(const VkSampler sampler, logicalDevice.createSampler(_samplerParameters));
   return Texture(logicalDevice, image, allocation, _imageParameters.extent, _imageParameters.aspect,
                  _imageParameters.mipLevels, _imageParameters.layerCount,
