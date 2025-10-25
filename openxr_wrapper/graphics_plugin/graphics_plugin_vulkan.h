@@ -1,7 +1,8 @@
 #pragma once
 
-#include <memory>
 #include <vulkan/vulkan.h>  // Vulkan needs to be included before openxr_platform.h
+
+#include <memory>
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
 #include <span>

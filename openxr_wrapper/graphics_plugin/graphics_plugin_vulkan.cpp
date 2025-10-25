@@ -67,9 +67,10 @@ Status GraphicsPluginVulkan::createSwapchainContext(
 
   context.views = lib::Buffer<VkImageView>(imageCount);
   for (size_t i = 0; i < imageCount; ++i) {
-    ASSIGN_OR_RETURN(context.views[i], _logicalDevice.createImageView(
-                                           context.images[i].image, static_cast<VkFormat>(format),
-                                           VK_IMAGE_ASPECT_COLOR_BIT, 1, 1));
+    ASSIGN_OR_RETURN(context.views[i],
+                     _logicalDevice.createImageView(
+                         context.images[i].image, VK_IMAGE_TYPE_2D, static_cast<VkFormat>(format),
+                         VK_IMAGE_ASPECT_COLOR_BIT, 1, 1));
   }
   context.format = static_cast<VkFormat>(format);
   context.width = width;
