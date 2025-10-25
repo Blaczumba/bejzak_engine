@@ -1,0 +1,7 @@
+add_subdirectory(graphics_plugin)
+add_subdirectory(platform)
+add_subdirectory(instance)
+add_subdirectory(system)
+add_subdirectory(session)
+add_subdirectory(swapchain)
+add_subdirectory(space)

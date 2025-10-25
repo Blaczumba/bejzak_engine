@@ -1,13 +1,11 @@
 cmake_minimum_required(VERSION 3.19)
 
-set(CMAKE_PROJECT_NAME BejzakEngine)
+set(ENGINE_NAME BejzakEngine)
 
-project(${CMAKE_PROJECT_NAME})
+project(${ENGINE_NAME})
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
 find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
 
@@ -49,9 +47,13 @@ endif()
 
 add_definitions(-DGLM_FORCE_NO_CTOR_INIT)
 
-add_subdirectory(${CMAKE_SOURCE_DIR}/external/glfw)
-add_subdirectory(${CMAKE_SOURCE_DIR}/external/tinyobjloader)
-add_subdirectory(${CMAKE_SOURCE_DIR}/external/googletest)
+if(NOT ANDROID)
+    set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/external/glfw)
+endif()
+
+add_subdirectory(${PROJECT_SOURCE_DIR}/external/tinyobjloader)
+add_subdirectory(${PROJECT_SOURCE_DIR}/external/googletest)
 
 if(WIN32)
     set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} /W3")
@@ -61,4 +63,42 @@ elseif(UNIX)
     set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -DNDEBUG")
 endif()
 
-add_subdirectory(sources)
+include_directories(${PROJECT_SOURCE_DIR}/external/glm)
+include_directories(${PROJECT_SOURCE_DIR}/external/)
+
+add_subdirectory(lib)
+add_subdirectory(common)
+
+if(Vulkan_FOUND)
+    add_subdirectory(vulkan_wrapper)
+endif()
+
+add_library(${ENGINE_NAME} INTERFACE)
+target_link_libraries(${ENGINE_NAME} INTERFACE
+        Instance AssetManager
+        Surface DebugMessenger
+        PhysicalDevice MemoryAllocator
+        LogicalDevice Renderpass
+        Swapchain Buffer CommandBuffer
+        Framebuffer Pipeline
+        DescriptorSet
+
+        CommonCamera CommonECS
+        CommonObject CommonUtil
+        CommonScene CommonStandardFileLoader
+        CommonModelLoader
+)
+
+if (ANDROID)
+    add_subdirectory(openxr_wrapper)
+    # target_compile_definitions(${ENGINE_NAME} INTERFACE XR_USE_PLATFORM_ANDROID)
+    target_link_libraries(${ENGINE_NAME} INTERFACE
+            OpenxrGraphicsPlugin OpenxrPlatform OpenxrInstance
+            OpenxrSystem OpenxrSession OpenxrSwapchain
+            OpenxrSpace
+
+            OpenXR::headers
+
+            CommonAndroidFileLoader
+    )
+endif ()
