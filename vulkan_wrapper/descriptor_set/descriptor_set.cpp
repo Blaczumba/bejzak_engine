@@ -51,7 +51,7 @@ ErrorOr<DescriptorSet> DescriptorSet::create(
 ErrorOr<std::vector<DescriptorSet>> DescriptorSet::create(
     const std::shared_ptr<const DescriptorPool>& descriptorPool, VkDescriptorSetLayout layout,
     uint32_t numSets) {
-  const std::vector<VkDescriptorSetLayout> layouts(numSets, layout);
+  const lib::Buffer<VkDescriptorSetLayout> layouts(numSets, layout);
   const VkDescriptorSetAllocateInfo allocInfo = {
     .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
     .descriptorPool = descriptorPool->getVkDescriptorPool(),

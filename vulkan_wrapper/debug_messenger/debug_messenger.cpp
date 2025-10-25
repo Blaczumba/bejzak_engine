@@ -26,7 +26,7 @@ DebugMessenger& DebugMessenger::operator=(DebugMessenger&& other) noexcept {
 
 ErrorOr<DebugMessenger> DebugMessenger::create(
     const Instance& instance, PFN_vkDebugUtilsMessengerCallbackEXT debugCallback) {
-  VkDebugUtilsMessengerCreateInfoEXT createInfo =
+  const VkDebugUtilsMessengerCreateInfoEXT createInfo =
       populateDebugMessengerCreateInfoUtility(debugCallback);
   VkDebugUtilsMessengerEXT debugUtilsMessenger;
   if (auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(
