@@ -1,9 +1,9 @@
 #pragma once
 
 #include <algorithm>
+#include <map>
 #include <stdexcept>
 #include <string>
-#include <map>
 #include <vulkan/vulkan.h>
 
 #include "pipeline.h"
@@ -136,7 +136,7 @@ public:
 
     lib::Buffer<VkPipelineShaderStageCreateInfo> shaders =
         _shaderProgram.getVkPipelineShaderStageCreateInfos();
-    //if (parameters)
+    // if (parameters)
 
     const std::optional<VkPipelineVertexInputStateCreateInfo>& vertexInputInfo =
         shaderProgram.getVkPipelineVertexInputStateCreateInfo();
