@@ -65,12 +65,12 @@ ErrorOr<LogicalDevice> LogicalDevice::create(const PhysicalDevice& physicalDevic
   std::transform(uniqueQueueFamilies.cbegin(), uniqueQueueFamilies.cend(), queueCreateInfos.begin(),
                  [&queuePriority](uint32_t queueFamilyIndex) {
                    return VkDeviceQueueCreateInfo{
-                     VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-                     nullptr,
-                     0,
-                     queueFamilyIndex,
-                     1,
-                     &queuePriority};
+                     .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+                     .pNext = nullptr,
+                     .flags = 0,
+                     .queueFamilyIndex = queueFamilyIndex,
+                     .queueCount = 1,
+                     .pQueuePriorities = &queuePriority};
                  });
 
   DeviceFeatures deviceFeatures;

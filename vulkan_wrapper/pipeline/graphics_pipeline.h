@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <stdexcept>
 #include <string>
-#include <unordered_map>
+#include <map>
 #include <vulkan/vulkan.h>
 
 #include "pipeline.h"
@@ -12,17 +12,21 @@
 #include "vulkan_wrapper/pipeline/shader_program.h"
 #include "vulkan_wrapper/render_pass/render_pass.h"
 
+struct SpecializationData {
+  void* data;
+  std::map<VkShaderStageFlagBits, VkSpecializationMapEntry> mapEntries;
+};
+
 struct GraphicsPipelineParameters {
   VkCullModeFlags cullMode = VK_CULL_MODE_BACK_BIT;
   VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_1_BIT;
   std::optional<uint32_t> patchControlPoints = std::nullopt;
   float depthBiasConstantFactor = 0.0f;
   float depthBiasSlopeFactor = 0.0f;
+  std::optional<SpecializationData> specializationData = std::nullopt;
 };
 
 class GraphicsPipeline : public Pipeline {
-  GraphicsPipelineParameters _parameters;
-
   const Renderpass& _renderpass;
   const ShaderProgram& _shaderProgram;
 
@@ -30,7 +34,7 @@ public:
   GraphicsPipeline(const Renderpass& renderpass, const ShaderProgram& shaderProgram,
                    const GraphicsPipelineParameters& parameters)
     : Pipeline(VK_PIPELINE_BIND_POINT_GRAPHICS), _renderpass(renderpass),
-      _shaderProgram(shaderProgram), _parameters(parameters) {
+      _shaderProgram(shaderProgram) {
     const VkDevice device = _renderpass.getLogicalDevice().getVkDevice();
 
     VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
@@ -39,11 +43,11 @@ public:
     inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
     VkPipelineTessellationStateCreateInfo tessellationState = {};
-    if (_parameters.patchControlPoints.has_value()) {
+    if (parameters.patchControlPoints.has_value()) {
       inputAssembly.topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
 
       tessellationState.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
-      tessellationState.patchControlPoints = _parameters.patchControlPoints.value();
+      tessellationState.patchControlPoints = parameters.patchControlPoints.value();
     }
 
     VkPipelineViewportStateCreateInfo viewportState{};
@@ -57,18 +61,18 @@ public:
     rasterizer.rasterizerDiscardEnable = VK_FALSE;
     rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
     rasterizer.lineWidth = 1.0f;
-    rasterizer.cullMode = _parameters.cullMode;
+    rasterizer.cullMode = parameters.cullMode;
     // rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     rasterizer.depthBiasEnable = VK_FALSE;
-    if (_parameters.depthBiasConstantFactor != 0.0f && _parameters.depthBiasSlopeFactor != 0.0f) {
+    if (parameters.depthBiasConstantFactor != 0.0f && parameters.depthBiasSlopeFactor != 0.0f) {
       rasterizer.depthBiasEnable = VK_TRUE;
     }
-    rasterizer.depthBiasConstantFactor = _parameters.depthBiasConstantFactor;
-    rasterizer.depthBiasSlopeFactor = _parameters.depthBiasSlopeFactor;
+    rasterizer.depthBiasConstantFactor = parameters.depthBiasConstantFactor;
+    rasterizer.depthBiasSlopeFactor = parameters.depthBiasSlopeFactor;
 
     VkPipelineMultisampleStateCreateInfo multisampling{};
     multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    multisampling.rasterizationSamples = _parameters.msaaSamples;
+    multisampling.rasterizationSamples = parameters.msaaSamples;
     multisampling.sampleShadingEnable = VK_TRUE;
     multisampling.minSampleShading = 0.2f;
 
@@ -130,8 +134,10 @@ public:
     depthStencil.front = {};  // Optional
     depthStencil.back = {};   // Optional
 
-    const lib::Buffer<VkPipelineShaderStageCreateInfo> shaders =
+    lib::Buffer<VkPipelineShaderStageCreateInfo> shaders =
         _shaderProgram.getVkPipelineShaderStageCreateInfos();
+    //if (parameters)
+
     const std::optional<VkPipelineVertexInputStateCreateInfo>& vertexInputInfo =
         shaderProgram.getVkPipelineVertexInputStateCreateInfo();
 
@@ -144,7 +150,7 @@ public:
     }
     pipelineInfo.pInputAssemblyState = &inputAssembly;
     pipelineInfo.pTessellationState =
-        _parameters.patchControlPoints.has_value() ? &tessellationState : nullptr;
+        parameters.patchControlPoints.has_value() ? &tessellationState : nullptr;
     pipelineInfo.pViewportState = &viewportState;
     pipelineInfo.pRasterizationState = &rasterizer;
     pipelineInfo.pMultisampleState = &multisampling;
