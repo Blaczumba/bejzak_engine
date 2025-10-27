@@ -28,7 +28,7 @@ public:
 
   VkImage getVkImage() const;
 
-  VkImageView getVkImageView() const;
+  VkImageView getVkImageView(size_t index = 0) const;
 
   VkSampler getVkSampler() const;
 
@@ -45,6 +45,7 @@ private:
 
   VkImage _image = VK_NULL_HANDLE;
   std::vector<VkImageView> _views;
+  // Create separate Sampler class which is not owned by Texture.
   VkSampler _sampler = VK_NULL_HANDLE;
   Allocation _allocation;
   VkImageLayout _layout;

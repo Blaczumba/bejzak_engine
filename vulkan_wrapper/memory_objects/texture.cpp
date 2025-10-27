@@ -83,9 +83,8 @@ VkImage Texture::getVkImage() const {
   return _image;
 }
 
-VkImageView Texture::getVkImageView() const {
-  // TODO
-  return _views[0];
+VkImageView Texture::getVkImageView(size_t index) const {
+  return index < _views.size() ? _views[index] : VK_NULL_HANDLE;
 }
 
 VkSampler Texture::getVkSampler() const {
@@ -117,7 +116,7 @@ VkImageViewType getImageViewType(VkImageType type, uint32_t layerCount, VkImageC
       }
     case VK_IMAGE_TYPE_2D:
       {
-        if (flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT && layerCount == 6) {
+        if ((flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) && layerCount == 6) {
           return VK_IMAGE_VIEW_TYPE_CUBE;
         }
         if (layerCount > 1) {
@@ -146,8 +145,7 @@ ErrorOr<VkImageView> Texture::addCreateVkImageView(
       const VkImageView view,
       _logicalDevice->createImageView(
           _image,
-          getImageViewType(
-              _imageParameters.type, _imageParameters.layerCount, _imageParameters.flags),
+          getImageViewType(_imageParameters.type, layerCount, _imageParameters.flags),
           _imageParameters.format, _imageParameters.aspect, baseMipLevel, levelCount,
           baseArrayLayer, layerCount));
   _views.push_back(view);
