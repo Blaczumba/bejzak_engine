@@ -19,7 +19,7 @@ ErrorOr<Texture> createColorAttachment(
       .withUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
       .withLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
       .buildAttachment(logicalDevice, commandBuffer));
-  texture.addCreateVkImageView(0, 1, 0, 1);
+  RETURN_IF_ERROR(texture.addCreateVkImageView(0, 1, 0, 1));
   return texture;
 }
 
@@ -43,7 +43,7 @@ ErrorOr<Texture> createDepthAttachment(
       .withLayout(hasStencil(format) ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL :
                                        VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL)
       .buildAttachment(logicalDevice, commandBuffer));
-  texture.addCreateVkImageView(0, 1, 0, 1);
+  RETURN_IF_ERROR(texture.addCreateVkImageView(0, 1, 0, 1));
   return texture;
 }
 
