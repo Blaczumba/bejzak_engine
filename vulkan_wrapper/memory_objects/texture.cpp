@@ -104,6 +104,34 @@ VkImageLayout Texture::getVkImageLayout() const {
   return _layout;
 }
 
+namespace {
+
+VkImageViewType getImageViewType(VkImageType type, uint32_t layerCount, VkImageCreateFlags flags) {
+  switch (type) {
+    case VK_IMAGE_TYPE_1D:
+      {
+        if (layerCount > 1) {
+          return VK_IMAGE_VIEW_TYPE_1D_ARRAY;
+        }
+        return VK_IMAGE_VIEW_TYPE_1D;
+      }
+    case VK_IMAGE_TYPE_2D:
+      {
+        if (flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT && layerCount == 6) {
+          return VK_IMAGE_VIEW_TYPE_CUBE;
+        }
+        if (layerCount > 1) {
+          return VK_IMAGE_VIEW_TYPE_2D_ARRAY;
+        }
+        return VK_IMAGE_VIEW_TYPE_2D;
+      }
+    case VK_IMAGE_TYPE_3D:
+      return VK_IMAGE_VIEW_TYPE_3D;
+  }
+}
+
+}  // namespace
+
 ErrorOr<VkImageView> Texture::addCreateVkImageView(
     uint32_t baseMipLevel, uint32_t levelCount, uint32_t baseArrayLayer, uint32_t layerCount) {
   if (baseMipLevel + levelCount > _imageParameters.mipLevels) {
@@ -114,10 +142,14 @@ ErrorOr<VkImageView> Texture::addCreateVkImageView(
     return Error(EngineError::INDEX_OUT_OF_RANGE);
   }
 
-  ASSIGN_OR_RETURN(const VkImageView view,
-                   _logicalDevice->createImageView(
-                       _image, _imageParameters.type, _imageParameters.format,
-                       _imageParameters.aspect, levelCount, layerCount, _imageParameters.flags));
+  ASSIGN_OR_RETURN(
+      const VkImageView view,
+      _logicalDevice->createImageView(
+          _image,
+          getImageViewType(
+              _imageParameters.type, _imageParameters.layerCount, _imageParameters.flags),
+          _imageParameters.format, _imageParameters.aspect, baseMipLevel, levelCount,
+          baseArrayLayer, layerCount));
   _views.push_back(view);
   return view;
 }
