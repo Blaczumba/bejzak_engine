@@ -14,7 +14,8 @@
 
 struct SpecializationData {
   void* data;
-  std::map<VkShaderStageFlagBits, VkSpecializationMapEntry> mapEntries;
+  size_t dataSize;
+  std::map<VkShaderStageFlagBits, std::vector<VkSpecializationMapEntry>> mapEntries;
 };
 
 struct GraphicsPipelineParameters {
@@ -136,7 +137,20 @@ public:
 
     lib::Buffer<VkPipelineShaderStageCreateInfo> shaders =
         _shaderProgram.getVkPipelineShaderStageCreateInfos();
-    // if (parameters)
+    if (parameters.specializationData.has_value()) {
+      for (VkPipelineShaderStageCreateInfo& shaderStage : shaders) {
+        const VkShaderStageFlagBits stageFlag = static_cast<VkShaderStageFlagBits>(shaderStage.stage);
+        auto it = parameters.specializationData->mapEntries.find(stageFlag);
+        if (it != parameters.specializationData->mapEntries.cend()) {
+          const VkSpecializationInfo specializationInfo = {
+            .mapEntryCount = static_cast<uint32_t>(it->second.size()),
+            .pMapEntries = it->second.data(),
+            .dataSize = parameters.specializationData->dataSize,
+            .pData = parameters.specializationData->data};
+          shaderStage.pSpecializationInfo = &specializationInfo;
+        }
+      }
+    }
 
     const std::optional<VkPipelineVertexInputStateCreateInfo>& vertexInputInfo =
         shaderProgram.getVkPipelineVertexInputStateCreateInfo();

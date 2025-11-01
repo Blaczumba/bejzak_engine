@@ -18,6 +18,7 @@ glslc -fshader-stage=fragment "$SCRIPT_DIR/skybox_offscreen.frag.glsl" -O -o "$S
 glslc -fshader-stage=vertex "$SCRIPT_DIR/shadow.vert.glsl" -O -o "$SCRIPT_DIR/shadow.vert.spv"
 glslc -fshader-stage=fragment "$SCRIPT_DIR/shadow.frag.glsl" -O -o "$SCRIPT_DIR/shadow.frag.spv"
 
+glslc -I "$SCRIPT_DIR/bindless.glsl" -fshader-stage=vertex "$SCRIPT_DIR/pbr_env_mapping.vert.glsl" -O -o "$SCRIPT_DIR/pbr_env_mapping.vert.spv"
 glslc -I "$SCRIPT_DIR/bindless.glsl" -fshader-stage=vertex "$SCRIPT_DIR/shader_pbr.vert.glsl" -O -o "$SCRIPT_DIR/shader_pbr.vert.spv"
 
 glslc -fshader-stage=vertex "$SCRIPT_DIR/shader_pbr_tesselation.vert.glsl" -O -o "$SCRIPT_DIR/shader_pbr_tesselation.vert.spv"

@@ -311,7 +311,9 @@ ErrorOr<Texture> TextureBuilder::buildAttachment(
   transitionImageLayout(
       commandBuffer, image, VK_IMAGE_LAYOUT_UNDEFINED, _imageLayout, _imageParameters.aspect,
       _imageParameters.mipLevels, _imageParameters.layerCount);
-  return Texture(logicalDevice, image, allocation, _imageParameters, _imageLayout);
+  // TODO: remove
+  ASSIGN_OR_RETURN(const VkSampler sampler, logicalDevice.createSampler(_samplerParameters));
+  return Texture(logicalDevice, image, allocation, _imageParameters, _imageLayout, sampler);
 }
 
 ErrorOr<Texture> TextureBuilder::buildImage(

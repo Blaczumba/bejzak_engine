@@ -207,7 +207,7 @@ ErrorOr<Swapchain> SwapchainBuilder::build(
   vkGetSwapchainImagesKHR(logicalDevice.getVkDevice(), swapchain, &imageCount, images.data());
 
   lib::Buffer<VkImageView> views(imageCount);
-  for (size_t i = 0; i < images.size(); ++i) {
+  for (size_t i = 0; i < images.size(); i++) {
     ASSIGN_OR_RETURN(views[i], logicalDevice.createImageView(
                                    images[i], VK_IMAGE_VIEW_TYPE_2D, surfaceFormat.format,
                                    VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1));

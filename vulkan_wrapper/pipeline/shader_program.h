@@ -34,11 +34,13 @@ public:
 
   const VkDescriptorSetLayout getVkDescriptorSetLayout(DescriptorSetType type) const;
 
-  ErrorOr<ShaderProgram> createPBRProgram(const LogicalDevice& _logicalDevice);
+  ErrorOr<ShaderProgram> createPBRProgram(const LogicalDevice& logicalDevice);
 
-  ErrorOr<ShaderProgram> createSkyboxProgram(const LogicalDevice& _logicalDevice);
+  ErrorOr<ShaderProgram> createPbrEnvMappingProgram(const LogicalDevice& logicalDevice);
 
-  ErrorOr<ShaderProgram> createShadowProgram(const LogicalDevice& _logicalDevice);
+  ErrorOr<ShaderProgram> createSkyboxProgram(const LogicalDevice& logicalDevice);
+
+  ErrorOr<ShaderProgram> createShadowProgram(const LogicalDevice& logicalDevice);
 
 private:
   std::shared_ptr<FileLoader> _fileLoader;
@@ -93,7 +95,7 @@ public:
 
 struct PushConstantsPBR {
   glm::mat4 model;
-  uint32_t light;
+  uint32_t uniformIndex;
   uint32_t diffuse;
   uint32_t normal;
   uint32_t metallicRoughness;
