@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <functional>
 #include <future>
+#include <numeric>
 #include <optional>
 #include <span>
 #include <string>
@@ -41,19 +42,18 @@ public:
   };
 
   struct VertexData {
-    Buffer vertexBuffer;
+    std::unordered_map<std::string, Buffer> buffers;
     Buffer indexBuffer;
     VkIndexType indexType;
-    Buffer vertexBufferPositions;
   };
 
   void loadImageAsync(const std::string& filePath);
 
-  template <typename Model>
+  template <typename Model, typename... Type>
   void loadVertexDataInterleavingAsync(
       std::shared_ptr<Model>& modelPtr, const std::string& name, std::span<const std::byte> indices,
-      uint8_t indexSize, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords,
-      std::span<const glm::vec3> normals);
+      uint8_t indexSize, std::span<const std::pair<std::string, std::string>> orderss,
+      std::span<const Type>... attributes);
 
   template <typename VertexType, typename Model>
   void loadVertexDataAsync(
@@ -82,35 +82,52 @@ private:
   std::unordered_map<std::string, std::future<ErrorOr<ImageData>>> _awaitingImageResources;
 };
 
-template <typename Model>
+template <typename Model, typename... Type>
 void AssetManager::loadVertexDataInterleavingAsync(
     std::shared_ptr<Model>& modelPtr, const std::string& name, std::span<const std::byte> indices,
-    uint8_t indexSize, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords,
-    std::span<const glm::vec3> normals) {
+    uint8_t indexSize, std::span<const std::pair<std::string, std::string>> orders,
+    std::span<const Type>... attributes) {
   if (_awaitingVertexDataResources.contains(name)) {
     return;
   }
+  
   auto future = std::async(
       _launchPolicy,
-      [this, modelPtr, indices, indexSize, positions, texCoords,
-       normals]() -> ErrorOr<VertexData> {  // TODO: boost::asio::post,
+      [this, modelPtr, indices, indexSize, orders, attributes...]() -> ErrorOr<VertexData> {  // TODO: boost::asio::post,
                                             // boost::asio::use_future
-        ASSIGN_OR_RETURN(
+
+        VertexData vertexData;
+        
+        AttributeDescription descs[] = {
+          AttributeDescription{(void*)attributes.data(), sizeof(Type), attributes.size()}...
+        };
+
+        size_t stride = std::accumulate(std::cbegin(descs), std::cend(descs), 0,
+                                        [](size_t val, const AttributeDescription& attribute) {
+                                          return val + attribute.size;
+                                        });
+
+        for (const std::pair<std::string, std::string>& order : orders) {
+          lib::Buffer<AttributeDescription> orderedDescs(order.second.size());
+          size_t size = 0;
+          for (size_t i = 0; i < orderedDescs.size(); i++) {
+            orderedDescs[i] = descs[static_cast<size_t>(order.second[i] - '0')];
+            size += orderedDescs[i].size * orderedDescs[i].count;
+          }
+
+          ASSIGN_OR_RETURN(
             auto vertexBuffer,
-            Buffer::createStagingBuffer(*_logicalDevice, positions.size() * sizeof(VertexPTNT)));
-        ASSIGN_OR_RETURN(lib::Buffer<glm::vec3> tangents,
-                         createTangents(indexSize, indices, positions, texCoords));
-        RETURN_IF_ERROR(vertexBuffer.copyDataInterleaving(positions, texCoords, normals, tangents));
-        ASSIGN_OR_RETURN(
-            auto vertexBufferPositions,
-            Buffer::createStagingBuffer(*_logicalDevice, positions.size() * sizeof(glm::vec3)));
-        RETURN_IF_ERROR(vertexBufferPositions.copyData(positions));
-        ASSIGN_OR_RETURN(
-            auto indexBuffer, Buffer::createStagingBuffer(*_logicalDevice, indices.size()));
-        RETURN_IF_ERROR(indexBuffer.copyData(indices));
-        return ErrorOr<VertexData>(
-            VertexData(std::move(vertexBuffer), std::move(indexBuffer), getIndexType(indexSize),
-                       std::move(vertexBufferPositions)));
+            Buffer::createStagingBuffer(*_logicalDevice, size));
+          RETURN_IF_ERROR(vertexBuffer.copyDataInterleaving(
+              orderedDescs));
+          vertexData.buffers.emplace(order.first, std::move(vertexBuffer));
+        }
+
+        ASSIGN_OR_RETURN(vertexData.indexBuffer, Buffer::createStagingBuffer(*_logicalDevice, indices.size()));
+        RETURN_IF_ERROR(vertexData.indexBuffer.copyData(indices));
+        vertexData.indexType = getIndexType(indexSize);
+
+        return vertexData;
       });
   _awaitingVertexDataResources.emplace(name, std::move(future));
 }

@@ -1,6 +1,7 @@
 #include "buffer.h"
 
 #include <glm/glm.hpp>
+#include <numeric>
 
 #include "common/util/vertex_builder.h"
 #include "vulkan_wrapper/memory_objects/buffers.h"
@@ -177,14 +178,26 @@ Status Buffer::copyDataInterleaving(
       std::span(static_cast<std::byte*>(_mappedMemory), _size), positions, texCoords, normals);
 }
 
-Status Buffer::copyDataInterleaving(
-    std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords,
-    std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents) {
+Status Buffer::copyDataInterleaving(std::span<const AttributeDescription> attributes) {
   if (!_mappedMemory) [[unlikely]] {
     return Error(EngineError::NOT_MAPPED);
   }
-  return buildInterleavingVertexData(std::span(static_cast<std::byte*>(_mappedMemory), _size),
-                                     positions, texCoords, normals, tangents);
+
+  size_t stride = std::accumulate(
+      attributes.cbegin(), attributes.cend(), 0u, [](size_t acc, const AttributeDescription& desc) {
+        return acc + desc.size;
+      });
+
+  for (int j = 0; j < attributes[0].count; j++) {
+    size_t offset = 0;
+    for (int i = 0; i < attributes.size(); i++) {
+      std::memcpy(static_cast<uint8_t*>(_mappedMemory) + j * stride + offset,
+          static_cast<uint8_t*>(attributes[i].data) + j * attributes[i].size, attributes[i].size);
+      offset += attributes[i].size;
+    }
+  }
+
+  return StatusOk();
 }
 
 VkBufferUsageFlags Buffer::getUsage() const {

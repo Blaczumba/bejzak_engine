@@ -14,6 +14,12 @@
 #include "lib/buffer/buffer.h"
 #include "vulkan_wrapper/logical_device/logical_device.h"
 
+struct AttributeDescription {
+  void* data;
+  size_t size;
+  size_t count;
+};
+
 class Buffer {
 public:
   Buffer() = default;
@@ -43,9 +49,7 @@ public:
       std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords,
       std::span<const glm::vec3> normals);
 
-  Status copyDataInterleaving(
-      std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords,
-      std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents);
+  Status copyDataInterleaving(std::span<const AttributeDescription> attributes);
 
   template <typename T>
   Status copyData(std::span<const T> data, VkDeviceSize offset = 0);

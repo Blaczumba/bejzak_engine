@@ -202,12 +202,36 @@ Status processNode(
     // TODO: refactor
     static int objectCounter = 0;
     std::string objectName = baseDir + std::to_string(objectCounter++);
+
+    ASSIGN_OR_RETURN(lib::Buffer<glm::vec3> tangents,
+        createTangents(indexSize, indicesBytes,
+                       std::span(reinterpret_cast<const glm::vec3*>(positionsData.data()),
+                                 positionsData.size()),
+                       std::span(reinterpret_cast<const glm::vec2*>(textureCoordsData.data()),
+                                 textureCoordsData.size())));
+
+    static std::pair<std::string, std::string> orders[] = {
+      {"PTNT", "0123"},
+      {"P", "0"}
+    };
+    static std::vector<lib::Buffer<glm::vec3>> tangentsVec;
+    tangentsVec.emplace_back();
+    ASSIGN_OR_RETURN(
+        tangentsVec.back(),
+        createTangents(indexSize, indicesBytes,
+                       std::span(reinterpret_cast<const glm::vec3*>(positionsData.data()),
+                                 positionsData.size()),
+        std::span(
+            reinterpret_cast<const glm::vec2*>(textureCoordsData.data()), textureCoordsData.size())));
     assetManager.loadVertexDataInterleavingAsync(
-        model, objectName, indicesBytes, indexSize,
+        model, objectName, indicesBytes, indexSize, orders,
         std::span(reinterpret_cast<const glm::vec3*>(positionsData.data()), positionsData.size()),
         std::span(
             reinterpret_cast<const glm::vec2*>(textureCoordsData.data()), textureCoordsData.size()),
-        std::span(reinterpret_cast<const glm::vec3*>(normalsData.data()), normalsData.size()));
+        std::span(reinterpret_cast<const glm::vec3*>(normalsData.data()), normalsData.size()),
+        std::span(reinterpret_cast<const glm::vec3*>(tangentsVec.back().data()),
+                  tangentsVec.back().size()));
+
 
     assetManager.loadImageAsync(baseDir + '/' + diffuseTexture);
     assetManager.loadImageAsync(baseDir + '/' + metallicRoughnessTexture);
