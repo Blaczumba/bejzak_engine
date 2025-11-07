@@ -21,6 +21,13 @@ struct VertexPT {
   static constexpr size_t num_attributes = 2;
 };
 
+struct VertexPN {
+  glm::vec3 pos;
+  glm::vec3 normal;
+
+  static constexpr size_t num_attributes = 2;
+};
+
 struct VertexPTN {
   glm::vec3 pos;
   glm::vec2 texCoord;

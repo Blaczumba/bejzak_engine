@@ -38,6 +38,8 @@ public:
 
   ErrorOr<ShaderProgram> createPbrEnvMappingProgram(const LogicalDevice& logicalDevice);
 
+  ErrorOr<ShaderProgram> createPhongWithEnvMappingProgram(const LogicalDevice& logicalDevice);
+
   ErrorOr<ShaderProgram> createSkyboxProgram(const LogicalDevice& logicalDevice);
 
   ErrorOr<ShaderProgram> createShadowProgram(const LogicalDevice& logicalDevice);
@@ -106,6 +108,12 @@ struct PushConstantsPBR {
 struct PushConstantsShadow {
   glm::mat4 model;
   glm::mat4 lightProjView;
+};
+
+struct PushConstantsPhongEnv {
+  glm::mat4 lightProjView;
+  glm::mat3x4 model;
+  uint32_t envMapHandle;
 };
 
 struct PushConstantsSkybox {

@@ -100,7 +100,7 @@ VkPipelineVertexInputStateCreateInfo getVkPipelineVertexInputStateCreateInfo() {
 
 ErrorOr<ShaderProgram> ShaderProgramManager::createPbrEnvMappingProgram(const LogicalDevice& logicalDevice) {
   static constexpr std::string_view vertexShaderPath = "pbr_env_mapping.vert.spv";
-  static constexpr std::string_view fragmentShaderPath = "pbr_env_mapping.frag.spv";
+  static constexpr std::string_view fragmentShaderPath = "shader_pbr.frag.spv";
   RETURN_IF_ERROR(addShader(logicalDevice, vertexShaderPath, VK_SHADER_STAGE_VERTEX_BIT));
   RETURN_IF_ERROR(addShader(logicalDevice, fragmentShaderPath, VK_SHADER_STAGE_FRAGMENT_BIT));
 
@@ -115,6 +115,26 @@ ErrorOr<ShaderProgram> ShaderProgramManager::createPbrEnvMappingProgram(const Lo
 
   return ShaderProgram(*this, {vertexShaderPath, fragmentShaderPath},
                        {bindlessLayout}, pushConstantRanges, vertexInputInfo);
+}
+
+ErrorOr<ShaderProgram> ShaderProgramManager::createPhongWithEnvMappingProgram(
+    const LogicalDevice& logicalDevice) {
+  static constexpr std::string_view vertexShaderPath = "env_mapping_phong.vert.spv";
+  static constexpr std::string_view fragmentShaderPath = "env_mapping_phong.frag.spv";
+  RETURN_IF_ERROR(addShader(logicalDevice, vertexShaderPath, VK_SHADER_STAGE_VERTEX_BIT));
+  RETURN_IF_ERROR(addShader(logicalDevice, fragmentShaderPath, VK_SHADER_STAGE_FRAGMENT_BIT));
+
+  static constexpr VkPushConstantRange pushConstantRanges[] = {
+    getPushConstantRange<PushConstantsPhongEnv>(
+        VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT)};
+
+  ASSIGN_OR_RETURN(DescriptorSetType bindlessLayout, getOrCreateBindlessLayout(logicalDevice));
+
+  const VkPipelineVertexInputStateCreateInfo vertexInputInfo =
+      getVkPipelineVertexInputStateCreateInfo<VertexPN>();
+
+  return ShaderProgram(*this, {vertexShaderPath, fragmentShaderPath}, {bindlessLayout},
+                       pushConstantRanges, vertexInputInfo);
 }
 
 ErrorOr<ShaderProgram> ShaderProgramManager::createPBRProgram(const LogicalDevice& logicalDevice) {
