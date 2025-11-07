@@ -143,7 +143,7 @@ getAttributeDescriptions<VertexPN>() {
                                       .location = 0,
                                       .binding = 0,
                                       .format = VK_FORMAT_R32G32B32_SFLOAT,
-                                      .offset = offsetof(VertexPN, pos)     },
+                                      .offset = offsetof(VertexPN, pos)   },
     VkVertexInputAttributeDescription{
                                       .location = 1,
                                       .binding = 0,

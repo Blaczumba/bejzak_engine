@@ -138,7 +138,8 @@ public:
         _shaderProgram.getVkPipelineShaderStageCreateInfos();
     if (parameters.specializationData.has_value()) {
       for (VkPipelineShaderStageCreateInfo& shaderStage : shaders) {
-        const VkShaderStageFlagBits stageFlag = static_cast<VkShaderStageFlagBits>(shaderStage.stage);
+        const VkShaderStageFlagBits stageFlag =
+            static_cast<VkShaderStageFlagBits>(shaderStage.stage);
         auto it = parameters.specializationData->mapEntries.find(stageFlag);
         if (it != parameters.specializationData->mapEntries.cend()) {
           const VkSpecializationInfo specializationInfo = {

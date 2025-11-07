@@ -90,22 +90,19 @@ void AssetManager::loadVertexDataInterleavingAsync(
   if (_awaitingVertexDataResources.contains(name)) {
     return;
   }
-  
+
   auto future = std::async(
       _launchPolicy,
-      [this, modelPtr, indices, indexSize, orders, attributes...]() -> ErrorOr<VertexData> {  // TODO: boost::asio::post,
-                                            // boost::asio::use_future
+      [this, modelPtr, indices, indexSize, orders,
+       attributes...]() -> ErrorOr<VertexData> {  // TODO: boost::asio::post,
+                                                  // boost::asio::use_future
 
         VertexData vertexData;
-        
-        AttributeDescription descs[] = {
-          AttributeDescription{(void*)attributes.data(), sizeof(Type), attributes.size()}...
-        };
 
-        size_t stride = std::accumulate(std::cbegin(descs), std::cend(descs), 0,
-                                        [](size_t val, const AttributeDescription& attribute) {
-                                          return val + attribute.size;
-                                        });
+        const AttributeDescription descs[] = {
+          AttributeDescription{(void*)attributes.data(), sizeof(Type), attributes.size()}
+          ...
+        };
 
         for (const std::pair<std::string, std::string>& order : orders) {
           lib::Buffer<AttributeDescription> orderedDescs(order.second.size());
@@ -115,15 +112,13 @@ void AssetManager::loadVertexDataInterleavingAsync(
             size += orderedDescs[i].size * orderedDescs[i].count;
           }
 
-          ASSIGN_OR_RETURN(
-            auto vertexBuffer,
-            Buffer::createStagingBuffer(*_logicalDevice, size));
-          RETURN_IF_ERROR(vertexBuffer.copyDataInterleaving(
-              orderedDescs));
+          ASSIGN_OR_RETURN(auto vertexBuffer, Buffer::createStagingBuffer(*_logicalDevice, size));
+          RETURN_IF_ERROR(vertexBuffer.copyDataInterleaving(orderedDescs));
           vertexData.buffers.emplace(order.first, std::move(vertexBuffer));
         }
 
-        ASSIGN_OR_RETURN(vertexData.indexBuffer, Buffer::createStagingBuffer(*_logicalDevice, indices.size()));
+        ASSIGN_OR_RETURN(
+            vertexData.indexBuffer, Buffer::createStagingBuffer(*_logicalDevice, indices.size()));
         RETURN_IF_ERROR(vertexData.indexBuffer.copyData(indices));
         vertexData.indexType = getIndexType(indexSize);
 

@@ -83,15 +83,15 @@ ErrorOr<VertexData> loadObj(common::AssetManager<AssetManagerImpl>& assetManager
   static constexpr uint8_t indexSize = 4;
 
   static std::pair<std::string, std::string> orders[] = {
-    {"P",    "0"   }
+    {"P", "0"}
   };
 
   assetManager.loadVertexDataInterleavingAsync(
       model, name,
       std::span(reinterpret_cast<const std::byte*>(model->indices.data()),
                 model->indices.size() * indexSize),
-      indexSize,
-      orders, std::span<const glm::vec3>(model->positions.data(), model->positions.size()));
+      indexSize, orders,
+      std::span<const glm::vec3>(model->positions.data(), model->positions.size()));
 
   return VertexData{.indexSize = indexSize, .vertexResource = name};
 }

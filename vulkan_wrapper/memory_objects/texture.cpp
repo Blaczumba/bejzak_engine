@@ -144,8 +144,7 @@ ErrorOr<VkImageView> Texture::addCreateVkImageView(
   ASSIGN_OR_RETURN(
       const VkImageView view,
       _logicalDevice->createImageView(
-          _image,
-          getImageViewType(_imageParameters.type, layerCount, _imageParameters.flags),
+          _image, getImageViewType(_imageParameters.type, layerCount, _imageParameters.flags),
           _imageParameters.format, _imageParameters.aspect, baseMipLevel, levelCount,
           baseArrayLayer, layerCount));
   _views.push_back(view);

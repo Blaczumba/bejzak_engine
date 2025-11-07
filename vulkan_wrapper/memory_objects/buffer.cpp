@@ -191,9 +191,10 @@ Status Buffer::copyDataInterleaving(std::span<const AttributeDescription> attrib
   for (int j = 0; j < attributes[0].count; j++) {
     size_t offset = 0;
     for (int i = 0; i < attributes.size(); i++) {
+      const AttributeDescription& attribute = attributes[i];
       std::memcpy(static_cast<uint8_t*>(_mappedMemory) + j * stride + offset,
-          static_cast<uint8_t*>(attributes[i].data) + j * attributes[i].size, attributes[i].size);
-      offset += attributes[i].size;
+                  static_cast<uint8_t*>(attribute.data) + j * attribute.size, attribute.size);
+      offset += attribute.size;
     }
   }
 
