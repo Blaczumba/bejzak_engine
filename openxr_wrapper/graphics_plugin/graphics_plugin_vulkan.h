@@ -1,9 +1,8 @@
 #pragma once
 
-#include <vulkan/vulkan.h>  // Vulkan needs to be included before openxr_platform.h
-
 #include <memory>
 #include <openxr/openxr.h>
+#include <vulkan/vulkan.h>  // Vulkan needs to be included before openxr_platform.h
 #include <openxr/openxr_platform.h>
 #include <span>
 #include <unordered_map>

@@ -96,7 +96,6 @@ void AssetManager::loadVertexDataInterleavingAsync(
       [this, modelPtr, indices, indexSize, orders,
        attributes...]() -> ErrorOr<VertexData> {  // TODO: boost::asio::post,
                                                   // boost::asio::use_future
-
         VertexData vertexData;
 
         const AttributeDescription descs[] = {
@@ -139,9 +138,10 @@ void AssetManager::loadVertexDataAsync(
   }
 
   auto future = std::async(
-      _launchPolicy, [this, modelPtr, indices, indexSize,
-                       vertices]() -> ErrorOr<VertexData> {  // TODO: boost::asio::post,
-                                                             // boost::asio::use_future
+      _launchPolicy,
+      [this, modelPtr, indices, indexSize,
+       vertices]() -> ErrorOr<VertexData> {  // TODO: boost::asio::post,
+                                             // boost::asio::use_future
         ASSIGN_OR_RETURN(auto vertexBuffer, Buffer::createStagingBuffer(
                                                 *_logicalDevice, vertices.size() * sizeof(Type)));
         RETURN_IF_ERROR(vertexBuffer.copyData(vertices));
