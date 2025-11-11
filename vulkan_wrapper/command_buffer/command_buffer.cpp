@@ -137,21 +137,19 @@ Status CommandBuffer::beginAsSecondary(
   if (_level != VK_COMMAND_BUFFER_LEVEL_SECONDARY) [[unlikely]] {
     return Error(EngineError::FLAG_NOT_SPECIFIED);
   }
-  VkCommandBufferInheritanceInfo inheritanceInfo;
-  if (scissorViewportInheritance) [[likely]] {
-    inheritanceInfo = {
+
+  const VkCommandBufferInheritanceInfo inheritanceInfo = {
       .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
       .pNext = scissorViewportInheritance,
       .renderPass = framebuffer.getRenderpass().getVkRenderPass(),
       .subpass = subpassIndex,
       .framebuffer = framebuffer.getVkFramebuffer()};
-  }
 
   const VkCommandBufferBeginInfo beginInfo = {
     .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
     .flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT
              | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-    .pInheritanceInfo = scissorViewportInheritance ? &inheritanceInfo : nullptr};
+    .pInheritanceInfo = &inheritanceInfo};
 
   CHECK_VKCMD(vkBeginCommandBuffer(_commandBuffer, &beginInfo));
   return StatusOk();

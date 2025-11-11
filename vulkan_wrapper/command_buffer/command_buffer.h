@@ -39,12 +39,6 @@ public:
   const LogicalDevice& getLogicalDevice() const;
 };
 
-template <size_t COUNT>
-ErrorOr<std::array<CommandBuffer, COUNT>> CommandPool::createCommandBuffers(
-    VkCommandBufferLevel level) const {
-  return CommandBuffer::create<COUNT>(shared_from_this(), level);
-}
-
 class CommandBuffer {
   VkCommandBuffer _commandBuffer;
   std::shared_ptr<const CommandPool> _commandPool;
@@ -97,6 +91,12 @@ public:
 
   VkCommandBuffer getVkCommandBuffer() const;
 };
+
+template <size_t COUNT>
+ErrorOr<std::array<CommandBuffer, COUNT>> CommandPool::createCommandBuffers(
+    VkCommandBufferLevel level) const {
+  return CommandBuffer::create<COUNT>(shared_from_this(), level);
+}
 
 namespace {
 
