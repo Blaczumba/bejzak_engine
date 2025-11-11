@@ -139,11 +139,11 @@ Status CommandBuffer::beginAsSecondary(
   }
 
   const VkCommandBufferInheritanceInfo inheritanceInfo = {
-      .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-      .pNext = scissorViewportInheritance,
-      .renderPass = framebuffer.getRenderpass().getVkRenderPass(),
-      .subpass = subpassIndex,
-      .framebuffer = framebuffer.getVkFramebuffer()};
+    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+    .pNext = scissorViewportInheritance,
+    .renderPass = framebuffer.getRenderpass().getVkRenderPass(),
+    .subpass = subpassIndex,
+    .framebuffer = framebuffer.getVkFramebuffer()};
 
   const VkCommandBufferBeginInfo beginInfo = {
     .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,

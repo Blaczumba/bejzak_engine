@@ -52,6 +52,10 @@ public:
   Status copyDataInterleaving(std::span<const AttributeDescription> attributes);
 
   template <typename T>
+  requires std::is_unsigned_v<T>
+  ErrorOr<size_t> copyAndShrinkData(std::span<const T> data, VkDeviceSize offset = 0);
+
+  template <typename T>
   Status copyData(std::span<const T> data, VkDeviceSize offset = 0);
 
   template <typename T>
@@ -78,6 +82,40 @@ private:
          const VkBuffer vertexBuffer, VkBufferUsageFlags usage, uint32_t size,
          void* mappedData = nullptr);
 };
+
+template <typename T>
+requires std::is_unsigned_v<T>
+ErrorOr<size_t> Buffer::copyAndShrinkData(std::span<const T> data, VkDeviceSize offset) {
+  if (!_mappedMemory) {
+    return Error(EngineError::NOT_MAPPED);
+  }
+
+  const size_t maxIndex = *std::max_element(std::cbegin(data), std::cend(data));
+  void* mappedMemory = static_cast<uint8_t*>(_mappedMemory) + offset;
+  if (maxIndex <= std::numeric_limits<uint8_t>::max()) {
+    if (_size < (maxIndex + 1) * sizeof(uint8_t) + offset) {
+      return Error(EngineError::INDEX_OUT_OF_RANGE);
+    }
+    for (size_t i = 0; i < data.size(); i++) {
+      static_cast<uint8_t*>(mappedMemory)[i] = static_cast<uint8_t>(data[i]);
+    }
+    return sizeof(uint8_t);
+  } else if (maxIndex <= std::numeric_limits<uint16_t>::max()) {
+    if (_size < (maxIndex + 1) * sizeof(uint16_t) + offset) {
+      return Error(EngineError::INDEX_OUT_OF_RANGE);
+    }
+    for (size_t i = 0; i < data.size(); i++) {
+      static_cast<uint16_t*>(mappedMemory)[i] = static_cast<uint16_t>(data[i]);
+    }
+    return sizeof(uint16_t);
+  } else {
+    if (_size < (maxIndex + 1) * sizeof(uint32_t) + offset) {
+      return Error(EngineError::INDEX_OUT_OF_RANGE);
+    }
+    std::memcpy(static_cast<uint8_t*>(mappedMemory), data.data(), data.size() * sizeof(uint32_t));
+    return sizeof(uint32_t);
+  }
+}
 
 template <typename T>
 Status Buffer::copyData(std::span<const T> data, VkDeviceSize offset) {

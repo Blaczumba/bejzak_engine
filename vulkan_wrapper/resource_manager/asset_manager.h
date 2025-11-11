@@ -52,13 +52,13 @@ public:
   template <typename Model, typename... Type>
   void loadVertexDataInterleavingAsync(
       std::shared_ptr<Model>& modelPtr, const std::string& name, std::span<const std::byte> indices,
-      uint8_t indexSize, std::span<const std::pair<std::string, std::string>> orderss,
+      uint8_t indexSize, std::span<const std::pair<std::string, std::string>> orders,
       std::span<const Type>... attributes);
 
   template <typename VertexType, typename Model>
   void loadVertexDataAsync(
       std::shared_ptr<Model>& modelPtr, const std::string& filePath,
-      std::span<const std::byte> indices, uint8_t indexSize, std::span<const VertexType> vertices);
+      std::span<const std::byte> indices, uint8_t indexSize, std::span<const VertexType> data);
 
   ErrorOr<std::reference_wrapper<const ImageData>> getImageData(const std::string& filePath);
 
@@ -121,8 +121,35 @@ void AssetManager::loadVertexDataInterleavingAsync(
 
         ASSIGN_OR_RETURN(
             vertexData.indexBuffer, Buffer::createStagingBuffer(*_logicalDevice, indices.size()));
-        RETURN_IF_ERROR(vertexData.indexBuffer.copyData(indices));
-        vertexData.indexType = getIndexType(indexSize);
+
+        size_t newIndexSize;
+        switch (indexSize) {
+          case sizeof(uint32_t):
+            {
+              ASSIGN_OR_RETURN(newIndexSize, vertexData.indexBuffer.copyAndShrinkData(std::span(
+                                                 reinterpret_cast<const uint32_t*>(indices.data()),
+                                                 indices.size() / sizeof(uint32_t))));
+            }
+            break;
+          case sizeof(uint16_t):
+            {
+              ASSIGN_OR_RETURN(newIndexSize, vertexData.indexBuffer.copyAndShrinkData(std::span(
+                                                 reinterpret_cast<const uint16_t*>(indices.data()),
+                                                 indices.size() / sizeof(uint16_t))));
+            }
+            break;
+          case sizeof(uint8_t):
+            {
+              ASSIGN_OR_RETURN(
+                  newIndexSize,
+                  vertexData.indexBuffer.copyAndShrinkData(
+                      std::span(reinterpret_cast<const uint8_t*>(indices.data()), indices.size())));
+            }
+            break;
+          default:
+            return Error(EngineError::NOT_RECOGNIZED_TYPE);
+        }
+        vertexData.indexType = getIndexType(newIndexSize);
 
         return vertexData;
       });

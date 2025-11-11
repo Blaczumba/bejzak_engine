@@ -159,25 +159,6 @@ Status Buffer::copyBuffer(
   return StatusOk();
 }
 
-Status Buffer::copyDataInterleaving(
-    std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords) {
-  if (!_mappedMemory) [[unlikely]] {
-    return Error(EngineError::NOT_MAPPED);
-  }
-  return buildInterleavingVertexData(
-      std::span(static_cast<std::byte*>(_mappedMemory), _size), positions, texCoords);
-}
-
-Status Buffer::copyDataInterleaving(
-    std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords,
-    std::span<const glm::vec3> normals) {
-  if (!_mappedMemory) [[unlikely]] {
-    return Error(EngineError::NOT_MAPPED);
-  }
-  return buildInterleavingVertexData(
-      std::span(static_cast<std::byte*>(_mappedMemory), _size), positions, texCoords, normals);
-}
-
 Status Buffer::copyDataInterleaving(std::span<const AttributeDescription> attributes) {
   if (!_mappedMemory) [[unlikely]] {
     return Error(EngineError::NOT_MAPPED);
