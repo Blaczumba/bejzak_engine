@@ -183,6 +183,13 @@ Status Buffer::copyDataInterleaving(std::span<const AttributeDescription> attrib
     return Error(EngineError::NOT_MAPPED);
   }
 
+  if (std::any_of(attributes.cbegin(), attributes.cend(),
+      [first = attributes[0].count](const AttributeDescription& attribute) {
+      return attribute.count != first;
+  })) {
+    return Error(EngineError::SIZE_MISMATCH);
+  }
+
   size_t stride = std::accumulate(
       attributes.cbegin(), attributes.cend(), 0u, [](size_t acc, const AttributeDescription& desc) {
         return acc + desc.size;

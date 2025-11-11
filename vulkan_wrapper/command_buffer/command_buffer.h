@@ -19,7 +19,8 @@ class CommandPool : public std::enable_shared_from_this<const CommandPool> {
   CommandPool(const LogicalDevice& logicalDevice, VkCommandPool commandPool);
 
 public:
-  static ErrorOr<std::unique_ptr<CommandPool>> create(const LogicalDevice& logicalDevice);
+  static ErrorOr<std::unique_ptr<CommandPool>> create(
+      const LogicalDevice& logicalDevice, VkCommandPoolCreateFlags flags = 0);
 
   ~CommandPool();
 

@@ -108,6 +108,9 @@ void AssetManager::loadVertexDataInterleavingAsync(
           lib::Buffer<AttributeDescription> orderedDescs(order.second.size());
           size_t size = 0;
           for (size_t i = 0; i < orderedDescs.size(); i++) {
+            if (!std::isdigit(order.second[i])) [[unlikely]] {
+              return Error(EngineError::LOAD_FAILURE);
+            }
             orderedDescs[i] = descs[static_cast<size_t>(order.second[i] - '0')];
             size += orderedDescs[i].size * orderedDescs[i].count;
           }
@@ -134,8 +137,9 @@ void AssetManager::loadVertexDataAsync(
   if (_awaitingVertexDataResources.contains(name)) {
     return;
   }
+
   auto future = std::async(
-      _launchPolicy, ([this, modelPtr, indices, indexSize,
+      _launchPolicy, [this, modelPtr, indices, indexSize,
                        vertices]() -> ErrorOr<VertexData> {  // TODO: boost::asio::post,
                                                              // boost::asio::use_future
         ASSIGN_OR_RETURN(auto vertexBuffer, Buffer::createStagingBuffer(
@@ -146,6 +150,6 @@ void AssetManager::loadVertexDataAsync(
         RETURN_IF_ERROR(indexBuffer.copyData(indices));
         return VertexData{
           Buffer(), std::move(indexBuffer), getIndexType(indexSize), std::move(vertexBuffer)};
-      }));
+      });
   _awaitingVertexDataResources.emplace(name, std::move(future));
 }

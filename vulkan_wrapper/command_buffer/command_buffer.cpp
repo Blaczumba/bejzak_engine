@@ -7,10 +7,11 @@
 CommandPool::CommandPool(const LogicalDevice& logicalDevice, VkCommandPool commandPool)
   : _logicalDevice(logicalDevice), _commandPool(commandPool) {}
 
-ErrorOr<std::unique_ptr<CommandPool>> CommandPool::create(const LogicalDevice& logicalDevice) {
+ErrorOr<std::unique_ptr<CommandPool>> CommandPool::create(
+    const LogicalDevice& logicalDevice, VkCommandPoolCreateFlags flags) {
   const VkCommandPoolCreateInfo poolInfo = {
     .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-    .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+    .flags = flags,
     .queueFamilyIndex = *logicalDevice.getPhysicalDevice().getQueueFamilyIndices().graphicsFamily};
 
   VkCommandPool commandPool;
@@ -131,7 +132,7 @@ ErrorOr<std::vector<PrimaryCommandBuffer>> PrimaryCommandBuffer::create(
 VkResult PrimaryCommandBuffer::begin(uint32_t subpassIndex) const {
   const VkCommandBufferBeginInfo beginInfo = {
     .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-  };
+    .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT};
   return vkBeginCommandBuffer(_commandBuffer, &beginInfo);
 }
 
@@ -228,7 +229,7 @@ VkResult SecondaryCommandBuffer::begin(
 
   const VkCommandBufferBeginInfo beginInfo = {
     .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-    .flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
+    .flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
     .pInheritanceInfo = &inheritance};
   return vkBeginCommandBuffer(_commandBuffer, &beginInfo);
 }
