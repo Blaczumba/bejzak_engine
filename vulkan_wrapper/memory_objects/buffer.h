@@ -11,8 +11,15 @@
 
 #include "buffer_deallocator.h"
 #include "common/status/status.h"
+#include "common/util/index_buffer.h"
 #include "lib/buffer/buffer.h"
 #include "vulkan_wrapper/logical_device/logical_device.h"
+
+struct AttributeDescription {
+  void* data;
+  size_t size;
+  size_t count;
+};
 
 class Buffer {
 public:
@@ -43,9 +50,10 @@ public:
       std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords,
       std::span<const glm::vec3> normals);
 
-  Status copyDataInterleaving(
-      std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords,
-      std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents);
+  Status copyDataInterleaving(std::span<const AttributeDescription> attributes);
+
+  Status copyAndShrinkData(std::span<const std::byte> data, size_t dstIndexSize,
+                           size_t srcIndexSize, VkDeviceSize offset = 0);
 
   template <typename T>
   Status copyData(std::span<const T> data, VkDeviceSize offset = 0);

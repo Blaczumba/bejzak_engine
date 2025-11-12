@@ -14,13 +14,13 @@ public:
     static_cast<AssetManagerImpl*>(this)->loadImageAsync(filePath);
   }
 
-  template <typename Model>
+  template <typename Model, typename... Type>
   void loadVertexDataInterleavingAsync(
       std::shared_ptr<Model>& modelPtr, const std::string& name, std::span<const std::byte> indices,
-      uint8_t indexSize, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords,
-      std::span<const glm::vec3> normals) {
+      uint8_t indexSize, std::span<const std::pair<std::string, std::string>> orders,
+      std::span<const Type>... attributes) {
     static_cast<AssetManagerImpl*>(this)->loadVertexDataInterleavingAsync(
-        modelPtr, name, indices, indexSize, positions, texCoords, normals);
+        modelPtr, name, indices, indexSize, orders, attributes...);
   }
 
   template <typename VertexType, typename Model>

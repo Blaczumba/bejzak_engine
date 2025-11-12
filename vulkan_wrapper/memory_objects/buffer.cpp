@@ -1,6 +1,7 @@
 #include "buffer.h"
 
 #include <glm/glm.hpp>
+#include <numeric>
 
 #include "common/util/vertex_builder.h"
 #include "vulkan_wrapper/memory_objects/buffers.h"
@@ -158,33 +159,49 @@ Status Buffer::copyBuffer(
   return StatusOk();
 }
 
-Status Buffer::copyDataInterleaving(
-    std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords) {
-  if (!_mappedMemory) [[unlikely]] {
+Status Buffer::copyAndShrinkData(std::span<const std::byte> data, size_t dstIndexSize,
+                                 size_t srcIndexSize, VkDeviceSize offset) {
+  if (!_mappedMemory) {
     return Error(EngineError::NOT_MAPPED);
   }
-  return buildInterleavingVertexData(
-      std::span(static_cast<std::byte*>(_mappedMemory), _size), positions, texCoords);
+
+  if (_size < dstIndexSize * data.size() / srcIndexSize + offset) {
+    return Error(EngineError::INDEX_OUT_OF_RANGE);
+  }
+
+  copyAndShrinkIndices(static_cast<uint8_t*>(_mappedMemory) + offset, dstIndexSize, data.data(),
+                       srcIndexSize, data.size() / srcIndexSize);
+  return StatusOk();
 }
 
-Status Buffer::copyDataInterleaving(
-    std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords,
-    std::span<const glm::vec3> normals) {
+Status Buffer::copyDataInterleaving(std::span<const AttributeDescription> attributes) {
   if (!_mappedMemory) [[unlikely]] {
     return Error(EngineError::NOT_MAPPED);
   }
-  return buildInterleavingVertexData(
-      std::span(static_cast<std::byte*>(_mappedMemory), _size), positions, texCoords, normals);
-}
 
-Status Buffer::copyDataInterleaving(
-    std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords,
-    std::span<const glm::vec3> normals, std::span<const glm::vec3> tangents) {
-  if (!_mappedMemory) [[unlikely]] {
-    return Error(EngineError::NOT_MAPPED);
+  if (std::any_of(std::cbegin(attributes), std::cend(attributes),
+                  [first = attributes[0].count](const AttributeDescription& attribute) {
+                    return attribute.count != first;
+                  })) {
+    return Error(EngineError::SIZE_MISMATCH);
   }
-  return buildInterleavingVertexData(std::span(static_cast<std::byte*>(_mappedMemory), _size),
-                                     positions, texCoords, normals, tangents);
+
+  size_t stride = std::accumulate(std::cbegin(attributes), std::cend(attributes), 0u,
+                                  [](size_t acc, const AttributeDescription& desc) {
+                                    return acc + desc.size;
+                                  });
+
+  for (int j = 0; j < attributes[0].count; j++) {
+    size_t offset = 0;
+    for (int i = 0; i < attributes.size(); i++) {
+      const AttributeDescription& attribute = attributes[i];
+      std::memcpy(static_cast<uint8_t*>(_mappedMemory) + j * stride + offset,
+                  static_cast<uint8_t*>(attribute.data) + j * attribute.size, attribute.size);
+      offset += attribute.size;
+    }
+  }
+
+  return StatusOk();
 }
 
 VkBufferUsageFlags Buffer::getUsage() const {

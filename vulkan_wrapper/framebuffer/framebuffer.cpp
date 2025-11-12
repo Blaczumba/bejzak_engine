@@ -11,14 +11,18 @@ namespace {
 ErrorOr<Texture> createColorAttachment(
     const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkFormat format,
     VkSampleCountFlagBits samples, VkExtent2D extent) {
-  return TextureBuilder()
-      .withAspect(VK_IMAGE_ASPECT_COLOR_BIT)
-      .withExtent(extent.width, extent.height)
-      .withFormat(format)
-      .withNumSamples(samples)
-      .withUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
-      .withLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
-      .buildAttachment(logicalDevice, commandBuffer);
+  ASSIGN_OR_RETURN(
+      Texture texture,
+      TextureBuilder()
+          .withAspect(VK_IMAGE_ASPECT_COLOR_BIT)
+          .withExtent(extent.width, extent.height)
+          .withFormat(format)
+          .withNumSamples(samples)
+          .withUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
+          .withLayout(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
+          .buildAttachment(logicalDevice, commandBuffer));
+  RETURN_IF_ERROR(texture.addCreateVkImageView(0, 1, 0, 1));
+  return texture;
 }
 
 bool hasStencil(VkFormat format) {
@@ -30,17 +34,21 @@ bool hasStencil(VkFormat format) {
 ErrorOr<Texture> createDepthAttachment(
     const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkFormat format,
     VkSampleCountFlagBits samples, VkExtent2D extent) {
-  return TextureBuilder()
-      .withAspect(hasStencil(format) ? VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT :
-                                       VK_IMAGE_ASPECT_DEPTH_BIT)
-      .withExtent(extent.width, extent.height)
-      .withFormat(format)
-      .withNumSamples(samples)
-      .withUsage(
-          VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT)
-      .withLayout(hasStencil(format) ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL :
-                                       VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL)
-      .buildAttachment(logicalDevice, commandBuffer);
+  ASSIGN_OR_RETURN(
+      Texture texture,
+      TextureBuilder()
+          .withAspect(hasStencil(format) ? VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT :
+                                           VK_IMAGE_ASPECT_DEPTH_BIT)
+          .withExtent(extent.width, extent.height)
+          .withFormat(format)
+          .withNumSamples(samples)
+          .withUsage(
+              VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT)
+          .withLayout(hasStencil(format) ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL :
+                                           VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL)
+          .buildAttachment(logicalDevice, commandBuffer));
+  RETURN_IF_ERROR(texture.addCreateVkImageView(0, 1, 0, 1));
+  return texture;
 }
 
 }  // namespace

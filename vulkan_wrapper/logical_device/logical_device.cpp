@@ -65,12 +65,12 @@ ErrorOr<LogicalDevice> LogicalDevice::create(const PhysicalDevice& physicalDevic
   std::transform(uniqueQueueFamilies.cbegin(), uniqueQueueFamilies.cend(), queueCreateInfos.begin(),
                  [&queuePriority](uint32_t queueFamilyIndex) {
                    return VkDeviceQueueCreateInfo{
-                     VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-                     nullptr,
-                     0,
-                     queueFamilyIndex,
-                     1,
-                     &queuePriority};
+                     .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
+                     .pNext = nullptr,
+                     .flags = 0,
+                     .queueFamilyIndex = queueFamilyIndex,
+                     .queueCount = 1,
+                     .pQueuePriorities = &queuePriority};
                  });
 
   DeviceFeatures deviceFeatures;
@@ -119,46 +119,18 @@ ErrorOr<LogicalDevice> LogicalDevice::wrap(VkDevice device, const PhysicalDevice
   return LogicalDevice(device, physicalDevice);
 }
 
-namespace {
-
-VkImageViewType getImageViewType(VkImageType type, uint32_t layerCount, VkImageCreateFlags flags) {
-  switch (type) {
-    case VK_IMAGE_TYPE_1D:
-      {
-        if (layerCount > 1) {
-          return VK_IMAGE_VIEW_TYPE_1D_ARRAY;
-        }
-        return VK_IMAGE_VIEW_TYPE_1D;
-      }
-    case VK_IMAGE_TYPE_2D:
-      {
-        if (flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT && layerCount == 6) {
-          return VK_IMAGE_VIEW_TYPE_CUBE;
-        }
-        if (layerCount > 1) {
-          return VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-        }
-        return VK_IMAGE_VIEW_TYPE_2D;
-      }
-    case VK_IMAGE_TYPE_3D:
-      return VK_IMAGE_VIEW_TYPE_3D;
-  }
-}
-
-}  // namespace
-
 ErrorOr<VkImageView> LogicalDevice::createImageView(
-    VkImage image, VkImageType type, VkFormat format, VkImageAspectFlags aspect, uint32_t mipLevels,
-    uint32_t layerCount, VkImageCreateFlags flags) const {
+    VkImage image, VkImageViewType type, VkFormat format, VkImageAspectFlags aspect,
+    uint32_t baseMipLevel, uint32_t mipLevels, uint32_t baseArrayLayer, uint32_t layerCount) const {
   const VkImageViewCreateInfo viewInfo = {
     .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
     .image = image,
-    .viewType = getImageViewType(type, layerCount, flags),
+    .viewType = type,
     .format = format,
     .subresourceRange = {.aspectMask = aspect,
-                         .baseMipLevel = 0,
+                         .baseMipLevel = baseMipLevel,
                          .levelCount = mipLevels,
-                         .baseArrayLayer = 0,
+                         .baseArrayLayer = baseArrayLayer,
                          .layerCount = layerCount}
   };
 

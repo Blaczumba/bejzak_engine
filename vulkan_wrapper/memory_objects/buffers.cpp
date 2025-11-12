@@ -178,9 +178,9 @@ void generateImageMipmaps(
 
   for (uint32_t i = 1; i < mipLevels; i++) {
     {
-      constexpr PipelineStageInfo srcStageInfo =
+      static constexpr PipelineStageInfo srcStageInfo =
           sourceStageAndAccessMask(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-      constexpr PipelineStageInfo dstStageInfo =
+      static constexpr PipelineStageInfo dstStageInfo =
           destinationStageAndAccessMask(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
       barrier.subresourceRange.baseMipLevel = i - 1;
       barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
@@ -207,7 +207,7 @@ void generateImageMipmaps(
     vkCmdBlitImage(commandBuffer, image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, image,
                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
 
-    constexpr PipelineStageInfo srcStageInfo =
+    static constexpr PipelineStageInfo srcStageInfo =
         sourceStageAndAccessMask(VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL);
     const PipelineStageInfo dstStageInfo = destinationStageAndAccessMask(finalLayout);
     barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
@@ -226,7 +226,7 @@ void generateImageMipmaps(
     }
   }
 
-  constexpr PipelineStageInfo srcStageInfo =
+  static constexpr PipelineStageInfo srcStageInfo =
       sourceStageAndAccessMask(VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
   const PipelineStageInfo dstStageInfo = destinationStageAndAccessMask(finalLayout);
   barrier.subresourceRange.baseMipLevel = mipLevels - 1;

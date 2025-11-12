@@ -131,6 +131,28 @@ getAttributeDescriptions<VertexPT>() {
 }
 
 template <>
+constexpr VkVertexInputBindingDescription getBindingDescription<VertexPN>() {
+  return {.binding = 0, .stride = sizeof(VertexPN), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX};
+}
+
+template <>
+constexpr std::array<VkVertexInputAttributeDescription, VertexPN::num_attributes>
+getAttributeDescriptions<VertexPN>() {
+  return {
+    VkVertexInputAttributeDescription{
+                                      .location = 0,
+                                      .binding = 0,
+                                      .format = VK_FORMAT_R32G32B32_SFLOAT,
+                                      .offset = offsetof(VertexPN, pos)   },
+    VkVertexInputAttributeDescription{
+                                      .location = 1,
+                                      .binding = 0,
+                                      .format = VK_FORMAT_R32G32B32_SFLOAT,
+                                      .offset = offsetof(VertexPN, normal)}
+  };
+}
+
+template <>
 constexpr VkVertexInputBindingDescription getBindingDescription<VertexP>() {
   return {.binding = 0, .stride = sizeof(VertexP), .inputRate = VK_VERTEX_INPUT_RATE_VERTEX};
 }

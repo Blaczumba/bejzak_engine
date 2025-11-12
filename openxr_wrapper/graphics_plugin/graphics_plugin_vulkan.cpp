@@ -69,8 +69,8 @@ Status GraphicsPluginVulkan::createSwapchainContext(
   for (size_t i = 0; i < imageCount; ++i) {
     ASSIGN_OR_RETURN(context.views[i],
                      _logicalDevice.createImageView(
-                         context.images[i].image, VK_IMAGE_TYPE_2D, static_cast<VkFormat>(format),
-                         VK_IMAGE_ASPECT_COLOR_BIT, 1, 1));
+                         context.images[i].image, VK_IMAGE_VIEW_TYPE_2D,
+                         static_cast<VkFormat>(format), VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1));
   }
   context.format = static_cast<VkFormat>(format);
   context.width = width;
@@ -305,7 +305,8 @@ Status GraphicsPluginVulkan::initialize(XrInstance xrInstance, XrSystemId system
     .device = _logicalDevice.getVkDevice(),
     .queueFamilyIndex = *_physicalDevice->getQueueFamilyIndices().graphicsFamily};
 
-  ASSIGN_OR_RETURN(_singleTimeCommandPool, CommandPool::create(_logicalDevice));
+  ASSIGN_OR_RETURN(_singleTimeCommandPool,
+                   CommandPool::create(_logicalDevice, VK_COMMAND_POOL_CREATE_TRANSIENT_BIT));
   return StatusOk();
 }
 

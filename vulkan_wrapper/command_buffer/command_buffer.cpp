@@ -7,10 +7,11 @@
 CommandPool::CommandPool(const LogicalDevice& logicalDevice, VkCommandPool commandPool)
   : _logicalDevice(logicalDevice), _commandPool(commandPool) {}
 
-ErrorOr<std::unique_ptr<CommandPool>> CommandPool::create(const LogicalDevice& logicalDevice) {
+ErrorOr<std::unique_ptr<CommandPool>> CommandPool::create(
+    const LogicalDevice& logicalDevice, VkCommandPoolCreateFlags flags) {
   const VkCommandPoolCreateInfo poolInfo = {
     .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-    .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+    .flags = flags,
     .queueFamilyIndex = *logicalDevice.getPhysicalDevice().getQueueFamilyIndices().graphicsFamily};
 
   VkCommandPool commandPool;
@@ -21,22 +22,13 @@ ErrorOr<std::unique_ptr<CommandPool>> CommandPool::create(const LogicalDevice& l
 CommandPool::~CommandPool() {
   vkDestroyCommandPool(_logicalDevice.getVkDevice(), _commandPool, nullptr);
 }
-ErrorOr<PrimaryCommandBuffer> CommandPool::createPrimaryCommandBuffer() const {
-  return PrimaryCommandBuffer::create(shared_from_this());
+ErrorOr<CommandBuffer> CommandPool::createCommandBuffer(VkCommandBufferLevel level) const {
+  return CommandBuffer::create(shared_from_this(), level);
 }
 
-ErrorOr<std::vector<PrimaryCommandBuffer>> CommandPool::createPrimaryCommandBuffers(
-    uint32_t count) const {
-  return PrimaryCommandBuffer::create(shared_from_this(), count);
-}
-
-ErrorOr<SecondaryCommandBuffer> CommandPool::createSecondaryCommandBuffer() const {
-  return SecondaryCommandBuffer::create(shared_from_this());
-}
-
-ErrorOr<std::vector<SecondaryCommandBuffer>> CommandPool::createSecondaryCommandBuffers(
-    uint32_t count) const {
-  return SecondaryCommandBuffer::create(shared_from_this(), count);
+ErrorOr<std::vector<CommandBuffer>> CommandPool::createCommandBuffers(
+    VkCommandBufferLevel level, uint32_t count) const {
+  return CommandBuffer::create(shared_from_this(), level, count);
 }
 
 void CommandPool::reset() const {
@@ -53,13 +45,13 @@ const LogicalDevice& CommandPool::getLogicalDevice() const {
 
 CommandBuffer::CommandBuffer() : _commandBuffer(VK_NULL_HANDLE) {}
 
-CommandBuffer::CommandBuffer(
-    const std::shared_ptr<const CommandPool>& commandPool, VkCommandBuffer commandBuffer)
-  : _commandPool(commandPool), _commandBuffer(commandBuffer) {}
+CommandBuffer::CommandBuffer(const std::shared_ptr<const CommandPool>& commandPool,
+                             VkCommandBuffer commandBuffer, VkCommandBufferLevel level)
+  : _commandPool(commandPool), _commandBuffer(commandBuffer), _level(level) {}
 
 CommandBuffer::CommandBuffer(CommandBuffer&& other) noexcept
   : _commandPool(std::move(other._commandPool)),
-    _commandBuffer(std::exchange(other._commandBuffer, VK_NULL_HANDLE)) {}
+    _commandBuffer(std::exchange(other._commandBuffer, VK_NULL_HANDLE)), _level(other._level) {}
 
 CommandBuffer& CommandBuffer::operator=(CommandBuffer&& other) noexcept {
   if (this == &other) {
@@ -67,6 +59,7 @@ CommandBuffer& CommandBuffer::operator=(CommandBuffer&& other) noexcept {
   }
   _commandPool = std::move(other._commandPool);
   _commandBuffer = std::exchange(other._commandBuffer, VK_NULL_HANDLE);
+  _level = other._level;
   return *this;
 }
 
@@ -77,65 +70,34 @@ CommandBuffer::~CommandBuffer() {
   }
 }
 
-VkResult CommandBuffer::end() const {
-  return vkEndCommandBuffer(_commandBuffer);
-}
-
-void CommandBuffer::resetCommandBuffer() const {
-  vkResetCommandBuffer(_commandBuffer, 0);
-}
-
-VkCommandBuffer CommandBuffer::getVkCommandBuffer() const {
-  return _commandBuffer;
-}
-
-PrimaryCommandBuffer::PrimaryCommandBuffer(
-    const std::shared_ptr<const CommandPool>& commandPool, VkCommandBuffer commandBuffer)
-  : CommandBuffer(commandPool, commandBuffer) {}
-
-ErrorOr<PrimaryCommandBuffer> PrimaryCommandBuffer::create(
-    const std::shared_ptr<const CommandPool>& commandPool) {
+ErrorOr<CommandBuffer> CommandBuffer::create(
+    const std::shared_ptr<const CommandPool>& commandPool, VkCommandBufferLevel level) {
   VkCommandBuffer commandBuffer;
-  CHECK_VKCMD(createCommandBuffers(
-      commandPool->getLogicalDevice().getVkDevice(), commandPool->getVkCommandPool(),
-      VK_COMMAND_BUFFER_LEVEL_PRIMARY, {&commandBuffer, 1}));
-  return PrimaryCommandBuffer(commandPool, commandBuffer);
+  CHECK_VKCMD(createCommandBuffers(commandPool->getLogicalDevice().getVkDevice(),
+                                   commandPool->getVkCommandPool(), level, {&commandBuffer, 1}));
+  return CommandBuffer(commandPool, commandBuffer, level);
 }
 
-namespace {
-
-template <typename CommandBufferType>
-std::vector<CommandBufferType> transformCommandBuffers(
-    std::span<const VkCommandBuffer> inCommandBuffers,
-    const std::shared_ptr<const CommandPool>& commandPool) {
-  std::vector<CommandBufferType> commandBuffers;
-  commandBuffers.reserve(inCommandBuffers.size());
-  std::transform(std::cbegin(inCommandBuffers), std::cend(inCommandBuffers),
-                 std::back_inserter(commandBuffers), [&commandPool](VkCommandBuffer commandBuffer) {
-                   return CommandBufferType(commandPool, commandBuffer);
-                 });
+ErrorOr<std::vector<CommandBuffer>> CommandBuffer::create(
+    const std::shared_ptr<const CommandPool>& commandPool, VkCommandBufferLevel level,
+    uint32_t count) {
+  lib::Buffer<VkCommandBuffer> vkCommandBuffers(count);
+  CHECK_VKCMD(createCommandBuffers(commandPool->getLogicalDevice().getVkDevice(),
+                                   commandPool->getVkCommandPool(), level, vkCommandBuffers));
+  std::vector<CommandBuffer> commandBuffers;
+  commandBuffers.reserve(vkCommandBuffers.size());
+  std::transform(
+      std::cbegin(vkCommandBuffers), std::cend(vkCommandBuffers),
+      std::back_inserter(commandBuffers), [&commandPool, level](VkCommandBuffer commandBuffer) {
+        return CommandBuffer(commandPool, commandBuffer, level);
+      });
   return commandBuffers;
 }
 
-}  // namespace
-
-ErrorOr<std::vector<PrimaryCommandBuffer>> PrimaryCommandBuffer::create(
-    const std::shared_ptr<const CommandPool>& commandPool, uint32_t count) {
-  lib::Buffer<VkCommandBuffer> commandBuffers(count);
-  CHECK_VKCMD(createCommandBuffers(
-      commandPool->getLogicalDevice().getVkDevice(), commandPool->getVkCommandPool(),
-      VK_COMMAND_BUFFER_LEVEL_PRIMARY, commandBuffers));
-  return transformCommandBuffers<PrimaryCommandBuffer>(commandBuffers, commandPool);
-}
-
-VkResult PrimaryCommandBuffer::begin(uint32_t subpassIndex) const {
-  const VkCommandBufferBeginInfo beginInfo = {
-    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-  };
-  return vkBeginCommandBuffer(_commandBuffer, &beginInfo);
-}
-
-void PrimaryCommandBuffer::beginRenderPass(const Framebuffer& framebuffer) const {
+Status CommandBuffer::beginRenderPass(const Framebuffer& framebuffer) const {
+  if (_level != VK_COMMAND_BUFFER_LEVEL_PRIMARY) [[unlikely]] {
+    return Error(EngineError::FLAG_NOT_SPECIFIED);
+  }
   const Renderpass& renderpass = framebuffer.getRenderpass();
   std::span<const VkClearValue> clearValues = renderpass.getAttachmentsLayout().getVkClearValues();
   const VkRenderPassBeginInfo renderPassInfo = {
@@ -150,21 +112,68 @@ void PrimaryCommandBuffer::beginRenderPass(const Framebuffer& framebuffer) const
   vkCmdSetScissor(_commandBuffer, 0, 1, &framebuffer.getScissor());
   vkCmdBeginRenderPass(
       _commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+  return StatusOk();
 }
 
-void PrimaryCommandBuffer::endRenderPass() const {
+void CommandBuffer::endRenderPass() const {
   vkCmdEndRenderPass(_commandBuffer);
 }
 
-void PrimaryCommandBuffer::executeSecondaryCommandBuffers(
-    std::initializer_list<VkCommandBuffer> commandBuffers) const {
-  vkCmdExecuteCommands(
-      _commandBuffer, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.begin());
+Status CommandBuffer::beginAsPrimary(uint32_t subpassIndex) const {
+  if (_level != VK_COMMAND_BUFFER_LEVEL_PRIMARY) [[unlikely]] {
+    return Error(EngineError::FLAG_NOT_SPECIFIED);
+  }
+
+  const VkCommandBufferBeginInfo beginInfo = {.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+                                              .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT};
+  CHECK_VKCMD(vkBeginCommandBuffer(_commandBuffer, &beginInfo));
+  return StatusOk();
 }
 
-VkResult PrimaryCommandBuffer::submit(
-    QueueType type, const VkSemaphore waitSemaphore, const VkSemaphore signalSemaphore,
-    const VkFence waitFence) const {
+Status CommandBuffer::beginAsSecondary(
+    const Framebuffer& framebuffer,
+    const VkCommandBufferInheritanceViewportScissorInfoNV* scissorViewportInheritance,
+    uint32_t subpassIndex) const {
+  if (_level != VK_COMMAND_BUFFER_LEVEL_SECONDARY) [[unlikely]] {
+    return Error(EngineError::FLAG_NOT_SPECIFIED);
+  }
+
+  const VkCommandBufferInheritanceInfo inheritanceInfo = {
+    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
+    .pNext = scissorViewportInheritance,
+    .renderPass = framebuffer.getRenderpass().getVkRenderPass(),
+    .subpass = subpassIndex,
+    .framebuffer = framebuffer.getVkFramebuffer()};
+
+  const VkCommandBufferBeginInfo beginInfo = {
+    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+    .flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT
+             | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+    .pInheritanceInfo = &inheritanceInfo};
+
+  CHECK_VKCMD(vkBeginCommandBuffer(_commandBuffer, &beginInfo));
+  return StatusOk();
+}
+
+VkResult CommandBuffer::end() const {
+  return vkEndCommandBuffer(_commandBuffer);
+}
+
+Status CommandBuffer::executeSecondaryCommandBuffers(
+    std::initializer_list<VkCommandBuffer> commandBuffers) const {
+  if (_level != VK_COMMAND_BUFFER_LEVEL_PRIMARY) [[unlikely]] {
+    return Error(EngineError::FLAG_NOT_SPECIFIED);
+  }
+  vkCmdExecuteCommands(
+      _commandBuffer, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.begin());
+  return StatusOk();
+}
+
+Status CommandBuffer::submit(QueueType type, const VkSemaphore waitSemaphore,
+                             const VkSemaphore signalSemaphore, const VkFence waitFence) const {
+  if (_level != VK_COMMAND_BUFFER_LEVEL_PRIMARY) [[unlikely]] {
+    return Error(EngineError::FLAG_NOT_SPECIFIED);
+  }
   VkSubmitInfo submitInfo = {};
   submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
@@ -187,50 +196,19 @@ VkResult PrimaryCommandBuffer::submit(
 
   const LogicalDevice& logicalDevice = _commandPool->getLogicalDevice();
   if (waitFence != VK_NULL_HANDLE) {
-    vkResetFences(logicalDevice.getVkDevice(), 1, &waitFence);
+    CHECK_VKCMD(vkResetFences(logicalDevice.getVkDevice(), 1, &waitFence));
   }
 
-  return vkQueueSubmit(logicalDevice.getVkQueue(type), 1, &submitInfo, waitFence);
+  CHECK_VKCMD(vkQueueSubmit(logicalDevice.getVkQueue(type), 1, &submitInfo, waitFence));
+  return StatusOk();
 }
 
-SecondaryCommandBuffer::SecondaryCommandBuffer(
-    const std::shared_ptr<const CommandPool>& commandPool, VkCommandBuffer commandBuffer)
-  : CommandBuffer(commandPool, commandBuffer) {}
-
-ErrorOr<SecondaryCommandBuffer> SecondaryCommandBuffer::create(
-    const std::shared_ptr<const CommandPool>& commandPool) {
-  VkCommandBuffer commandBuffer;
-  CHECK_VKCMD(createCommandBuffers(
-      commandPool->getLogicalDevice().getVkDevice(), commandPool->getVkCommandPool(),
-      VK_COMMAND_BUFFER_LEVEL_SECONDARY, {&commandBuffer, 1}));
-  return SecondaryCommandBuffer(commandPool, commandBuffer);
+void CommandBuffer::resetCommandBuffer() const {
+  vkResetCommandBuffer(_commandBuffer, 0);
 }
 
-ErrorOr<std::vector<SecondaryCommandBuffer>> SecondaryCommandBuffer::create(
-    const std::shared_ptr<const CommandPool>& commandPool, uint32_t count) {
-  lib::Buffer<VkCommandBuffer> commandBuffers(count);
-  CHECK_VKCMD(createCommandBuffers(
-      commandPool->getLogicalDevice().getVkDevice(), commandPool->getVkCommandPool(),
-      VK_COMMAND_BUFFER_LEVEL_SECONDARY, commandBuffers));
-  return transformCommandBuffers<SecondaryCommandBuffer>(commandBuffers, commandPool);
-}
-
-VkResult SecondaryCommandBuffer::begin(
-    const Framebuffer& framebuffer,
-    const VkCommandBufferInheritanceViewportScissorInfoNV* scissorViewportInheritance,
-    uint32_t subpassIndex) const {
-  const VkCommandBufferInheritanceInfo inheritance = {
-    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-    .pNext = scissorViewportInheritance,
-    .renderPass = framebuffer.getRenderpass().getVkRenderPass(),
-    .subpass = subpassIndex,
-    .framebuffer = framebuffer.getVkFramebuffer()};
-
-  const VkCommandBufferBeginInfo beginInfo = {
-    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-    .flags = VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT,
-    .pInheritanceInfo = &inheritance};
-  return vkBeginCommandBuffer(_commandBuffer, &beginInfo);
+VkCommandBuffer CommandBuffer::getVkCommandBuffer() const {
+  return _commandBuffer;
 }
 
 SingleTimeCommandBuffer::SingleTimeCommandBuffer(

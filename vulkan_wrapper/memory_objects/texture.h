@@ -1,6 +1,7 @@
 #pragma once
 
 #include <span>
+#include <vector>
 #include <vulkan/vulkan.h>
 
 #include "common/status/status.h"
@@ -20,11 +21,14 @@ public:
 
   ~Texture();
 
+  ErrorOr<VkImageView> addCreateVkImageView(
+      uint32_t baseMipLevel, uint32_t levelCount, uint32_t baseArrayLayer, uint32_t layerCount);
+
   void transitionLayout(VkCommandBuffer commandBuffer, VkImageLayout newLayout);
 
   VkImage getVkImage() const;
 
-  VkImageView getVkImageView() const;
+  VkImageView getVkImageView(size_t index = 0) const;
 
   VkSampler getVkSampler() const;
 
@@ -36,19 +40,16 @@ public:
 
 private:
   Texture(const LogicalDevice& logicalDevice, VkImage image, const Allocation allocation,
-          VkExtent3D extent, VkImageAspectFlags aspect, uint32_t mipLevels, uint32_t layerCount,
-          VkImageLayout layout, VkImageView view = VK_NULL_HANDLE,
+          const ImageParameters& imageParameters, VkImageLayout layout,
           VkSampler sampler = VK_NULL_HANDLE);
 
   VkImage _image = VK_NULL_HANDLE;
-  VkImageView _view = VK_NULL_HANDLE;
+  std::vector<VkImageView> _views;
+  // Create separate Sampler class which is not owned by Texture.
   VkSampler _sampler = VK_NULL_HANDLE;
   Allocation _allocation;
   VkImageLayout _layout;
-  VkExtent3D _extent;
-  VkImageAspectFlags _aspect;
-  uint32_t _mipLevels;
-  uint32_t _layerCount;
+  ImageParameters _imageParameters;
 
   const LogicalDevice* _logicalDevice;
 

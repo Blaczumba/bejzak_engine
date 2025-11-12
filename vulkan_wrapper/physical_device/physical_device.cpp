@@ -1,9 +1,6 @@
 #include "physical_device.h"
 
 #include <algorithm>
-#include <array>
-#include <iostream>
-#include <stdexcept>
 #include <vulkan/vulkan.hpp>
 
 #include "lib/algorithm.h"

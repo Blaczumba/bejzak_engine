@@ -1,9 +1,8 @@
 #pragma once
 
-#include <vulkan/vulkan.h>  // Vulkan needs to be included before openxr_platform.h
-
 #include <memory>
 #include <openxr/openxr.h>
+#include <vulkan/vulkan.h>  // Vulkan needs to be included before openxr_platform.h
 #include <openxr/openxr_platform.h>
 #include <span>
 #include <unordered_map>
@@ -67,8 +66,8 @@ protected:
     std::vector<Texture> attachments;
     std::array<VkFence, MAX_FRAMES_IN_FLIGHT> fences;
     std::array<std::shared_ptr<CommandPool>, MAX_THREADS_IN_POOL + 1> commandPools;
-    std::array<PrimaryCommandBuffer, MAX_FRAMES_IN_FLIGHT> primaryCommandBuffer;
-    std::array<std::array<SecondaryCommandBuffer, MAX_FRAMES_IN_FLIGHT>, MAX_THREADS_IN_POOL>
+    std::array<CommandBuffer, MAX_FRAMES_IN_FLIGHT> primaryCommandBuffer;
+    std::array<std::array<CommandBuffer, MAX_FRAMES_IN_FLIGHT>, MAX_THREADS_IN_POOL>
         commandBuffers;
   };
 

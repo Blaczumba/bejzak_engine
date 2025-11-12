@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <functional>
 #include <future>
+#include <numeric>
 #include <optional>
 #include <span>
 #include <string>
@@ -41,24 +42,23 @@ public:
   };
 
   struct VertexData {
-    Buffer vertexBuffer;
+    std::unordered_map<std::string, Buffer> buffers;
     Buffer indexBuffer;
     VkIndexType indexType;
-    Buffer vertexBufferPositions;
   };
 
   void loadImageAsync(const std::string& filePath);
 
-  template <typename Model>
+  template <typename Model, typename... Type>
   void loadVertexDataInterleavingAsync(
       std::shared_ptr<Model>& modelPtr, const std::string& name, std::span<const std::byte> indices,
-      uint8_t indexSize, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords,
-      std::span<const glm::vec3> normals);
+      uint8_t indexSize, std::span<const std::pair<std::string, std::string>> orders,
+      std::span<const Type>... attributes);
 
   template <typename VertexType, typename Model>
   void loadVertexDataAsync(
       std::shared_ptr<Model>& modelPtr, const std::string& filePath,
-      std::span<const std::byte> indices, uint8_t indexSize, std::span<const VertexType> vertices);
+      std::span<const std::byte> indices, uint8_t indexSize, std::span<const VertexType> data);
 
   ErrorOr<std::reference_wrapper<const ImageData>> getImageData(const std::string& filePath);
 
@@ -82,35 +82,53 @@ private:
   std::unordered_map<std::string, std::future<ErrorOr<ImageData>>> _awaitingImageResources;
 };
 
-template <typename Model>
+template <typename Model, typename... Type>
 void AssetManager::loadVertexDataInterleavingAsync(
     std::shared_ptr<Model>& modelPtr, const std::string& name, std::span<const std::byte> indices,
-    uint8_t indexSize, std::span<const glm::vec3> positions, std::span<const glm::vec2> texCoords,
-    std::span<const glm::vec3> normals) {
+    uint8_t indexSize, std::span<const std::pair<std::string, std::string>> orders,
+    std::span<const Type>... attributes) {
   if (_awaitingVertexDataResources.contains(name)) {
     return;
   }
+
   auto future = std::async(
       _launchPolicy,
-      [this, modelPtr, indices, indexSize, positions, texCoords,
-       normals]() -> ErrorOr<VertexData> {  // TODO: boost::asio::post,
-                                            // boost::asio::use_future
-        ASSIGN_OR_RETURN(
-            auto vertexBuffer,
-            Buffer::createStagingBuffer(*_logicalDevice, positions.size() * sizeof(VertexPTNT)));
-        ASSIGN_OR_RETURN(lib::Buffer<glm::vec3> tangents,
-                         createTangents(indexSize, indices, positions, texCoords));
-        RETURN_IF_ERROR(vertexBuffer.copyDataInterleaving(positions, texCoords, normals, tangents));
-        ASSIGN_OR_RETURN(
-            auto vertexBufferPositions,
-            Buffer::createStagingBuffer(*_logicalDevice, positions.size() * sizeof(glm::vec3)));
-        RETURN_IF_ERROR(vertexBufferPositions.copyData(positions));
-        ASSIGN_OR_RETURN(
-            auto indexBuffer, Buffer::createStagingBuffer(*_logicalDevice, indices.size()));
-        RETURN_IF_ERROR(indexBuffer.copyData(indices));
-        return ErrorOr<VertexData>(
-            VertexData(std::move(vertexBuffer), std::move(indexBuffer), getIndexType(indexSize),
-                       std::move(vertexBufferPositions)));
+      [this, modelPtr, indices, indexSize, orders,
+       attributes...]() -> ErrorOr<VertexData> {  // TODO: boost::asio::post,
+                                                  // boost::asio::use_future
+        VertexData vertexData;
+
+        const AttributeDescription descs[] = {
+          AttributeDescription{(void*)attributes.data(), sizeof(Type), attributes.size()}
+          ...
+        };
+
+        for (const std::pair<std::string, std::string>& order : orders) {
+          lib::Buffer<AttributeDescription> orderedDescs(order.second.size());
+          size_t size = 0;
+          for (size_t i = 0; i < orderedDescs.size(); i++) {
+            if (!std::isdigit(order.second[i])) [[unlikely]] {
+              return Error(EngineError::LOAD_FAILURE);
+            }
+            orderedDescs[i] = descs[static_cast<size_t>(order.second[i] - '0')];
+            size += orderedDescs[i].size * orderedDescs[i].count;
+          }
+
+          ASSIGN_OR_RETURN(auto vertexBuffer, Buffer::createStagingBuffer(*_logicalDevice, size));
+          RETURN_IF_ERROR(vertexBuffer.copyDataInterleaving(orderedDescs));
+          vertexData.buffers.emplace(order.first, std::move(vertexBuffer));
+        }
+
+        const size_t shrunkIndexSize = getShrunkIndexSize(indices, indexSize);
+        ASSIGN_OR_RETURN(vertexData.indexBuffer,
+                         Buffer::createStagingBuffer(
+                             *_logicalDevice, indices.size() / indexSize * shrunkIndexSize));
+        RETURN_IF_ERROR(
+            vertexData.indexBuffer.copyAndShrinkData(indices, shrunkIndexSize, indexSize));
+
+        vertexData.indexType = getIndexType(shrunkIndexSize);
+
+        return vertexData;
       });
   _awaitingVertexDataResources.emplace(name, std::move(future));
 }
@@ -122,10 +140,12 @@ void AssetManager::loadVertexDataAsync(
   if (_awaitingVertexDataResources.contains(name)) {
     return;
   }
+
   auto future = std::async(
-      _launchPolicy, ([this, modelPtr, indices, indexSize,
-                       vertices]() -> ErrorOr<VertexData> {  // TODO: boost::asio::post,
-                                                             // boost::asio::use_future
+      _launchPolicy,
+      [this, modelPtr, indices, indexSize,
+       vertices]() -> ErrorOr<VertexData> {  // TODO: boost::asio::post,
+                                             // boost::asio::use_future
         ASSIGN_OR_RETURN(auto vertexBuffer, Buffer::createStagingBuffer(
                                                 *_logicalDevice, vertices.size() * sizeof(Type)));
         RETURN_IF_ERROR(vertexBuffer.copyData(vertices));
@@ -134,6 +154,6 @@ void AssetManager::loadVertexDataAsync(
         RETURN_IF_ERROR(indexBuffer.copyData(indices));
         return VertexData{
           Buffer(), std::move(indexBuffer), getIndexType(indexSize), std::move(vertexBuffer)};
-      }));
+      });
   _awaitingVertexDataResources.emplace(name, std::move(future));
 }
