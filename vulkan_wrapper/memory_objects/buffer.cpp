@@ -159,6 +159,21 @@ Status Buffer::copyBuffer(
   return StatusOk();
 }
 
+Status Buffer::copyAndShrinkData(std::span<const std::byte> data, size_t dstIndexSize,
+                                 size_t srcIndexSize, VkDeviceSize offset) {
+  if (!_mappedMemory) {
+    return Error(EngineError::NOT_MAPPED);
+  }
+
+  if (_size < dstIndexSize * data.size() / srcIndexSize + offset) {
+    return Error(EngineError::INDEX_OUT_OF_RANGE);
+  }
+
+  copyAndShrinkIndices(static_cast<uint8_t*>(_mappedMemory) + offset, dstIndexSize, data.data(),
+                       srcIndexSize, data.size() / srcIndexSize);
+  return StatusOk();
+}
+
 Status Buffer::copyDataInterleaving(std::span<const AttributeDescription> attributes) {
   if (!_mappedMemory) [[unlikely]] {
     return Error(EngineError::NOT_MAPPED);

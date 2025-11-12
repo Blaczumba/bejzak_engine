@@ -7,7 +7,6 @@
 #include <string>
 #include <vector>
 
-#include "common/util/index_buffer_index.h"
 #include "lib/buffer/buffer.h"
 #include "lib/buffer/shared_buffer.h"
 

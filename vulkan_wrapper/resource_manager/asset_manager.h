@@ -119,37 +119,14 @@ void AssetManager::loadVertexDataInterleavingAsync(
           vertexData.buffers.emplace(order.first, std::move(vertexBuffer));
         }
 
-        ASSIGN_OR_RETURN(
-            vertexData.indexBuffer, Buffer::createStagingBuffer(*_logicalDevice, indices.size()));
+        const size_t shrunkIndexSize = getShrunkIndexSize(indices, indexSize);
+        ASSIGN_OR_RETURN(vertexData.indexBuffer,
+                         Buffer::createStagingBuffer(
+                             *_logicalDevice, indices.size() / indexSize * shrunkIndexSize));
+        RETURN_IF_ERROR(
+            vertexData.indexBuffer.copyAndShrinkData(indices, shrunkIndexSize, indexSize));
 
-        size_t newIndexSize;
-        switch (indexSize) {
-          case sizeof(uint32_t):
-            {
-              ASSIGN_OR_RETURN(newIndexSize, vertexData.indexBuffer.copyAndShrinkData(std::span(
-                                                 reinterpret_cast<const uint32_t*>(indices.data()),
-                                                 indices.size() / sizeof(uint32_t))));
-            }
-            break;
-          case sizeof(uint16_t):
-            {
-              ASSIGN_OR_RETURN(newIndexSize, vertexData.indexBuffer.copyAndShrinkData(std::span(
-                                                 reinterpret_cast<const uint16_t*>(indices.data()),
-                                                 indices.size() / sizeof(uint16_t))));
-            }
-            break;
-          case sizeof(uint8_t):
-            {
-              ASSIGN_OR_RETURN(
-                  newIndexSize,
-                  vertexData.indexBuffer.copyAndShrinkData(
-                      std::span(reinterpret_cast<const uint8_t*>(indices.data()), indices.size())));
-            }
-            break;
-          default:
-            return Error(EngineError::NOT_RECOGNIZED_TYPE);
-        }
-        vertexData.indexType = getIndexType(newIndexSize);
+        vertexData.indexType = getIndexType(shrunkIndexSize);
 
         return vertexData;
       });
