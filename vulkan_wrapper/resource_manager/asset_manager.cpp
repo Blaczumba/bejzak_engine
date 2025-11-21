@@ -1,7 +1,5 @@
 #include "asset_manager.h"
 
-#include "common/util/geometry.h"
-
 using ImageData = AssetManager::ImageData;
 using VertexData = AssetManager::VertexData;
 

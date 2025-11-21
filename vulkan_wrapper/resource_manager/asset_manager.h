@@ -15,8 +15,7 @@
 #include "common/model_loader/image_loader/image_loader.h"
 #include "common/status/status.h"
 #include "common/util/asset_manager.h"
-#include "common/util/geometry.h"
-#include "common/util/primitives.h"
+#include "common/util/buffer_manip.h"
 #include "vulkan_wrapper/logical_device/logical_device.h"
 #include "vulkan_wrapper/memory_objects/buffer.h"
 #include "vulkan_wrapper/util/index_buffer_util.h"
@@ -103,20 +102,14 @@ void AssetManager::loadVertexDataInterleavingAsync(
           ...
         };
 
-        for (const std::pair<std::string, std::string>& order : orders) {
-          lib::Buffer<AttributeDescription> orderedDescs(order.second.size());
-          size_t size = 0;
-          for (size_t i = 0; i < orderedDescs.size(); i++) {
-            if (!std::isdigit(order.second[i])) [[unlikely]] {
-              return Error(EngineError::LOAD_FAILURE);
-            }
-            orderedDescs[i] = descs[static_cast<size_t>(order.second[i] - '0')];
-            size += orderedDescs[i].size * orderedDescs[i].count;
-          }
+        ASSIGN_OR_RETURN(
+            std::vector<BufferDescription> bufferDescriptions, analyzeConfig(orders, descs));
 
-          ASSIGN_OR_RETURN(auto vertexBuffer, Buffer::createStagingBuffer(*_logicalDevice, size));
-          RETURN_IF_ERROR(vertexBuffer.copyDataInterleaving(orderedDescs));
-          vertexData.buffers.emplace(order.first, std::move(vertexBuffer));
+        for (BufferDescription& description : bufferDescriptions) {
+          ASSIGN_OR_RETURN(auto vertexBuffer,
+                           Buffer::createStagingBuffer(*_logicalDevice, description.totalSize));
+          RETURN_IF_ERROR(vertexBuffer.copyDataInterleaving(description.attributes));
+          vertexData.buffers.emplace(std::move(description.name), std::move(vertexBuffer));
         }
 
         const size_t shrunkIndexSize = getShrunkIndexSize(indices, indexSize);

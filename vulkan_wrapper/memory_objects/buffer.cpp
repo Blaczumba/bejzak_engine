@@ -1,9 +1,9 @@
 #include "buffer.h"
 
 #include <glm/glm.hpp>
+#include <iterator>
 #include <numeric>
 
-#include "common/util/vertex_builder.h"
 #include "vulkan_wrapper/memory_objects/buffers.h"
 
 Buffer::Buffer(const LogicalDevice& logicalDevice, const Allocation allocation,
@@ -145,16 +145,20 @@ Status Buffer::copyBuffer(
   if ((_usage & VK_BUFFER_USAGE_TRANSFER_DST_BIT) == 0) [[unlikely]] {
     return Error(EngineError::FLAG_NOT_SPECIFIED);
   }
+
   if ((srcBuffer._usage & VK_BUFFER_USAGE_TRANSFER_SRC_BIT) == 0) [[unlikely]] {
     return Error(EngineError::FLAG_NOT_SPECIFIED);
   }
+
   const VkDeviceSize size = srcSize.value_or(srcBuffer._size);
   if (srcOffset + size > srcBuffer._size) [[unlikely]] {
     return Error(EngineError::INDEX_OUT_OF_RANGE);
   }
+
   if (dstOffset + size > _size) [[unlikely]] {
     return Error(EngineError::INDEX_OUT_OF_RANGE);
   }
+
   copyBufferToBuffer(commandBuffer, srcBuffer._buffer, _buffer, srcOffset, dstOffset, size);
   return StatusOk();
 }
@@ -186,18 +190,23 @@ Status Buffer::copyDataInterleaving(std::span<const AttributeDescription> attrib
     return Error(EngineError::SIZE_MISMATCH);
   }
 
-  size_t stride = std::accumulate(std::cbegin(attributes), std::cend(attributes), 0u,
-                                  [](size_t acc, const AttributeDescription& desc) {
-                                    return acc + desc.size;
-                                  });
+  std::vector<uint8_t*> offsetMemory;
+  offsetMemory.reserve(attributes.size());
+  offsetMemory.push_back(static_cast<uint8_t*>(_mappedMemory));
+  size_t stride = 0;
+  std::transform(
+      attributes.cbegin(), std::prev(attributes.cend()), std::back_inserter(offsetMemory),
+      [this, &stride](const AttributeDescription& attribute) {
+        stride += attribute.size;
+        return static_cast<uint8_t*>(_mappedMemory) + stride;
+      });
+  stride += attributes.back().size;
 
-  for (int j = 0; j < attributes[0].count; j++) {
-    size_t offset = 0;
-    for (int i = 0; i < attributes.size(); i++) {
+  for (size_t j = 0, running_stride = 0; j < attributes[0].count; j++, running_stride += stride) {
+    for (size_t i = 0; i < attributes.size(); i++) {
       const AttributeDescription& attribute = attributes[i];
-      std::memcpy(static_cast<uint8_t*>(_mappedMemory) + j * stride + offset,
+      std::memcpy(offsetMemory[i] + running_stride,
                   static_cast<uint8_t*>(attribute.data) + j * attribute.size, attribute.size);
-      offset += attribute.size;
     }
   }
 

@@ -11,15 +11,9 @@
 
 #include "buffer_deallocator.h"
 #include "common/status/status.h"
-#include "common/util/index_buffer.h"
+#include "common/util/buffer_manip.h"
 #include "lib/buffer/buffer.h"
 #include "vulkan_wrapper/logical_device/logical_device.h"
-
-struct AttributeDescription {
-  void* data;
-  size_t size;
-  size_t count;
-};
 
 class Buffer {
 public:

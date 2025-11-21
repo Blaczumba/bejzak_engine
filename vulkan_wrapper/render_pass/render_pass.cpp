@@ -23,11 +23,13 @@ RenderpassBuilder& RenderpassBuilder::addSubpass(std::initializer_list<uint8_t> 
   for (uint8_t index : outputAttachments) {
     UPDATE_STATUS(_status, subpass.addOutputAttachment(_attachmentLayout, index));
   }
+
   for (uint8_t index : inputAttachments) {
     // TODO set proper image layouts
     UPDATE_STATUS(
         _status, subpass.addInputAttachment(_attachmentLayout, index, VK_IMAGE_LAYOUT_GENERAL));
   }
+
   _subpasses.push_back(subpass);
   return *this;
 }
@@ -76,6 +78,7 @@ Status RenderpassBuilder::Subpass::addInputAttachment(
   if (layout.getAttachmentsTypes().size() <= attachmentBinding) {
     return Error(EngineError::INDEX_OUT_OF_RANGE);
   }
+
   _inputAttachmentRefs.emplace_back(attachmentBinding, imageLayout);
   return StatusOk();
 }
@@ -137,6 +140,7 @@ Renderpass& Renderpass::operator=(Renderpass&& renderpass) noexcept {
   if (this == &renderpass) {
     return *this;
   }
+
   _renderpass = std::exchange(renderpass._renderpass, VK_NULL_HANDLE);
   _logicalDevice = std::exchange(renderpass._logicalDevice, nullptr);
   _attachmentsLayout = std::move(renderpass._attachmentsLayout);
