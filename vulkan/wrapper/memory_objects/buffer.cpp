@@ -195,7 +195,7 @@ Status Buffer::copyDataInterleaving(std::span<const AttributeDescription> attrib
   offsetMemory.push_back(static_cast<uint8_t*>(_mappedMemory));
   size_t stride = 0;
   std::transform(
-      attributes.cbegin(), std::prev(attributes.cend()), std::back_inserter(offsetMemory),
+      std::cbegin(attributes), std::prev(std::cend(attributes)), std::back_inserter(offsetMemory),
       [this, &stride](const AttributeDescription& attribute) {
         stride += attribute.size;
         return static_cast<uint8_t*>(_mappedMemory) + stride;
