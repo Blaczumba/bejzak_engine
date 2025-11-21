@@ -10,13 +10,13 @@
 
 #include "common/status/status.h"
 #include "graphics_plugin.h"
-#include "vulkan_wrapper/command_buffer/command_buffer.h"
-#include "vulkan_wrapper/debug_messenger/debug_messenger.h"
-#include "vulkan_wrapper/framebuffer/framebuffer.h"
-#include "vulkan_wrapper/instance/instance.h"
-#include "vulkan_wrapper/logical_device/logical_device.h"
-#include "vulkan_wrapper/memory_objects/texture.h"
-#include "vulkan_wrapper/physical_device/physical_device.h"
+#include "vulkan/wrapper/command_buffer/command_buffer.h"
+#include "vulkan/wrapper/debug_messenger/debug_messenger.h"
+#include "vulkan/wrapper/framebuffer/framebuffer.h"
+#include "vulkan/wrapper/instance/instance.h"
+#include "vulkan/wrapper/logical_device/logical_device.h"
+#include "vulkan/wrapper/memory_objects/texture.h"
+#include "vulkan/wrapper/physical_device/physical_device.h"
 
 namespace xrw {
 

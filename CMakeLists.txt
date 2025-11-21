@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.19)
+cmake_minimum_required(VERSION 3.21)
 
 set(ENGINE_NAME BejzakEngine)
 
@@ -66,28 +66,39 @@ endif()
 include_directories(${PROJECT_SOURCE_DIR}/external/glm)
 include_directories(${PROJECT_SOURCE_DIR}/external/)
 
+add_library(${ENGINE_NAME} INTERFACE)
+
 add_subdirectory(lib)
+
 add_subdirectory(common)
+set(COMMON_ENGINE_NAME ${ENGINE_NAME}COMMON)
+add_library(${COMMON_ENGINE_NAME} INTERFACE)
+target_include_directories(${COMMON_ENGINE_NAME} INTERFACE
+    ${PROJECT_SOURCE_DIR}
+)
+target_link_libraries(${COMMON_ENGINE_NAME} INTERFACE
+    CommonCamera CommonInputManager CommonECS
+    CommonObject CommonUtil
+    CommonScene CommonStandardFileLoader
+    CommonModelLoader
+)
+target_link_libraries(${ENGINE_NAME} INTERFACE ${COMMON_ENGINE_NAME})
 
 if(Vulkan_FOUND)
-    add_subdirectory(vulkan_wrapper)
+    add_subdirectory(vulkan)
+    set(VULKAN_ENGINE_NAME ${ENGINE_NAME}Vulkan)
+    add_library(${VULKAN_ENGINE_NAME} INTERFACE)
+    target_link_libraries(${VULKAN_ENGINE_NAME} INTERFACE
+            Instance AssetManager
+            Surface DebugMessenger
+            PhysicalDevice MemoryAllocator
+            LogicalDevice Renderpass
+            Swapchain Buffer CommandBuffer
+            Framebuffer Pipeline
+            DescriptorSet
+    )
+    target_link_libraries(${ENGINE_NAME} INTERFACE ${VULKAN_ENGINE_NAME})
 endif()
-
-add_library(${ENGINE_NAME} INTERFACE)
-target_link_libraries(${ENGINE_NAME} INTERFACE
-        Instance AssetManager
-        Surface DebugMessenger
-        PhysicalDevice MemoryAllocator
-        LogicalDevice Renderpass
-        Swapchain Buffer CommandBuffer
-        Framebuffer Pipeline
-        DescriptorSet
-
-        CommonCamera CommonECS
-        CommonObject CommonUtil
-        CommonScene CommonStandardFileLoader
-        CommonModelLoader
-)
 
 if (ANDROID)
     add_subdirectory(openxr_wrapper)

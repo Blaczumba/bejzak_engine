@@ -7,6 +7,9 @@ if((WIN32 OR UNIX) AND NOT ANDROID)
 	target_include_directories(CommonInputManagerGlfw PUBLIC ${PROJECT_SOURCE_DIR})
 	target_include_directories(CommonInputManagerGlfw PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 
+	target_include_directories(CommonInputManagerGlfw PUBLIC ${PROJECT_SOURCE_DIR})
+	target_include_directories(CommonInputManagerGlfw PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+
 	target_link_libraries(CommonInputManager INTERFACE CommonInputManagerGlfw)
 endif()
 

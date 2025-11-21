@@ -11,12 +11,12 @@
 #include "common/status/status.h"
 #include "lib/buffer/buffer.h"
 #include "openxr_wrapper/util/check.h"
-#include "vulkan_wrapper/command_buffer/command_buffer.h"
-#include "vulkan_wrapper/debug_messenger/debug_messenger.h"
-#include "vulkan_wrapper/debug_messenger/debug_messenger_utils.h"
-#include "vulkan_wrapper/instance/extensions.h"
-#include "vulkan_wrapper/logical_device/extensions_connector.h"
-#include "vulkan_wrapper/util/check.h"
+#include "vulkan/wrapper/command_buffer/command_buffer.h"
+#include "vulkan/wrapper/debug_messenger/debug_messenger.h"
+#include "vulkan/wrapper/debug_messenger/debug_messenger_utils.h"
+#include "vulkan/wrapper/instance/extensions.h"
+#include "vulkan/wrapper/logical_device/extensions_connector.h"
+#include "vulkan/wrapper/util/check.h"
 
 namespace xrw {
 

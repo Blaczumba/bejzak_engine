@@ -2,6 +2,8 @@
 
 #include "common/input_manager/mouse_keyboard_manager.h"
 
+class MouseKeyboardManager;
+
 class MouseKeyboardCameraController {
 public:
   virtual void updateFromKeyboard(
