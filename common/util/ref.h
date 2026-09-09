@@ -1,26 +1,27 @@
 #pragma once
 
 #include <cstdint>
+#include <tuple>
 
 namespace common {
 
 class Ref {
   struct VTable {
-    void (*incrementRefCount)(void* resourceManager, uint64_t handle);
-    void (*decrementRefCount)(void* resourceManager, uint64_t handle);
+    void (*incrementRefCount)(void* referenceCounter, uint32_t handle);
+    void (*decrementRefCount)(void* referenceCounter, uint32_t handle);
   };
 
-  // One VTable instance per (ResourceManager, Handle) pair, shared by all Refs
+  // One VTable instance per (ReferenceCounter, Handle) pair, shared by all Refs
   // built from that pair. Returned by pointer so every Ref stores just 8 bytes.
-  template <typename ResourceManager, typename Handle>
+  template <typename ReferenceCounter, typename Handle>
   static const VTable* vtableFor() {
     static constexpr VTable table{
-      [](void* resourceManager, uint64_t handle) {
-        static_cast<ResourceManager*>(resourceManager)
+      [](void* referenceCounter, uint32_t handle) {
+        static_cast<ReferenceCounter*>(referenceCounter)
             ->incrementRefCount(static_cast<Handle>(handle));
       },
-      [](void* resourceManager, uint64_t handle) {
-        static_cast<ResourceManager*>(resourceManager)
+      [](void* referenceCounter, uint32_t handle) {
+        static_cast<ReferenceCounter*>(referenceCounter)
             ->decrementRefCount(static_cast<Handle>(handle));
       },
     };
@@ -28,14 +29,21 @@ class Ref {
   }
 
 public:
+  enum class Type : uint8_t {
+    UNDEFINED,
+    BUFFER,
+    IMAGE,
+    VIRTUAL_ALLOCATION,
+  };
+
   Ref() noexcept = default;
 
-  template <typename ResourceManager, typename Handle>
-  Ref(ResourceManager* resourceManager, Handle handle)
-    : _resourceManager(resourceManager), _vtable(vtableFor<ResourceManager, Handle>()),
-      _handle(static_cast<uint64_t>(*handle)) {
-    if (_resourceManager) {
-      _vtable->incrementRefCount(_resourceManager, _handle);
+  template <typename ReferenceCounter, typename Handle>
+  Ref(ReferenceCounter* referenceCounter, Handle handle, Type type)
+    : _referenceCounter(referenceCounter), _vtable(vtableFor<ReferenceCounter, Handle>()),
+      _handle(static_cast<uint32_t>(*handle)), _type(type) {
+    if (referenceCounter) {
+      referenceCounter->incrementRefCout(handle);
     }
   }
 
@@ -49,14 +57,33 @@ public:
 
   ~Ref();
 
-  uint64_t getHandle() const noexcept {
-    return _handle;
+  // Do not use it directly.
+  template <typename ResourceManager, typename Handle>
+  static Ref adopt(ResourceManager* referenceCounter, Handle handle, Type type) noexcept {
+    Ref ref;
+    if (referenceCounter) {
+      ref._referenceCounter = referenceCounter;
+      ref._vtable = vtableFor<ResourceManager, Handle>();
+      ref._handle = static_cast<uint32_t>(*handle);
+      ref._type = type;
+    }
+    return ref;
   }
 
+  // Do not use it directly.
+  std::tuple<void*, uint32_t> release() noexcept;
+
+  void* getReferenceCounter() const noexcept;
+
+  uint32_t getHandle() const noexcept;
+
+  Type getType() const noexcept;
+
 private:
-  void* _resourceManager = nullptr;
-  const VTable* _vtable = nullptr;
-  uint64_t _handle = 0;
+  void* _referenceCounter = nullptr;
+  const VTable* _vtable;
+  uint32_t _handle;
+  Type _type = Type::UNDEFINED;
 };
 
 }  // namespace common

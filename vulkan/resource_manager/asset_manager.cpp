@@ -36,21 +36,22 @@ std::unique_ptr<AssetManager> AssetManager::create(
 namespace {
 
 lib::Buffer<VkBufferImageCopy> translateToVkBufferImageCopy(
-    std::span<const ImageSubresource> imageSubresources) {
+    std::span<const ImageSubresource> imageSubresources, size_t stagingBufferOffset = 0) {
   lib::Buffer<VkBufferImageCopy> vkSubresources(imageSubresources.size());
-  std::transform(std::cbegin(imageSubresources), std::cend(imageSubresources),
-                 vkSubresources.begin(), [](const ImageSubresource& subresource) {
-                   return VkBufferImageCopy{
-                     .bufferOffset = subresource.offset,
-                     .imageSubresource = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                                          .mipLevel = subresource.mipLevel,
-                                          .baseArrayLayer = subresource.baseArrayLayer,
-                                          .layerCount = subresource.layerCount},
-                     .imageExtent = {.width = subresource.width,
-                                          .height = subresource.height,
-                                          .depth = subresource.depth},
-                   };
-                 });
+  std::transform(
+      std::cbegin(imageSubresources), std::cend(imageSubresources), vkSubresources.begin(),
+      [stagingBufferOffset](const ImageSubresource& subresource) {
+        return VkBufferImageCopy{
+          .bufferOffset = subresource.offset + stagingBufferOffset,
+          .imageSubresource = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                               .mipLevel = subresource.mipLevel,
+                               .baseArrayLayer = subresource.baseArrayLayer,
+                               .layerCount = subresource.layerCount},
+          .imageExtent = {.width = subresource.width,
+                               .height = subresource.height,
+                               .depth = subresource.depth},
+        };
+      });
   return vkSubresources;
 }
 
@@ -82,30 +83,32 @@ StagingImageDataResourceHandle AssetManager::loadImageAsync(
   return index;
 }
 
-//StagingImageDataResourceHandle AssetManager::loadImageAsync(
-//    std::shared_ptr<void> modelPtr, std::span<const std::byte> data) {
-//  const StagingImageDataResourceHandle index = _freeImageDataIndices.back();
-//  _freeImageDataIndices.pop_back();
-//  _awaitingImageDataResources.emplace(
-//      index, std::async(_launchPolicy, [this, modelPtr = std::move(modelPtr), data]() -> ImageData {
-//        const auto [resource, dataPtr] = loadImage(data, "");  // TODO: refactor.
-//        ImageData imageData = {
-//          .stagingBuffer = BufferBuilder()
-//                               .withSize(resource.size)
-//                               .withUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
-//                               .buildStagingBufferWithMetadata(_logicalDevice),
-//          .width = resource.width,
-//          .height = resource.height,
-//          .mipLevels = resource.mipLevels,
-//          .layerCount = resource.layerCount,
-//          .copyRegions = translateToVkBufferImageCopy(resource.subresources),
-//        };
-//        common::copyData(std::get<BufferMetadata>(imageData.stagingBuffer).getMappedMemoryAsSpan(),
-//                         0, std::span(static_cast<const std::byte*>(resource.data), resource.size));
-//        return imageData;
-//      }));
-//  return index;
-//}
+// StagingImageDataResourceHandle AssetManager::loadImageAsync(
+//     std::shared_ptr<void> modelPtr, std::span<const std::byte> data) {
+//   const StagingImageDataResourceHandle index = _freeImageDataIndices.back();
+//   _freeImageDataIndices.pop_back();
+//   _awaitingImageDataResources.emplace(
+//       index, std::async(_launchPolicy, [this, modelPtr = std::move(modelPtr), data]() ->
+//       ImageData {
+//         const auto [resource, dataPtr] = loadImage(data, "");  // TODO: refactor.
+//         ImageData imageData = {
+//           .stagingBuffer = BufferBuilder()
+//                                .withSize(resource.size)
+//                                .withUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
+//                                .buildStagingBufferWithMetadata(_logicalDevice),
+//           .width = resource.width,
+//           .height = resource.height,
+//           .mipLevels = resource.mipLevels,
+//           .layerCount = resource.layerCount,
+//           .copyRegions = translateToVkBufferImageCopy(resource.subresources),
+//         };
+//         common::copyData(std::get<BufferMetadata>(imageData.stagingBuffer).getMappedMemoryAsSpan(),
+//                          0, std::span(static_cast<const std::byte*>(resource.data),
+//                          resource.size));
+//         return imageData;
+//       }));
+//   return index;
+// }
 
 StagingImageDataResourceHandle AssetManager::loadImageAsync(
     std::shared_ptr<void> modelPtr, ImageResource&& imageResource) {
@@ -144,52 +147,62 @@ StagingVertexDataResourceHandle AssetManager::loadVertexDataInterleavingAsync(
   _freeVertexDataIndices.pop_back();
   _awaitingVertexDataResources.emplace(
       index,
-      std::async(_launchPolicy,
-                 [this, modelPtr = std::move(modelPtr), indices, indexSize,
-                  bufferDescriptions = std::move(bufferDescriptions)]() mutable -> VertexData {
-                   VertexData vertexData;
-                   const VkPhysicalDeviceType deviceType =
-                       _logicalDevice.getPhysicalDevice().getPhysicalDeviceType();
+      std::async(
+          _launchPolicy,
+          [this, modelPtr = std::move(modelPtr), indices, indexSize,
+           bufferDescriptions = std::move(bufferDescriptions)]() mutable -> VertexData {
+            VertexData vertexData;
+            const VkPhysicalDeviceType deviceType =
+                _logicalDevice.getPhysicalDevice().getPhysicalDeviceType();
 
-                   struct {
-                     VkBufferUsageFlags vertexBufferUsage = 0;
-                     VkBufferUsageFlags indexBufferUsage = 0;
-                   } flags;
+            struct {
+              VkBufferUsageFlags vertexBufferUsage = 0;
+              VkBufferUsageFlags indexBufferUsage = 0;
+            } flags;
 
-                   // For integrated graphics we create buffers properly in place so that they do
-                   // not need to be copied to the same memory later.
-                   if (deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) {
-                     flags.vertexBufferUsage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-                     flags.indexBufferUsage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-                   } else if (deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
-                     flags.vertexBufferUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-                     flags.indexBufferUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-                   }
+            // For integrated graphics we create buffers properly in place so that they do
+            // not need to be copied to the same memory later.
+            if (deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) {
+              flags.vertexBufferUsage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+              flags.indexBufferUsage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+            } else if (deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
+              flags.vertexBufferUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+              flags.indexBufferUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+            }
 
-                   for (common::BufferDescription& description : bufferDescriptions) {
-                     auto [it, inserted] = vertexData.buffers.insert(
-                         {std::move(description.name),
-                          BufferBuilder()
-                              .withSize(description.totalSize)
-                              .withUsage(flags.vertexBufferUsage)
-                              .buildStagingBufferWithMetadata(_logicalDevice)});
-                     common::copyDataInterleaving(
-                         std::get<BufferMetadata>(it->second).getMappedMemoryAsSpan(),
-                         description.attributes);
-                   }
+            for (common::BufferDescription& description : bufferDescriptions) {
+              auto [it, inserted] = vertexData.buffers.insert(
+                  {std::move(description.name),
+                   BufferBuilder()
+                       .withSize(description.totalSize)
+                       .withUsage(flags.vertexBufferUsage)
+                       .buildStagingBufferWithMetadata(_logicalDevice)});
+              common::copyDataInterleaving(
+                  std::get<BufferMetadata>(it->second).getMappedMemoryAsSpan(),
+                  description.attributes);
+            }
 
-                   const size_t shrunkIndexSize = getShrunkIndexSize(indices, indexSize);
-                   vertexData.indexBuffer =
-                       BufferBuilder()
-                           .withSize(indices.size() / indexSize * shrunkIndexSize)
-                           .withUsage(flags.indexBufferUsage)
-                           .buildStagingBufferWithMetadata(_logicalDevice);
-                   common::copyAndShrinkIndexData(
-                       std::get<BufferMetadata>(vertexData.indexBuffer).getMappedMemoryAsSpan(),
-                       indices, shrunkIndexSize, indexSize);
-                   vertexData.indexType = getIndexType(shrunkIndexSize);
-                   return vertexData;
-                 }));
+            const IndexType shrunkIndexSize = getShrunkIndexSize(indices, getIndexType(indexSize));
+            vertexData.indexBuffer =
+                BufferBuilder()
+                    .withSize(indices.size() / indexSize * static_cast<uint8_t>(shrunkIndexSize))
+                    .withUsage(flags.indexBufferUsage)
+                    .buildStagingBufferWithMetadata(_logicalDevice);
+            common::copyAndShrinkIndexData(
+                std::get<BufferMetadata>(vertexData.indexBuffer).getMappedMemoryAsSpan(), indices,
+                static_cast<uint8_t>(shrunkIndexSize), indexSize);
+            vertexData.indexType = [](IndexType indexType) {
+              switch (indexType) {
+                case IndexType::UINT8:
+                  return VK_INDEX_TYPE_UINT8_EXT;
+                case IndexType::UINT16:
+                  return VK_INDEX_TYPE_UINT16;
+                default:
+                  return VK_INDEX_TYPE_UINT32;
+              }
+            }(shrunkIndexSize);
+            return vertexData;
+          }));
 
   return index;
 }
@@ -258,82 +271,156 @@ VertexData AssetManager::releaseVertexData(StagingVertexDataResourceHandle index
   return data;
 }
 
-std::shared_ptr<std::tuple<Ref<VirtualAllocation>, NewAssetManager::ImageData>> NewAssetManager::
-    loadImageAsync(
+std::tuple<Ref<Buffer>, Ref<VirtualAllocation>, VirtualAllocationMetadata>
+NewAssetManager::allocate(ThreadData& threadData, size_t size, size_t alignment, size_t blockSize) {
+  std::expected<std::tuple<VirtualAllocation, VirtualAllocationMetadata>, VirtualAllocation::Error>
+      expectedVirtualAllocation =
+          threadData.bufferBlocks.back().virtualBlock.createVirtualAllocation(size, alignment);
+  if (!expectedVirtualAllocation.has_value()) {
+    // Retry with the new buffer/block.
+    if (threadData.blockToBeReclaimed.has_value()) {
+      // Slower path: still very fast, if allocation didn't succeed then try to reuse the
+      // retired block.
+      threadData.bufferBlocks.push_back(std::move(*threadData.blockToBeReclaimed));
+      threadData.blockToBeReclaimed = std::nullopt;
+    } else {
+      // The slowest path: allocate new staging buffer and virtual block for the allocation.
+      auto [buffer, metadata] =
+          BufferBuilder()
+              .withUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
+              .withSize(blockSize)
+              .buildStagingBufferWithMetadata(_logicalDevice);
+      threadData.bufferBlocks.push_back(ThreadData::BufferBlock{
+        .stagingBuffer = _bufferManager.storeBuffer(std::move(buffer), metadata),
+        .virtualBlock = VirtualBlock::create(_logicalDevice.getMemoryAllocator(), blockSize)});
+    }
+    expectedVirtualAllocation =
+        threadData.bufferBlocks.back().virtualBlock.createVirtualAllocation(size, alignment);
+  }
+  auto& [virtualAllocation, virtualAllocationMetadata] = expectedVirtualAllocation.value();
+
+  Ref<VirtualAllocation> virtualAllocationRef;
+  uint8_t i;
+  for (i = 0; i < threadData.virtualAllocationCounters.size(); i++) {
+    // Fast path: virtual allocation counters have a free spot.
+    if (threadData.virtualAllocationCounters[i]->size() < MAX_VIRTUAL_ALLOCATIONS) {
+      virtualAllocationRef = threadData.virtualAllocationCounters[i]->transferResource(
+          std::move(virtualAllocation), virtualAllocationMetadata);
+      break;
+    }
+  }
+
+  if (i == threadData.virtualAllocationCounters.size()) [[unlikely]] {
+    // Slow path: very rare, if no virtual allocation counter has free spot then allocate the
+    // new one.
+    threadData.virtualAllocationCounters.push_back(
+        std::make_unique<ReferenceCounterWithMetadata<VirtualAllocation>>());
+    virtualAllocationRef = threadData.virtualAllocationCounters.back()->transferResource(
+        std::move(virtualAllocation), virtualAllocationMetadata);
+  }
+  return std::make_tuple(threadData.bufferBlocks.back().stagingBuffer,
+                         std::move(virtualAllocationRef), virtualAllocationMetadata);
+}
+
+std::shared_ptr<NewAssetManager::ImageData> NewAssetManager::loadImageAsync(
     std::function<std::tuple<ImageResource, OwnedImageData>(void)>&& imageFunction) {
-  auto promise = std::make_shared<std::tuple<Ref<VirtualAllocation>, NewAssetManager::ImageData>>();
-  { 
+  auto promise = std::make_shared<NewAssetManager::ImageData>();
+  {
     std::lock_guard lock(_mutex);
-    _tasks.push_back([promise, imageFunction = std::move(imageFunction)](
-                         const LogicalDevice& logicalDevice, ThreadData& threadData,
-                         BufferManager& bufferManager, size_t blockSize, size_t alignment) mutable {
-      const auto [resource, dataPtr] = imageFunction();
-      // Fast path: try to get new virtual allocation.
-      std::expected<std::tuple<VirtualAllocation, VirtualAllocationMetadata>,
-                    VirtualAllocation::Error>
-          expectedVirtualAllocation =
-              threadData.bufferBlocks.back().virtualBlock.createVirtualAllocation(
-                  resource.size, alignment);
-      if (!expectedVirtualAllocation.has_value()) {
-        // Retry with the new buffer/block.
-        if (threadData.blockToBeReclaimed.has_value()) {
-          // Slower path: still very fast, if allocation didn't succeed then try to reuse the
-          // retired block.
-          threadData.bufferBlocks.push_back(std::move(*threadData.blockToBeReclaimed));
-          threadData.blockToBeReclaimed = std::nullopt;
-        } else {
-          // The slowest path: allocate new staging buffer and virtual block for the allocation.
-          auto [buffer, metadata] =
-              BufferBuilder()
-                  .withUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
-                  .withSize(blockSize)
-                  .buildStagingBufferWithMetadata(logicalDevice);
-          threadData.bufferBlocks.push_back(ThreadData::BufferBlock{
-            .stagingBuffer = bufferManager.storeBuffer(std::move(buffer), metadata),
-            .virtualBlock = VirtualBlock::create(logicalDevice.getMemoryAllocator(), blockSize)});
-        }
-        expectedVirtualAllocation =
-            threadData.bufferBlocks.back().virtualBlock.createVirtualAllocation(
-                resource.size, alignment);
-      }
-      auto& [virtualAllocation, virtualAllocationMetadata] = expectedVirtualAllocation.value();
+    _tasks.push_back([this, promise, imageFunction = std::move(imageFunction)](
+                         ThreadData& threadData, size_t blockSize, size_t alignment) {
+      auto [resource, dataPtr] = imageFunction();
+      auto [stagingBufferRef, virtualAllocationRef, virtualAllocationMetadata] =
+          allocate(threadData, resource.size, alignment, blockSize);
+
       common::copyData(
-          std::span(
-              bufferManager.getMetadata(threadData.bufferBlocks.back().stagingBuffer.getHandle())
-                  .mappedMemory,
-              virtualAllocationMetadata.size),
+          std::span(_bufferManager.getMetadata(stagingBufferRef.getHandle()).mappedMemory,
+                    virtualAllocationMetadata.size),
           virtualAllocationMetadata.offset,
           std::span(static_cast<const std::byte*>(resource.data), resource.size));
 
-      Ref<VirtualAllocation> ref;
-      uint8_t i;
-      for (i = 0; i < threadData.virtualAllocationCounters.size(); i++) {
-        // Fast path: virtual allocation counters have a free spot.
-        if (threadData.virtualAllocationCounters[i]->size() < MAX_VIRTUAL_ALLOCATIONS) {
-          ref = threadData.virtualAllocationCounters[i]->transferResource(
-              std::move(virtualAllocation), virtualAllocationMetadata);
-          break;
-        }
+      promise->stagingBuffer = std::move(stagingBufferRef);
+      promise->virtualAllocation = std::move(virtualAllocationRef);
+      promise->width = resource.width;
+      promise->height = resource.height;
+      promise->mipLevels = resource.mipLevels;
+      promise->layerCount = resource.layerCount;
+      promise->copyRegions = std::move(resource.subresources);
+      promise->residentMips.store(0, std::memory_order_relaxed);
+      promise->loadState.store(LoadState::READY, std::memory_order_release);
+    });
+  }
+  return promise;
+}
+
+std::shared_ptr<NewAssetManager::ImageData> NewAssetManager::loadImageAsync(
+    std::shared_ptr<void> modelPtr, ImageResource&& resource) {
+  auto promise = std::make_shared<NewAssetManager::ImageData>();
+  {
+    std::lock_guard lock(_mutex);
+    _tasks.push_back(
+        [this, promise, modelPtr = std::move(modelPtr), resource = std::move(resource)](
+            ThreadData& threadData, size_t blockSize, size_t alignment) {
+          auto [stagingBufferRef, virtualAllocationRef, virtualAllocationMetadata] =
+              allocate(threadData, resource.size, alignment, blockSize);
+
+          common::copyData(
+              std::span(_bufferManager.getMetadata(stagingBufferRef.getHandle()).mappedMemory,
+                        virtualAllocationMetadata.size),
+              virtualAllocationMetadata.offset,
+              std::span(static_cast<const std::byte*>(resource.data), resource.size));
+
+          promise->stagingBuffer = std::move(stagingBufferRef);
+          promise->virtualAllocation = std::move(virtualAllocationRef);
+          promise->width = resource.width;
+          promise->height = resource.height;
+          promise->mipLevels = resource.mipLevels;
+          promise->layerCount = resource.layerCount;
+          promise->copyRegions = std::move(resource.subresources);
+          promise->residentMips.store(0, std::memory_order_relaxed);
+          promise->loadState.store(LoadState::READY, std::memory_order_release);
+        });
+  }
+  return promise;
+}
+
+std::shared_ptr<NewAssetManager::VertexData> NewAssetManager::loadVertexDataInterleavingAsync(
+    std::shared_ptr<void> modelPtr, std::span<const std::byte> indices, IndexType indexType,
+    std::vector<common::BufferDescription>&& bufferDescriptions) {
+  auto promise = std::make_shared<NewAssetManager::VertexData>();
+  {
+    std::lock_guard lock(_mutex);
+    _tasks.push_back([this, promise, modelPtr = std::move(modelPtr), indices, indexType,
+                      bufferDescriptions = std::move(bufferDescriptions)](
+                         ThreadData& threadData, size_t blockSize, size_t alignment) mutable {
+      for (common::BufferDescription& description : bufferDescriptions) {
+        auto [stagingBufferRef, virtualAllocationRef, virtualAllocationMetadata] =
+            allocate(threadData, description.totalSize, alignment, blockSize);
+        common::copyDataInterleaving(
+            std::span(_bufferManager.getMetadata(stagingBufferRef.getHandle()).mappedMemory
+                          + virtualAllocationMetadata.offset,
+                      virtualAllocationMetadata.size),
+            description.attributes);
+        promise->buffers.insert(
+            {std::move(description.name),
+             std::make_tuple(std::move(stagingBufferRef), std::move(virtualAllocationRef))});
       }
 
-      if (i == threadData.virtualAllocationCounters.size()) [[unlikely]] {
-        // Slow path: very rare, if no virtual allocation counter has free spot then allocate the
-        // new one.
-        threadData.virtualAllocationCounters.push_back(
-            std::make_unique<ReferenceCounterWithMetadata<VirtualAllocation>>());
-        ref = threadData.virtualAllocationCounters.back()->transferResource(
-            std::move(virtualAllocation), virtualAllocationMetadata);
-      }
+      const IndexType shrunkIndexType = getShrunkIndexSize(indices, indexType);
+      auto [stagingBufferRef, virtualAllocationRef, virtualAllocationMetadata] = allocate(
+          threadData,
+          indices.size() / static_cast<size_t>(indexType) * static_cast<size_t>(shrunkIndexType),
+          alignment, blockSize);
+      common::copyAndShrinkIndexData(
+          std::span(_bufferManager.getMetadata(stagingBufferRef.getHandle()).mappedMemory,
+                    virtualAllocationMetadata.size),
+          indices, static_cast<size_t>(shrunkIndexType), static_cast<size_t>(indexType),
+          virtualAllocationMetadata.offset);
 
-      std::get<Ref<VirtualAllocation>>(*promise) = std::move(ref);
-      ImageData& imageData = std::get<ImageData>(*promise);
-      imageData.width = resource.width;
-      imageData.height = resource.height;
-      imageData.mipLevels = resource.mipLevels;
-      imageData.layerCount = resource.layerCount;
-      imageData.copyRegions = translateToVkBufferImageCopy(resource.subresources);
-      imageData.residentMips.store(0, std::memory_order_relaxed);
-      imageData.loadState.store(LoadState::READY, std::memory_order_release);
+      promise->indexType = indexType;
+      promise->indexBuffer =
+          std::make_tuple(std::move(stagingBufferRef), std::move(virtualAllocationRef));
+      promise->loadState.store(LoadState::READY, std::memory_order_release);
     });
   }
   return promise;

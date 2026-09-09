@@ -8,4 +8,15 @@
 
 #include "common/buffer/buffer.h"
 
-size_t getShrunkIndexSize(std::span<const std::byte> indicesBuffer, size_t indexSize);
+enum class IndexType : uint8_t {
+  UINT8 = 1,
+  UINT16 = 2,
+  UINT32 = 4,
+  UINT64 = 8
+};
+
+IndexType getShrunkIndexSize(std::span<const std::byte> indicesBuffer, IndexType indexSize);
+
+IndexType getIndexType(uint8_t indexSize);
+
+IndexType getCapableIndexType(size_t maxIndex);

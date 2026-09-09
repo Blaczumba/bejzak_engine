@@ -1,9 +1,9 @@
 #include "vulkan/wrapper/memory_allocator/allocation.h"
 
-#include <optional>
-#include <tuple>
 #include <cstdint>
 #include <expected>
+#include <optional>
+#include <tuple>
 #include <variant>
 #include <vulkan/vulkan.h>
 
@@ -112,7 +112,8 @@ VirtualAllocation::create(const VirtualBlock& virtualBlock, size_t size, size_t 
 }
 
 VirtualAllocation::VirtualAllocation(VirtualAllocation&& other) noexcept
-    : _virtualBlock(std::exchange(other._virtualBlock, nullptr)), _virtualAlloc(other._virtualAlloc) {}
+  : _virtualBlock(std::exchange(other._virtualBlock, nullptr)), _virtualAlloc(other._virtualAlloc) {
+}
 
 VirtualAllocation& VirtualAllocation::operator=(VirtualAllocation&& other) noexcept {
   if (this == &other) [[unlikely]] {
@@ -149,7 +150,8 @@ VirtualBlock VirtualBlock::create(const MemoryAllocator& memoryAllocator, size_t
 }
 
 VirtualBlock::VirtualBlock(VirtualBlock&& other) noexcept
-  : _virtualBlock(std::exchange(other._virtualBlock, std::monostate{})), _mutex(std::move(other._mutex)) {}
+  : _virtualBlock(std::exchange(other._virtualBlock, std::monostate{})),
+    _mutex(std::move(other._mutex)) {}
 
 VirtualBlock& VirtualBlock::operator()(VirtualBlock&& other) noexcept {
   if (this == &other) [[unlikely]] {

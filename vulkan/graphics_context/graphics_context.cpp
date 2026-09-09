@@ -270,26 +270,21 @@ Entity GCONTEXT_CLASS loadObject(
   if (_physicalDevice->getPhysicalDeviceType() == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) {
     AssetManager::VertexData vData = _assetManager->releaseVertexData(cubeData.vertexResourceID);
     auto& [r1, m1] = vData.buffers.at("P");
-    auto a = _bufferManager->storeBuffer(std::move(r1), m1);
-    msh.vertexBufferPrimitiveHandle = common::Ref(a.getCounter(), a.getHandle());
+    // auto a = _bufferManager->storeBuffer(std::move(r1), m1);
+    msh.vertexBufferPrimitiveHandle = _bufferManager->storeBuffer(std::move(r1), m1);
     auto& [r2, m2] = vData.buffers.at("PTN");
-    auto b = _bufferManager->storeBuffer(std::move(r2), m2);
-    msh.vertexBufferHandle = common::Ref(b.getCounter(), b.getHandle());
+    msh.vertexBufferHandle = _bufferManager->storeBuffer(std::move(r2), m2);
     auto& [r3, m3] = vData.indexBuffer;
-    auto c = _bufferManager->storeBuffer(std::move(r3), m3);
-    msh.indexBufferHandle = common::Ref(c.getCounter(), c.getHandle());
+    msh.indexBufferHandle = _bufferManager->storeBuffer(std::move(r3), m3);
     msh.indexType = vData.indexType;
   } else if (_physicalDevice->getPhysicalDeviceType() == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
     const AssetManager::VertexData& vData = _assetManager->getVertexData(cubeData.vertexResourceID);
-    auto a = copyStagingToGpuBuffer(
+    msh.vertexBufferPrimitiveHandle = copyStagingToGpuBuffer(
         *_logicalDevice, _bufferManager.get(), commandBuffer, vData.buffers.at("P"));
-    msh.vertexBufferPrimitiveHandle = common::Ref(a.getCounter(), a.getHandle());
-    auto b = copyStagingToGpuBuffer(
+    msh.vertexBufferHandle = copyStagingToGpuBuffer(
         *_logicalDevice, _bufferManager.get(), commandBuffer, vData.buffers.at("PTN"));
-    msh.vertexBufferHandle = common::Ref(b.getCounter(), b.getHandle());
-    auto c = copyStagingToGpuBuffer(
+    msh.indexBufferHandle = copyStagingToGpuBuffer(
         *_logicalDevice, _bufferManager.get(), commandBuffer, vData.indexBuffer, false);
-    msh.indexBufferHandle = common::Ref(c.getCounter(), c.getHandle());
     msh.indexType = vData.indexType;
   }
   _registry.addComponent(entity, std::move(msh));
@@ -570,28 +565,21 @@ void GCONTEXT_CLASS loadObjects(
           _assetManager->releaseVertexData(sceneObject.vertexResourceID);
       // TODO:
       auto& [r1, m1] = vData.buffers.at("PTNT");
-      auto a =
-          _bufferManager->storeBuffer(std::move(r1), m1);
-      msh.vertexBufferHandle = common::Ref(a.getCounter(), a.getHandle());
+      msh.vertexBufferHandle = _bufferManager->storeBuffer(std::move(r1), m1);
       auto& [r2, m2] = vData.buffers.at("P");
-      auto b = _bufferManager->storeBuffer(std::move(r2), m2);
-      msh.vertexBufferPrimitiveHandle = common::Ref(b.getCounter(), b.getHandle());
+      msh.vertexBufferPrimitiveHandle = _bufferManager->storeBuffer(std::move(r2), m2);
       auto& [r3, m3] = vData.indexBuffer;
-      auto c = _bufferManager->storeBuffer(std::move(r3), m3);
-      msh.indexBufferHandle = common::Ref(c.getCounter(), c.getHandle());
+      msh.indexBufferHandle = _bufferManager->storeBuffer(std::move(r3), m3);
       msh.indexType = vData.indexType;
     } else if (_physicalDevice->getPhysicalDeviceType() == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
       const AssetManager::VertexData& vData =
           _assetManager->getVertexData(sceneObject.vertexResourceID);
-      auto a = copyStagingToGpuBuffer(
+      msh.vertexBufferHandle = copyStagingToGpuBuffer(
           *_logicalDevice, _bufferManager.get(), commandBuffer, vData.buffers.at("PTNT"));
-      msh.vertexBufferHandle = common::Ref(a.getCounter(), a.getHandle());
-      auto b = copyStagingToGpuBuffer(
+      msh.vertexBufferPrimitiveHandle = copyStagingToGpuBuffer(
           *_logicalDevice, _bufferManager.get(), commandBuffer, vData.buffers.at("P"));
-      msh.vertexBufferPrimitiveHandle = common::Ref(b.getCounter(), b.getHandle());
-      auto c = copyStagingToGpuBuffer(
+      msh.indexBufferHandle = copyStagingToGpuBuffer(
           *_logicalDevice, _bufferManager.get(), commandBuffer, vData.indexBuffer, false);
-      msh.indexBufferHandle = common::Ref(c.getCounter(), c.getHandle());
       msh.indexType = vData.indexType;
     }
     msh.aabb = createAABBfromVertices(sceneObject.positions, sceneObject.model);
