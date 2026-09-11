@@ -200,6 +200,7 @@ void GCONTEXT_CLASS setup() {
   // loadObjects(spartanData, _graphicsTesselationPipelineHandle);
 
   {
+    auto asMan = NewAssetManager::create(*_logicalDevice, *_bufferManager);
     SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
     const VkCommandBuffer commandBuffer = handle.getVkCommandBuffer();
 
@@ -211,6 +212,7 @@ void GCONTEXT_CLASS setup() {
         return loadImage(_fileLoader.loadFileToBuffer(filePath), filePath);
       }),
       TEXTURES_PATH "cubemap_yokohama_rgba.ktx"};
+
     const AssetManager::ImageData& imageData =
         _assetManager->getImageData(cubeData.diffuseTexture.ID);
 

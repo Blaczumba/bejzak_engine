@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstdint>
+
 #include "vulkan/resource_manager/handle.h"
 
 template <typename Resource>

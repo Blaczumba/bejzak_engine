@@ -16,6 +16,8 @@ class Buffer {
 public:
   Buffer() = default;
 
+  ~Buffer() = default;
+
   explicit Buffer(size_t size)
     : _buffer(size > 0 ? std::make_unique_for_overwrite<T[]>(size) : nullptr), _size(size) {}
 

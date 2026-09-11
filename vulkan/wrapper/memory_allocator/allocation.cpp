@@ -14,7 +14,7 @@ namespace {
 struct VirtualBlockInitializer {
   const size_t size;
 
-  std::variant<std::monostate, VmaVirtualBlock> operator()(VmaAllocator allocator) {
+  std::variant<std::monostate, VmaVirtualBlock> operator()(const VmaWrapper& allocator) {
     const VmaVirtualBlockCreateInfo createInfo{
       .size = size, .flags = VMA_VIRTUAL_BLOCK_CREATE_LINEAR_ALGORITHM_BIT};
     VmaVirtualBlock virtualBlock;

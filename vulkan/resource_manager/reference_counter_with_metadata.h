@@ -2,11 +2,11 @@
 
 #include <atomic>
 #include <cstdint>
+#include <expected>
 #include <format>
 #include <mutex>
 #include <numeric>
 
-#include "common/util/engine_exception.h"
 #include "lib/sparse/sparse_map.h"
 #include "vulkan/resource_manager/handle.h"
 #include "vulkan/resource_manager/ref.h"
@@ -17,7 +17,8 @@ class ReferenceCounterWithMetadata : public ReferenceCounter<Resource> {
 public:
   ReferenceCounterWithMetadata();
 
-  Ref<Resource> transferResource(Resource&& resource, const MetadataFor<Resource>& metadata);
+  std::expected<Ref<Resource>, Resource> transferResource(
+      Resource&& resource, const MetadataFor<Resource>& metadata);
 
   // Must be called when related Ref<Resource> is still alive.
   VulkanObjectFor<Resource> getVkResource(HandleFor<Resource> handle) const;
@@ -51,14 +52,13 @@ ReferenceCounterWithMetadata<Resource>::ReferenceCounterWithMetadata()
 }
 
 template <typename Resource>
-Ref<Resource> ReferenceCounterWithMetadata<Resource>::transferResource(
+std::expected<Ref<Resource>, Resource> ReferenceCounterWithMetadata<Resource>::transferResource(
     Resource&& resource, const MetadataFor<Resource>& metadata) {
   HandleFor<Resource> handle;
   {
     std::lock_guard lock(_mutex);
     if (_freeHandles.empty()) [[unlikely]] {
-      throw EngineException(
-          std::format("No free handles available for {} transfer.", NAME_OF<Resource>));
+      return std::unexpected(std::move(resource));
     }
     handle = _freeHandles.back();
     _freeHandles.pop_back();

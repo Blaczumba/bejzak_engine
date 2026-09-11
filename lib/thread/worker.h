@@ -7,6 +7,8 @@
 #include <queue>
 #include <thread>
 
+#include "lib/types/util.h"
+
 namespace lib::thread {
 
 template <size_t N, typename... Args>
@@ -72,10 +74,11 @@ void Worker<N, Args...>::startWorkingThread(Args... args) {
 template <size_t N, typename... Args>
 void Worker<N, Args...>::workingThread() {
   std::array<Job, N> tasksToProcess;
+  typename lib::SmallestIndex<N>::type i;
   while (true) {
     {
       std::unique_lock<std::mutex> lock(_mtx);
-      _cv.wait(lock, [this]() {
+      _cv.wait_for(lock, std::chrono::seconds(5), [this]() {
         return _tasks.size() > N || _stop;
       });
 
@@ -83,14 +86,14 @@ void Worker<N, Args...>::workingThread() {
         break;
       }
 
-      for (Job& task : tasksToProcess) {
-        task = std::move(_tasks.front());
+      for (i = 0; i < std::min(N, _tasks.size()); i++ ) {
+        tasksToProcess[i] = std::move(_tasks.front());
         _tasks.pop();
       }
     }
 
-    for (Job& task : tasksToProcess) {
-      std::apply(task, _context);
+    for (typename lib::SmallestIndex<N>::type j = 0; j < i; j++) {
+      std::apply(tasksToProcess[j], _context);
     }
   }
 

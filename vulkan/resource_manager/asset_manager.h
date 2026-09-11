@@ -1,8 +1,10 @@
 #pragma once
 
 #include <array>
+#include <chrono>
 #include <deque>
 #include <future>
+#include <iostream>
 #include <span>
 #include <string>
 #include <tuple>
@@ -130,7 +132,7 @@ class NewAssetManager {
     while (true) {
       {
         std::unique_lock lock(_mutex);
-        timedOut = !_conditionVariable.wait_for(lock, std::chrono::milliseconds(200), [this] {
+        timedOut = !_conditionVariable.wait_for(lock, std::chrono::seconds(10000), [this] {
           return !_tasks.empty() || _stop;
         });
 
@@ -176,7 +178,10 @@ class NewAssetManager {
   }
 
 public:
-  static std::unique_ptr<AssetManager> create(const LogicalDevice& logicalDevice);
+  static std::unique_ptr<NewAssetManager> create(
+      const LogicalDevice& logicalDevice, BufferManager& bufferManager);
+
+  ~NewAssetManager();
 
   enum class LoadState : uint8_t {
     PENDING,

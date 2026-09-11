@@ -271,6 +271,22 @@ VertexData AssetManager::releaseVertexData(StagingVertexDataResourceHandle index
   return data;
 }
 
+std::unique_ptr<NewAssetManager> NewAssetManager::create(
+    const LogicalDevice& logicalDevice, BufferManager& bufferManager) {
+  return std::unique_ptr<NewAssetManager>(new NewAssetManager(logicalDevice, bufferManager, 10));
+}
+
+NewAssetManager::~NewAssetManager() {
+  {
+    std::lock_guard lck(_mutex);
+    _stop = true;
+  }
+  _conditionVariable.notify_all();
+  for (auto& thread : _threads) {
+    thread.thread.join();
+  }
+}
+
 std::tuple<Ref<Buffer>, Ref<VirtualAllocation>, VirtualAllocationMetadata>
 NewAssetManager::allocate(ThreadData& threadData, size_t size, size_t alignment, size_t blockSize) {
   std::expected<std::tuple<VirtualAllocation, VirtualAllocationMetadata>, VirtualAllocation::Error>
@@ -288,7 +304,8 @@ NewAssetManager::allocate(ThreadData& threadData, size_t size, size_t alignment,
       auto [buffer, metadata] =
           BufferBuilder()
               .withUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
-              .withSize(blockSize)
+              .withSize(std::max(blockSize, size))  // Rare situation when size is bigger than
+                                                    // blockSize.
               .buildStagingBufferWithMetadata(_logicalDevice);
       threadData.bufferBlocks.push_back(ThreadData::BufferBlock{
         .stagingBuffer = _bufferManager.storeBuffer(std::move(buffer), metadata),
@@ -296,30 +313,36 @@ NewAssetManager::allocate(ThreadData& threadData, size_t size, size_t alignment,
     }
     expectedVirtualAllocation =
         threadData.bufferBlocks.back().virtualBlock.createVirtualAllocation(size, alignment);
+    if (!expectedVirtualAllocation.has_value()) [[unlikely]] {
+      throw EngineException("Failed to create virtual allocation.");
+    }
   }
   auto& [virtualAllocation, virtualAllocationMetadata] = expectedVirtualAllocation.value();
 
-  Ref<VirtualAllocation> virtualAllocationRef;
-  uint8_t i;
-  for (i = 0; i < threadData.virtualAllocationCounters.size(); i++) {
+  std::expected<Ref<VirtualAllocation>, VirtualAllocation> expectedRef =
+      std::unexpected(std::move(virtualAllocation));
+  for (uint8_t i = 0; i < threadData.virtualAllocationCounters.size(); i++) {
     // Fast path: virtual allocation counters have a free spot.
-    if (threadData.virtualAllocationCounters[i]->size() < MAX_VIRTUAL_ALLOCATIONS) {
-      virtualAllocationRef = threadData.virtualAllocationCounters[i]->transferResource(
-          std::move(virtualAllocation), virtualAllocationMetadata);
+    expectedRef = threadData.virtualAllocationCounters[i]->transferResource(
+        std::move(expectedRef.error()), virtualAllocationMetadata);
+    if (expectedRef.has_value()) {
       break;
     }
   }
 
-  if (i == threadData.virtualAllocationCounters.size()) [[unlikely]] {
+  if (!expectedRef.has_value()) [[unlikely]] {
     // Slow path: very rare, if no virtual allocation counter has free spot then allocate the
     // new one.
     threadData.virtualAllocationCounters.push_back(
         std::make_unique<ReferenceCounterWithMetadata<VirtualAllocation>>());
-    virtualAllocationRef = threadData.virtualAllocationCounters.back()->transferResource(
-        std::move(virtualAllocation), virtualAllocationMetadata);
+    expectedRef = threadData.virtualAllocationCounters.back()->transferResource(
+        std::move(expectedRef.error()), virtualAllocationMetadata);
+    if (!expectedRef.has_value()) [[unlikely]] {
+      throw EngineException("Failed to store the virtual allocation.");
+    }
   }
-  return std::make_tuple(threadData.bufferBlocks.back().stagingBuffer,
-                         std::move(virtualAllocationRef), virtualAllocationMetadata);
+  return std::make_tuple(threadData.bufferBlocks.back().stagingBuffer, std::move(*expectedRef),
+                         virtualAllocationMetadata);
 }
 
 std::shared_ptr<NewAssetManager::ImageData> NewAssetManager::loadImageAsync(
@@ -332,12 +355,11 @@ std::shared_ptr<NewAssetManager::ImageData> NewAssetManager::loadImageAsync(
       auto [resource, dataPtr] = imageFunction();
       auto [stagingBufferRef, virtualAllocationRef, virtualAllocationMetadata] =
           allocate(threadData, resource.size, alignment, blockSize);
-
       common::copyData(
-          std::span(_bufferManager.getMetadata(stagingBufferRef.getHandle()).mappedMemory,
+          std::span(_bufferManager.getMetadata(stagingBufferRef.getHandle()).mappedMemory
+                        + virtualAllocationMetadata.offset,
                     virtualAllocationMetadata.size),
-          virtualAllocationMetadata.offset,
-          std::span(static_cast<const std::byte*>(resource.data), resource.size));
+          0, std::span(static_cast<const std::byte*>(resource.data), resource.size));
 
       promise->stagingBuffer = std::move(stagingBufferRef);
       promise->virtualAllocation = std::move(virtualAllocationRef);
@@ -350,6 +372,7 @@ std::shared_ptr<NewAssetManager::ImageData> NewAssetManager::loadImageAsync(
       promise->loadState.store(LoadState::READY, std::memory_order_release);
     });
   }
+  _conditionVariable.notify_one();
   return promise;
 }
 
@@ -381,6 +404,7 @@ std::shared_ptr<NewAssetManager::ImageData> NewAssetManager::loadImageAsync(
           promise->loadState.store(LoadState::READY, std::memory_order_release);
         });
   }
+  _conditionVariable.notify_one();
   return promise;
 }
 
@@ -423,5 +447,6 @@ std::shared_ptr<NewAssetManager::VertexData> NewAssetManager::loadVertexDataInte
       promise->loadState.store(LoadState::READY, std::memory_order_release);
     });
   }
+  _conditionVariable.notify_one();
   return promise;
 }

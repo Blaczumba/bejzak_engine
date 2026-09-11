@@ -1,5 +1,6 @@
 #pragma once
 
+#include <expected>
 #include <memory>
 
 #include "vulkan/resource_manager/ref.h"
