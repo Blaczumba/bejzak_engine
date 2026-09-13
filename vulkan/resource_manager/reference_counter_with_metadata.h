@@ -20,11 +20,12 @@ public:
   std::expected<Ref<Resource>, Resource> transferResource(
       Resource&& resource, const MetadataFor<Resource>& metadata);
 
+  // Should be moved to protected session.
   // Must be called when related Ref<Resource> is still alive.
-  VulkanObjectFor<Resource> getVkResource(HandleFor<Resource> handle) const;
+  VulkanObjectFor<Resource> getVkResource(HandleFor<Resource> handle) const override;
 
   // Must be called when related Ref<Resource> is still alive.
-  const MetadataFor<Resource>& getMetadata(HandleFor<Resource> handle) const;
+  const MetadataFor<Resource>& getMetadata(HandleFor<Resource> handle) const override;
 
   size_t size() const;
 

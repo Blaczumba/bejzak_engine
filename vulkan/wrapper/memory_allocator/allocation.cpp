@@ -136,6 +136,10 @@ VirtualAllocation::~VirtualAllocation() {
   }
 }
 
+std::variant<VmaVirtualAllocation> VirtualAllocation::getVkResource() const noexcept {
+  return _virtualAlloc;
+}
+
 std::variant<VmaVirtualAllocation>& VirtualAllocation::getVirtualAllocation() noexcept {
   return _virtualAlloc;
 }

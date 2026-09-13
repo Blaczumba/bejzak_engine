@@ -91,21 +91,39 @@ void copyBuffer(
   copyBufferToBuffer(commandBuffer, srcBuffer, dstBuffer, srcOffset, dstOffset, size);
 }
 
-Ref<Buffer> copyStagingToGpuBuffer(
-    const LogicalDevice& logicalDevice, BufferManager* bufferManager,
-    const VkCommandBuffer commandBuffer, const std::tuple<Buffer, BufferMetadata>& stagingBuffer,
-    bool vertexBuffer = true) {
+Ref<Buffer> copyStagingToGpuBuffer(const LogicalDevice& logicalDevice, BufferManager* bufferManager,
+                                   const VkCommandBuffer commandBuffer, Ref<Buffer> bufferRef,
+                                   Ref<VirtualAllocation> allocationRef, bool vertexBuffer = true) {
   auto [buffer, metadata] =
       BufferBuilder()
           .withUsage(vertexBuffer == true ?
                          VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT :
                          VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT)
-          .withSize(std::get<BufferMetadata>(stagingBuffer).size)
+          .withSize(allocationRef.getMetadata().size)
           .buildVertexInputBufferWithMetadata(logicalDevice);
-  copyBuffer(commandBuffer, buffer.getVkBuffer(), metadata,
-             std::get<Buffer>(stagingBuffer).getVkBuffer(),
-             std::get<BufferMetadata>(stagingBuffer));
+  copyBufferToBuffer(commandBuffer, bufferRef.getVkResource(), buffer.getVkBuffer(),
+                     allocationRef.getMetadata().offset, 0, allocationRef.getMetadata().size);
   return bufferManager->storeBuffer(std::move(buffer), metadata);
+}
+
+lib::Buffer<VkBufferImageCopy> translateToVkBufferImageCopy(
+    std::span<const ImageSubresource> imageSubresources, size_t stagingBufferOffset = 0) {
+  lib::Buffer<VkBufferImageCopy> vkSubresources(imageSubresources.size());
+  std::transform(
+      std::cbegin(imageSubresources), std::cend(imageSubresources), vkSubresources.begin(),
+      [stagingBufferOffset](const ImageSubresource& subresource) {
+        return VkBufferImageCopy{
+          .bufferOffset = subresource.offset + stagingBufferOffset,
+          .imageSubresource = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                               .mipLevel = subresource.mipLevel,
+                               .baseArrayLayer = subresource.baseArrayLayer,
+                               .layerCount = subresource.layerCount},
+          .imageExtent = {.width = subresource.width,
+                               .height = subresource.height,
+                               .depth = subresource.depth},
+        };
+      });
+  return vkSubresources;
 }
 
 std::pair<Framebuffer, FramebufferMetadata> createFramebufferFromTextures(
@@ -157,12 +175,36 @@ std::tuple<Image, ImageMetadata> createAttachment(
 void createFsrContents(const LogicalDevice& logicalDevice, Image& image,
                        const ImageMetadata& metadata, const CommandBuffer& commandBuffer);
 
+VkIndexType convertIndexTypeToVkIndexType(IndexType indexType) {
+  switch (indexType) {
+    case IndexType::UINT8:
+      return VK_INDEX_TYPE_UINT8_EXT;
+    case IndexType::UINT16:
+      return VK_INDEX_TYPE_UINT16;
+    default:
+      return VK_INDEX_TYPE_UINT32;
+  }
+}
+
+void waitForAssetToLoad(const std::atomic<AssetManager::LoadState>& loadState) {
+  while (loadState.load(std::memory_order_acquire) == AssetManager::LoadState::PENDING) {
+    std::this_thread::yield();
+  }
+}
+
 }  // namespace
 
 GCONTEXT_TEMPLATE
 void GCONTEXT_CLASS setup() {
-  const std::vector<common::VertexData> sponzaData =
+  const std::vector<common::AssetData> sponzaData =
       common::LoadGltfFromFile(*_assetManager, _fileLoader, MODELS_PATH "sponza/scene.gltf");
+  // for (const common::AssetData& asset : sponzaData) {
+  //   waitForAssetToLoad(asset.vertexData->loadState);
+  //   waitForAssetToLoad(asset.diffuseTexture.imageData->loadState);
+  //   waitForAssetToLoad(asset.normalTexture.imageData->loadState);
+  //   waitForAssetToLoad(asset.metallicRoughnessTexture.imageData->loadState);
+  // }
+
   //     std::vector<common::VertexData> antiqueCandleStickData = common::LoadGltfFromFile(
   //         *_assetManager, MODELS_PATH "ornate_antique_candlestick/scene.gltf");
   //     std::for_each(
@@ -200,25 +242,22 @@ void GCONTEXT_CLASS setup() {
   // loadObjects(spartanData, _graphicsTesselationPipelineHandle);
 
   {
-    auto asMan = NewAssetManager::create(*_logicalDevice, *_bufferManager);
     SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
     const VkCommandBuffer commandBuffer = handle.getVkCommandBuffer();
 
     std::string cubeFileContents = _fileLoader.loadFileToString(MODELS_PATH "cube.obj");
-    common::VertexData cubeData = common::loadObj(*_assetManager, "cube.obj", cubeFileContents);
+    common::AssetData cubeData = common::loadObj(*_assetManager, "cube.obj", cubeFileContents);
+    waitForAssetToLoad(cubeData.vertexData->loadState);
     cubeData.diffuseTexture = {
       _assetManager->loadImageAsync([this]() {
         static constexpr std::string_view filePath = TEXTURES_PATH "cubemap_yokohama_rgba.ktx";
         return loadImage(_fileLoader.loadFileToBuffer(filePath), filePath);
       }),
       TEXTURES_PATH "cubemap_yokohama_rgba.ktx"};
-
-    const AssetManager::ImageData& imageData =
-        _assetManager->getImageData(cubeData.diffuseTexture.ID);
-
+    waitForAssetToLoad(cubeData.diffuseTexture.imageData->loadState);
     auto [skyboxImage, skyboxMetadata] =
-        createSkybox(*_logicalDevice, handle, imageData, VK_FORMAT_R8G8B8A8_SRGB,
-                     _physicalDevice->getMaxSamplerAnisotropy());
+        createSkybox(*_logicalDevice, handle, *cubeData.diffuseTexture.imageData,
+                     VK_FORMAT_R8G8B8A8_SRGB, _physicalDevice->getMaxSamplerAnisotropy());
     _skyboxEntity = loadObject(
         commandBuffer, cubeData, PipelineHandle(0), std::move(skyboxImage), skyboxMetadata);
 
@@ -252,8 +291,8 @@ void GCONTEXT_CLASS setup() {
 
 GCONTEXT_TEMPLATE
 Entity GCONTEXT_CLASS loadObject(
-    VkCommandBuffer commandBuffer, const common::VertexData& cubeData,
-    PipelineHandle pipelineHandle, Image&& image, const ImageMetadata& metadata) {
+    VkCommandBuffer commandBuffer, const common::AssetData& cubeData, PipelineHandle pipelineHandle,
+    Image&& image, const ImageMetadata& metadata) {
   Entity entity = _registry.createEntity();
   Ref<Sampler> samplerRef = _samplerManager->getOrCreateSampler(
       *_logicalDevice, SamplerBuilder()
@@ -267,27 +306,44 @@ Entity GCONTEXT_CLASS loadObject(
                             imageRef, samplerRef, view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                             _samplerManager->getVkResource(samplerRef.getHandle())),
                         .pipelineHandle = pipelineHandle});
-
-  MeshComponent msh = {.aabb = createAABBfromVertices(cubeData.positions, glm::mat4(1.0f))};
+  Ref<Buffer> vertexBufferRef;
+  Ref<VirtualAllocation> virtualAllocationRef;
+  std::tie(vertexBufferRef, virtualAllocationRef) = cubeData.vertexData->buffers.at("P");
+  MeshComponent msh = {
+    .aabb = createAABBfromVertices(
+        std::span(reinterpret_cast<glm::vec3*>(vertexBufferRef.getMetadata().mappedMemory
+                                               + virtualAllocationRef.getMetadata().offset),
+                  virtualAllocationRef.getMetadata().size / sizeof(glm::vec3)),
+        glm::mat4(1.0f))};
   if (_physicalDevice->getPhysicalDeviceType() == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) {
-    AssetManager::VertexData vData = _assetManager->releaseVertexData(cubeData.vertexResourceID);
-    auto& [r1, m1] = vData.buffers.at("P");
-    // auto a = _bufferManager->storeBuffer(std::move(r1), m1);
-    msh.vertexBufferPrimitiveHandle = _bufferManager->storeBuffer(std::move(r1), m1);
-    auto& [r2, m2] = vData.buffers.at("PTN");
-    msh.vertexBufferHandle = _bufferManager->storeBuffer(std::move(r2), m2);
-    auto& [r3, m3] = vData.indexBuffer;
-    msh.indexBufferHandle = _bufferManager->storeBuffer(std::move(r3), m3);
-    msh.indexType = vData.indexType;
+    // AssetManager::VertexData vData = _assetManager->releaseVertexData(cubeData.vertexResourceID);
+    // auto& [r1, m1] = vData.buffers.at("P");
+    //// auto a = _bufferManager->storeBuffer(std::move(r1), m1);
+    // msh.vertexBufferPrimitiveHandle = _bufferManager->storeBuffer(std::move(r1), m1);
+    // auto& [r2, m2] = vData.buffers.at("PTN");
+    // msh.vertexBufferHandle = _bufferManager->storeBuffer(std::move(r2), m2);
+    // auto& [r3, m3] = vData.indexBuffer;
+    // msh.indexBufferHandle = _bufferManager->storeBuffer(std::move(r3), m3);
+    // msh.indexType = vData.indexType;
   } else if (_physicalDevice->getPhysicalDeviceType() == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
-    const AssetManager::VertexData& vData = _assetManager->getVertexData(cubeData.vertexResourceID);
+    Ref<Buffer> pBufferRef;
+    Ref<VirtualAllocation> pVirtualAllocationRef;
+    std::tie(pBufferRef, pVirtualAllocationRef) = cubeData.vertexData->buffers.at("P");
     msh.vertexBufferPrimitiveHandle = copyStagingToGpuBuffer(
-        *_logicalDevice, _bufferManager.get(), commandBuffer, vData.buffers.at("P"));
+        *_logicalDevice, _bufferManager.get(), commandBuffer, pBufferRef, pVirtualAllocationRef);
+    Ref<Buffer> ptnBufferRef;
+    Ref<VirtualAllocation> ptnVirtualAllocationRef;
+    std::tie(ptnBufferRef, ptnVirtualAllocationRef) = cubeData.vertexData->buffers.at("PTN");
     msh.vertexBufferHandle = copyStagingToGpuBuffer(
-        *_logicalDevice, _bufferManager.get(), commandBuffer, vData.buffers.at("PTN"));
+        *_logicalDevice, _bufferManager.get(), commandBuffer, ptnBufferRef,
+        ptnVirtualAllocationRef);
+    Ref<Buffer> indexBufferRef;
+    Ref<VirtualAllocation> indexVirtualAllocationRef;
+    std::tie(indexBufferRef, indexVirtualAllocationRef) = cubeData.vertexData->indexBuffer;
     msh.indexBufferHandle = copyStagingToGpuBuffer(
-        *_logicalDevice, _bufferManager.get(), commandBuffer, vData.indexBuffer, false);
-    msh.indexType = vData.indexType;
+        *_logicalDevice, _bufferManager.get(), commandBuffer, indexBufferRef,
+        indexVirtualAllocationRef, false);
+    msh.indexType = convertIndexTypeToVkIndexType(cubeData.vertexData->indexType);
   }
   _registry.addComponent(entity, std::move(msh));
   _registry.addComponent(entity, TransformComponent{.model = cubeData.model});
@@ -503,19 +559,20 @@ void GCONTEXT_CLASS createSyncObjects() {
 
 GCONTEXT_TEMPLATE
 std::tuple<UniformTextureHandle, ImageHandle> GCONTEXT_CLASS getOrLoadTexture(
-    std::unordered_map<StagingImageDataResourceHandle,
-                       std::pair<UniformTextureHandle, ImageHandle>>& textureCache,
-    StagingImageDataResourceHandle textureID, VkFormat format, const CommandBuffer& commandBuffer,
+    std::unordered_map<uint64_t, std::pair<UniformTextureHandle, ImageHandle>>& textureCache,
+    const AssetManager::ImageData& imageData, VkFormat format, const CommandBuffer& commandBuffer,
     float maxSamplerAnisotropy, Ref<Sampler>& samplerRef) {
-  auto [it, inserted] = textureCache.try_emplace(textureID);
+  waitForAssetToLoad(imageData.loadState);
+  auto [it, inserted] = textureCache.try_emplace(
+      (static_cast<uint64_t>(imageData.stagingBuffer.getHandle()) << 32)
+      | imageData.virtualAllocation.getHandle());
 
   if (!inserted) {
     return it->second;
   }
 
-  const AssetManager::ImageData& imgData = _assetManager->getImageData(textureID);
   auto [image, metadata] =
-      createTexture2D(*_logicalDevice, commandBuffer, imgData, format, maxSamplerAnisotropy);
+      createTexture2D(*_logicalDevice, commandBuffer, imageData, format, maxSamplerAnisotropy);
   VkImageView view = image.getVkImageView();
   Ref<Image> imageRef = _imageManager->storeImage(std::move(image), metadata);
   UniformTextureHandle handle = _bindlessWriter->writeTexture(
@@ -530,11 +587,10 @@ std::tuple<UniformTextureHandle, ImageHandle> GCONTEXT_CLASS getOrLoadTexture(
 
 GCONTEXT_TEMPLATE
 void GCONTEXT_CLASS loadObjects(
-    std::span<const common::VertexData> sceneData, PipelineHandle pipelineHandle) {
+    std::span<const common::AssetData> sceneData, PipelineHandle pipelineHandle) {
   const float maxSamplerAnisotropy = _physicalDevice->getMaxSamplerAnisotropy();
 
-  std::unordered_map<StagingImageDataResourceHandle, std::pair<UniformTextureHandle, ImageHandle>>
-      textureCache;
+  std::unordered_map<uint64_t, std::pair<UniformTextureHandle, ImageHandle>> textureCache;
   textureCache.reserve(sceneData.size());
   SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
   VkCommandBuffer commandBuffer = handle.getVkCommandBuffer();
@@ -544,17 +600,17 @@ void GCONTEXT_CLASS loadObjects(
                            .withLodRange(0.0f, VK_LOD_CLAMP_NONE)
                            .buildMetadata());
 
-  for (const common::VertexData& sceneObject : sceneData) {
+  for (const common::AssetData& sceneObject : sceneData) {
     const auto [diffuseHandle, diffuseTextureIndex] =
-        getOrLoadTexture(textureCache, sceneObject.diffuseTexture.ID, VK_FORMAT_R8G8B8A8_SRGB,
-                         handle, maxSamplerAnisotropy, samplerRef);
+        getOrLoadTexture(textureCache, *sceneObject.diffuseTexture.imageData,
+                         VK_FORMAT_R8G8B8A8_SRGB, handle, maxSamplerAnisotropy, samplerRef);
 
     const auto [normalHandle, normalTextureIndex] =
-        getOrLoadTexture(textureCache, sceneObject.normalTexture.ID, VK_FORMAT_R8G8B8A8_UNORM,
-                         handle, maxSamplerAnisotropy, samplerRef);
+        getOrLoadTexture(textureCache, *sceneObject.normalTexture.imageData,
+                         VK_FORMAT_R8G8B8A8_UNORM, handle, maxSamplerAnisotropy, samplerRef);
 
     const auto [metallicRoughnessHandle, metallicRoughnessTextureIndex] =
-        getOrLoadTexture(textureCache, sceneObject.metallicRoughnessTexture.ID,
+        getOrLoadTexture(textureCache, *sceneObject.metallicRoughnessTexture.imageData,
                          VK_FORMAT_R8G8B8A8_UNORM, handle, maxSamplerAnisotropy, samplerRef);
 
     Entity e = _registry.createEntity();
@@ -563,28 +619,43 @@ void GCONTEXT_CLASS loadObjects(
         e, MaterialComponent{diffuseHandle, normalHandle, metallicRoughnessHandle, pipelineHandle});
     MeshComponent msh;
     if (_physicalDevice->getPhysicalDeviceType() == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) {
-      AssetManager::VertexData vData =
-          _assetManager->releaseVertexData(sceneObject.vertexResourceID);
-      // TODO:
-      auto& [r1, m1] = vData.buffers.at("PTNT");
-      msh.vertexBufferHandle = _bufferManager->storeBuffer(std::move(r1), m1);
-      auto& [r2, m2] = vData.buffers.at("P");
-      msh.vertexBufferPrimitiveHandle = _bufferManager->storeBuffer(std::move(r2), m2);
-      auto& [r3, m3] = vData.indexBuffer;
-      msh.indexBufferHandle = _bufferManager->storeBuffer(std::move(r3), m3);
-      msh.indexType = vData.indexType;
+      // AssetManager::VertexData vData =
+      //     _assetManager->releaseVertexData(sceneObject.vertexResourceID);
+      //// TODO:
+      // auto& [r1, m1] = vData.buffers.at("PTNT");
+      // msh.vertexBufferHandle = _bufferManager->storeBuffer(std::move(r1), m1);
+      // auto& [r2, m2] = vData.buffers.at("P");
+      // msh.vertexBufferPrimitiveHandle = _bufferManager->storeBuffer(std::move(r2), m2);
+      // auto& [r3, m3] = vData.indexBuffer;
+      // msh.indexBufferHandle = _bufferManager->storeBuffer(std::move(r3), m3);
+      // msh.indexType = vData.indexType;
     } else if (_physicalDevice->getPhysicalDeviceType() == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
-      const AssetManager::VertexData& vData =
-          _assetManager->getVertexData(sceneObject.vertexResourceID);
+      const AssetManager::VertexData& vData = *sceneObject.vertexData;
+      waitForAssetToLoad(vData.loadState);
+      Ref<Buffer> ptntBufferRef;
+      Ref<VirtualAllocation> ptntVirtualAllocationRef;
+      std::tie(ptntBufferRef, ptntVirtualAllocationRef) = vData.buffers.at("PTNT");
       msh.vertexBufferHandle = copyStagingToGpuBuffer(
-          *_logicalDevice, _bufferManager.get(), commandBuffer, vData.buffers.at("PTNT"));
+          *_logicalDevice, _bufferManager.get(), commandBuffer, ptntBufferRef,
+          ptntVirtualAllocationRef);
+      Ref<Buffer> pBufferRef;
+      Ref<VirtualAllocation> pVirtualAllocationRef;
+      std::tie(pBufferRef, pVirtualAllocationRef) = vData.buffers.at("P");
       msh.vertexBufferPrimitiveHandle = copyStagingToGpuBuffer(
-          *_logicalDevice, _bufferManager.get(), commandBuffer, vData.buffers.at("P"));
+          *_logicalDevice, _bufferManager.get(), commandBuffer, pBufferRef, pVirtualAllocationRef);
+      msh.aabb = createAABBfromVertices(
+          std::span(reinterpret_cast<glm::vec3*>(pBufferRef.getMetadata().mappedMemory
+                                                 + pVirtualAllocationRef.getMetadata().offset),
+                    pVirtualAllocationRef.getMetadata().size / sizeof(glm::vec3)),
+          sceneObject.model);
+      Ref<Buffer> indexBufferRef;
+      Ref<VirtualAllocation> indexVirtualAllocationRef;
+      std::tie(indexBufferRef, indexVirtualAllocationRef) = vData.indexBuffer;
       msh.indexBufferHandle = copyStagingToGpuBuffer(
-          *_logicalDevice, _bufferManager.get(), commandBuffer, vData.indexBuffer, false);
-      msh.indexType = vData.indexType;
+          *_logicalDevice, _bufferManager.get(), commandBuffer, indexBufferRef,
+          indexVirtualAllocationRef, false);
+      msh.indexType = convertIndexTypeToVkIndexType(vData.indexType);
     }
-    msh.aabb = createAABBfromVertices(sceneObject.positions, sceneObject.model);
     _registry.addComponent<MeshComponent>(e, std::move(msh));
 
     TransformComponent trsf;
@@ -991,9 +1062,9 @@ GCONTEXT_CLASS GraphicsContext(
           .withFlags(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT)
           .withQueueFamilyIndex(*_physicalDevice->getQueueFamilyIndices().graphicsFamily)
           .build(*_logicalDevice);
-  _assetManager = AssetManager::create(*_logicalDevice, std::launch::async);
   _bufferManager = BufferManager::create();
   _imageManager = ImageManager::create();
+  _assetManager = AssetManager::create(*_logicalDevice, *_bufferManager);
   _samplerManager = SamplerManager::create();
   _pipelineManager = PipelineManager::create(fileLoader);
   _framebufferAttachmentManager = FramebufferAttachmentManager::create();
@@ -1221,6 +1292,7 @@ namespace {
 std::tuple<Image, ImageMetadata> createSkybox(
     const LogicalDevice& logicalDevice, const CommandBuffer& commandBuffer,
     const AssetManager::ImageData& imageData, VkFormat format, float samplerAnisotropy) {
+  waitForAssetToLoad(imageData.loadState);
   auto [image, imageMetadata] =
       ImageBuilder()
           .withAspect(VK_IMAGE_ASPECT_COLOR_BIT)
@@ -1235,8 +1307,11 @@ std::tuple<Image, ImageMetadata> createSkybox(
       image.getVkImage(), imageMetadata.imageAspect, VK_IMAGE_LAYOUT_UNDEFINED,
       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, imageMetadata.mipLevels, 0,
       imageMetadata.arrayLayers);
-  commandBuffer.copyBufferToImage(std::get<Buffer>(imageData.stagingBuffer).getVkBuffer(),
-                                  image.getVkImage(), imageData.copyRegions);
+  Ref<Buffer> rfBuf = imageData.stagingBuffer;
+  Ref<VirtualAllocation> rfVirt = imageData.virtualAllocation;
+  commandBuffer.copyBufferToImage(
+      rfBuf.getVkResource(), image.getVkImage(),
+      translateToVkBufferImageCopy(imageData.copyRegions, rfVirt.getMetadata().offset));
   commandBuffer.transitionImageLayout(
       image.getVkImage(), imageMetadata.imageAspect, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
       VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0, imageMetadata.mipLevels, 0,
@@ -1301,8 +1376,11 @@ std::tuple<Image, ImageMetadata> createTexture2D(
       image.getVkImage(), imageMetadata.imageAspect, VK_IMAGE_LAYOUT_UNDEFINED,
       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, imageMetadata.mipLevels, 0,
       imageMetadata.arrayLayers);
-  commandBuffer.copyBufferToImage(std::get<Buffer>(imageData.stagingBuffer).getVkBuffer(),
-                                  image.getVkImage(), imageData.copyRegions);
+  Ref<Buffer> rfBuf = imageData.stagingBuffer;
+  Ref<VirtualAllocation> rfVirt = imageData.virtualAllocation;
+  commandBuffer.copyBufferToImage(
+      rfBuf.getVkResource(), image.getVkImage(),
+      translateToVkBufferImageCopy(imageData.copyRegions, rfVirt.getMetadata().offset));
   commandBuffer.generateMipmaps(
       image.getVkImage(), imageMetadata.imageFormat, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
       imageMetadata.imageExtent.width, imageMetadata.imageExtent.height, imageMetadata.mipLevels,

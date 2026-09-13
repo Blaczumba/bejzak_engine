@@ -8,6 +8,7 @@
 
 #include "common/model_loader/model_loader.h"
 #include "common/util/asset_manager.h"
+#include "common/util/buffer_manip.h"
 #include "common/util/engine_exception.h"
 
 namespace common {
@@ -35,7 +36,7 @@ struct Indices {
 
 }  // namespace
 
-VertexData loadObj(
+AssetData loadObj(
     common::AssetManager& assetManager, const std::string& name, std::string& stringData) {
   tinyobj::attrib_t attrib;
   std::vector<tinyobj::shape_t> shapes;
@@ -93,16 +94,14 @@ VertexData loadObj(
       std::span<const glm::vec2>(model->texCoords.data(), model->texCoords.size()),
       std::span<const glm::vec3>(model->normals.data(), model->normals.size()));
 
-  const StagingVertexDataResourceHandle vertexResourceID =
+  std::shared_ptr<AssetManager::VertexData> vertexResourceID =
       assetManager.loadVertexDataInterleavingAsync(
           model,
           std::span(reinterpret_cast<const std::byte*>(model->indices.data()),
                     model->indices.size() * indexSize),
-          indexSize, common::analyzeConfig(orders, attributeDescriptions));
+          getIndexType(indexSize), common::analyzeConfig(orders, attributeDescriptions));
 
-  return VertexData{.positions = lib::Buffer<glm::vec3>(model->positions),
-                    .indexSize = indexSize,
-                    .vertexResourceID = vertexResourceID};
+  return AssetData{.vertexData = std::move(vertexResourceID)};
 }
 
 }  // namespace common

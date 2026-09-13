@@ -48,6 +48,8 @@ public:
 
   ~VirtualAllocation();
 
+  std::variant<VmaVirtualAllocation> getVkResource() const noexcept;
+
 private:
   std::variant<VmaVirtualAllocation>& getVirtualAllocation() noexcept;
 

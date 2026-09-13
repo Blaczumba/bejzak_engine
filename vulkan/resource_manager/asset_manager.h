@@ -29,67 +29,6 @@
 #include "vulkan/wrapper/util/check.h"
 
 class AssetManager : public common::AssetManager {
-  AssetManager(const LogicalDevice& logicalDevice, std::launch launchPolicy);
-
-public:
-  static std::unique_ptr<AssetManager> create(
-      const LogicalDevice& logicalDevice, std::launch launchPolicy = std::launch::async);
-
-  ~AssetManager() = default;
-
-  struct ImageData {
-    std::tuple<Buffer, BufferMetadata> stagingBuffer;
-    uint32_t width;
-    uint32_t height;
-    uint32_t mipLevels;
-    uint32_t layerCount;
-    lib::Buffer<VkBufferImageCopy> copyRegions;
-  };
-
-  struct VertexData {
-    lib::DynamicAssociationList<std::string, std::tuple<Buffer, BufferMetadata>> buffers;
-    std::tuple<Buffer, BufferMetadata> indexBuffer;
-    VkIndexType indexType;
-  };
-
-  StagingImageDataResourceHandle loadImageAsync(
-      std::function<std::tuple<ImageResource, OwnedImageData>(void)>&& imageFunction) override;
-
-  StagingImageDataResourceHandle loadImageAsync(
-      std::shared_ptr<void> modelPtr, ImageResource&& imageResource) override;
-
-  StagingVertexDataResourceHandle loadVertexDataInterleavingAsync(
-      std::shared_ptr<void> modelPtr, std::span<const std::byte> indices, uint8_t indexSize,
-      std::vector<common::BufferDescription>&& bufferDescriptions) override;
-
-  const ImageData& getImageData(StagingImageDataResourceHandle index);
-
-  ImageData releaseImageData(StagingImageDataResourceHandle index);
-
-  const VertexData& getVertexData(StagingVertexDataResourceHandle index);
-
-  VertexData releaseVertexData(StagingVertexDataResourceHandle index);
-
-private:
-  using ImageResourceMap = lib::SparseMap<ImageData, MAX_STAGING_IMAGE_DATA_RESOURCES>;
-  using VertexResourceMap = lib::SparseMap<VertexData, MAX_STAGING_VERTEX_DATA_RESOURCES>;
-
-  std::launch _launchPolicy;
-
-  const LogicalDevice& _logicalDevice;
-
-  std::vector<StagingImageDataResourceHandle> _freeImageDataIndices;
-  std::unordered_map<StagingImageDataResourceHandle, std::future<ImageData>>
-      _awaitingImageDataResources;  // TODO: Change to flat unordered map.
-  ImageResourceMap _imageDataResources;
-
-  std::vector<StagingVertexDataResourceHandle> _freeVertexDataIndices;
-  std::unordered_map<StagingVertexDataResourceHandle, std::future<VertexData>>
-      _awaitingVertexDataResources;  // TODO: Change to flat unordered map.
-  VertexResourceMap _vertexDataResources;
-};
-
-class NewAssetManager {
   struct ThreadData {
     std::thread thread;
     struct BufferBlock {
@@ -104,8 +43,8 @@ class NewAssetManager {
         virtualAllocationCouterToBeReclaimed;
   };
 
-  NewAssetManager(const LogicalDevice& logicalDevice, BufferManager& bufferManager,
-                  uint8_t threadCount, size_t size = 2 * lib::GiB)
+  AssetManager(const LogicalDevice& logicalDevice, BufferManager& bufferManager,
+               uint8_t threadCount, size_t size = 2 * lib::GiB)
     : _logicalDevice(logicalDevice), _bufferManager(bufferManager), _threads(threadCount),
       _bufferSize(size / threadCount),
       _alignment(logicalDevice.getPhysicalDevice().getStagingAlignment()) {
@@ -120,7 +59,7 @@ class NewAssetManager {
         .virtualBlock = VirtualBlock::create(logicalDevice.getMemoryAllocator(), _bufferSize)});
       _threads[i].virtualAllocationCounters.push_back(
           std::make_unique<ReferenceCounterWithMetadata<VirtualAllocation>>());
-      _threads[i].thread = std::thread(&NewAssetManager::doWork, this, i);
+      _threads[i].thread = std::thread(&AssetManager::doWork, this, i);
     }
     _tasks.reserve(256);
   }
@@ -178,49 +117,20 @@ class NewAssetManager {
   }
 
 public:
-  static std::unique_ptr<NewAssetManager> create(
+  static std::unique_ptr<AssetManager> create(
       const LogicalDevice& logicalDevice, BufferManager& bufferManager);
 
-  ~NewAssetManager();
+  ~AssetManager();
 
-  enum class LoadState : uint8_t {
-    PENDING,
-    PARTIAL,
-    READY
-  };
+  std::shared_ptr<common::AssetManager::ImageData> loadImageAsync(
+      std::function<std::tuple<ImageResource, OwnedImageData>(void)>&& imageFunction) override;
 
-  struct ImageData {
-    Ref<Buffer> stagingBuffer;
-    Ref<VirtualAllocation> virtualAllocation;
-    uint32_t width;
-    uint32_t height;
-    uint32_t mipLevels;
-    uint32_t layerCount;
-    size_t bufferOffset;
-    lib::Buffer<ImageSubresource> copyRegions;
-    std::atomic<uint8_t> residentMips = 0;
-    std::atomic<LoadState> loadState = LoadState::PENDING;
-  };
+  std::shared_ptr<common::AssetManager::ImageData> loadImageAsync(
+      std::shared_ptr<void> modelPtr, ImageResource&& imageResource) override;
 
-  struct VertexData {
-    lib::DynamicAssociationList<std::string, std::tuple<common::Ref, common::Ref>> buffers;
-    std::tuple<common::Ref, common::Ref> indexBuffer;
-    IndexType indexType;
-    std::atomic<LoadState> loadState = LoadState::PENDING;
-  };
-
-  // TODO virtual override
-  std::shared_ptr<NewAssetManager::ImageData> loadImageAsync(
-      std::function<std::tuple<ImageResource, OwnedImageData>(void)>&& imageFunction);
-
-  // TODO virtual override
-  std::shared_ptr<NewAssetManager::ImageData> loadImageAsync(
-      std::shared_ptr<void> modelPtr, ImageResource&& imageResource);
-
-  // TODO virtual override
-  std::shared_ptr<NewAssetManager::VertexData> loadVertexDataInterleavingAsync(
-      std::shared_ptr<void> modelPtr, std::span<const std::byte> indices, IndexType indexType,
-      std::vector<common::BufferDescription>&& bufferDescriptions);
+  std::shared_ptr<common::AssetManager::VertexData> loadVertexDataInterleavingAsync(
+      std::shared_ptr<void> modelPtr, std::span<const std::byte> indices, IndexType indexSize,
+      std::vector<common::BufferDescription>&& bufferDescriptions) override;
 
 private:
   std::tuple<Ref<Buffer>, Ref<VirtualAllocation>, VirtualAllocationMetadata> allocate(

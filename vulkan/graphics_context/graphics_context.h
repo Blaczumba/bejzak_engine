@@ -99,9 +99,9 @@ private:
 
   std::shared_ptr<CommandPool> _singleTimeCommandPool;
 
-  std::unique_ptr<AssetManager> _assetManager;
   std::unique_ptr<BufferManager> _bufferManager;
   std::unique_ptr<ImageManager> _imageManager;
+  std::unique_ptr<AssetManager> _assetManager;
   std::unique_ptr<SamplerManager> _samplerManager;
   std::unique_ptr<PipelineManager> _pipelineManager;
   std::unique_ptr<FramebufferAttachmentManager> _framebufferAttachmentManager;
@@ -179,7 +179,7 @@ private:
 
   void setup();
 
-  Entity loadObject(VkCommandBuffer commandBuffer, const common::VertexData& cubeData,
+  Entity loadObject(VkCommandBuffer commandBuffer, const common::AssetData& cubeData,
                     PipelineHandle pipelineHandle, Image&& image, const ImageMetadata& metadata);
 
   void createDescriptorSets();
@@ -195,12 +195,11 @@ private:
   void createSyncObjects();
 
   std::tuple<UniformTextureHandle, ImageHandle> getOrLoadTexture(
-      std::unordered_map<StagingImageDataResourceHandle,
-                         std::pair<UniformTextureHandle, ImageHandle>>& textureCache,
-      StagingImageDataResourceHandle textureID, VkFormat format, const CommandBuffer& commandBuffer,
+      std::unordered_map<uint64_t, std::pair<UniformTextureHandle, ImageHandle>>& textureCache,
+      const AssetManager::ImageData& textureID, VkFormat format, const CommandBuffer& commandBuffer,
       float maxSamplerAnisotropy, Ref<Sampler>& samplerRef);
 
-  void loadObjects(std::span<const common::VertexData> sceneData, PipelineHandle pipelineHandle);
+  void loadObjects(std::span<const common::AssetData> sceneData, PipelineHandle pipelineHandle);
 
   void createOctreeScene();
 

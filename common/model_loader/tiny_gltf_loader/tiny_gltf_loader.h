@@ -15,10 +15,10 @@ namespace common {
 void setAssetmanager(AAssetManager* assetManager);
 #endif
 
-std::vector<VertexData> LoadGltfFromFile(
+std::vector<AssetData> LoadGltfFromFile(
     common::AssetManager& assetManager, const FileLoader& fileLaoder, const std::string& filePath);
 
-std::vector<VertexData> LoadGltfFromString(
+std::vector<AssetData> LoadGltfFromString(
     common::AssetManager& assetManager, const FileLoader& fileLaoder, const std::string& dataString,
     const std::string& baseDir);
 

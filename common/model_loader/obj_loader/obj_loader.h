@@ -7,7 +7,7 @@
 
 namespace common {
 
-VertexData loadObj(
+AssetData loadObj(
     common::AssetManager& assetManager, const std::string& name, std::string& stringData);
 
 }  // namespace common

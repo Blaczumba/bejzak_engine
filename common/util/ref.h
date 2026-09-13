@@ -58,12 +58,12 @@ public:
   ~Ref();
 
   // Do not use it directly.
-  template <typename ResourceManager, typename Handle>
-  static Ref adopt(ResourceManager* referenceCounter, Handle handle, Type type) noexcept {
+  template <typename ReferenceCounter, typename Handle>
+  static Ref adopt(ReferenceCounter* referenceCounter, Handle handle, Type type) noexcept {
     Ref ref;
     if (referenceCounter) {
       ref._referenceCounter = referenceCounter;
-      ref._vtable = vtableFor<ResourceManager, Handle>();
+      ref._vtable = vtableFor<ReferenceCounter, Handle>();
       ref._handle = static_cast<uint32_t>(*handle);
       ref._type = type;
     }

@@ -48,8 +48,8 @@ public:
       throw EngineException("Type mismatch in Ref constructor");
     }
     if (_counter != nullptr) {
-      _counter->incrementRefCount(_handle);
       _handle = static_cast<HandleFor<Resource>>(other.getHandle());
+      _counter->incrementRefCount(_handle);
     }
   }
 
@@ -151,6 +151,20 @@ public:
 
   ReferenceCounter<Resource>* getCounter() const noexcept {
     return _counter;
+  }
+
+  VulkanObjectFor<Resource> getVkResource() const {
+    if (_counter == nullptr) {
+      throw EngineException("Attempt to get Vulkan resource from null reference counter");
+    }
+    return _counter->getVkResource(_handle);
+  }
+
+  const MetadataFor<Resource>& getMetadata() const {
+    if (_counter == nullptr) {
+      throw EngineException("Attempt to get metadata from null reference counter");
+    }
+    return _counter->getMetadata(_handle);
   }
 
 private:
