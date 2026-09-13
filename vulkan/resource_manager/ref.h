@@ -7,25 +7,6 @@
 #include "vulkan/resource_manager/handle.h"
 #include "vulkan/resource_manager/reference_counter.h"
 
-namespace {
-
-template <typename Resource>
-constexpr common::Ref::Type deduceResourceType() {
-  return common::Ref::Type::UNDEFINED;
-}
-
-template <>
-constexpr common::Ref::Type deduceResourceType<Buffer>() {
-  return common::Ref::Type::BUFFER;
-}
-
-template <>
-constexpr common::Ref::Type deduceResourceType<Image>() {
-  return common::Ref::Type::IMAGE;
-}
-
-}  // namespace
-
 template <typename Resource>
 class Ref {
 public:
@@ -36,17 +17,15 @@ public:
     _counter->incrementRefCount(_handle);
   }
 
-  Ref(const Ref& other) : _counter(other._counter), _handle(other._handle) {
+  Ref(const Ref& other) : _counter(other._counter) {
     if (_counter != nullptr) {
+      _handle = other._handle;
       _counter->incrementRefCount(_handle);
     }
   }
 
-  Ref(const common::Ref& other)
+  Ref(const common::Ref<ErasedTypeOf<Resource>>& other)
     : _counter(static_cast<ReferenceCounter<Resource>*>(other.getReferenceCounter())) {
-    if (deduceResourceType<Resource>() != other.getType()) {
-      throw EngineException("Type mismatch in Ref constructor");
-    }
     if (_counter != nullptr) {
       _handle = static_cast<HandleFor<Resource>>(other.getHandle());
       _counter->incrementRefCount(_handle);
@@ -56,10 +35,7 @@ public:
   Ref(Ref&& other) noexcept
     : _counter(std::exchange(other._counter, nullptr)), _handle(other._handle) {}
 
-  Ref(common::Ref&& other) {
-    if (deduceResourceType<Resource>() != other.getType()) {
-      throw EngineException("Type mismatch in Ref = operator");
-    }
+  Ref(common::Ref<ErasedTypeOf<Resource>>&& other) noexcept {
     const auto [referenceCounter, handle] = other.release();
     if (referenceCounter != nullptr) {
       _counter = static_cast<ReferenceCounter<Resource>*>(referenceCounter);
@@ -77,18 +53,15 @@ public:
     }
 
     _counter = other._counter;
-    _handle = other._handle;
-
     if (_counter != nullptr) {
+      _handle = other._handle;
       _counter->incrementRefCount(_handle);
     }
+
     return *this;
   }
 
-  Ref& operator=(const common::Ref& other) {
-    if (deduceResourceType<Resource>() != other.getType()) {
-      throw EngineException("Type mismatch in Ref = operator");
-    }
+  Ref& operator=(const common::Ref<ErasedTypeOf<Resource>>& other) {
     if (_counter != nullptr) {
       _counter->decrementRefCount(_handle);
     }
@@ -114,10 +87,7 @@ public:
     return *this;
   }
 
-  Ref& operator=(common::Ref&& other) {
-    if (deduceResourceType<Resource>() != other.getType()) {
-      throw EngineException("Type mismatch in Ref = operator");
-    }
+  Ref& operator=(common::Ref<ErasedTypeOf<Resource>>&& other) noexcept {
     if (_counter != nullptr) {
       _counter->decrementRefCount(_handle);
     }
@@ -127,16 +97,17 @@ public:
     return *this;
   }
 
-  operator common::Ref() const& {
-    return common::Ref(_counter, _handle, deduceResourceType<Resource>());
+  operator common::Ref<ErasedTypeOf<Resource>>() const& {
+    return common::Ref<ErasedTypeOf<Resource>>(_counter, _handle);
   }
 
-  operator common::Ref() && noexcept {
+  operator common::Ref<ErasedTypeOf<Resource>>() && noexcept {
     if (_counter == nullptr) {
-      return common::Ref{};
+      return common::Ref<ErasedTypeOf<Resource>>{};
     }
-    return common::Ref::adopt<ReferenceCounter<Resource>, HandleFor<Resource>>(
-        std::exchange(_counter, nullptr), _handle, deduceResourceType<Resource>());
+    return common::Ref<ErasedTypeOf<Resource>>::
+        template adopt<ReferenceCounter<Resource>, HandleFor<Resource>>(
+            std::exchange(_counter, nullptr), _handle);
   }
 
   ~Ref() {

@@ -2,6 +2,7 @@
 
 #include <string_view>
 
+#include "common/util/ref.h"
 #include "common/util/resource_handles.h"
 #include "vulkan/resource_manager/hasher.h"
 #include "vulkan/wrapper/memory_allocator/allocation.h"
@@ -22,6 +23,7 @@ struct Handle<Sampler> {
   using hasher = SamplerHasher;
   static constexpr size_t size = MAX_SAMPLERS;
   static constexpr std::string_view name = "Sampler";
+  static constexpr common::RefType erased_type = common::RefType::Sampler;
 };
 
 template <>
@@ -31,6 +33,7 @@ struct Handle<Buffer> {
   using metadata = BufferMetadata;
   static constexpr size_t size = MAX_BUFFERS;
   static constexpr std::string_view name = "Buffer";
+  static constexpr common::RefType erased_type = common::RefType::Buffer;
 };
 
 template <>
@@ -40,6 +43,7 @@ struct Handle<Image> {
   using metadata = ImageMetadata;
   static constexpr size_t size = MAX_IMAGES;
   static constexpr std::string_view name = "Image";
+  static constexpr common::RefType erased_type = common::RefType::Image;
 };
 
 template <>
@@ -49,6 +53,7 @@ struct Handle<VirtualAllocation> {
   using metadata = VirtualAllocationMetadata;
   static constexpr size_t size = MAX_VIRTUAL_ALLOCATIONS;
   static constexpr std::string_view name = "VirtualAllocation";
+  static constexpr common::RefType erased_type = common::RefType::VirtualAllocation;
 };
 
 }  // namespace
@@ -70,3 +75,6 @@ constexpr std::string_view NAME_OF = Handle<T>::name;
 
 template <typename T>
 constexpr size_t MAX_NUMBER_OF = Handle<T>::size;
+
+template <typename T>
+constexpr common::RefType ErasedTypeOf = Handle<T>::erased_type;

@@ -151,11 +151,12 @@ std::string getTextureUri(const tinygltf::Model& model, const tinygltf::Paramete
   return image.uri;
 }
 
-void processNode(common::AssetManager& assetManager, const FileLoader& fileLoader,
-                 std::shared_ptr<SharedData>& sharedData, const tinygltf::Node& node,
-                 const glm::mat4& parentTransform, std::vector<AssetData>& assets,
+void processNode(
+    common::AssetManager& assetManager, const FileLoader& fileLoader,
+    std::shared_ptr<SharedData>& sharedData, const tinygltf::Node& node,
+    const glm::mat4& parentTransform, std::vector<AssetData>& assets,
     std::unordered_map<std::string, std::shared_ptr<AssetManager::ImageData>>& textureCollisionMap,
-                 const std::string& baseDir) {
+    const std::string& baseDir) {
   const glm::mat4 currentTransform = parentTransform * GetNodeTransform(node);
 
   if (node.mesh < 0) {

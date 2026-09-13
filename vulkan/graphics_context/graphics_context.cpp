@@ -1378,6 +1378,11 @@ std::tuple<Image, ImageMetadata> createTexture2D(
       imageMetadata.arrayLayers);
   Ref<Buffer> rfBuf = imageData.stagingBuffer;
   Ref<VirtualAllocation> rfVirt = imageData.virtualAllocation;
+  {
+    common::Ref<common::RefType::VirtualAllocation> rf = rfVirt;
+    common::Ref<common::RefType::VirtualAllocation> rf1 = rfVirt;
+    common::Ref<common::RefType::VirtualAllocation> rf2 = rfVirt;
+  }
   commandBuffer.copyBufferToImage(
       rfBuf.getVkResource(), image.getVkImage(),
       translateToVkBufferImageCopy(imageData.copyRegions, rfVirt.getMetadata().offset));

@@ -12,9 +12,9 @@ class MeshComponent {
   static constexpr ComponentType componentID = 2;
 
 public:
-  common::Ref vertexBufferHandle;
-  common::Ref indexBufferHandle;
-  common::Ref vertexBufferPrimitiveHandle;
+  common::Ref<common::RefType::Buffer> vertexBufferHandle;
+  common::Ref<common::RefType::Buffer> indexBufferHandle;
+  common::Ref<common::RefType::Buffer> vertexBufferPrimitiveHandle;
   AABB aabb;
   VkIndexType indexType;
 
