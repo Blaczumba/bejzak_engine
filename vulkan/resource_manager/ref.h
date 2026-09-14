@@ -44,7 +44,7 @@ public:
   }
 
   Ref& operator=(const Ref& other) {
-    if (this == &other) {
+    if (this == &other) [[unlikely]] {
       return *this;
     }
 
@@ -74,7 +74,7 @@ public:
   }
 
   Ref& operator=(Ref&& other) noexcept {
-    if (this == &other) {
+    if (this == &other) [[unlikely]] {
       return *this;
     }
 
@@ -141,4 +141,56 @@ public:
 private:
   ReferenceCounter<Resource>* _counter = nullptr;
   HandleFor<Resource> _handle;
+};
+
+template <>
+struct common::RefTraits<common::RefType::Buffer> {
+  inline static void increment(void* counter, uint32_t handle) {
+    static_cast<ReferenceCounter<Buffer>*>(counter)->incrementRefCount(
+        static_cast<HandleFor<Buffer>>(handle));
+  }
+
+  inline static void decrement(void* counter, uint32_t handle) {
+    static_cast<ReferenceCounter<Buffer>*>(counter)->decrementRefCount(
+        static_cast<HandleFor<Buffer>>(handle));
+  }
+};
+
+template <>
+struct common::RefTraits<common::RefType::Image> {
+  inline static void increment(void* counter, uint32_t handle) {
+    static_cast<ReferenceCounter<Image>*>(counter)->incrementRefCount(
+        static_cast<HandleFor<Image>>(handle));
+  }
+
+  inline static void decrement(void* counter, uint32_t handle) {
+    static_cast<ReferenceCounter<Image>*>(counter)->decrementRefCount(
+        static_cast<HandleFor<Image>>(handle));
+  }
+};
+
+template <>
+struct common::RefTraits<common::RefType::VirtualAllocation> {
+  inline static void increment(void* counter, uint32_t handle) {
+    static_cast<ReferenceCounter<VirtualAllocation>*>(counter)->incrementRefCount(
+        static_cast<HandleFor<VirtualAllocation>>(handle));
+  }
+
+  inline static void decrement(void* counter, uint32_t handle) {
+    static_cast<ReferenceCounter<VirtualAllocation>*>(counter)->decrementRefCount(
+        static_cast<HandleFor<VirtualAllocation>>(handle));
+  }
+};
+
+template <>
+struct common::RefTraits<common::RefType::Sampler> {
+  inline static void increment(void* counter, uint32_t handle) {
+    static_cast<ReferenceCounter<Sampler>*>(counter)->incrementRefCount(
+        static_cast<HandleFor<Sampler>>(handle));
+  }
+
+  inline static void decrement(void* counter, uint32_t handle) {
+    static_cast<ReferenceCounter<Sampler>*>(counter)->decrementRefCount(
+        static_cast<HandleFor<Sampler>>(handle));
+  }
 };

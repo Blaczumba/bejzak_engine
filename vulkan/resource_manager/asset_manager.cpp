@@ -10,11 +10,84 @@
 
 #include "vulkan/wrapper/logical_device/logical_device.h"
 #include "vulkan/wrapper/memory_objects/buffer.h"
-#include "vulkan/wrapper/util/index_buffer_util.h"
 
 std::unique_ptr<AssetManager> AssetManager::create(
     const LogicalDevice& logicalDevice, BufferManager& bufferManager) {
-  return std::unique_ptr<AssetManager>(new AssetManager(logicalDevice, bufferManager, 19));
+  return std::unique_ptr<AssetManager>(new AssetManager(
+      logicalDevice, bufferManager, std::thread::hardware_concurrency() - 2, 2 * lib::GiB));
+}
+
+AssetManager::AssetManager(const LogicalDevice& logicalDevice, BufferManager& bufferManager,
+                           uint8_t threadCount, size_t size)
+  : _logicalDevice(logicalDevice), _bufferManager(bufferManager), _threads(threadCount),
+    _bufferSize(size / threadCount),
+    _alignment(logicalDevice.getPhysicalDevice().getStagingAlignment()) {
+  for (uint8_t i = 0; i < _threads.size(); i++) {
+    auto [buffer, metadata] =
+        BufferBuilder()
+            .withUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
+            .withSize(_bufferSize)
+            .buildStagingBufferWithMetadata(_logicalDevice);
+    _threads[i].bufferBlocks.push_back(ThreadData::BufferBlock{
+      .stagingBuffer = bufferManager.storeBuffer(std::move(buffer), metadata),
+      .virtualBlock = VirtualBlock::create(logicalDevice.getMemoryAllocator(), _bufferSize)});
+    _threads[i].virtualAllocationCounters.push_back(
+        std::make_unique<ReferenceCounterWithMetadata<VirtualAllocation>>());
+    _threads[i].thread = std::thread(&AssetManager::doWork, this, i);
+  }
+  _tasks.reserve(256);
+}
+
+void AssetManager::doWork(uint8_t threadIndex) {
+  ThreadData& thisThread = _threads[threadIndex];
+  std::function<void(ThreadData&, size_t, size_t)> task;
+  bool timedOut;
+  while (true) {
+    {
+      std::unique_lock lock(_mutex);
+      timedOut = !_conditionVariable.wait_for(lock, std::chrono::seconds(5), [this] {
+        return !_tasks.empty() || _stop;
+      });
+
+      if (_stop) [[unlikely]] {
+        return;
+      }
+
+      if (!timedOut) {
+        task = std::move(_tasks.back());
+        _tasks.pop_back();
+      }
+    }
+
+    if (!timedOut) {
+      task(thisThread, _bufferSize, _alignment);
+    } else {
+      cleanVirtualAllocatorCounters(thisThread);
+      cleanVirtualBlocks(thisThread);
+    }
+  }
+}
+
+// Pop from the back of the vector as long as the size of the allocation is 0.
+void AssetManager::cleanVirtualAllocatorCounters(ThreadData& threadData) {
+  while (threadData.virtualAllocationCounters.size() > 1
+         && threadData.virtualAllocationCounters.back()->size() == 0) {
+    if (!threadData.virtualAllocationCouterToBeReclaimed.has_value()) {
+      threadData.virtualAllocationCouterToBeReclaimed =
+          std::move(threadData.virtualAllocationCounters.back());
+    }
+    threadData.virtualAllocationCounters.pop_back();
+  }
+}
+
+void AssetManager::cleanVirtualBlocks(ThreadData& threadData) {
+  while (
+      threadData.bufferBlocks.size() > 1 && threadData.bufferBlocks.front().virtualBlock.empty()) {
+    if (!threadData.blockToBeReclaimed.has_value()) {
+      threadData.blockToBeReclaimed.emplace(std::move(threadData.bufferBlocks.front()));
+    }
+    threadData.bufferBlocks.pop_front();
+  }
 }
 
 AssetManager::~AssetManager() {
@@ -110,7 +183,8 @@ std::shared_ptr<common::AssetManager::ImageData> AssetManager::loadImageAsync(
       promise->layerCount = resource.layerCount;
       promise->copyRegions = std::move(resource.subresources);
       promise->residentMips.store(0, std::memory_order_relaxed);
-      promise->loadState.store(common::AssetManager::LoadState::READY, std::memory_order_release);
+      promise->loadState.store(
+          common::AssetManager::LoadState::FINISHED, std::memory_order_release);
     });
   }
   _conditionVariable.notify_one();
@@ -122,28 +196,29 @@ std::shared_ptr<common::AssetManager::ImageData> AssetManager::loadImageAsync(
   auto promise = std::make_shared<common::AssetManager::ImageData>();
   {
     std::lock_guard lock(_mutex);
-    _tasks.push_back([this, promise, modelPtr = std::move(modelPtr),
-                      resource = std::move(resource)](
-                         ThreadData& threadData, size_t blockSize, size_t alignment) {
-      auto [stagingBufferRef, virtualAllocationRef, virtualAllocationMetadata] =
-          allocate(threadData, resource.size, alignment, blockSize);
+    _tasks.push_back(
+        [this, promise, modelPtr = std::move(modelPtr), resource = std::move(resource)](
+            ThreadData& threadData, size_t blockSize, size_t alignment) {
+          auto [stagingBufferRef, virtualAllocationRef, virtualAllocationMetadata] =
+              allocate(threadData, resource.size, alignment, blockSize);
 
-      common::copyData(
-          std::span(_bufferManager.getMetadata(stagingBufferRef.getHandle()).mappedMemory
-                        + virtualAllocationMetadata.offset,
-                    virtualAllocationMetadata.size),
-          0, std::span(static_cast<const std::byte*>(resource.data), resource.size));
+          common::copyData(
+              std::span(_bufferManager.getMetadata(stagingBufferRef.getHandle()).mappedMemory
+                            + virtualAllocationMetadata.offset,
+                        virtualAllocationMetadata.size),
+              0, std::span(static_cast<const std::byte*>(resource.data), resource.size));
 
-      promise->stagingBuffer = std::move(stagingBufferRef);
-      promise->virtualAllocation = std::move(virtualAllocationRef);
-      promise->width = resource.width;
-      promise->height = resource.height;
-      promise->mipLevels = resource.mipLevels;
-      promise->layerCount = resource.layerCount;
-      promise->copyRegions = std::move(resource.subresources);
-      promise->residentMips.store(0, std::memory_order_relaxed);
-      promise->loadState.store(common::AssetManager::LoadState::READY, std::memory_order_release);
-    });
+          promise->stagingBuffer = std::move(stagingBufferRef);
+          promise->virtualAllocation = std::move(virtualAllocationRef);
+          promise->width = resource.width;
+          promise->height = resource.height;
+          promise->mipLevels = resource.mipLevels;
+          promise->layerCount = resource.layerCount;
+          promise->copyRegions = std::move(resource.subresources);
+          promise->residentMips.store(0, std::memory_order_relaxed);
+          promise->loadState.store(
+              common::AssetManager::LoadState::FINISHED, std::memory_order_release);
+        });
   }
   _conditionVariable.notify_one();
   return promise;
@@ -185,7 +260,8 @@ std::shared_ptr<common::AssetManager::VertexData> AssetManager::loadVertexDataIn
       promise->indexType = shrunkIndexType;
       promise->indexBuffer =
           std::make_tuple(std::move(stagingBufferRef), std::move(virtualAllocationRef));
-      promise->loadState.store(common::AssetManager::LoadState::READY, std::memory_order_release);
+      promise->loadState.store(
+          common::AssetManager::LoadState::FINISHED, std::memory_order_release);
     });
   }
   _conditionVariable.notify_one();

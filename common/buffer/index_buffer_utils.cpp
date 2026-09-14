@@ -1,12 +1,9 @@
-#include "buffer_manip.h"
+#include "common/buffer/index_buffer_utils.h"
 
 #include <algorithm>
+#include <cstddef>
 #include <cstdint>
-#include <format>
-#include <limits>
 #include <span>
-
-#include "common/util/engine_exception.h"
 
 namespace {
 
@@ -42,7 +39,7 @@ IndexType getShrunkIndexSize(std::span<const std::byte> indicesBuffer, IndexType
   return getCapableIndexType(getMaxIndex(indicesBuffer, indexSize));
 }
 
-IndexType getIndexType(uint8_t indexSize) {
+IndexType getIndexType(uint8_t indexSize) noexcept {
   switch (indexSize) {
     case 1:
       return IndexType::UINT8;
@@ -50,14 +47,12 @@ IndexType getIndexType(uint8_t indexSize) {
       return IndexType::UINT16;
     case 4:
       return IndexType::UINT32;
-    case 8:
-      return IndexType::UINT64;
     default:
-      throw EngineException(std::format("Invalid index size: {}", indexSize));
+      return IndexType::UINT64;
   }
 }
 
-IndexType getCapableIndexType(size_t maxIndex) {
+IndexType getCapableIndexType(size_t maxIndex) noexcept {
   if (maxIndex <= std::numeric_limits<uint8_t>::max()) {
     return IndexType::UINT8;
   } else if (maxIndex <= std::numeric_limits<uint16_t>::max()) {

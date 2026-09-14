@@ -1,4 +1,4 @@
-#include "common/buffer/buffer.h"
+#include "common/buffer/buffer_utils.h"
 
 #include <algorithm>
 #include <format>
@@ -11,14 +11,14 @@
 namespace common {
 
 void copyAndShrinkIndexData(std::span<std::byte> dst, std::span<const std::byte> src,
-                            size_t dstIndexSize, size_t srcIndexSize, size_t offset) {
-  if (dst.size() < dstIndexSize * src.size() / srcIndexSize + offset) [[unlikely]] {
-    throw EngineException(std::format(
-        "Trying to access out of range memory. Offset: {}, copied size: {}, buffer size: {}.",
-        offset, dstIndexSize * src.size() / srcIndexSize, dst.size()));
+                            size_t dstIndexSize, size_t srcIndexSize) {
+  if (dst.size() < dstIndexSize * src.size() / srcIndexSize) [[unlikely]] {
+    throw EngineException(
+        std::format("Trying to access out of range memory.  copied size: {}, buffer size: {}.",
+                    dstIndexSize * src.size() / srcIndexSize, dst.size()));
   }
 
-  std::byte* dstData = dst.data() + offset;
+  std::byte* dstData = dst.data();
   const std::byte* srcData = src.data();
   for (size_t i = 0; i < src.size() / srcIndexSize; i++) {
     std::memcpy(dstData, srcData, dstIndexSize);

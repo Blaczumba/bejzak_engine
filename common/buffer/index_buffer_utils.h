@@ -1,12 +1,8 @@
 #pragma once
 
-#include <array>
+#include <cstddef>
 #include <cstdint>
 #include <span>
-#include <string>
-#include <vector>
-
-#include "common/buffer/buffer.h"
 
 enum class IndexType : uint8_t {
   UINT8 = 1,
@@ -17,6 +13,6 @@ enum class IndexType : uint8_t {
 
 IndexType getShrunkIndexSize(std::span<const std::byte> indicesBuffer, IndexType indexSize);
 
-IndexType getIndexType(uint8_t indexSize);
+IndexType getIndexType(uint8_t indexSize) noexcept;
 
-IndexType getCapableIndexType(size_t maxIndex);
+IndexType getCapableIndexType(size_t maxIndex) noexcept;

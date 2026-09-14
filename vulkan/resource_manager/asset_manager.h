@@ -11,10 +11,10 @@
 #include <unordered_map>
 #include <vulkan/vulkan.h>
 
-#include "common/buffer/buffer.h"
+#include "common/buffer/buffer_utils.h"
+#include "common/buffer/index_buffer_utils.h"
 #include "common/model_loader/image_loader/types.h"
 #include "common/util/asset_manager.h"
-#include "common/util/buffer_manip.h"
 #include "common/util/ref.h"
 #include "common/util/resource_handles.h"
 #include "lib/association_list/association_list.h"
@@ -44,77 +44,13 @@ class AssetManager : public common::AssetManager {
   };
 
   AssetManager(const LogicalDevice& logicalDevice, BufferManager& bufferManager,
-               uint8_t threadCount, size_t size = 2 * lib::GiB)
-    : _logicalDevice(logicalDevice), _bufferManager(bufferManager), _threads(threadCount),
-      _bufferSize(size / threadCount),
-      _alignment(logicalDevice.getPhysicalDevice().getStagingAlignment()) {
-    for (uint8_t i = 0; i < _threads.size(); i++) {
-      auto [buffer, metadata] =
-          BufferBuilder()
-              .withUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
-              .withSize(_bufferSize)
-              .buildStagingBufferWithMetadata(_logicalDevice);
-      _threads[i].bufferBlocks.push_back(ThreadData::BufferBlock{
-        .stagingBuffer = bufferManager.storeBuffer(std::move(buffer), metadata),
-        .virtualBlock = VirtualBlock::create(logicalDevice.getMemoryAllocator(), _bufferSize)});
-      _threads[i].virtualAllocationCounters.push_back(
-          std::make_unique<ReferenceCounterWithMetadata<VirtualAllocation>>());
-      _threads[i].thread = std::thread(&AssetManager::doWork, this, i);
-    }
-    _tasks.reserve(256);
-  }
+               uint8_t threadCount, size_t size);
 
-  void doWork(uint8_t threadIndex) {
-    ThreadData& thisThread = _threads[threadIndex];
-    std::function<void(ThreadData&, size_t, size_t)> task;
-    bool timedOut;
-    while (true) {
-      {
-        std::unique_lock lock(_mutex);
-        timedOut = !_conditionVariable.wait_for(lock, std::chrono::seconds(10000), [this] {
-          return !_tasks.empty() || _stop;
-        });
+  void doWork(uint8_t threadIndex);
 
-        if (_stop) [[unlikely]] {
-          return;
-        }
+  void cleanVirtualAllocatorCounters(ThreadData& threadData);
 
-        if (!timedOut) {
-          task = std::move(_tasks.back());
-          _tasks.pop_back();
-        }
-      }
-
-      if (!timedOut) {
-        task(thisThread, _bufferSize, _alignment);
-      } else {
-        cleanVirtualAllocatorCounters(thisThread);
-        cleanVirtualBlocks(thisThread);
-      }
-    }
-  }
-
-  // Pop from the back of the vector as long as the size of the allocation is 0.
-  void cleanVirtualAllocatorCounters(ThreadData& threadData) {
-    while (threadData.virtualAllocationCounters.size() > 1
-           && threadData.virtualAllocationCounters.back()->size() == 0) {
-      if (!threadData.virtualAllocationCouterToBeReclaimed.has_value()) {
-        threadData.virtualAllocationCouterToBeReclaimed =
-            std::move(threadData.virtualAllocationCounters.back());
-      }
-      threadData.virtualAllocationCounters.pop_back();
-    }
-  }
-
-  void cleanVirtualBlocks(ThreadData& threadData) {
-    while (threadData.bufferBlocks.size() > 1
-           && threadData.bufferBlocks.front().virtualBlock.empty()) {
-      if (!threadData.blockToBeReclaimed.has_value()) {
-        threadData.blockToBeReclaimed.emplace(std::move(threadData.bufferBlocks.front()));
-      }
-      threadData.bufferBlocks.pop_front();
-    }
-  }
+  void cleanVirtualBlocks(ThreadData& threadData);
 
 public:
   static std::unique_ptr<AssetManager> create(

@@ -9,10 +9,10 @@
 #include <string>
 #include <tuple>
 
-#include "common/buffer/buffer.h"
+#include "common/buffer/buffer_utils.h"
+#include "common/buffer/index_buffer_utils.h"
 #include "common/model_loader/image_loader/image_loader.h"
 #include "common/model_loader/image_loader/types.h"
-#include "common/util/buffer_manip.h"
 #include "common/util/ref.h"
 #include "common/util/resource_handles.h"
 #include "lib/association_list/association_list.h"
@@ -25,7 +25,7 @@ public:
   enum class LoadState : uint8_t {
     PENDING,
     PARTIAL,
-    READY
+    FINISHED
   };
 
   struct ImageData {
