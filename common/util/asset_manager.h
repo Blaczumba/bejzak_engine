@@ -15,6 +15,7 @@
 #include "common/model_loader/image_loader/types.h"
 #include "common/util/ref.h"
 #include "common/util/resource_handles.h"
+#include "common/buffer/vertex_buffer_utils.h"
 #include "lib/association_list/association_list.h"
 #include "lib/buffer/buffer.h"
 

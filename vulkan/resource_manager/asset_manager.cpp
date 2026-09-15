@@ -8,6 +8,8 @@
 #include <tuple>
 #include <vulkan/vulkan.h>
 
+#include "common/buffer/vertex_buffer_utils.h"
+#include "common/buffer/index_buffer_utils.h"
 #include "vulkan/wrapper/logical_device/logical_device.h"
 #include "vulkan/wrapper/memory_objects/buffer.h"
 
@@ -251,7 +253,7 @@ std::shared_ptr<common::AssetManager::VertexData> AssetManager::loadVertexDataIn
           threadData,
           indices.size() / static_cast<size_t>(indexType) * static_cast<size_t>(shrunkIndexType),
           alignment, blockSize);
-      common::shrinkAndCopyIndexData(
+      common::shrinkIndexData(
           std::span(_bufferManager.getMetadata(stagingBufferRef.getHandle()).mappedMemory
                         + virtualAllocationMetadata.offset,
                     virtualAllocationMetadata.size),

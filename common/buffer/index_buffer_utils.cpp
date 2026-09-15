@@ -38,6 +38,16 @@ size_t getMaxIndex(std::span<const std::byte> indicesBuffer, IndexType indexSize
                                + indicesBuffer.size() / sizeof(uint64_t));
 }
 
+// We use template here to let the compiler generate faster code for specific index sizes.
+template <IndexType dstIndexSize, IndexType srcIndexSize>
+static void copyAndShrinkImpl(std::byte* dstData, const std::byte* srcData, size_t indexCount) {
+  for (size_t i = 0; i < indexCount; ++i) {
+    std::memcpy(dstData, srcData, static_cast<size_t>(dstIndexSize));
+    dstData += static_cast<size_t>(dstIndexSize);
+    srcData += static_cast<size_t>(srcIndexSize);
+  }
+}
+
 }  // namespace
 
 IndexType getShrunkIndexSize(std::span<const std::byte> indicesBuffer, IndexType indexSize) {
@@ -69,21 +79,7 @@ IndexType getCapableIndexType(size_t maxIndex) noexcept {
   }
 }
 
-namespace {
-
-// We use template here to let the compiler generate faster code for specific index sizes.
-template <IndexType dstIndexSize, IndexType srcIndexSize>
-static void copyAndShrinkImpl(std::byte* dstData, const std::byte* srcData, size_t indexCount) {
-  for (size_t i = 0; i < indexCount; ++i) {
-    std::memcpy(dstData, srcData, static_cast<size_t>(dstIndexSize));
-    dstData += static_cast<size_t>(dstIndexSize);
-    srcData += static_cast<size_t>(srcIndexSize);
-  }
-}
-
-}  // namespace
-
-void shrinkAndCopyIndexData(std::span<std::byte> dst, std::span<const std::byte> src,
+void shrinkIndexData(std::span<std::byte> dst, std::span<const std::byte> src,
                             IndexType dstIndexSize, IndexType srcIndexSize) {
   const size_t indexCount = src.size() / static_cast<size_t>(srcIndexSize);
   if (const size_t dstIndexCount = dst.size() / static_cast<size_t>(dstIndexSize);

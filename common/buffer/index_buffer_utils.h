@@ -19,7 +19,7 @@ IndexType getIndexType(uint8_t indexSize) noexcept;
 
 IndexType getCapableIndexType(size_t maxIndex) noexcept;
 
-void shrinkAndCopyIndexData(std::span<std::byte> dst, std::span<const std::byte> src,
+void shrinkIndexData(std::span<std::byte> dst, std::span<const std::byte> src,
                             IndexType dstIndexSize, IndexType srcIndexSize);
 
 }  // namespace common
