@@ -175,11 +175,11 @@ std::tuple<Image, ImageMetadata> createAttachment(
 void createFsrContents(const LogicalDevice& logicalDevice, Image& image,
                        const ImageMetadata& metadata, const CommandBuffer& commandBuffer);
 
-VkIndexType convertIndexTypeToVkIndexType(IndexType indexType) {
+VkIndexType convertIndexTypeToVkIndexType(common::IndexType indexType) {
   switch (indexType) {
-    case IndexType::UINT8:
+    case common::IndexType::UINT8:
       return VK_INDEX_TYPE_UINT8_EXT;
-    case IndexType::UINT16:
+    case common::IndexType::UINT16:
       return VK_INDEX_TYPE_UINT16;
     default:
       return VK_INDEX_TYPE_UINT32;

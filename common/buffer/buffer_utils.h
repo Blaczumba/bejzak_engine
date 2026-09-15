@@ -19,9 +19,6 @@ struct BufferDescription {
   size_t totalSize;
 };
 
-void copyAndShrinkIndexData(std::span<std::byte> dst, std::span<const std::byte> src,
-                            size_t dstIndexSize, size_t srcIndexSize);
-
 void copyData(std::span<std::byte> dst, size_t dstOffset, std::span<const std::byte> src,
               size_t srcOffset, size_t size);
 

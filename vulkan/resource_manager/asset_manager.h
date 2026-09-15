@@ -65,7 +65,8 @@ public:
       std::shared_ptr<void> modelPtr, ImageResource&& imageResource) override;
 
   std::shared_ptr<common::AssetManager::VertexData> loadVertexDataInterleavingAsync(
-      std::shared_ptr<void> modelPtr, std::span<const std::byte> indices, IndexType indexSize,
+      std::shared_ptr<void> modelPtr, std::span<const std::byte> indices,
+      common::IndexType indexSize,
       std::vector<common::BufferDescription>&& bufferDescriptions) override;
 
 private:

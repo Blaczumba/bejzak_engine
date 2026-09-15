@@ -10,23 +10,6 @@
 
 namespace common {
 
-void copyAndShrinkIndexData(std::span<std::byte> dst, std::span<const std::byte> src,
-                            size_t dstIndexSize, size_t srcIndexSize) {
-  if (dst.size() < dstIndexSize * src.size() / srcIndexSize) [[unlikely]] {
-    throw EngineException(
-        std::format("Trying to access out of range memory.  copied size: {}, buffer size: {}.",
-                    dstIndexSize * src.size() / srcIndexSize, dst.size()));
-  }
-
-  std::byte* dstData = dst.data();
-  const std::byte* srcData = src.data();
-  for (size_t i = 0; i < src.size() / srcIndexSize; i++) {
-    std::memcpy(dstData, srcData, dstIndexSize);
-    dstData += dstIndexSize;
-    srcData += srcIndexSize;
-  }
-}
-
 void copyData(std::span<std::byte> dst, size_t dstOffset, std::span<const std::byte> src,
               size_t srcOffset, size_t size) {
   if (dst.size() < size + dstOffset) [[unlikely]] {

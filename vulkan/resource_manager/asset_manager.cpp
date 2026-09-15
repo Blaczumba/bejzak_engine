@@ -225,7 +225,7 @@ std::shared_ptr<common::AssetManager::ImageData> AssetManager::loadImageAsync(
 }
 
 std::shared_ptr<common::AssetManager::VertexData> AssetManager::loadVertexDataInterleavingAsync(
-    std::shared_ptr<void> modelPtr, std::span<const std::byte> indices, IndexType indexType,
+    std::shared_ptr<void> modelPtr, std::span<const std::byte> indices, common::IndexType indexType,
     std::vector<common::BufferDescription>&& bufferDescriptions) {
   auto promise = std::make_shared<common::AssetManager::VertexData>();
   {
@@ -246,16 +246,16 @@ std::shared_ptr<common::AssetManager::VertexData> AssetManager::loadVertexDataIn
              std::make_tuple(std::move(stagingBufferRef), std::move(virtualAllocationRef))});
       }
 
-      const IndexType shrunkIndexType = getShrunkIndexSize(indices, indexType);
+      const common::IndexType shrunkIndexType = common::getShrunkIndexSize(indices, indexType);
       auto [stagingBufferRef, virtualAllocationRef, virtualAllocationMetadata] = allocate(
           threadData,
           indices.size() / static_cast<size_t>(indexType) * static_cast<size_t>(shrunkIndexType),
           alignment, blockSize);
-      common::copyAndShrinkIndexData(
+      common::shrinkAndCopyIndexData(
           std::span(_bufferManager.getMetadata(stagingBufferRef.getHandle()).mappedMemory
                         + virtualAllocationMetadata.offset,
                     virtualAllocationMetadata.size),
-          indices, static_cast<size_t>(shrunkIndexType), static_cast<size_t>(indexType));
+          indices, shrunkIndexType, indexType);
 
       promise->indexType = shrunkIndexType;
       promise->indexBuffer =
