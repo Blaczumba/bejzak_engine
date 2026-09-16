@@ -8,15 +8,15 @@
 #include <tuple>
 #include <vulkan/vulkan.h>
 
-#include "common/buffer/vertex_buffer_utils.h"
-#include "common/buffer/index_buffer_utils.h"
+#include "common/buffer/index_buffer_lib.h"
+#include "common/buffer/vertex_buffer_lib.h"
 #include "vulkan/wrapper/logical_device/logical_device.h"
 #include "vulkan/wrapper/memory_objects/buffer.h"
 
 std::unique_ptr<AssetManager> AssetManager::create(
     const LogicalDevice& logicalDevice, BufferManager& bufferManager) {
   return std::unique_ptr<AssetManager>(new AssetManager(
-      logicalDevice, bufferManager, std::thread::hardware_concurrency() - 2, 2 * lib::GiB));
+      logicalDevice, bufferManager, std::thread::hardware_concurrency() - 1, 2 * lib::GiB));
 }
 
 AssetManager::AssetManager(const LogicalDevice& logicalDevice, BufferManager& bufferManager,
@@ -171,11 +171,9 @@ std::shared_ptr<common::AssetManager::ImageData> AssetManager::loadImageAsync(
       auto [resource, dataPtr] = imageFunction();
       auto [stagingBufferRef, virtualAllocationRef, virtualAllocationMetadata] =
           allocate(threadData, resource.size, alignment, blockSize);
-      common::copyData(
-          std::span(_bufferManager.getMetadata(stagingBufferRef.getHandle()).mappedMemory
-                        + virtualAllocationMetadata.offset,
-                    virtualAllocationMetadata.size),
-          0, std::span(static_cast<const std::byte*>(resource.data), resource.size));
+      std::memcpy(_bufferManager.getMetadata(stagingBufferRef.getHandle()).mappedMemory
+                      + virtualAllocationMetadata.offset,
+                  resource.data, resource.size);
 
       promise->stagingBuffer = std::move(stagingBufferRef);
       promise->virtualAllocation = std::move(virtualAllocationRef);
@@ -203,12 +201,9 @@ std::shared_ptr<common::AssetManager::ImageData> AssetManager::loadImageAsync(
             ThreadData& threadData, size_t blockSize, size_t alignment) {
           auto [stagingBufferRef, virtualAllocationRef, virtualAllocationMetadata] =
               allocate(threadData, resource.size, alignment, blockSize);
-
-          common::copyData(
-              std::span(_bufferManager.getMetadata(stagingBufferRef.getHandle()).mappedMemory
-                            + virtualAllocationMetadata.offset,
-                        virtualAllocationMetadata.size),
-              0, std::span(static_cast<const std::byte*>(resource.data), resource.size));
+          std::memcpy(_bufferManager.getMetadata(stagingBufferRef.getHandle()).mappedMemory
+                          + virtualAllocationMetadata.offset,
+                      resource.data, resource.size);
 
           promise->stagingBuffer = std::move(stagingBufferRef);
           promise->virtualAllocation = std::move(virtualAllocationRef);

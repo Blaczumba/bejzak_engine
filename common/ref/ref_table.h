@@ -2,8 +2,6 @@
 
 #include <algorithm>
 #include <array>
-#include <cstddef>
-#include <optional>
 #include <span>
 #include <utility>
 

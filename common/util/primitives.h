@@ -1,12 +1,6 @@
 #pragma once
 
-#include <cstdint>
 #include <glm/glm.hpp>
-
-struct Extent {
-  uint32_t width;
-  uint32_t height;
-};
 
 struct UniformBufferLight {
   alignas(16) glm::mat4 projView;

@@ -1,4 +1,4 @@
-#include "common/buffer/index_buffer_utils.h"
+#include "common/buffer/index_buffer_lib.h"
 
 #include <algorithm>
 #include <cstddef>
@@ -40,7 +40,7 @@ size_t getMaxIndex(std::span<const std::byte> indicesBuffer, IndexType indexSize
 
 // We use template here to let the compiler generate faster code for specific index sizes.
 template <IndexType dstIndexSize, IndexType srcIndexSize>
-static void copyAndShrinkImpl(std::byte* dstData, const std::byte* srcData, size_t indexCount) {
+void shrinkIndexDataImpl(std::byte* dstData, const std::byte* srcData, size_t indexCount) {
   for (size_t i = 0; i < indexCount; ++i) {
     std::memcpy(dstData, srcData, static_cast<size_t>(dstIndexSize));
     dstData += static_cast<size_t>(dstIndexSize);
@@ -60,10 +60,8 @@ IndexType getIndexType(uint8_t indexSize) noexcept {
       return IndexType::UINT8;
     case 2:
       return IndexType::UINT16;
-    case 4:
-      return IndexType::UINT32;
     default:
-      return IndexType::UINT64;
+      return IndexType::UINT32;
   }
 }
 
@@ -72,15 +70,13 @@ IndexType getCapableIndexType(size_t maxIndex) noexcept {
     return IndexType::UINT8;
   } else if (maxIndex <= std::numeric_limits<uint16_t>::max()) {
     return IndexType::UINT16;
-  } else if (maxIndex <= std::numeric_limits<uint32_t>::max()) {
-    return IndexType::UINT32;
   } else {
-    return IndexType::UINT64;
+    return IndexType::UINT32;
   }
 }
 
 void shrinkIndexData(std::span<std::byte> dst, std::span<const std::byte> src,
-                            IndexType dstIndexSize, IndexType srcIndexSize) {
+                     IndexType dstIndexSize, IndexType srcIndexSize) {
   const size_t indexCount = src.size() / static_cast<size_t>(srcIndexSize);
   if (const size_t dstIndexCount = dst.size() / static_cast<size_t>(dstIndexSize);
       dstIndexCount != indexCount) [[unlikely]] {
@@ -92,11 +88,11 @@ void shrinkIndexData(std::span<std::byte> dst, std::span<const std::byte> src,
   if (dstIndexSize == srcIndexSize) {
     std::memcpy(dst.data(), src.data(), src.size());
   } else if (dstIndexSize == IndexType::UINT8 && srcIndexSize == IndexType::UINT16) {
-    copyAndShrinkImpl<IndexType::UINT8, IndexType::UINT16>(dst.data(), src.data(), indexCount);
+    shrinkIndexDataImpl<IndexType::UINT8, IndexType::UINT16>(dst.data(), src.data(), indexCount);
   } else if (dstIndexSize == IndexType::UINT8 && srcIndexSize == IndexType::UINT32) {
-    copyAndShrinkImpl<IndexType::UINT8, IndexType::UINT32>(dst.data(), src.data(), indexCount);
+    shrinkIndexDataImpl<IndexType::UINT8, IndexType::UINT32>(dst.data(), src.data(), indexCount);
   } else if (dstIndexSize == IndexType::UINT16 && srcIndexSize == IndexType::UINT32) {
-    copyAndShrinkImpl<IndexType::UINT16, IndexType::UINT32>(dst.data(), src.data(), indexCount);
+    shrinkIndexDataImpl<IndexType::UINT16, IndexType::UINT32>(dst.data(), src.data(), indexCount);
   } else {
     throw EngineException(
         std::format("Unsupported index size conversion. dst: {}, src: {}.",

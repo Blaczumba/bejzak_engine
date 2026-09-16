@@ -3,7 +3,6 @@
 #include <memory>
 
 #include "vulkan/resource_manager/ref.h"
-#include "vulkan/wrapper/logical_device/logical_device.h"
 #include "vulkan/wrapper/memory_objects/buffer.h"
 
 std::unique_ptr<BufferManager> BufferManager::create() {

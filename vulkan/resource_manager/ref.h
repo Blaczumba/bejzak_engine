@@ -2,8 +2,8 @@
 
 #include <utility>
 
+#include "common/ref/ref.h"
 #include "common/util/engine_exception.h"
-#include "common/util/ref.h"
 #include "vulkan/resource_manager/handle.h"
 #include "vulkan/resource_manager/reference_counter.h"
 
@@ -140,6 +140,51 @@ public:
 
 private:
   ReferenceCounter<Resource>* _counter = nullptr;
+  HandleFor<Resource> _handle;
+};
+
+template <typename Resource>
+class [[nodiscard]] WeakRef {
+public:
+  WeakRef(const common::Ref<ErasedTypeOf<Resource>>& src) noexcept
+    : _counter(static_cast<ReferenceCounter<Resource>*>(src.getReferenceCounter())),
+      _handle(static_cast<HandleFor<Resource>>(src.getHandle())) {}
+
+  WeakRef(const Ref<Resource>& src) noexcept
+    : _counter(src.getCounter()), _handle(src.getHandle()) {}
+
+  WeakRef(const WeakRef&) = delete;
+
+  WeakRef(WeakRef&&) = delete;
+
+  WeakRef& operator=(const WeakRef&) = delete;
+
+  WeakRef& operator=(WeakRef&&) = delete;
+
+  HandleFor<Resource> getHandle() const&& noexcept {
+    return _handle;
+  }
+
+  ReferenceCounter<Resource>* getCounter() const&& noexcept {
+    return _counter;
+  }
+
+  VulkanObjectFor<Resource> getVkResource() const&& {
+    if (_counter == nullptr) {
+      throw EngineException("Attempt to get Vulkan resource from null reference counter");
+    }
+    return _counter->getVkResource(_handle);
+  }
+
+  const MetadataFor<Resource>& getMetadata() const&& {
+    if (_counter == nullptr) {
+      throw EngineException("Attempt to get metadata from null reference counter");
+    }
+    return _counter->getMetadata(_handle);
+  }
+
+private:
+  ReferenceCounter<Resource>* _counter;
   HandleFor<Resource> _handle;
 };
 

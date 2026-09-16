@@ -117,7 +117,7 @@ target_link_libraries(${COMMON_ENGINE_NAME} INTERFACE
     CommonObject CommonUtil
     CommonScene CommonFileLoader
     CommonModelLoader CommonMath CommonBuffer
-    CommonAbstractions
+    CommonAbstractions CommonRef
 )
 target_link_libraries(${ENGINE_NAME} INTERFACE ${COMMON_ENGINE_NAME})
 

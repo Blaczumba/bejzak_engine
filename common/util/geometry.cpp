@@ -14,7 +14,6 @@ void AABB::extend(const AABB& other) {
   lowerCorner.x = std::min(lowerCorner.x, other.lowerCorner.x);
   lowerCorner.y = std::min(lowerCorner.y, other.lowerCorner.y);
   lowerCorner.z = std::min(lowerCorner.z, other.lowerCorner.z);
-
   upperCorner.x = std::max(upperCorner.x, other.upperCorner.x);
   upperCorner.y = std::max(upperCorner.y, other.upperCorner.y);
   upperCorner.z = std::max(upperCorner.z, other.upperCorner.z);

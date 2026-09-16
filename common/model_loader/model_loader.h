@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-#include "common/util/asset_manager.h"
+#include "common/abstractions/asset_manager.h"
 #include "common/util/resource_handles.h"
 #include "lib/buffer/buffer.h"
 

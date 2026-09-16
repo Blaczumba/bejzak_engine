@@ -5,9 +5,9 @@
 #endif
 #include <string>
 
+#include "common/abstractions/asset_manager.h"
 #include "common/file/file_loader.h"
 #include "common/model_loader/model_loader.h"
-#include "common/util/asset_manager.h"
 
 namespace common {
 

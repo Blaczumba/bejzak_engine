@@ -2,14 +2,11 @@
 
 #include <span>
 #include <utility>
-#include <vector>
 #include <vulkan/vulkan.h>
 
-#include "common/util/engine_exception.h"
+#include "common/buffer/index_buffer_lib.h"
+#include "common/model_loader/image_loader/types.h"
 #include "lib/buffer/buffer.h"
-#include "vulkan/wrapper/command_buffer/command_buffer.h"
-#include "vulkan/wrapper/framebuffer/framebuffer.h"
-#include "vulkan/wrapper/memory_objects/image.h"
 
 namespace vlkn::internal {
 
@@ -18,5 +15,10 @@ namespace vlkn::internal {
 
 lib::Buffer<VkDescriptorPoolSize> getDescriptorPoolSizesFromBindings(
     std::span<const std::pair<VkDescriptorSetLayoutBinding, VkDescriptorBindingFlags>> bindings);
+
+VkIndexType convertIndexTypeToVkIndexType(common::IndexType indexType);
+
+lib::Buffer<VkBufferImageCopy> translateImageSubresourcesToVkBufferImageCopy(
+    std::span<const ImageSubresource> imageSubresources, size_t stagingBufferOffset = 0);
 
 }  // namespace vlkn::internal

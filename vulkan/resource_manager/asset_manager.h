@@ -11,11 +11,11 @@
 #include <unordered_map>
 #include <vulkan/vulkan.h>
 
-#include "common/buffer/buffer_utils.h"
-#include "common/buffer/index_buffer_utils.h"
+#include "common/abstractions/asset_manager.h"
+#include "common/buffer/buffer_lib.h"
+#include "common/buffer/index_buffer_lib.h"
 #include "common/model_loader/image_loader/types.h"
-#include "common/util/asset_manager.h"
-#include "common/util/ref.h"
+#include "common/ref/ref.h"
 #include "common/util/resource_handles.h"
 #include "lib/association_list/association_list.h"
 #include "lib/buffer/buffer.h"

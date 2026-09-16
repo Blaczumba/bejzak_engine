@@ -14,9 +14,9 @@
 #include <tinygltf/tiny_gltf.h>
 #include <vector>
 
+#include "common/abstractions/asset_manager.h"
 #include "common/file/file.h"
 #include "common/model_loader/model_loader.h"
-#include "common/util/asset_manager.h"
 #include "common/util/engine_exception.h"
 #include "common/util/geometry.h"
 #include "lib/buffer/buffer.h"

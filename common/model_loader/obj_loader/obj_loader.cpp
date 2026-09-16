@@ -6,9 +6,9 @@
 #include <tinyobjloader/tiny_obj_loader.h>
 #include <unordered_map>
 
-#include "common/buffer/index_buffer_utils.h"
+#include "common/abstractions/asset_manager.h"
+#include "common/buffer/index_buffer_lib.h"
 #include "common/model_loader/model_loader.h"
-#include "common/util/asset_manager.h"
 #include "common/util/engine_exception.h"
 
 namespace common {

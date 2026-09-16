@@ -1,9 +1,8 @@
 #pragma once
 
-#include <cstdint>
-#include <vector>
 #include <span>
 #include <string>
+#include <vector>
 
 namespace common {
 
@@ -47,5 +46,3 @@ std::vector<BufferDescription> analyzeConfig(
     std::span<const common::AttributeDescription> descs);
 
 }  // namespace common
-
-

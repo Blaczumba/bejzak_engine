@@ -2,13 +2,14 @@
 
 #include <string_view>
 
-#include "common/util/ref.h"
+#include "common/ref/ref.h"
 #include "common/util/resource_handles.h"
 #include "vulkan/resource_manager/hasher.h"
 #include "vulkan/wrapper/memory_allocator/allocation.h"
 #include "vulkan/wrapper/memory_objects/buffer.h"
 #include "vulkan/wrapper/memory_objects/image.h"
 #include "vulkan/wrapper/sampler/sampler.h"
+#include "vulkan/wrapper/framebuffer/framebuffer.h"
 
 namespace {
 
@@ -54,6 +55,16 @@ struct Handle<VirtualAllocation> {
   static constexpr size_t size = MAX_VIRTUAL_ALLOCATIONS;
   static constexpr std::string_view name = "VirtualAllocation";
   static constexpr common::RefType erased_type = common::RefType::VirtualAllocation;
+};
+
+template <>
+struct Handle<Framebuffer> {
+  using type = VirtualAllocationHandle;
+  using vulkan_object = std::variant<VmaVirtualAllocation>;
+  using metadata = VirtualAllocationMetadata;
+  static constexpr size_t size = MAX_FRAMEBUFFERS;
+  static constexpr std::string_view name = "Framebuffer";
+  static constexpr common::RefType erased_type = common::RefType::Framebuffer;
 };
 
 }  // namespace

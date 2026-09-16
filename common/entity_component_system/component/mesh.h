@@ -5,8 +5,8 @@
 #include <vulkan/vulkan.h>
 
 #include "common/entity_component_system/entity/entity.h"
+#include "common/ref/ref.h"
 #include "common/util/geometry.h"
-#include "common/util/ref.h"
 
 class MeshComponent {
   static constexpr ComponentType componentID = 2;

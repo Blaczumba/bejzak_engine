@@ -1,6 +1,6 @@
-add_library(CommonAbstractions INTERFACE contexts.h graphics_context.h hardware_layer.h presentation.h)
+add_library(CommonAbstractions asset_manager.h asset_manager.cpp contexts.h graphics_context.h presentation.h)
 
-target_link_libraries(CommonAbstractions INTERFACE glm::glm)
+target_link_libraries(CommonAbstractions PUBLIC glm::glm CommonImageLoader)
 
-target_include_directories(CommonAbstractions INTERFACE ${PROJECT_SOURCE_DIR})
-target_include_directories(CommonAbstractions INTERFACE ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(CommonAbstractions PUBLIC ${PROJECT_SOURCE_DIR})
+target_include_directories(CommonAbstractions PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

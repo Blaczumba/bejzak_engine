@@ -1,16 +1,14 @@
 #include "vulkan/graphics_context/graphics_context_lib.h"
 
+#include <algorithm>
 #include <ranges>
 #include <span>
 #include <unordered_map>
 #include <utility>
-#include <vector>
 #include <vulkan/vulkan.h>
 
-#include "common/util/engine_exception.h"
+#include "common/model_loader/image_loader/types.h"
 #include "lib/buffer/buffer.h"
-#include "vulkan/wrapper/framebuffer/framebuffer.h"
-#include "vulkan/wrapper/memory_objects/image.h"
 
 namespace vlkn::internal {
 namespace {
@@ -81,6 +79,37 @@ lib::Buffer<VkDescriptorPoolSize> getDescriptorPoolSizesFromBindings(
         VkDescriptorPoolSize{.type = VkDescriptorType, .descriptorCount = uint32_t};
   }
   return poolSizes;
+}
+
+VkIndexType convertIndexTypeToVkIndexType(common::IndexType indexType) {
+  switch (indexType) {
+    case common::IndexType::UINT8:
+      return VK_INDEX_TYPE_UINT8_EXT;
+    case common::IndexType::UINT16:
+      return VK_INDEX_TYPE_UINT16;
+    default:
+      return VK_INDEX_TYPE_UINT32;
+  }
+}
+
+lib::Buffer<VkBufferImageCopy> translateImageSubresourcesToVkBufferImageCopy(
+    std::span<const ImageSubresource> imageSubresources, size_t stagingBufferOffset) {
+  lib::Buffer<VkBufferImageCopy> vkSubresources(imageSubresources.size());
+  std::transform(
+      std::cbegin(imageSubresources), std::cend(imageSubresources), vkSubresources.begin(),
+      [stagingBufferOffset](const ImageSubresource& subresource) {
+        return VkBufferImageCopy{
+          .bufferOffset = subresource.offset + stagingBufferOffset,
+          .imageSubresource = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                               .mipLevel = subresource.mipLevel,
+                               .baseArrayLayer = subresource.baseArrayLayer,
+                               .layerCount = subresource.layerCount},
+          .imageExtent = {.width = subresource.width,
+                               .height = subresource.height,
+                               .depth = subresource.depth},
+        };
+      });
+  return vkSubresources;
 }
 
 }  // namespace vlkn::internal

@@ -5,7 +5,6 @@
 #include <format>
 #include <span>
 #include <stb_image/stb_image.h>
-#include <vector>
 
 #include "common/util/engine_exception.h"
 

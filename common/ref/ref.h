@@ -10,7 +10,8 @@ enum class RefType : uint8_t {
   Buffer,
   Image,
   Sampler,
-  VirtualAllocation
+  VirtualAllocation,
+  Framebuffer,
 };
 
 // For performance reasons, every graphics wrapper defines it on its own.
