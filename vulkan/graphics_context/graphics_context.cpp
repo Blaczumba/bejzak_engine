@@ -174,9 +174,8 @@ void GCONTEXT_CLASS setup() {
       }),
       TEXTURES_PATH "cubemap_yokohama_rgba.ktx"};
     common::waitForAssetToLoad(cubeData.diffuseTexture.imageData->loadState);
-    auto [skyboxImage, skyboxMetadata] =
-        createSkybox(*_logicalDevice, handle, *cubeData.diffuseTexture.imageData,
-                     VK_FORMAT_R8G8B8A8_SRGB);
+    auto [skyboxImage, skyboxMetadata] = createSkybox(
+        *_logicalDevice, handle, *cubeData.diffuseTexture.imageData, VK_FORMAT_R8G8B8A8_SRGB);
     _skyboxEntity = loadObject(
         commandBuffer, cubeData, PipelineHandle(0), std::move(skyboxImage), skyboxMetadata);
 
@@ -619,8 +618,8 @@ void GCONTEXT_CLASS recordShadowCommandBuffer(const CommandBuffer& commandBuffer
         _bufferManager->getVkResource(BufferHandle(meshComponent.indexBufferHandle.getHandle())),
         meshComponent.indexType);
     commandBuffer.drawIndexed(WeakRef<Buffer>(meshComponent.indexBufferHandle).getMetadata().size
-            / getIndexSize(meshComponent.indexType),
-        1);
+                                  / getIndexSize(meshComponent.indexType),
+                              1);
   }
   commandBuffer.endRenderPass();
 }

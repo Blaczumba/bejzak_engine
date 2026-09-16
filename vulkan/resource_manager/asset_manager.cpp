@@ -33,8 +33,6 @@ AssetManager::AssetManager(const LogicalDevice& logicalDevice, BufferManager& bu
     _threads[i].bufferBlocks.push_back(ThreadData::BufferBlock{
       .stagingBuffer = bufferManager.storeBuffer(std::move(buffer), metadata),
       .virtualBlock = VirtualBlock::create(logicalDevice.getMemoryAllocator(), _bufferSize)});
-    _threads[i].virtualAllocationCounters.push_back(
-        std::make_unique<ReferenceCounterWithMetadata<VirtualAllocation>>());
     _threads[i].thread = std::thread(&AssetManager::doWork, this, i);
   }
   _tasks.reserve(256);
@@ -64,21 +62,9 @@ void AssetManager::doWork(uint8_t threadIndex) {
     if (!timedOut) {
       task(thisThread, _bufferSize, _alignment);
     } else {
-      cleanVirtualAllocatorCounters(thisThread);
+      thisThread.virtualAllocationStrategy.cleanEmptyCounters();
       cleanVirtualBlocks(thisThread);
     }
-  }
-}
-
-// Pop from the back of the vector as long as the size of the allocation is 0.
-void AssetManager::cleanVirtualAllocatorCounters(ThreadData& threadData) {
-  while (threadData.virtualAllocationCounters.size() > 1
-         && threadData.virtualAllocationCounters.back()->size() == 0) {
-    if (!threadData.virtualAllocationCouterToBeReclaimed.has_value()) {
-      threadData.virtualAllocationCouterToBeReclaimed =
-          std::move(threadData.virtualAllocationCounters.back());
-    }
-    threadData.virtualAllocationCounters.pop_back();
   }
 }
 
@@ -134,30 +120,9 @@ std::tuple<Ref<Buffer>, Ref<VirtualAllocation>, VirtualAllocationMetadata> Asset
     }
   }
   auto& [virtualAllocation, virtualAllocationMetadata] = expectedVirtualAllocation.value();
-
-  std::expected<Ref<VirtualAllocation>, VirtualAllocation> expectedRef =
-      std::unexpected(std::move(virtualAllocation));
-  for (uint8_t i = 0; i < threadData.virtualAllocationCounters.size(); i++) {
-    // Fast path: virtual allocation counters have a free spot.
-    expectedRef = threadData.virtualAllocationCounters[i]->transferResource(
-        std::move(expectedRef.error()), virtualAllocationMetadata);
-    if (expectedRef.has_value()) {
-      break;
-    }
-  }
-
-  if (!expectedRef.has_value()) [[unlikely]] {
-    // Slow path: very rare, if no virtual allocation counter has free spot then allocate the
-    // new one.
-    threadData.virtualAllocationCounters.push_back(
-        std::make_unique<ReferenceCounterWithMetadata<VirtualAllocation>>());
-    expectedRef = threadData.virtualAllocationCounters.back()->transferResource(
-        std::move(expectedRef.error()), virtualAllocationMetadata);
-    if (!expectedRef.has_value()) [[unlikely]] {
-      throw EngineException("Failed to store the virtual allocation.");
-    }
-  }
-  return std::make_tuple(threadData.bufferBlocks.back().stagingBuffer, std::move(*expectedRef),
+  return std::make_tuple(threadData.bufferBlocks.back().stagingBuffer,
+                         threadData.virtualAllocationStrategy.transferResource(
+                             std::move(virtualAllocation), virtualAllocationMetadata),
                          virtualAllocationMetadata);
 }
 

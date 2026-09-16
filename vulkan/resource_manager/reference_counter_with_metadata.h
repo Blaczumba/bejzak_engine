@@ -15,9 +15,13 @@
 template <typename Resource>
 class ReferenceCounterWithMetadata : public ReferenceCounter<Resource> {
 public:
+  enum class Error : uint8_t {
+    FREE_HANDLES_DEPLETED
+  };
+
   ReferenceCounterWithMetadata();
 
-  std::expected<Ref<Resource>, Resource> transferResource(
+  std::expected<Ref<Resource>, Error> transferResource(
       Resource&& resource, const MetadataFor<Resource>& metadata);
 
   // Should be moved to protected session.
@@ -53,13 +57,14 @@ ReferenceCounterWithMetadata<Resource>::ReferenceCounterWithMetadata()
 }
 
 template <typename Resource>
-std::expected<Ref<Resource>, Resource> ReferenceCounterWithMetadata<Resource>::transferResource(
+std::expected<Ref<Resource>, typename ReferenceCounterWithMetadata<Resource>::Error>
+ReferenceCounterWithMetadata<Resource>::transferResource(
     Resource&& resource, const MetadataFor<Resource>& metadata) {
   HandleFor<Resource> handle;
   {
     std::lock_guard lock(_mutex);
     if (_freeHandles.empty()) [[unlikely]] {
-      return std::unexpected(std::move(resource));
+      return std::unexpected(Error::FREE_HANDLES_DEPLETED);
     }
     handle = _freeHandles.back();
     _freeHandles.pop_back();

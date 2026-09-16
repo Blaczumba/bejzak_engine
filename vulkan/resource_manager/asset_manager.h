@@ -23,6 +23,7 @@
 #include "lib/types/memory.h"
 #include "vulkan/resource_manager/buffer_manager.h"
 #include "vulkan/resource_manager/reference_counter_with_metadata.h"
+#include "vulkan/resource_manager/resource_manager_allocation_strategy.h"
 #include "vulkan/wrapper/logical_device/logical_device.h"
 #include "vulkan/wrapper/memory_allocator/allocation.h"
 #include "vulkan/wrapper/memory_objects/buffer.h"
@@ -37,18 +38,13 @@ class AssetManager : public common::AssetManager {
     };
     std::deque<BufferBlock> bufferBlocks;  // We want pointer stability.
     std::optional<BufferBlock> blockToBeReclaimed;
-    std::vector<std::unique_ptr<ReferenceCounterWithMetadata<VirtualAllocation>>>
-        virtualAllocationCounters;
-    std::optional<std::unique_ptr<ReferenceCounterWithMetadata<VirtualAllocation>>>
-        virtualAllocationCouterToBeReclaimed;
+    AllocationStrategy<VirtualAllocation, AllocationPolicy::POOL_BASED> virtualAllocationStrategy;
   };
 
   AssetManager(const LogicalDevice& logicalDevice, BufferManager& bufferManager,
                uint8_t threadCount, size_t size);
 
   void doWork(uint8_t threadIndex);
-
-  void cleanVirtualAllocatorCounters(ThreadData& threadData);
 
   void cleanVirtualBlocks(ThreadData& threadData);
 
