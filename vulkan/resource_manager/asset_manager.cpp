@@ -100,7 +100,7 @@ std::tuple<Ref<Buffer>, Ref<VirtualAllocation>, VirtualAllocationMetadata> Asset
       // Slower path: still very fast, if allocation didn't succeed then try to reuse the
       // retired block.
       threadData.bufferBlocks.push_back(std::move(*threadData.blockToBeReclaimed));
-      threadData.blockToBeReclaimed = std::nullopt;
+      threadData.blockToBeReclaimed.reset();
     } else {
       // The slowest path: allocate new staging buffer and virtual block for the allocation.
       auto [buffer, metadata] =
@@ -136,7 +136,7 @@ std::shared_ptr<common::AssetManager::ImageData> AssetManager::loadImageAsync(
       auto [resource, dataPtr] = imageFunction();
       auto [stagingBufferRef, virtualAllocationRef, virtualAllocationMetadata] =
           allocate(threadData, resource.size, alignment, blockSize);
-      std::memcpy(_bufferManager.getMetadata(stagingBufferRef.getHandle()).mappedMemory
+      std::memcpy(WeakRef<Buffer>(stagingBufferRef).getMetadata().mappedMemory
                       + virtualAllocationMetadata.offset,
                   resource.data, resource.size);
 
@@ -166,7 +166,7 @@ std::shared_ptr<common::AssetManager::ImageData> AssetManager::loadImageAsync(
             ThreadData& threadData, size_t blockSize, size_t alignment) {
           auto [stagingBufferRef, virtualAllocationRef, virtualAllocationMetadata] =
               allocate(threadData, resource.size, alignment, blockSize);
-          std::memcpy(_bufferManager.getMetadata(stagingBufferRef.getHandle()).mappedMemory
+          std::memcpy(WeakRef<Buffer>(stagingBufferRef).getMetadata().mappedMemory
                           + virtualAllocationMetadata.offset,
                       resource.data, resource.size);
 
@@ -199,7 +199,7 @@ std::shared_ptr<common::AssetManager::VertexData> AssetManager::loadVertexDataIn
         auto [stagingBufferRef, virtualAllocationRef, virtualAllocationMetadata] =
             allocate(threadData, description.totalSize, alignment, blockSize);
         common::copyDataInterleaving(
-            std::span(_bufferManager.getMetadata(stagingBufferRef.getHandle()).mappedMemory
+            std::span(WeakRef<Buffer>(stagingBufferRef).getMetadata().mappedMemory
                           + virtualAllocationMetadata.offset,
                       virtualAllocationMetadata.size),
             description.attributes);
@@ -213,11 +213,10 @@ std::shared_ptr<common::AssetManager::VertexData> AssetManager::loadVertexDataIn
           threadData,
           indices.size() / static_cast<size_t>(indexType) * static_cast<size_t>(shrunkIndexType),
           alignment, blockSize);
-      common::shrinkIndexData(
-          std::span(_bufferManager.getMetadata(stagingBufferRef.getHandle()).mappedMemory
-                        + virtualAllocationMetadata.offset,
-                    virtualAllocationMetadata.size),
-          indices, shrunkIndexType, indexType);
+      common::shrinkIndexData(std::span(WeakRef<Buffer>(stagingBufferRef).getMetadata().mappedMemory
+                                            + virtualAllocationMetadata.offset,
+                                        virtualAllocationMetadata.size),
+                              indices, shrunkIndexType, indexType);
 
       promise->indexType = shrunkIndexType;
       promise->indexBuffer =

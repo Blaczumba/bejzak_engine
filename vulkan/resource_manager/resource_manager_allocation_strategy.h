@@ -21,11 +21,9 @@ public:
   }
 
   Ref<Resource> transferResource(Resource&& resource, const MetadataFor<Resource>& metadata) {
-    std::expected<Ref<VirtualAllocation>, ReferenceCounterWithMetadata<VirtualAllocation>::Error>
-        expectedRef;
-    for (
-        std::unique_ptr<ReferenceCounterWithMetadata<VirtualAllocation>>& virtualAllocationCounter :
-        _counters) {
+    std::expected<Ref<Resource>, ReferenceCounterWithMetadata<Resource>::Error> expectedRef;
+    for (std::unique_ptr<ReferenceCounterWithMetadata<Resource>>& virtualAllocationCounter :
+         _counters) {
       // Fast path: virtual allocation counters have a free spot.
       expectedRef = virtualAllocationCounter->transferResource(std::move(resource), metadata);
       if (expectedRef.has_value()) {
@@ -38,7 +36,7 @@ public:
       // new one or take the spare one.
       _counters.push_back(_counterToBeReclaimed.has_value() ?
                               std::move(*_counterToBeReclaimed) :
-                              std::make_unique<ReferenceCounterWithMetadata<VirtualAllocation>>());
+                              std::make_unique<ReferenceCounterWithMetadata<Resource>>());
       _counterToBeReclaimed.reset();
       expectedRef = _counters.back()->transferResource(std::move(resource), metadata);
       if (!expectedRef.has_value()) [[unlikely]] {

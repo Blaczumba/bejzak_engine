@@ -161,22 +161,22 @@ public:
 
   WeakRef& operator=(WeakRef&&) = delete;
 
-  HandleFor<Resource> getHandle() const&& noexcept {
+  HandleFor<Resource> getHandle() const noexcept {
     return _handle;
   }
 
-  ReferenceCounter<Resource>* getCounter() const&& noexcept {
+  ReferenceCounter<Resource>* getCounter() const noexcept {
     return _counter;
   }
 
-  VulkanObjectFor<Resource> getVkResource() const&& {
+  VulkanObjectFor<Resource> getVkResource() const {
     if (_counter == nullptr) {
       throw EngineException("Attempt to get Vulkan resource from null reference counter");
     }
     return _counter->getVkResource(_handle);
   }
 
-  const MetadataFor<Resource>& getMetadata() const&& {
+  const MetadataFor<Resource>& getMetadata() const {
     if (_counter == nullptr) {
       throw EngineException("Attempt to get metadata from null reference counter");
     }

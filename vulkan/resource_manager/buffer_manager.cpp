@@ -10,5 +10,5 @@ std::unique_ptr<BufferManager> BufferManager::create() {
 }
 
 Ref<Buffer> BufferManager::storeBuffer(Buffer&& buffer, const BufferMetadata& metadata) {
-  return *transferResource(std::move(buffer), metadata);
+  return _allocationStrategy.transferResource(std::move(buffer), metadata);
 }

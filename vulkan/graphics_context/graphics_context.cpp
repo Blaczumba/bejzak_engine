@@ -285,7 +285,7 @@ void GCONTEXT_CLASS createDescriptorSets() {
             .buildUniformBufferWithMetadata(*_logicalDevice);
     Ref<Buffer> lightBufferRef = _bufferManager->storeBuffer(std::move(buffer), metadata);
     _lightHandle = _bindlessWriter->writeBuffer(
-        lightBufferRef, _bufferManager->getVkResource(lightBufferRef.getHandle()), metadata);
+        lightBufferRef, WeakRef<Buffer>(lightBufferRef).getVkResource(), metadata);
 
     _ubLight.pos = glm::vec3(15.1891f, 2.66408f, -0.841221f);
     _ubLight.projView = glm::perspective(glm::radians(120.0f), 1.0f, 0.1f, 40.0f);
@@ -610,13 +610,10 @@ void GCONTEXT_CLASS recordShadowCommandBuffer(const CommandBuffer& commandBuffer
                                 std::span(reinterpret_cast<const std::byte*>(&pc), sizeof(pc)));
 
     commandBuffer.bindVertexBuffers(
-        {_bufferManager->getVkResource(
-            BufferHandle(meshComponent.vertexBufferPrimitiveHandle.getHandle()))},
-        {0});
+        {WeakRef<Buffer>(meshComponent.vertexBufferPrimitiveHandle).getVkResource()}, {0});
 
     commandBuffer.bindIndexBuffer(
-        _bufferManager->getVkResource(BufferHandle(meshComponent.indexBufferHandle.getHandle())),
-        meshComponent.indexType);
+        WeakRef<Buffer>(meshComponent.indexBufferHandle).getVkResource(), meshComponent.indexType);
     commandBuffer.drawIndexed(WeakRef<Buffer>(meshComponent.indexBufferHandle).getMetadata().size
                                   / getIndexSize(meshComponent.indexType),
                               1);
@@ -746,18 +743,16 @@ void GCONTEXT_CLASS recordOctreeSecondaryCommandBuffer(
           std::span(reinterpret_cast<const std::byte*>(&pc), sizeof(pc)));
       const auto& meshComponent = _registry.getComponent<MeshComponent>(object->getEntity());
       const VkBuffer vertexBuffers[] = {
-        _bufferManager->getVkResource(BufferHandle(meshComponent.vertexBufferHandle.getHandle()))};
+        WeakRef<Buffer>(meshComponent.vertexBufferHandle).getVkResource()};
       static constexpr VkDeviceSize offsets[] = {0};
       commandBuffer.bindVertexBuffers(vertexBuffers, offsets);
       commandBuffer.bindIndexBuffer(
-          _bufferManager->getVkResource(BufferHandle(meshComponent.indexBufferHandle.getHandle())),
+          WeakRef<Buffer>(meshComponent.indexBufferHandle).getVkResource(),
           meshComponent.indexType);
-      vkCmdDrawIndexed(
-          commandBuffer.getVkCommandBuffer(),
-          _bufferManager->getMetadata(BufferHandle(meshComponent.indexBufferHandle.getHandle()))
-                  .size
-              / getIndexSize(meshComponent.indexType),
-          1, 0, 0, 0);
+      vkCmdDrawIndexed(commandBuffer.getVkCommandBuffer(),
+                       WeakRef<Buffer>(meshComponent.indexBufferHandle).getMetadata().size
+                           / getIndexSize(meshComponent.indexType),
+                       1, 0, 0, 0);
     }
 
     static constexpr OctreeNode::Subvolume options[] = {
@@ -893,13 +888,12 @@ void GCONTEXT_CLASS recordCommandBuffer(const glm::mat4& cameraProj, const glm::
     const MeshComponent& cubeMeshComponent = _registry.getComponent<MeshComponent>(_skyboxEntity);
     const MaterialComponent& cubeMaterialComponent =
         _registry.getComponent<MaterialComponent>(_skyboxEntity);
-    const VkBuffer vertexBuffers[] = {_bufferManager->getVkResource(
-        BufferHandle(cubeMeshComponent.vertexBufferPrimitiveHandle.getHandle()))};
+    const VkBuffer vertexBuffers[] = {
+      WeakRef<Buffer>(cubeMeshComponent.vertexBufferPrimitiveHandle).getVkResource()};
     static constexpr VkDeviceSize offsets[] = {0};
     secondaryCommandBuffer.bindVertexBuffers(vertexBuffers, offsets);
     secondaryCommandBuffer.bindIndexBuffer(
-        _bufferManager->getVkResource(
-            BufferHandle(cubeMeshComponent.indexBufferHandle.getHandle())),
+        WeakRef<Buffer>(cubeMeshComponent.indexBufferHandle).getVkResource(),
         cubeMeshComponent.indexType);
 
     const PushConstantsSkybox pc = {
@@ -915,9 +909,10 @@ void GCONTEXT_CLASS recordCommandBuffer(const glm::mat4& cameraProj, const glm::
         _skyboxPipeline->getVkPipelineBindPoint(), _skyboxPipeline->getVkPipelineLayout(),
         {_bindlessDescriptorSet.getVkDescriptorSet()});
 
+    const auto& a = WeakRef<Buffer>(cubeMeshComponent.indexBufferHandle).getMetadata();
+
     secondaryCommandBuffer.drawIndexed(
-        _bufferManager->getMetadata(BufferHandle(cubeMeshComponent.indexBufferHandle.getHandle()))
-                .size
+        WeakRef<Buffer>(cubeMeshComponent.indexBufferHandle).getMetadata().size
             / getIndexSize(cubeMeshComponent.indexType),
         1);
 
