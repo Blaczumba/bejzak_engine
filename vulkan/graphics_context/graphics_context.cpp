@@ -903,7 +903,7 @@ void GCONTEXT_CLASS recordCommandBuffer(const glm::mat4& cameraProj, const glm::
     secondaryCommandBuffer.pushConstants(
         _skyboxPipeline->getVkPipelineLayout(),
         _skyboxPipeline->getPushConstantVkShaderStageFlags(),
-        std::span<const std::byte>(reinterpret_cast<const std::byte*>(&pc), sizeof(pc)));
+        std::span(reinterpret_cast<const std::byte*>(&pc), sizeof(pc)));
 
     secondaryCommandBuffer.bindDescriptorSets(
         _skyboxPipeline->getVkPipelineBindPoint(), _skyboxPipeline->getVkPipelineLayout(),
