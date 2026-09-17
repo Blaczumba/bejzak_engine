@@ -21,7 +21,7 @@ public:
   }
 
   Ref<Resource> transferResource(Resource&& resource, const MetadataFor<Resource>& metadata) {
-    std::expected<Ref<Resource>, ReferenceCounterWithMetadata<Resource>::Error> expectedRef;
+    std::expected<Ref<Resource>, typename ReferenceCounterWithMetadata<Resource>::Error> expectedRef;
     for (std::unique_ptr<ReferenceCounterWithMetadata<Resource>>& virtualAllocationCounter :
          _counters) {
       // Fast path: virtual allocation counters have a free spot.
