@@ -381,7 +381,6 @@ void GCONTEXT_CLASS createShadowResources() {
   {
     // TODO: Should not be in this function.
     SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
-    const VkCommandBuffer commandBuffer = handle.getVkCommandBuffer();
     auto [image, metadata] =
         createShadowmap(*_logicalDevice, handle, 1024 * 2, 1024 * 2, VK_FORMAT_D32_SFLOAT);
     view = image.getVkImageView();
@@ -409,7 +408,7 @@ void GCONTEXT_CLASS createShadowResources() {
   const std::tuple<VkImageView, ImageMetadata> shadowMapData = {view, _shadowMapRef.getMetadata()};
   auto [framebuffer, framebufferMetadata] =
       createFramebufferFromTextures(_shadowRenderPass, std::span(&shadowMapData, 1));
-  _shadowFramebuffer = _framebufferAttachmentManager->storeFramebuffer(
+  _shadowFramebuffer = _framebufferManager.storeFramebuffer(
       std::move(framebuffer), framebufferMetadata, {&_shadowMapRef, 1});  // TODO pass proper
                                                                           // attachments
 }
@@ -788,9 +787,7 @@ void GCONTEXT_CLASS recordCommandBuffer(const glm::mat4& cameraProj, const glm::
       {_computeDescriptorSet.getVkDescriptorSet()});
   primaryCommandBuffer.dispatchCompute(16, 16);
 
-  const ImageMetadata& fsrTextureMetadata =
-      _imageManager->getMetadata(_fsrTextureHandle.getHandle());
-  VkImage fsrVkImage = _imageManager->getVkResource(_fsrTextureHandle.getHandle());
+  const ImageMetadata& fsrTextureMetadata = _fsrTextureHandle.getMetadata();
   static DependencyInfoBuilder dependencyInfoBuilder;
   dependencyInfoBuilder.clearBuilders()
       .addImageMemoryBarrier()
@@ -799,7 +796,7 @@ void GCONTEXT_CLASS recordCommandBuffer(const glm::mat4& cameraProj, const glm::
                     VK_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR)
       .withLayouts(
           VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR)
-      .withImage(fsrVkImage,
+      .withImage(_fsrTextureHandle.getVkResource(),
                  VkImageSubresourceRange{
                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                    .baseMipLevel = 0,
@@ -812,6 +809,7 @@ void GCONTEXT_CLASS recordCommandBuffer(const glm::mat4& cameraProj, const glm::
 
   const auto& [framebuffer, framebufferData] =
       _framebufferAttachmentManager->getFramebufferWithMetadata(_framebuffers[imageIndex]);
+  const auto& FramebufferMetadata = _framebuffers[imageIndex].getMetadata();
   const VkViewport viewports[] = {
     VkViewport{.width = static_cast<float>(framebufferData.metadata.extent.width),
                .height = static_cast<float>(framebufferData.metadata.extent.height),
@@ -956,7 +954,6 @@ GCONTEXT_CLASS GraphicsContext(
   _assetManager = AssetManager::create(*_logicalDevice, *_bufferManager);
   _samplerManager = SamplerManager::create();
   _pipelineManager = PipelineManager::create(fileLoader);
-  _framebufferAttachmentManager = FramebufferAttachmentManager::create();
 
   {
     _bindlessDescriptorPool =
@@ -1166,7 +1163,7 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
       framebufferBuilder.addAttachment(view);
     }
     Framebuffer framebuffer = framebufferBuilder.build(_renderPass, extent, 1);
-    _framebuffers.push_back(_framebufferAttachmentManager->storeFramebuffer(
+    _framebuffers.push_back(_framebufferManager.storeFramebuffer(
         std::move(framebuffer), framebufferBuilder.getMetadata(), attachmentRefs, imageView));
   }
 }

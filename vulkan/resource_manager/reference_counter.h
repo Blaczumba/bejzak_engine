@@ -16,4 +16,8 @@ public:
 
   // Must be called when related Ref<Resource> is still alive.
   virtual const MetadataFor<Resource>& getMetadata(HandleFor<Resource> handle) const = 0;
+
+  // Must be called when related Ref<Resource> is still alive.
+  virtual std::tuple<VulkanObjectFor<Resource>, const MetadataFor<Resource>&>
+  getVkResourceWithMetadata(HandleFor<Resource> handle) const = 0;
 };

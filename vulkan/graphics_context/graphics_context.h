@@ -104,7 +104,7 @@ private:
   std::unique_ptr<AssetManager> _assetManager;
   std::unique_ptr<SamplerManager> _samplerManager;
   std::unique_ptr<PipelineManager> _pipelineManager;
-  std::unique_ptr<FramebufferAttachmentManager> _framebufferAttachmentManager;
+  FramebufferManager _framebufferManager;
 
   std::shared_ptr<DescriptorPool> _bindlessDescriptorPool;
   DescriptorSet _bindlessDescriptorSet;
@@ -128,12 +128,12 @@ private:
 
   Renderpass _renderPass;
   AttachmentLayout _attachmentLayout;
-  std::vector<FramebufferHandle> _framebuffers;
+  std::vector<Ref<Framebuffer>> _framebuffers;
 
   // Shadowmap
   Renderpass _shadowRenderPass;
   AttachmentLayout _shadowAttachmentLayout;
-  FramebufferHandle _shadowFramebuffer;
+  Ref<Framebuffer> _shadowFramebuffer;
   Ref<Image> _shadowMapRef;
   Pipeline* _shadowPipeline;
   UniformTextureHandle _shadowHandle;
@@ -149,7 +149,7 @@ private:
   // First pass.
   Renderpass _envMappingRenderPass;
   AttachmentLayout _envMappingAttachmentLayout;
-  FramebufferHandle _envMappingFramebuffer;
+  Ref<Framebuffer> _envMappingFramebuffer;
   Pipeline* _envMappingPipeline;
   Buffer _envMappingUniformBuffer;
   UniformBufferHandle _envMappingHandle;

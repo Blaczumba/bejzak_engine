@@ -7,38 +7,27 @@
 
 #include "common/util/resource_handles.h"
 #include "lib/buffer/buffer.h"
-#include "lib/sparse/sparse_map.h"
 #include "vulkan/resource_manager/ref.h"
+#include "vulkan/resource_manager/resource_manager_allocation_strategy.h"
 #include "vulkan/wrapper/framebuffer/framebuffer.h"
 #include "vulkan/wrapper/memory_objects/image.h"
 
-struct FramebufferData {
-  FramebufferMetadata metadata;
-  lib::Buffer<Ref<Image>> imageRefs;
-};
-
-class FramebufferAttachmentManager {
-  FramebufferAttachmentManager(std::vector<FramebufferHandle>&& freeFramebuffers) noexcept;
-
+class FramebufferManager {
 public:
-  static std::unique_ptr<FramebufferAttachmentManager> create();
+  FramebufferManager() noexcept = default;
 
-  ~FramebufferAttachmentManager();
+  ~FramebufferManager() = default;
 
-  FramebufferHandle storeFramebuffer(
+  Ref<Framebuffer> storeFramebuffer(
       Framebuffer&& framebuffer, const FramebufferMetadata& metadata,
-      std::span<Ref<Image>> attachments, VkImageView swapchainView = VK_NULL_HANDLE);
-
-  void destroyFramebuffer(FramebufferHandle handle);
-
-  const Framebuffer& getFramebuffer(FramebufferHandle handle) const;
-
-  const std::pair<Framebuffer, FramebufferData>& getFramebufferWithMetadata(
-      FramebufferHandle handle) const;
+      std::span<const Ref<Image>> attachments, VkImageView swapchainView = VK_NULL_HANDLE);
 
 private:
-  lib::SparseMap<std::pair<Framebuffer, FramebufferData>, MAX_FRAMEBUFFERS> _framebuffers;
-  std::vector<FramebufferHandle> _freeFramebufferHandles;
+  struct FramebufferDependencies {
+    lib::Buffer<Ref<Image>> imageRefs;
+    VkImageView swapchainImageView;
+  };
 
-  std::unordered_map<VkFramebuffer, VkImageView> _framebuffersSwapchainViews;
+  AllocationStrategy<Framebuffer, AllocationPolicy::POOL_BASED> _allocationStrategy;
+  std::unordered_map<VkFramebuffer, FramebufferDependencies> _dependencies;
 };

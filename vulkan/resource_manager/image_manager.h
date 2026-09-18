@@ -4,11 +4,11 @@
 #include <memory>
 
 #include "vulkan/resource_manager/ref.h"
-#include "vulkan/resource_manager/reference_counter_with_metadata.h"
+#include "vulkan/resource_manager/resource_manager_allocation_strategy.h"
 #include "vulkan/wrapper/logical_device/logical_device.h"
 #include "vulkan/wrapper/memory_objects/image.h"
 
-class ImageManager final : public ReferenceCounterWithMetadata<Image> {
+class ImageManager final {
   ImageManager() = default;
 
 public:
@@ -17,4 +17,7 @@ public:
   ~ImageManager() = default;
 
   Ref<Image> storeImage(Image&& image, const ImageMetadata& metadata);
+
+private:
+  AllocationStrategy<Image, AllocationPolicy::POOL_BASED> _allocationStrategy;
 };

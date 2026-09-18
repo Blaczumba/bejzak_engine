@@ -10,5 +10,5 @@ std::unique_ptr<ImageManager> ImageManager::create() {
 }
 
 Ref<Image> ImageManager::storeImage(Image&& image, const ImageMetadata& metadata) {
-  return *transferResource(std::move(image), metadata);
+  return _allocationStrategy.transferResource(std::move(image), metadata);
 }

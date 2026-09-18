@@ -54,6 +54,10 @@ VkFramebuffer Framebuffer::getVkFramebuffer() const noexcept {
   return _framebuffer;
 }
 
+VkFramebuffer Framebuffer::getVkResource() const noexcept {
+  return _framebuffer;
+}
+
 const Renderpass& Framebuffer::getRenderpass() const {
   return *_renderpass;
 }

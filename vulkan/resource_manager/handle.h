@@ -59,9 +59,9 @@ struct Handle<VirtualAllocation> {
 
 template <>
 struct Handle<Framebuffer> {
-  using type = VirtualAllocationHandle;
-  using vulkan_object = std::variant<VmaVirtualAllocation>;
-  using metadata = VirtualAllocationMetadata;
+  using type = FramebufferHandle;
+  using vulkan_object = VkFramebuffer;
+  using metadata = FramebufferMetadata;
   static constexpr size_t size = MAX_FRAMEBUFFERS;
   static constexpr std::string_view name = "Framebuffer";
   static constexpr common::RefType erased_type = common::RefType::Framebuffer;

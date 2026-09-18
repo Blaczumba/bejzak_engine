@@ -138,6 +138,14 @@ public:
     return _counter->getMetadata(_handle);
   }
 
+  std::tuple<VulkanObjectFor<Resource>, const MetadataFor<Resource>&>
+  getVkResourceWithMetadata() const {
+    if (_counter == nullptr) {
+      throw EngineException("Attempt to get data from null reference counter");
+    }
+    return _counter->getVkResourceWithMetadata(_handle);
+  }
+
 private:
   ReferenceCounter<Resource>* _counter = nullptr;
   HandleFor<Resource> _handle;

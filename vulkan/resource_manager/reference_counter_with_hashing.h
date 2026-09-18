@@ -30,6 +30,10 @@ public:
   // Must be called when related Ref<Resource> is still alive.
   const MetadataFor<Resource>& getMetadata(HandleFor<Resource> handle) const override;
 
+  // Must be called when related Ref<Resource> is still alive.
+  std::tuple<VulkanObjectFor<Resource>, const MetadataFor<Resource>&> getVkResourceWithMetadata(
+      HandleFor<Resource> handle) const override;
+
 protected:
   void incrementRefCount(HandleFor<Resource> handle) override;
 
@@ -119,6 +123,13 @@ template <typename Resource>
 const MetadataFor<Resource>& ReferenceCounterWithHashing<Resource>::getMetadata(
     HandleFor<Resource> handle) const {
   return *_entries[*handle].metadata;
+}
+
+template <typename Resource>
+std::tuple<VulkanObjectFor<Resource>, const MetadataFor<Resource>&>
+ReferenceCounterWithHashing<Resource>::getVkResourceWithMetadata(HandleFor<Resource> handle) const {
+  return std::make_tuple(
+      _entries[*handle].resource.getVkResource(), std::cref(*_entries[*handle].metadata));
 }
 
 template <typename Resource>

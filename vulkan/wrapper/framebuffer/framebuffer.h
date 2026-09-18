@@ -24,6 +24,8 @@ public:
 
   VkFramebuffer getVkFramebuffer() const noexcept;
 
+  VkFramebuffer getVkResource() const noexcept;
+
   const Renderpass& getRenderpass() const;
 
 private:
