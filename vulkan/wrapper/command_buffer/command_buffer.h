@@ -39,8 +39,8 @@ public:
   ~CommandBuffer();
 
   void beginRenderPass(
-      VkSubpassContents subpassContents, const Framebuffer& framebuffer,
-      VkExtent2D framebufferExtent, std::span<const VkClearValue> clearValues) const;
+      VkSubpassContents subpassContents, VkFramebuffer framebuffer, VkExtent2D framebufferExtent,
+      VkRenderPass renderpass, std::span<const VkClearValue> clearValues) const;
 
   void endRenderPass() const;
 

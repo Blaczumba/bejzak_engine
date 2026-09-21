@@ -86,18 +86,17 @@ std::vector<CommandBuffer> CommandBuffer::create(
 }
 
 void CommandBuffer::beginRenderPass(
-    VkSubpassContents subpassContents, const Framebuffer& framebuffer, VkExtent2D framebufferExtent,
-    std::span<const VkClearValue> clearValues) const {
+    VkSubpassContents subpassContents, VkFramebuffer framebuffer, VkExtent2D framebufferExtent,
+    VkRenderPass renderpass, std::span<const VkClearValue> clearValues) const {
   if (_level != VK_COMMAND_BUFFER_LEVEL_PRIMARY) [[unlikely]] {
     throw EngineException(
         "Cannot begin renderpass without VK_COMMAND_BUFFER_LEVEL_PRIMARY specified.");
   }
 
-  const Renderpass& renderpass = framebuffer.getRenderpass();
   const VkRenderPassBeginInfo renderPassInfo = {
     .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-    .renderPass = renderpass.getVkRenderPass(),
-    .framebuffer = framebuffer.getVkFramebuffer(),
+    .renderPass = renderpass,
+    .framebuffer = framebuffer,
     .renderArea = {.offset = {0, 0}, .extent = framebufferExtent},
     .clearValueCount = static_cast<uint32_t>(clearValues.size()),
     .pClearValues = clearValues.data()

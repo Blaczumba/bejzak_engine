@@ -22,7 +22,7 @@
 #include "vulkan/resource_manager/asset_manager.h"
 #include "vulkan/resource_manager/bindless_descriptor_set_writer.h"
 #include "vulkan/resource_manager/buffer_manager.h"
-#include "vulkan/resource_manager/framebuffer_attachments_manager.h"
+#include "vulkan/resource_manager/framebuffer_manager.h"
 #include "vulkan/resource_manager/image_manager.h"
 #include "vulkan/resource_manager/pipeline_manager.h"
 #include "vulkan/resource_manager/sampler_manager.h"
@@ -99,12 +99,12 @@ private:
 
   std::shared_ptr<CommandPool> _singleTimeCommandPool;
 
-  std::unique_ptr<BufferManager> _bufferManager;
-  std::unique_ptr<ImageManager> _imageManager;
+  BufferManager _bufferManager;
+  ImageManager _imageManager;
+  FramebufferManager _framebufferManager;
   std::unique_ptr<AssetManager> _assetManager;
   std::unique_ptr<SamplerManager> _samplerManager;
   std::unique_ptr<PipelineManager> _pipelineManager;
-  FramebufferManager _framebufferManager;
 
   std::shared_ptr<DescriptorPool> _bindlessDescriptorPool;
   DescriptorSet _bindlessDescriptorSet;

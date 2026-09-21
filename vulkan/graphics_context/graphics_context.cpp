@@ -28,7 +28,7 @@
 #include "vulkan/graphics_context/presentation_lib.h"
 #include "vulkan/resource_manager/asset_manager.h"
 #include "vulkan/resource_manager/bindless_descriptor_set_writer.h"
-#include "vulkan/resource_manager/framebuffer_attachments_manager.h"
+#include "vulkan/resource_manager/framebuffer_manager.h"
 #include "vulkan/resource_manager/pipeline_manager.h"
 #include "vulkan/resource_manager/sampler_manager.h"
 #include "vulkan/wrapper/builders/dependency_info_builder.h"
@@ -217,7 +217,7 @@ Entity GCONTEXT_CLASS loadObject(
                            .withMaxAnisotropy(_physicalDevice->getMaxSamplerAnisotropy())
                            .buildMetadata());
   VkImageView view = image.getVkImageView();
-  Ref<Image> imageRef = _imageManager->storeImage(std::move(image), metadata);
+  Ref<Image> imageRef = _imageManager.storeImage(std::move(image), metadata);
   _registry.addComponent<MaterialComponent>(
       entity,
       MaterialComponent{.diffuse = _bindlessWriter->writeTexture(
@@ -237,19 +237,19 @@ Entity GCONTEXT_CLASS loadObject(
   Ref<VirtualAllocation> pVirtualAllocationRef;
   std::tie(pBufferRef, pVirtualAllocationRef) = cubeData.vertexData->buffers.at("P");
   msh.vertexBufferPrimitiveHandle = copyStagingToGpuBuffer(
-      *_logicalDevice, _bufferManager.get(), commandBuffer, pBufferRef, pVirtualAllocationRef,
+      *_logicalDevice, &_bufferManager, commandBuffer, pBufferRef, pVirtualAllocationRef,
       VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
   Ref<Buffer> ptnBufferRef;
   Ref<VirtualAllocation> ptnVirtualAllocationRef;
   std::tie(ptnBufferRef, ptnVirtualAllocationRef) = cubeData.vertexData->buffers.at("PTN");
   msh.vertexBufferHandle = copyStagingToGpuBuffer(
-      *_logicalDevice, _bufferManager.get(), commandBuffer, ptnBufferRef, ptnVirtualAllocationRef,
+      *_logicalDevice, &_bufferManager, commandBuffer, ptnBufferRef, ptnVirtualAllocationRef,
       VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
   Ref<Buffer> indexBufferRef;
   Ref<VirtualAllocation> indexVirtualAllocationRef;
   std::tie(indexBufferRef, indexVirtualAllocationRef) = cubeData.vertexData->indexBuffer;
   msh.indexBufferHandle = copyStagingToGpuBuffer(
-      *_logicalDevice, _bufferManager.get(), commandBuffer, indexBufferRef,
+      *_logicalDevice, &_bufferManager, commandBuffer, indexBufferRef,
       indexVirtualAllocationRef, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
   msh.indexType = internal::convertIndexTypeToVkIndexType(cubeData.vertexData->indexType);
   _registry.addComponent(entity, std::move(msh));
@@ -283,7 +283,7 @@ void GCONTEXT_CLASS createDescriptorSets() {
             .withUsage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)
             .withSize(sizeof(UniformBufferLight))
             .buildUniformBufferWithMetadata(*_logicalDevice);
-    Ref<Buffer> lightBufferRef = _bufferManager->storeBuffer(std::move(buffer), metadata);
+    Ref<Buffer> lightBufferRef = _bufferManager.storeBuffer(std::move(buffer), metadata);
     _lightHandle = _bindlessWriter->writeBuffer(
         lightBufferRef, WeakRef<Buffer>(lightBufferRef).getVkResource(), metadata);
 
@@ -384,7 +384,7 @@ void GCONTEXT_CLASS createShadowResources() {
     auto [image, metadata] =
         createShadowmap(*_logicalDevice, handle, 1024 * 2, 1024 * 2, VK_FORMAT_D32_SFLOAT);
     view = image.getVkImageView();
-    _shadowMapRef = _imageManager->storeImage(std::move(image), metadata);
+    _shadowMapRef = _imageManager.storeImage(std::move(image), metadata);
   }
   Ref<Sampler> samplerRef = _samplerManager->getOrCreateSampler(
       *_logicalDevice,
@@ -479,7 +479,7 @@ std::tuple<UniformTextureHandle, ImageHandle> GCONTEXT_CLASS getOrLoadTexture(
   auto [image, metadata] =
       createTexture2D(*_logicalDevice, commandBuffer, imageData, format, maxSamplerAnisotropy);
   VkImageView view = image.getVkImageView();
-  Ref<Image> imageRef = _imageManager->storeImage(std::move(image), metadata);
+  Ref<Image> imageRef = _imageManager.storeImage(std::move(image), metadata);
   UniformTextureHandle handle = _bindlessWriter->writeTexture(
       imageRef, samplerRef, view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
       _samplerManager->getVkResource(samplerRef.getHandle()));
@@ -529,13 +529,13 @@ void GCONTEXT_CLASS loadObjects(
     Ref<VirtualAllocation> ptntVirtualAllocationRef;
     std::tie(ptntBufferRef, ptntVirtualAllocationRef) = vData.buffers.at("PTNT");
     msh.vertexBufferHandle = copyStagingToGpuBuffer(
-        *_logicalDevice, _bufferManager.get(), commandBuffer, ptntBufferRef,
+        *_logicalDevice, &_bufferManager, commandBuffer, ptntBufferRef,
         ptntVirtualAllocationRef, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
     Ref<Buffer> pBufferRef;
     Ref<VirtualAllocation> pVirtualAllocationRef;
     std::tie(pBufferRef, pVirtualAllocationRef) = vData.buffers.at("P");
     msh.vertexBufferPrimitiveHandle = copyStagingToGpuBuffer(
-        *_logicalDevice, _bufferManager.get(), commandBuffer, pBufferRef, pVirtualAllocationRef,
+        *_logicalDevice, &_bufferManager, commandBuffer, pBufferRef, pVirtualAllocationRef,
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
     msh.aabb = createAABBfromVertices(
         std::span(reinterpret_cast<glm::vec3*>(pBufferRef.getMetadata().mappedMemory
@@ -546,7 +546,7 @@ void GCONTEXT_CLASS loadObjects(
     Ref<VirtualAllocation> indexVirtualAllocationRef;
     std::tie(indexBufferRef, indexVirtualAllocationRef) = vData.indexBuffer;
     msh.indexBufferHandle = copyStagingToGpuBuffer(
-        *_logicalDevice, _bufferManager.get(), commandBuffer, indexBufferRef,
+        *_logicalDevice, &_bufferManager, commandBuffer, indexBufferRef,
         indexVirtualAllocationRef, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
     msh.indexType = internal::convertIndexTypeToVkIndexType(vData.indexType);
 
@@ -578,20 +578,19 @@ void GCONTEXT_CLASS createOctreeScene() {
 
 GCONTEXT_TEMPLATE
 void GCONTEXT_CLASS recordShadowCommandBuffer(const CommandBuffer& commandBuffer) {
-  const ImageMetadata& metadata = _shadowMapRef.getMetadata();
+  const FramebufferMetadata& metadata = _shadowFramebuffer.getMetadata();
   commandBuffer.setVieport({
-    VkViewport{.width = static_cast<float>(metadata.imageExtent.width),
-               .height = static_cast<float>(metadata.imageExtent.height),
+    VkViewport{.width = static_cast<float>(metadata.extent.width),
+               .height = static_cast<float>(metadata.extent.height),
                .minDepth = 0.0f,
                .maxDepth = 1.0f}
   });
-  const VkExtent2D extent{metadata.imageExtent.width, metadata.imageExtent.height};
+  const VkExtent2D extent{metadata.extent.width, metadata.extent.height};
   commandBuffer.setScissor({VkRect2D{.extent = extent}});
 
-  const Framebuffer& framebuffer =
-      _framebufferAttachmentManager->getFramebuffer(_shadowFramebuffer);
   commandBuffer.beginRenderPass(
-      VK_SUBPASS_CONTENTS_INLINE, framebuffer, extent, _shadowAttachmentLayout.getVkClearValues());
+      VK_SUBPASS_CONTENTS_INLINE, _shadowFramebuffer.getVkResource(), extent,
+      _shadowRenderPass.getVkRenderPass(), _shadowAttachmentLayout.getVkClearValues());
 
   commandBuffer.bindPipeline(
       _shadowPipeline->getVkPipelineBindPoint(), _shadowPipeline->getVkPipeline());
@@ -807,24 +806,24 @@ void GCONTEXT_CLASS recordCommandBuffer(const glm::mat4& cameraProj, const glm::
   const VkDependencyInfo dependencyInfo = dependencyInfoBuilder.build();
   primaryCommandBuffer.pipelineBarrier(&dependencyInfo);
 
-  const auto& [framebuffer, framebufferData] =
-      _framebufferAttachmentManager->getFramebufferWithMetadata(_framebuffers[imageIndex]);
+  const auto [framebuffer, framebufferMetadata] =
+      _framebuffers[imageIndex].getVkResourceWithMetadata();
   const auto& FramebufferMetadata = _framebuffers[imageIndex].getMetadata();
   const VkViewport viewports[] = {
-    VkViewport{.width = static_cast<float>(framebufferData.metadata.extent.width),
-               .height = static_cast<float>(framebufferData.metadata.extent.height),
+    VkViewport{.width = static_cast<float>(framebufferMetadata.extent.width),
+               .height = static_cast<float>(framebufferMetadata.extent.height),
                .minDepth = 0.0f,
                .maxDepth = 1.0f}
   };
-  const VkRect2D scissors[] = {VkRect2D{.extent = framebufferData.metadata.extent}};
+  const VkRect2D scissors[] = {VkRect2D{.extent = framebufferMetadata.extent}};
   primaryCommandBuffer.setVieport(viewports);
   primaryCommandBuffer.setScissor(scissors);
   primaryCommandBuffer.beginRenderPass(
-      VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS, framebuffer, framebufferData.metadata.extent,
-      _attachmentLayout.getVkClearValues());
+      VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS, framebuffer, framebufferMetadata.extent,
+      _renderPass.getVkRenderPass(), _attachmentLayout.getVkClearValues());
 
   auto beginInfoBuilder = CommandBuffer::BeginInfoBuilder().withInheritenceInfo(
-      framebuffer.getRenderpass().getVkRenderPass(), framebuffer.getVkFramebuffer(), 0);
+      _renderPass.getVkRenderPass(), framebuffer, 0);
   static const bool viewportScissorInheritance =
       _physicalDevice->hasAvailableExtension(VK_NV_INHERITED_VIEWPORT_SCISSOR_EXTENSION_NAME);
   if (viewportScissorInheritance) [[likely]] {
@@ -949,9 +948,7 @@ GCONTEXT_CLASS GraphicsContext(
           .withFlags(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT)
           .withQueueFamilyIndex(*_physicalDevice->getQueueFamilyIndices().graphicsFamily)
           .build(*_logicalDevice);
-  _bufferManager = BufferManager::create();
-  _imageManager = ImageManager::create();
-  _assetManager = AssetManager::create(*_logicalDevice, *_bufferManager);
+  _assetManager = AssetManager::create(*_logicalDevice, _bufferManager);
   _samplerManager = SamplerManager::create();
   _pipelineManager = PipelineManager::create(fileLoader);
 
@@ -1091,7 +1088,7 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
         VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
     attachmentViews[0] = colorAttachment.getVkImageView();
     Ref<Image> collorAttachmentHandle =
-        _imageManager->storeImage(std::move(colorAttachment), colorAttachmentMetadata);
+        _imageManager.storeImage(std::move(colorAttachment), colorAttachmentMetadata);
 
     auto [depthAtachment, depthAtachmentMetadata] = createAttachment(
         *_logicalDevice, VK_FORMAT_D24_UNORM_S8_UINT, msaaSamples, extent,
@@ -1099,7 +1096,7 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT);
     attachmentViews[1] = depthAtachment.getVkImageView();
     Ref<Image> depthAttachmentHandle =
-        _imageManager->storeImage(std::move(depthAtachment), depthAtachmentMetadata);
+        _imageManager.storeImage(std::move(depthAtachment), depthAtachmentMetadata);
 
     const VkPhysicalDeviceFragmentShadingRatePropertiesKHR& fsrProperties =
         _physicalDevice->getFragmentShadingRateProperties();
@@ -1121,7 +1118,7 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
         _logicalDevice->getVkDevice(), _computeDescriptorSet.getVkDescriptorSet());
 
     Ref<Image> fsrAttachmentHandle = _fsrTextureHandle =
-        _imageManager->storeImage(std::move(fsrTexture), fsrTextureMetadata);
+        _imageManager.storeImage(std::move(fsrTexture), fsrTextureMetadata);
 
     attachmentRefs = lib::Buffer<Ref<Image>>{
       std::move(collorAttachmentHandle), std::move(depthAttachmentHandle),
