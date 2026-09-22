@@ -249,8 +249,8 @@ Entity GCONTEXT_CLASS loadObject(
   Ref<VirtualAllocation> indexVirtualAllocationRef;
   std::tie(indexBufferRef, indexVirtualAllocationRef) = cubeData.vertexData->indexBuffer;
   msh.indexBufferHandle = copyStagingToGpuBuffer(
-      *_logicalDevice, &_bufferManager, commandBuffer, indexBufferRef,
-      indexVirtualAllocationRef, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+      *_logicalDevice, &_bufferManager, commandBuffer, indexBufferRef, indexVirtualAllocationRef,
+      VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
   msh.indexType = internal::convertIndexTypeToVkIndexType(cubeData.vertexData->indexType);
   _registry.addComponent(entity, std::move(msh));
   _registry.addComponent(entity, TransformComponent{.model = cubeData.model});
@@ -529,8 +529,8 @@ void GCONTEXT_CLASS loadObjects(
     Ref<VirtualAllocation> ptntVirtualAllocationRef;
     std::tie(ptntBufferRef, ptntVirtualAllocationRef) = vData.buffers.at("PTNT");
     msh.vertexBufferHandle = copyStagingToGpuBuffer(
-        *_logicalDevice, &_bufferManager, commandBuffer, ptntBufferRef,
-        ptntVirtualAllocationRef, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+        *_logicalDevice, &_bufferManager, commandBuffer, ptntBufferRef, ptntVirtualAllocationRef,
+        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
     Ref<Buffer> pBufferRef;
     Ref<VirtualAllocation> pVirtualAllocationRef;
     std::tie(pBufferRef, pVirtualAllocationRef) = vData.buffers.at("P");
@@ -546,8 +546,8 @@ void GCONTEXT_CLASS loadObjects(
     Ref<VirtualAllocation> indexVirtualAllocationRef;
     std::tie(indexBufferRef, indexVirtualAllocationRef) = vData.indexBuffer;
     msh.indexBufferHandle = copyStagingToGpuBuffer(
-        *_logicalDevice, &_bufferManager, commandBuffer, indexBufferRef,
-        indexVirtualAllocationRef, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+        *_logicalDevice, &_bufferManager, commandBuffer, indexBufferRef, indexVirtualAllocationRef,
+        VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
     msh.indexType = internal::convertIndexTypeToVkIndexType(vData.indexType);
 
     _registry.addComponent<MeshComponent>(e, std::move(msh));

@@ -119,11 +119,9 @@ UniformBufferHandle BindlessDescriptorSetWriter::writeBuffer(
   size_t range = size.value_or(metadata.size);
   if (range + offset > metadata.size) [[unlikely]] {
     throw EngineException(
-        std::format("BindlessDescriptorSetWriter::storeBuffer: Buffer range " "(offset = {}, size "
-                                                                              "= " "{}) exceeds "
-                                                                                   "buffer size "
-                                                                                   "({}).",
-                    offset, range, metadata.size));
+        std::format(
+            "BindlessDescriptorSetWriter::storeBuffer: Buffer range " "(offset = {}, size " "= " "{" "}" ")" " " "e" "x" "c" "e" "e" "d" "s" " " "buffer size " "({}).",
+            offset, range, metadata.size));
   }
 
   const VkDescriptorBufferInfo bufferInfo = {.buffer = buffer, .offset = offset, .range = range};

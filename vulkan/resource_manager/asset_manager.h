@@ -54,13 +54,13 @@ public:
 
   ~AssetManager();
 
-  std::shared_ptr<common::AssetManager::ImageData> loadImageAsync(
+  std::shared_ptr<const common::AssetManager::ImageData> loadImageAsync(
       std::function<std::tuple<ImageResource, OwnedImageData>(void)>&& imageFunction) override;
 
-  std::shared_ptr<common::AssetManager::ImageData> loadImageAsync(
+  std::shared_ptr<const common::AssetManager::ImageData> loadImageAsync(
       std::shared_ptr<void> modelPtr, ImageResource&& imageResource) override;
 
-  std::shared_ptr<common::AssetManager::VertexData> loadVertexDataInterleavingAsync(
+  std::shared_ptr<const common::AssetManager::VertexData> loadVertexDataInterleavingAsync(
       std::shared_ptr<void> modelPtr, std::span<const std::byte> indices,
       common::IndexType indexSize,
       std::vector<common::BufferDescription>&& bufferDescriptions) override;

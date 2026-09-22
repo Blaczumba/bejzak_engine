@@ -50,13 +50,13 @@ public:
     std::atomic<LoadState> loadState = LoadState::PENDING;
   };
 
-  virtual std::shared_ptr<ImageData> loadImageAsync(
+  virtual std::shared_ptr<const ImageData> loadImageAsync(
       std::function<std::tuple<ImageResource, OwnedImageData>(void)>&& imageFunction) = 0;
 
-  virtual std::shared_ptr<ImageData> loadImageAsync(
+  virtual std::shared_ptr<const ImageData> loadImageAsync(
       std::shared_ptr<void> modelPtr, ImageResource&& imageResource) = 0;
 
-  virtual std::shared_ptr<VertexData> loadVertexDataInterleavingAsync(
+  virtual std::shared_ptr<const VertexData> loadVertexDataInterleavingAsync(
       std::shared_ptr<void> modelPtr, std::span<const std::byte> indices, IndexType indexSize,
       std::vector<BufferDescription>&& bufferDescriptions) = 0;
 };

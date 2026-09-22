@@ -94,7 +94,7 @@ AssetData loadObj(
       std::span<const glm::vec2>(model->texCoords.data(), model->texCoords.size()),
       std::span<const glm::vec3>(model->normals.data(), model->normals.size()));
 
-  std::shared_ptr<AssetManager::VertexData> vertexResourceID =
+  std::shared_ptr<const AssetManager::VertexData> vertexResourceID =
       assetManager.loadVertexDataInterleavingAsync(
           model,
           std::span(reinterpret_cast<const std::byte*>(model->indices.data()),

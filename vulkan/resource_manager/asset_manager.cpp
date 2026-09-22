@@ -126,7 +126,7 @@ std::tuple<Ref<Buffer>, Ref<VirtualAllocation>, VirtualAllocationMetadata> Asset
                          virtualAllocationMetadata);
 }
 
-std::shared_ptr<common::AssetManager::ImageData> AssetManager::loadImageAsync(
+std::shared_ptr<const common::AssetManager::ImageData> AssetManager::loadImageAsync(
     std::function<std::tuple<ImageResource, OwnedImageData>(void)>&& imageFunction) {
   auto promise = std::make_shared<common::AssetManager::ImageData>();
   {
@@ -156,7 +156,7 @@ std::shared_ptr<common::AssetManager::ImageData> AssetManager::loadImageAsync(
   return promise;
 }
 
-std::shared_ptr<common::AssetManager::ImageData> AssetManager::loadImageAsync(
+std::shared_ptr<const common::AssetManager::ImageData> AssetManager::loadImageAsync(
     std::shared_ptr<void> modelPtr, ImageResource&& resource) {
   auto promise = std::make_shared<common::AssetManager::ImageData>();
   {
@@ -186,7 +186,8 @@ std::shared_ptr<common::AssetManager::ImageData> AssetManager::loadImageAsync(
   return promise;
 }
 
-std::shared_ptr<common::AssetManager::VertexData> AssetManager::loadVertexDataInterleavingAsync(
+std::shared_ptr<const common::AssetManager::VertexData>
+AssetManager::loadVertexDataInterleavingAsync(
     std::shared_ptr<void> modelPtr, std::span<const std::byte> indices, common::IndexType indexType,
     std::vector<common::BufferDescription>&& bufferDescriptions) {
   auto promise = std::make_shared<common::AssetManager::VertexData>();

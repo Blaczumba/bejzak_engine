@@ -100,8 +100,8 @@ std::span<const std::byte> getIndices(
 ImageID getOrLoadTexture(
     std::shared_ptr<SharedData>& sharedData, const FileLoader& fileLoader, std::string_view baseDir,
     int textureIndex, AssetManager& assetManager,
-    std::
-        unordered_map<std::string, std::shared_ptr<AssetManager::ImageData>>& textureCollisionMap) {
+    std::unordered_map<std::string, std::shared_ptr<const AssetManager::ImageData>>&
+        textureCollisionMap) {
   if (textureIndex < 0) {
     return ImageID{{}, ""};
   }
@@ -155,7 +155,8 @@ void processNode(
     common::AssetManager& assetManager, const FileLoader& fileLoader,
     std::shared_ptr<SharedData>& sharedData, const tinygltf::Node& node,
     const glm::mat4& parentTransform, std::vector<AssetData>& assets,
-    std::unordered_map<std::string, std::shared_ptr<AssetManager::ImageData>>& textureCollisionMap,
+    std::unordered_map<std::string, std::shared_ptr<const AssetManager::ImageData>>&
+        textureCollisionMap,
     const std::string& baseDir) {
   const glm::mat4 currentTransform = parentTransform * GetNodeTransform(node);
 
@@ -219,7 +220,7 @@ void processNode(
         std::span(reinterpret_cast<const glm::vec3*>(sharedData->tangents.back().data()),
                   sharedData->tangents.back().size()));
 
-    std::shared_ptr<AssetManager::VertexData> vertexResourceID =
+    std::shared_ptr<const AssetManager::VertexData> vertexResourceID =
         assetManager.loadVertexDataInterleavingAsync(
             sharedData, indicesBytes, getIndexType(indexSize),
             common::analyzeConfig(orders, attributeDescriptions));
@@ -259,7 +260,8 @@ std::vector<AssetData> LoadGltfFromFile(
 
   const std::string baseDir = std::filesystem::path(filePath).parent_path().string();
   std::vector<AssetData> assets;
-  std::unordered_map<std::string, std::shared_ptr<AssetManager::ImageData>> textureCollisionMap;
+  std::unordered_map<std::string, std::shared_ptr<const AssetManager::ImageData>>
+      textureCollisionMap;
   for (const tinygltf::Scene& scene : sharedData->model.scenes) {
     for (int nodeIndex : scene.nodes) {
       const tinygltf::Node& node = sharedData->model.nodes[nodeIndex];
@@ -282,7 +284,8 @@ std::vector<AssetData> LoadGltfFromString(
       &sharedData->model, &error, &warning, dataString.data(), dataString.size(), baseDir);
 
   std::vector<AssetData> assets;
-  std::unordered_map<std::string, std::shared_ptr<AssetManager::ImageData>> textureCollisionMap;
+  std::unordered_map<std::string, std::shared_ptr<const AssetManager::ImageData>>
+      textureCollisionMap;
   for (const tinygltf::Scene& scene : sharedData->model.scenes) {
     for (int nodeIndex : scene.nodes) {
       const tinygltf::Node& node = sharedData->model.nodes[nodeIndex];

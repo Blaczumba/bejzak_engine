@@ -11,12 +11,12 @@
 namespace common {
 
 struct ImageID {
-  std::shared_ptr<AssetManager::ImageData> imageData;
+  std::shared_ptr<const AssetManager::ImageData> imageData;
   std::string path;
 };
 
 struct AssetData {
-  std::shared_ptr<AssetManager::VertexData> vertexData;
+  std::shared_ptr<const AssetManager::VertexData> vertexData;
   glm::mat4 model;
 
   ImageID diffuseTexture;
