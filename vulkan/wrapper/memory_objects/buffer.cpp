@@ -129,7 +129,7 @@ const VkBuffer& Buffer::getVkBuffer() const noexcept {
   return _buffer;
 }
 
-VkBuffer Buffer::getVkResource() const noexcept {
+VkBuffer Buffer::getUnderlyingResource() const noexcept {
   return _buffer;
 }
 

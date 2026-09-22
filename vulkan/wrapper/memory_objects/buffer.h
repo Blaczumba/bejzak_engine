@@ -23,7 +23,7 @@ public:
   // TODO: Do not return the reference.
   const VkBuffer& getVkBuffer() const noexcept;
 
-  VkBuffer getVkResource() const noexcept;
+  VkBuffer getUnderlyingResource() const noexcept;
 
   const LogicalDevice& getLogicalDevice() const noexcept;
 

@@ -124,11 +124,11 @@ public:
     return _counter;
   }
 
-  VulkanObjectFor<Resource> getVkResource() const {
+  UnderlyingResourceFor<Resource> getUnderlyingResource() const {
     if (_counter == nullptr) {
       throw EngineException("Attempt to get Vulkan resource from null reference counter");
     }
-    return _counter->getVkResource(_handle);
+    return _counter->getUnderlyingResource(_handle);
   }
 
   const MetadataFor<Resource>& getMetadata() const {
@@ -138,12 +138,12 @@ public:
     return _counter->getMetadata(_handle);
   }
 
-  std::tuple<VulkanObjectFor<Resource>, const MetadataFor<Resource>&>
-  getVkResourceWithMetadata() const {
+  std::tuple<UnderlyingResourceFor<Resource>, const MetadataFor<Resource>&>
+  getUnderlyingResourceWithMetadata() const {
     if (_counter == nullptr) {
       throw EngineException("Attempt to get data from null reference counter");
     }
-    return _counter->getVkResourceWithMetadata(_handle);
+    return _counter->getUnderlyingResourceWithMetadata(_handle);
   }
 
 private:
@@ -177,11 +177,11 @@ public:
     return _counter;
   }
 
-  VulkanObjectFor<Resource> getVkResource() const {
+  UnderlyingResourceFor<Resource> getUnderlyingResource() const {
     if (_counter == nullptr) {
       throw EngineException("Attempt to get Vulkan resource from null reference counter");
     }
-    return _counter->getVkResource(_handle);
+    return _counter->getUnderlyingResource(_handle);
   }
 
   const MetadataFor<Resource>& getMetadata() const {

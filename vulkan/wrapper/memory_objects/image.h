@@ -25,7 +25,7 @@ public:
 
   VkImage getVkImage() const noexcept;
 
-  VkImage getVkResource() const noexcept;
+  VkImage getUnderlyingResource() const noexcept;
 
   VkImageView getVkImageView(size_t index = 0) const noexcept;
 

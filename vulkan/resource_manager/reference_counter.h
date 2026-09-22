@@ -12,12 +12,13 @@ public:
   virtual void decrementRefCount(HandleFor<Resource> handle) = 0;
 
   // Must be called when related Ref<Resource> is still alive.
-  virtual VulkanObjectFor<Resource> getVkResource(HandleFor<Resource> handle) const = 0;
+  virtual UnderlyingResourceFor<Resource> getUnderlyingResource(
+      HandleFor<Resource> handle) const = 0;
 
   // Must be called when related Ref<Resource> is still alive.
   virtual const MetadataFor<Resource>& getMetadata(HandleFor<Resource> handle) const = 0;
 
   // Must be called when related Ref<Resource> is still alive.
-  virtual std::tuple<VulkanObjectFor<Resource>, const MetadataFor<Resource>&>
-  getVkResourceWithMetadata(HandleFor<Resource> handle) const = 0;
+  virtual std::tuple<UnderlyingResourceFor<Resource>, const MetadataFor<Resource>&>
+  getUnderlyingResourceWithMetadata(HandleFor<Resource> handle) const = 0;
 };

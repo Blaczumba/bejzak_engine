@@ -101,7 +101,7 @@ VkImage Image::getVkImage() const noexcept {
   return _image;
 }
 
-VkImage Image::getVkResource() const noexcept {
+VkImage Image::getUnderlyingResource() const noexcept {
   return _image;
 }
 

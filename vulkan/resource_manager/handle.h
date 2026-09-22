@@ -19,7 +19,7 @@ struct Handle;
 template <>
 struct Handle<Sampler> {
   using type = SamplerHandle;
-  using vulkan_object = VkSampler;
+  using underlying_resource = VkSampler;
   using metadata = SamplerMetadata;
   using hasher = SamplerHasher;
   static constexpr size_t size = MAX_SAMPLERS;
@@ -30,7 +30,7 @@ struct Handle<Sampler> {
 template <>
 struct Handle<Buffer> {
   using type = BufferHandle;
-  using vulkan_object = VkBuffer;
+  using underlying_resource = VkBuffer;
   using metadata = BufferMetadata;
   static constexpr size_t size = MAX_BUFFERS;
   static constexpr std::string_view name = "Buffer";
@@ -40,7 +40,7 @@ struct Handle<Buffer> {
 template <>
 struct Handle<Image> {
   using type = ImageHandle;
-  using vulkan_object = VkImage;
+  using underlying_resource = VkImage;
   using metadata = ImageMetadata;
   static constexpr size_t size = MAX_IMAGES;
   static constexpr std::string_view name = "Image";
@@ -50,7 +50,7 @@ struct Handle<Image> {
 template <>
 struct Handle<VirtualAllocation> {
   using type = VirtualAllocationHandle;
-  using vulkan_object = std::variant<VmaVirtualAllocation>;
+  using underlying_resource = std::variant<VmaVirtualAllocation>;
   using metadata = VirtualAllocationMetadata;
   static constexpr size_t size = MAX_VIRTUAL_ALLOCATIONS;
   static constexpr std::string_view name = "VirtualAllocation";
@@ -60,7 +60,7 @@ struct Handle<VirtualAllocation> {
 template <>
 struct Handle<Framebuffer> {
   using type = FramebufferHandle;
-  using vulkan_object = VkFramebuffer;
+  using underlying_resource = VkFramebuffer;
   using metadata = FramebufferMetadata;
   static constexpr size_t size = MAX_FRAMEBUFFERS;
   static constexpr std::string_view name = "Framebuffer";
@@ -73,7 +73,7 @@ template <typename T>
 using HandleFor = typename Handle<T>::type;
 
 template <typename T>
-using VulkanObjectFor = typename Handle<T>::vulkan_object;
+using UnderlyingResourceFor = typename Handle<T>::underlying_resource;
 
 template <typename T>
 using MetadataFor = typename Handle<T>::metadata;

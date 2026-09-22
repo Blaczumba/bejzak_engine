@@ -26,14 +26,14 @@ public:
 
   // Should be moved to protected session.
   // Must be called when related Ref<Resource> is still alive.
-  VulkanObjectFor<Resource> getVkResource(HandleFor<Resource> handle) const override;
+  UnderlyingResourceFor<Resource> getUnderlyingResource(HandleFor<Resource> handle) const override;
 
   // Must be called when related Ref<Resource> is still alive.
   const MetadataFor<Resource>& getMetadata(HandleFor<Resource> handle) const override;
 
   // Must be called when related Ref<Resource> is still alive.
-  std::tuple<VulkanObjectFor<Resource>, const MetadataFor<Resource>&> getVkResourceWithMetadata(
-      HandleFor<Resource> handle) const override;
+  std::tuple<UnderlyingResourceFor<Resource>, const MetadataFor<Resource>&>
+  getUnderlyingResourceWithMetadata(HandleFor<Resource> handle) const override;
 
   size_t size() const;
 
@@ -78,9 +78,9 @@ ReferenceCounterWithMetadata<Resource>::transferResource(
 }
 
 template <typename Resource>
-VulkanObjectFor<Resource> ReferenceCounterWithMetadata<Resource>::getVkResource(
+UnderlyingResourceFor<Resource> ReferenceCounterWithMetadata<Resource>::getUnderlyingResource(
     HandleFor<Resource> handle) const {
-  return _entries[*handle].resource.getVkResource();
+  return _entries[*handle].resource.getUnderlyingResource();
 }
 
 template <typename Resource>
@@ -90,11 +90,11 @@ const MetadataFor<Resource>& ReferenceCounterWithMetadata<Resource>::getMetadata
 }
 
 template <typename Resource>
-std::tuple<VulkanObjectFor<Resource>, const MetadataFor<Resource>&>
-ReferenceCounterWithMetadata<Resource>::getVkResourceWithMetadata(
+std::tuple<UnderlyingResourceFor<Resource>, const MetadataFor<Resource>&>
+ReferenceCounterWithMetadata<Resource>::getUnderlyingResourceWithMetadata(
     HandleFor<Resource> handle) const {
   return std::make_tuple(
-      _entries[*handle].resource.getVkResource(), std::cref(_entries[*handle].metadata));
+      _entries[*handle].resource.getUnderlyingResource(), std::cref(_entries[*handle].metadata));
 }
 
 template <typename Resource>

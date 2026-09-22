@@ -66,7 +66,7 @@ Ref<Buffer> copyStagingToGpuBuffer(const LogicalDevice& logicalDevice, BufferMan
           .withUsage(VK_BUFFER_USAGE_TRANSFER_DST_BIT | usage)
           .withSize(allocationRef.getMetadata().size)
           .buildVertexInputBufferWithMetadata(logicalDevice);
-  copyBufferToBuffer(commandBuffer, bufferRef.getVkResource(), buffer.getVkBuffer(),
+  copyBufferToBuffer(commandBuffer, bufferRef.getUnderlyingResource(), buffer.getVkBuffer(),
                      allocationRef.getMetadata().offset, 0, allocationRef.getMetadata().size);
   return bufferManager->storeBuffer(std::move(buffer), metadata);
 }
@@ -222,7 +222,7 @@ Entity GCONTEXT_CLASS loadObject(
       entity,
       MaterialComponent{.diffuse = _bindlessWriter->writeTexture(
                             imageRef, samplerRef, view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                            _samplerManager->getVkResource(samplerRef.getHandle())),
+                            _samplerManager->getUnderlyingResource(samplerRef.getHandle())),
                         .pipelineHandle = pipelineHandle});
   Ref<Buffer> vertexBufferRef;
   Ref<VirtualAllocation> virtualAllocationRef;
@@ -285,7 +285,7 @@ void GCONTEXT_CLASS createDescriptorSets() {
             .buildUniformBufferWithMetadata(*_logicalDevice);
     Ref<Buffer> lightBufferRef = _bufferManager.storeBuffer(std::move(buffer), metadata);
     _lightHandle = _bindlessWriter->writeBuffer(
-        lightBufferRef, WeakRef<Buffer>(lightBufferRef).getVkResource(), metadata);
+        lightBufferRef, WeakRef<Buffer>(lightBufferRef).getUnderlyingResource(), metadata);
 
     _ubLight.pos = glm::vec3(15.1891f, 2.66408f, -0.841221f);
     _ubLight.projView = glm::perspective(glm::radians(120.0f), 1.0f, 0.1f, 40.0f);
@@ -398,7 +398,7 @@ void GCONTEXT_CLASS createShadowResources() {
           .buildMetadata());
   _shadowHandle = _bindlessWriter->writeTexture(
       _shadowMapRef, samplerRef, view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-      _samplerManager->getVkResource(samplerRef.getHandle()));
+      _samplerManager->getUnderlyingResource(samplerRef.getHandle()));
   _shadowAttachmentLayout.addShadowAttachment(
       VK_FORMAT_D32_SFLOAT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
@@ -482,7 +482,7 @@ std::tuple<UniformTextureHandle, ImageHandle> GCONTEXT_CLASS getOrLoadTexture(
   Ref<Image> imageRef = _imageManager.storeImage(std::move(image), metadata);
   UniformTextureHandle handle = _bindlessWriter->writeTexture(
       imageRef, samplerRef, view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-      _samplerManager->getVkResource(samplerRef.getHandle()));
+      _samplerManager->getUnderlyingResource(samplerRef.getHandle()));
 
   const auto result = std::make_tuple(handle, imageRef.getHandle());
   it->second = result;
@@ -589,7 +589,7 @@ void GCONTEXT_CLASS recordShadowCommandBuffer(const CommandBuffer& commandBuffer
   commandBuffer.setScissor({VkRect2D{.extent = extent}});
 
   commandBuffer.beginRenderPass(
-      VK_SUBPASS_CONTENTS_INLINE, _shadowFramebuffer.getVkResource(), extent,
+      VK_SUBPASS_CONTENTS_INLINE, _shadowFramebuffer.getUnderlyingResource(), extent,
       _shadowRenderPass.getVkRenderPass(), _shadowAttachmentLayout.getVkClearValues());
 
   commandBuffer.bindPipeline(
@@ -608,10 +608,11 @@ void GCONTEXT_CLASS recordShadowCommandBuffer(const CommandBuffer& commandBuffer
                                 std::span(reinterpret_cast<const std::byte*>(&pc), sizeof(pc)));
 
     commandBuffer.bindVertexBuffers(
-        {WeakRef<Buffer>(meshComponent.vertexBufferPrimitiveHandle).getVkResource()}, {0});
+        {WeakRef<Buffer>(meshComponent.vertexBufferPrimitiveHandle).getUnderlyingResource()}, {0});
 
     commandBuffer.bindIndexBuffer(
-        WeakRef<Buffer>(meshComponent.indexBufferHandle).getVkResource(), meshComponent.indexType);
+        WeakRef<Buffer>(meshComponent.indexBufferHandle).getUnderlyingResource(),
+        meshComponent.indexType);
     commandBuffer.drawIndexed(WeakRef<Buffer>(meshComponent.indexBufferHandle).getMetadata().size
                                   / getIndexSize(meshComponent.indexType),
                               1);
@@ -741,11 +742,11 @@ void GCONTEXT_CLASS recordOctreeSecondaryCommandBuffer(
           std::span(reinterpret_cast<const std::byte*>(&pc), sizeof(pc)));
       const auto& meshComponent = _registry.getComponent<MeshComponent>(object->getEntity());
       const VkBuffer vertexBuffers[] = {
-        WeakRef<Buffer>(meshComponent.vertexBufferHandle).getVkResource()};
+        WeakRef<Buffer>(meshComponent.vertexBufferHandle).getUnderlyingResource()};
       static constexpr VkDeviceSize offsets[] = {0};
       commandBuffer.bindVertexBuffers(vertexBuffers, offsets);
       commandBuffer.bindIndexBuffer(
-          WeakRef<Buffer>(meshComponent.indexBufferHandle).getVkResource(),
+          WeakRef<Buffer>(meshComponent.indexBufferHandle).getUnderlyingResource(),
           meshComponent.indexType);
       vkCmdDrawIndexed(commandBuffer.getVkCommandBuffer(),
                        WeakRef<Buffer>(meshComponent.indexBufferHandle).getMetadata().size
@@ -795,7 +796,7 @@ void GCONTEXT_CLASS recordCommandBuffer(const glm::mat4& cameraProj, const glm::
                     VK_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR)
       .withLayouts(
           VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR)
-      .withImage(_fsrTextureHandle.getVkResource(),
+      .withImage(_fsrTextureHandle.getUnderlyingResource(),
                  VkImageSubresourceRange{
                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                    .baseMipLevel = 0,
@@ -807,7 +808,7 @@ void GCONTEXT_CLASS recordCommandBuffer(const glm::mat4& cameraProj, const glm::
   primaryCommandBuffer.pipelineBarrier(&dependencyInfo);
 
   const auto [framebuffer, framebufferMetadata] =
-      _framebuffers[imageIndex].getVkResourceWithMetadata();
+      _framebuffers[imageIndex].getUnderlyingResourceWithMetadata();
   const auto& FramebufferMetadata = _framebuffers[imageIndex].getMetadata();
   const VkViewport viewports[] = {
     VkViewport{.width = static_cast<float>(framebufferMetadata.extent.width),
@@ -886,11 +887,11 @@ void GCONTEXT_CLASS recordCommandBuffer(const glm::mat4& cameraProj, const glm::
     const MaterialComponent& cubeMaterialComponent =
         _registry.getComponent<MaterialComponent>(_skyboxEntity);
     const VkBuffer vertexBuffers[] = {
-      WeakRef<Buffer>(cubeMeshComponent.vertexBufferPrimitiveHandle).getVkResource()};
+      WeakRef<Buffer>(cubeMeshComponent.vertexBufferPrimitiveHandle).getUnderlyingResource()};
     static constexpr VkDeviceSize offsets[] = {0};
     secondaryCommandBuffer.bindVertexBuffers(vertexBuffers, offsets);
     secondaryCommandBuffer.bindIndexBuffer(
-        WeakRef<Buffer>(cubeMeshComponent.indexBufferHandle).getVkResource(),
+        WeakRef<Buffer>(cubeMeshComponent.indexBufferHandle).getUnderlyingResource(),
         cubeMeshComponent.indexType);
 
     const PushConstantsSkybox pc = {
@@ -1192,7 +1193,7 @@ std::tuple<Image, ImageMetadata> createSkybox(
       imageMetadata.arrayLayers);
   Ref<Buffer> rfBuf = imageData.stagingBuffer;
   Ref<VirtualAllocation> rfVirt = imageData.virtualAllocation;
-  commandBuffer.copyBufferToImage(rfBuf.getVkResource(), image.getVkImage(),
+  commandBuffer.copyBufferToImage(rfBuf.getUnderlyingResource(), image.getVkImage(),
                                   internal::translateImageSubresourcesToVkBufferImageCopy(
                                       imageData.copyRegions, rfVirt.getMetadata().offset));
   commandBuffer.transitionImageLayout(
@@ -1259,7 +1260,7 @@ std::tuple<Image, ImageMetadata> createTexture2D(
       imageMetadata.arrayLayers);
   Ref<Buffer> rfBuf = imageData.stagingBuffer;
   Ref<VirtualAllocation> rfVirt = imageData.virtualAllocation;
-  commandBuffer.copyBufferToImage(rfBuf.getVkResource(), image.getVkImage(),
+  commandBuffer.copyBufferToImage(rfBuf.getUnderlyingResource(), image.getVkImage(),
                                   internal::translateImageSubresourcesToVkBufferImageCopy(
                                       imageData.copyRegions, rfVirt.getMetadata().offset));
   commandBuffer.generateMipmaps(

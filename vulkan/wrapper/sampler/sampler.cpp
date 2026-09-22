@@ -50,7 +50,7 @@ VkSampler Sampler::getVkSampler() const noexcept {
   return _sampler;
 }
 
-VkSampler Sampler::getVkResource() const noexcept {
+VkSampler Sampler::getUnderlyingResource() const noexcept {
   return _sampler;
 }
 
