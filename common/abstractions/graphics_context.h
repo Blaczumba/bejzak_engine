@@ -1,6 +1,5 @@
 #pragma once
 
-#include <any>
 #include <cstdint>
 
 #include "common/abstractions/contexts.h"
@@ -16,9 +15,7 @@ class GraphicsContext {
 public:
   virtual ~GraphicsContext() = default;
 
-  virtual UpdateContextResponse update(const UpdateContext& updateContext) = 0;
-
-  virtual void draw(const DrawingContext& drawingContext) = 0;
+  virtual void draw() = 0;
 
   virtual void initializeResources() = 0;
 
@@ -27,8 +24,6 @@ public:
   virtual void createPresentingResources(const PresentResources& presentResources) = 0;
 
   virtual void waitDeviceIdle() const = 0;
-
-  virtual std::any getSynchronizationContext() const = 0;
 
 private:
 };

@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <memory>
+#include <span>
 #include <vulkan/vulkan.h>
 
 #include "vulkan/wrapper/logical_device/resource_destroyer.h"
@@ -50,6 +51,12 @@ public:
   void destroyResource(ResourceDestroyer::Job destroyResource) const;
 
   VkImageView createImageView(const VkImageViewCreateInfo& imageViewCreateInfo) const;
+
+  VkResult waitForFences(
+      std::span<const VkFence> fences, VkBool32 waitAll = VK_FALSE, uint64_t timeout = UINT64_MAX);
+
+  VkResult waitForFences(std::initializer_list<VkFence> fences, VkBool32 waitAll = VK_FALSE,
+                         uint64_t timeout = UINT64_MAX);
 
   VkDevice getVkDevice() const noexcept;
 

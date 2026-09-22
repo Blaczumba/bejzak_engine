@@ -3,7 +3,9 @@
 #include "common/math/engine_math.h"
 #include "common/util/engine_exception.h"
 #include "lib/types/util.h"
+#include "presentation_graphics_communication/presentation_graphics_communication.h"
 #include "vulkan/graphics_context/graphics_context.h"
+#include "vulkan/graphics_context/presentation_lib.h"
 #include "vulkan/wrapper/instance/instance.h"
 #include "vulkan/wrapper/logical_device/logical_device.h"
 #include "vulkan/wrapper/physical_device/physical_device.h"
@@ -13,20 +15,24 @@
 namespace vlkn {
 
 Presentation::Presentation(
-    std::shared_ptr<Window>&& window, Surface&& surface, Swapchain&& swapchain,
-    std::unique_ptr<GraphicsContext<false, false>>&& graphicsContext, const FileLoader& fileLoader)
-  : _window(std::move(window)), _surface(std::move(surface)), _swapchain(std::move(swapchain)),
-    _graphicsContext(std::move(graphicsContext)),
+    std::shared_ptr<Window> window, std::shared_ptr<Instance> instance, Surface&& surface,
+    PresentationContext* presentationContext,
+    std::unique_ptr<GraphicsContext<false, false>> graphicsContext,
+    std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer,
+    const FileLoader& fileLoader)
+  : _window(std::move(window)), _instance(std::move(instance)), _surface(std::move(surface)),
+    _presentationContext(presentationContext), _graphicsContext(std::move(graphicsContext)),
+    _communicationLayer(std::move(communicationLayer)),
     _mouseKeyboardManager(_window->createMouseKeyboardManager()) {}
 
 std::unique_ptr<common::Presentation> Presentation::create(
-    std::shared_ptr<Window>&& window, const FileLoader& fileLoader) {
+    std::shared_ptr<Window> window, const FileLoader& fileLoader) {
   std::vector<const char*> requiredExtensions = window->getVulkanExtensions();
 #ifdef VALIDATION_LAYERS_ENABLED
   requiredExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 #endif  // VALIDATION_LAYERS_ENABLED
   requiredExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
-  std::unique_ptr<Instance> instance =
+  std::shared_ptr<Instance> instance =
       Instance::createPtr("Bejzak Engine", requiredExtensions, debugCallback1);
 #ifdef VALIDATION_LAYERS_ENABLED
   DebugMessenger debugMessenger = DebugMessenger::create(*instance, debugCallback1);
@@ -44,13 +50,19 @@ std::unique_ptr<common::Presentation> Presentation::create(
           .withPreferredPresentMode(VK_PRESENT_MODE_MAILBOX_KHR)
           .build(*logicalDevice, surface.getVkSurface(), VkExtent2D{width, height});
 
+  std::unique_ptr<PresentationContext> presentationContext =
+      PresentationContext::create(std::move(swapchain));
+  PresentationContext* presentationContextPtr = presentationContext.get();
+
+  std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer =
+      engine::PresentationGraphicsCommunication::create();
   auto graphicsContext =
       lib::dynamicUniqueCast<GraphicsContext<false, false>>(GraphicsContext<false, false>::create(
-          std::move(instance), std::move(debugMessenger), std::move(physicalDevice),
-          std::move(logicalDevice), fileLoader));
-  return std::unique_ptr<Presentation>(
-      new Presentation(std::move(window), std::move(surface), std::move(swapchain),
-                       std::move(graphicsContext), fileLoader));
+          instance, std::move(debugMessenger), std::move(physicalDevice), std::move(logicalDevice),
+          fileLoader, communicationLayer, std::move(presentationContext)));
+  return std::unique_ptr<Presentation>(new Presentation(
+      std::move(window), std::move(instance), std::move(surface), presentationContextPtr,
+      std::move(graphicsContext), std::move(communicationLayer), fileLoader));
 }
 
 common::GraphicsContext* Presentation::getGraphicsContext() {
@@ -75,20 +87,7 @@ void Presentation::run() {
     }
   });
   /////////////////////////
-  const SynchronizationContext* synchContext =
-      std::any_cast<const SynchronizationContext*>(_graphicsContext->getSynchronizationContext());
-
-  const auto [width, height] = _swapchain.getExtent();
-  std::span<const VkImageView> imageViews = _swapchain.getImageViews();
-  _graphicsContext->createPresentingResources(common::PresentResources{
-    .imageFormat = static_cast<int64_t>(_swapchain.getVkFormat()),
-    .width = width,
-    .height = height,
-    .numLayers = 1,
-    .imageViews =
-        std::span(reinterpret_cast<const std::byte*>(imageViews.data()), imageViews.size()),
-    .multiview = false,
-  });
+  _graphicsContext->createPresentingResources(_presentationContext->getPresentResources());
 
   _graphicsContext->initializeResources();
   Camera camera(PerspectiveProjection{glm::radians(45.0f), 1920.0f / 1080.f, 0.01f, 500.0f},
@@ -104,23 +103,21 @@ void Presentation::run() {
     camera.updateFromKeyboard(*_mouseKeyboardManager, deltaTime);
     /////////////////////////
     _graphicsContext->waitCompleteExecution();
-    _swapchain.acquireNextImage(synchContext->imageAvailableSemaphores[synchContext->currentFrame],
-                                &_drawingContext.imageIndex);
+    _communicationLayer->setCurrentSwapchainImageIndex(_presentationContext->acquireNextImage());
     glm::vec2 mousePos = _mouseKeyboardManager->getMousePosition();
     const glm::vec3 viewDir = common::getWorldSpaceViewDirection(
         mousePos.x, mousePos.y, screenWidth, screenHeight, glm::inverse(tempViewMat),
         glm::inverse(camera.getProjectionMatrix()));
-    _drawingContext.cameraContexts = {
-      {camera.getPosition(),
-       _mouseKeyboardManager->isPressed(Keyboard::Key::R) ? tempViewMat = camera.getViewMatrix() :
-                                                            tempViewMat, camera.getProjectionMatrix(), viewDir}
-    };
-    _drawingContext.screenSpaceViewPos = _mouseKeyboardManager->getMousePosition();
-    _graphicsContext->draw(_drawingContext);
-    _swapchain.present(_drawingContext.imageIndex,
-                       synchContext->renderFinishedSemaphores[_drawingContext.imageIndex]);
+    _communicationLayer->setCameraContexts({
+      common::CameraContext{
+                            camera.getPosition(),
+                            _mouseKeyboardManager->isPressed(Keyboard::Key::R) ? tempViewMat = camera.getViewMatrix() :
+                                                             tempViewMat, camera.getProjectionMatrix(), viewDir}
+    });
+    _communicationLayer->setScreenPos(mousePos.x, mousePos.y);
+    _graphicsContext->draw();
+    _presentationContext->present();
   }
-  _graphicsContext->waitDeviceIdle();
 }
 
 }  // namespace vlkn

@@ -1,0 +1,9 @@
+add_library(VulkanWrapperBuilders submit_info_builder.h submit_info_builder.cpp
+submit_info_view_builder.h submit_info_view_builder.cpp
+image_memory_barrier_builder.h image_memory_barrier_builder.cpp
+dependency_info_builder.h dependency_info_builder.cpp)
+
+target_link_libraries(VulkanWrapperBuilders PUBLIC Vulkan::Vulkan)
+
+target_include_directories(VulkanWrapperBuilders PUBLIC ${PROJECT_SOURCE_DIR})
+target_include_directories(VulkanWrapperBuilders PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

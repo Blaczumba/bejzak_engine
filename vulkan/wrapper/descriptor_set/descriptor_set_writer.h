@@ -10,23 +10,26 @@
 #include "lib/buffer/buffer.h"
 #include "vulkan/wrapper/descriptor_set/descriptor_set.h"
 #include "vulkan/wrapper/memory_objects/buffer.h"
-#include "vulkan/wrapper/memory_objects/texture.h"
+#include "vulkan/wrapper/memory_objects/image.h"
 #include "vulkan/wrapper/sampler/sampler.h"
 
 class DescriptorSetWriter {
 public:
   DescriptorSetWriter() noexcept = default;
 
-  DescriptorSetWriter& storeTexture(const Texture& texture, const Sampler& sampler);
+  DescriptorSetWriter& storeTexture(VkImageView imageView, VkImageLayout layout, VkSampler sampler);
 
-  DescriptorSetWriter& storeImageStorage(const Texture& texture);
+  DescriptorSetWriter& storeImageStorage(VkImageView imageView, VkImageLayout layout);
 
-  DescriptorSetWriter& storeBuffer(const Buffer& buffer);
+  DescriptorSetWriter& storeBuffer(
+      const Buffer& buffer, VkBufferUsageFlags usage, VkDeviceSize range, VkDeviceSize offset = 0);
 
   DescriptorSetWriter& storeDynamicBuffer(
-      const Buffer& buffer, uint32_t dynamicElementSize, uint32_t descriptorCount = 1);
+      const Buffer& buffer, VkBufferUsageFlags usage, uint32_t dynamicElementSize,
+      uint32_t descriptorCount = 1);
 
-  DescriptorSetWriter& storeBufferArrayElement(const Buffer& buffer);
+  DescriptorSetWriter& storeBufferArrayElement(
+      const Buffer& buffer, VkBufferUsageFlags usage, VkDeviceSize range, VkDeviceSize offset);
 
   void writeDescriptorSet(VkDevice device, const VkDescriptorSet descriptorSet);
 

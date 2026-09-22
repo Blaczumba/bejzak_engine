@@ -1,85 +1,82 @@
 #pragma once
 
+#include <array>
+#include <chrono>
+#include <deque>
 #include <future>
+#include <iostream>
 #include <span>
 #include <string>
+#include <tuple>
 #include <unordered_map>
 #include <vulkan/vulkan.h>
 
-#include "common/buffer/buffer.h"
-#include "common/file/file_loader.h"
-#include "common/model_loader/image_loader/image_loader.h"
-#include "common/util/asset_manager.h"
-#include "common/util/buffer_manip.h"
+#include "common/abstractions/asset_manager.h"
+#include "common/buffer/buffer_lib.h"
+#include "common/buffer/index_buffer_lib.h"
+#include "common/model_loader/image_loader/types.h"
+#include "common/ref/ref.h"
 #include "common/util/resource_handles.h"
 #include "lib/association_list/association_list.h"
 #include "lib/buffer/buffer.h"
 #include "lib/sparse/sparse_map.h"
+#include "lib/types/memory.h"
+#include "vulkan/resource_manager/buffer_manager.h"
+#include "vulkan/resource_manager/reference_counter_with_metadata.h"
+#include "vulkan/resource_manager/resource_manager_allocation_strategy.h"
 #include "vulkan/wrapper/logical_device/logical_device.h"
+#include "vulkan/wrapper/memory_allocator/allocation.h"
 #include "vulkan/wrapper/memory_objects/buffer.h"
+#include "vulkan/wrapper/util/check.h"
 
 class AssetManager : public common::AssetManager {
-  AssetManager(
-      const LogicalDevice& logicalDevice, const FileLoader& fileLoader, std::launch launchPolicy);
+  struct ThreadData {
+    std::thread thread;
+    struct BufferBlock {
+      Ref<Buffer> stagingBuffer;
+      VirtualBlock virtualBlock;
+    };
+    std::deque<BufferBlock> bufferBlocks;  // We want pointer stability.
+    std::optional<BufferBlock> blockToBeReclaimed;
+    AllocationStrategy<VirtualAllocation, AllocationPolicy::POOL_BASED> virtualAllocationStrategy;
+  };
+
+  AssetManager(const LogicalDevice& logicalDevice, BufferManager& bufferManager,
+               uint8_t threadCount, size_t size);
+
+  void doWork(uint8_t threadIndex);
+
+  void cleanVirtualBlocks(ThreadData& threadData);
 
 public:
   static std::unique_ptr<AssetManager> create(
-      const LogicalDevice& logicalDevice, const FileLoader& fileLoader,
-      std::launch launchPolicy = std::launch::async);
+      const LogicalDevice& logicalDevice, BufferManager& bufferManager);
 
-  ~AssetManager() = default;
+  ~AssetManager();
 
-  struct ImageData {
-    Buffer stagingBuffer;
-    uint32_t width;
-    uint32_t height;
-    uint32_t mipLevels;
-    uint32_t layerCount;
-    lib::Buffer<VkBufferImageCopy> copyRegions;
-  };
+  std::shared_ptr<common::AssetManager::ImageData> loadImageAsync(
+      std::function<std::tuple<ImageResource, OwnedImageData>(void)>&& imageFunction) override;
 
-  struct VertexData {
-    lib::DynamicAssociationList<std::string, Buffer> buffers;
-    Buffer indexBuffer;
-    VkIndexType indexType;
-  };
-
-  StagingImageDataResourceHandle loadImageAsync(const std::string& filePath) override;
-
-  StagingImageDataResourceHandle loadImageAsync(
-      std::shared_ptr<void> modelPtr, std::span<const std::byte> data) override;
-
-  StagingImageDataResourceHandle loadImageAsync(
+  std::shared_ptr<common::AssetManager::ImageData> loadImageAsync(
       std::shared_ptr<void> modelPtr, ImageResource&& imageResource) override;
 
-  StagingVertexDataResourceHandle loadVertexDataInterleavingAsync(
-      std::shared_ptr<void> modelPtr, std::span<const std::byte> indices, uint8_t indexSize,
+  std::shared_ptr<common::AssetManager::VertexData> loadVertexDataInterleavingAsync(
+      std::shared_ptr<void> modelPtr, std::span<const std::byte> indices,
+      common::IndexType indexSize,
       std::vector<common::BufferDescription>&& bufferDescriptions) override;
 
-  const ImageData& getImageData(StagingImageDataResourceHandle index);
-
-  ImageData releaseImageData(StagingImageDataResourceHandle index);
-
-  const VertexData& getVertexData(StagingVertexDataResourceHandle index);
-
-  VertexData releaseVertexData(StagingVertexDataResourceHandle index);
-
 private:
-  using ImageResourceMap = lib::SparseMap<ImageData, MAX_STAGING_IMAGE_DATA_RESOURCES>;
-  using VertexResourceMap = lib::SparseMap<VertexData, MAX_STAGING_VERTEX_DATA_RESOURCES>;
-
-  std::launch _launchPolicy;
+  std::tuple<Ref<Buffer>, Ref<VirtualAllocation>, VirtualAllocationMetadata> allocate(
+      ThreadData& threadData, size_t size, size_t alignment, size_t blockSize);
 
   const LogicalDevice& _logicalDevice;
-  const FileLoader& _fileLoader;
+  BufferManager& _bufferManager;
+  lib::Buffer<ThreadData> _threads;
+  const size_t _bufferSize;
+  const size_t _alignment;
 
-  std::vector<StagingImageDataResourceHandle> _freeImageDataIndices;
-  std::unordered_map<StagingImageDataResourceHandle, std::future<ImageData>>
-      _awaitingImageDataResources;  // TODO: Change to flat unordered map.
-  ImageResourceMap _imageDataResources;
-
-  std::vector<StagingVertexDataResourceHandle> _freeVertexDataIndices;
-  std::unordered_map<StagingVertexDataResourceHandle, std::future<VertexData>>
-      _awaitingVertexDataResources;  // TODO: Change to flat unordered map.
-  VertexResourceMap _vertexDataResources;
+  std::mutex _mutex;
+  std::condition_variable _conditionVariable;
+  std::vector<std::function<void(ThreadData&, size_t, size_t)>> _tasks;
+  bool _stop = false;
 };

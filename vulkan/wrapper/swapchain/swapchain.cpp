@@ -16,7 +16,7 @@
 
 Swapchain::Swapchain(
     const VkSwapchainKHR swapchain, const LogicalDevice& logicalDevice, VkFormat surfaceFormat,
-    VkExtent2D extent, lib::Buffer<VkImage>&& images, lib::Buffer<VkImageView>&& views) noexcept
+    VkExtent2D extent, std::vector<VkImage>&& images, std::vector<VkImageView>&& views) noexcept
   : _swapchain(swapchain), _logicalDevice(&logicalDevice), _surfaceFormat(surfaceFormat),
     _extent(extent), _images(std::move(images)), _views(std::move(views)) {}
 
@@ -32,11 +32,13 @@ void Swapchain::destroy() {
       vkDestroyImageView(context.device, view, context.allocationCallbacks);
     });
   }
+  _views.clear();
 
   if (_swapchain != VK_NULL_HANDLE) {
     _logicalDevice->destroyResource([swapchain = _swapchain](DestroyerContext context) {
       vkDestroySwapchainKHR(context.device, swapchain, context.allocationCallbacks);
     });
+    _swapchain = VK_NULL_HANDLE;
   }
 }
 
@@ -105,6 +107,10 @@ VkResult Swapchain::present(uint32_t imageIndex, VkSemaphore waitSemaphore) cons
   };
 
   return vkQueuePresentKHR(_logicalDevice->getPresentVkQueue(), &presentInfo);
+}
+
+const LogicalDevice& Swapchain::getLogicalDevice() const noexcept {
+  return *_logicalDevice;
 }
 
 SwapchainBuilder& SwapchainBuilder::withOldSwapchain(VkSwapchainKHR oldSwapchain) noexcept {
@@ -224,10 +230,10 @@ Swapchain SwapchainBuilder::build(
               "Failed to create VkSwapchainKHR.");
 
   vkGetSwapchainImagesKHR(logicalDevice.getVkDevice(), swapchain, &imageCount, nullptr);
-  lib::Buffer<VkImage> images(imageCount);
+  std::vector<VkImage> images(imageCount);
   vkGetSwapchainImagesKHR(logicalDevice.getVkDevice(), swapchain, &imageCount, images.data());
 
-  lib::Buffer<VkImageView> views(imageCount);
+  std::vector<VkImageView> views(imageCount);
   std::transform(
       images.cbegin(), images.cend(), views.begin(),
       [logicalDevice = &logicalDevice, format = surfaceFormat.format](const VkImage image) {

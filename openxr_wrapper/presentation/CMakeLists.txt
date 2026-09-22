@@ -1,6 +1,6 @@
 add_library(OpenxrPresentation presentation.h presentation.cpp)
 
-target_link_libraries(OpenxrPresentation PRIVATE OpenXR::headers spdlog)
+target_link_libraries(OpenxrPresentation PRIVATE OpenXR::headers spdlog glm::glm)
 target_link_libraries(OpenxrPresentation PRIVATE OpenxrSystem OpenxrSession OpenxrSpace)
 target_link_libraries(OpenxrPresentation PUBLIC OpenxrGraphicsPlugin OpenxrPlatform)
 

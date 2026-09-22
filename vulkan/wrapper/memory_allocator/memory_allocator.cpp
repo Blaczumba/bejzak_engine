@@ -38,21 +38,15 @@ VmaWrapper::~VmaWrapper() {
 }
 
 VmaWrapper::Buffer VmaWrapper::createVkBuffer(
-    VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage,
+    const VkBufferCreateInfo& bufferCreateInfo, VmaMemoryUsage memoryUsage,
     VmaAllocationCreateFlags flags) {
-  const VkBufferCreateInfo bufferInfo = {
-    .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-    .size = size,
-    .usage = usage,
-    .sharingMode = VK_SHARING_MODE_EXCLUSIVE};
-
   const VmaAllocationCreateInfo vmaallocInfo = {.flags = flags, .usage = memoryUsage};
 
   VkBuffer buffer;
   VmaAllocation allocation;
   VmaAllocationInfo allocationInfo;
-  CHECK_VKCMD(vmaCreateBuffer(
-                  _allocator, &bufferInfo, &vmaallocInfo, &buffer, &allocation, &allocationInfo),
+  CHECK_VKCMD(vmaCreateBuffer(_allocator, &bufferCreateInfo, &vmaallocInfo, &buffer, &allocation,
+                              &allocationInfo),
               "Failed to create VkBuffer by VMA.");
   return VmaWrapper::Buffer{buffer, allocation, allocationInfo.pMappedData};
 }

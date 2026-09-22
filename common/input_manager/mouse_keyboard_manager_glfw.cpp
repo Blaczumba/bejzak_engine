@@ -1,6 +1,7 @@
 #include "mouse_keyboard_manager_glfw.h"
 
 #include <array>
+#include <GLFW/glfw3.h>
 
 #include "mouse_keyboard_manager.h"
 

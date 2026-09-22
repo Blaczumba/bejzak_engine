@@ -4,27 +4,24 @@
 #include <string>
 #include <vector>
 
+#include "common/abstractions/asset_manager.h"
 #include "common/util/resource_handles.h"
 #include "lib/buffer/buffer.h"
 
 namespace common {
 
 struct ImageID {
-  StagingImageDataResourceHandle ID;
+  std::shared_ptr<AssetManager::ImageData> imageData;
   std::string path;
 };
 
-struct VertexData {
-  lib::Buffer<glm::vec3> positions;
-  uint8_t indexSize;
-
+struct AssetData {
+  std::shared_ptr<AssetManager::VertexData> vertexData;
   glm::mat4 model;
 
   ImageID diffuseTexture;
   ImageID normalTexture;
   ImageID metallicRoughnessTexture;
-
-  StagingVertexDataResourceHandle vertexResourceID;
 };
 
 class ModelLoader {

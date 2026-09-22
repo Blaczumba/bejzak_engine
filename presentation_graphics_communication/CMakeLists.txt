@@ -1,0 +1,6 @@
+add_library(PresentationGraphicsCommunication presentation_graphics_communication.h presentation_graphics_communication.cpp)
+
+target_link_libraries(PresentationGraphicsCommunication PRIVATE CommonAbstractions)
+
+target_include_directories(PresentationGraphicsCommunication PRIVATE ${PROJECT_SOURCE_DIR})
+target_include_directories(PresentationGraphicsCommunication PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})

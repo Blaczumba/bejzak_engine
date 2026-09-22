@@ -1,6 +1,6 @@
-add_library(CommandBuffer command_buffer.h command_buffer.cpp)
+add_library(CommandBuffer command_buffer.h command_buffer.cpp command_pool.h command_pool.cpp single_time_command_buffer.h single_time_command_buffer.cpp)
 
-target_link_libraries(CommandBuffer PUBLIC LogicalDevice Framebuffer)
+target_link_libraries(CommandBuffer PUBLIC LogicalDevice Framebuffer VulkanWrapperSynchronization VulkanWrapperUtil)
 
 target_include_directories(CommandBuffer PUBLIC ${PROJECT_SOURCE_DIR})
 target_include_directories(CommandBuffer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})

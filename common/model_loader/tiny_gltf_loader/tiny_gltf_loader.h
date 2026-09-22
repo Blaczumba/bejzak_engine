@@ -5,8 +5,9 @@
 #endif
 #include <string>
 
+#include "common/abstractions/asset_manager.h"
+#include "common/file/file_loader.h"
 #include "common/model_loader/model_loader.h"
-#include "common/util/asset_manager.h"
 
 namespace common {
 
@@ -14,10 +15,11 @@ namespace common {
 void setAssetmanager(AAssetManager* assetManager);
 #endif
 
-std::vector<VertexData> LoadGltfFromFile(
-    common::AssetManager& assetManager, const std::string& filePath);
+std::vector<AssetData> LoadGltfFromFile(
+    common::AssetManager& assetManager, const FileLoader& fileLaoder, const std::string& filePath);
 
-std::vector<VertexData> LoadGltfFromString(
-    common::AssetManager& assetManager, const std::string& dataString, const std::string& baseDir);
+std::vector<AssetData> LoadGltfFromString(
+    common::AssetManager& assetManager, const FileLoader& fileLaoder, const std::string& dataString,
+    const std::string& baseDir);
 
 }  // namespace common

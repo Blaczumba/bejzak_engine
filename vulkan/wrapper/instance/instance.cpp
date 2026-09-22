@@ -65,10 +65,10 @@ VkInstance createVkInstance(
   const VkApplicationInfo appInfo = {
     .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
     .pApplicationName = engineName.data(),
-    .applicationVersion = VK_MAKE_VERSION(1, 2, 0),
+    .applicationVersion = VK_MAKE_VERSION(1, 3, 0),
     .pEngineName = engineName.data(),
-    .engineVersion = VK_MAKE_VERSION(1, 2, 0),
-    .apiVersion = VK_API_VERSION_1_2};
+    .engineVersion = VK_MAKE_VERSION(1, 3, 0),
+    .apiVersion = VK_API_VERSION_1_3};
 
 #ifdef VALIDATION_LAYERS_ENABLED
   VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo =

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <glm/glm.hpp>
 #include <string_view>
 #include <vector>
 
@@ -15,6 +14,8 @@ class Object {
 
 public:
   Object(std::string_view name, Entity entity);
+
   void SetParent(Object* newParent);
+
   Entity getEntity() const;
 };

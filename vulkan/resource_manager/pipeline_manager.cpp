@@ -30,82 +30,64 @@ const Shader& PipelineManager::addShader(
   return it->second = Shader::create(logicalDevice, shaderData, shaderStages);
 }
 
-VkDescriptorSetLayout PipelineManager::getOrCreateBindlessLayout(
-    const LogicalDevice& logicalDevice) {
+std::pair<VkDescriptorSetLayout, std::reference_wrapper<DescriptorSetLayoutMetadata>>
+PipelineManager::getOrCreateBindlessLayout(const LogicalDevice& logicalDevice) {
   static constexpr DescriptorSetType layoutType = DescriptorSetType::BINDLESS;
   if (auto it = _descriptorSetLayouts.find(layoutType); it != _descriptorSetLayouts.cend()) {
-    return it->second.getVkDescriptorSetLayout();
+    return std::make_pair(it->second.first.getVkDescriptorSetLayout(), std::ref(it->second.second));
   }
 
-  static constexpr VkDescriptorSetLayoutBinding bindings[] = {
-    {
-     .binding = 0,
-     .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-     .descriptorCount = 200,
-     .stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS,
-     },
-    {
-     .binding = 1,
-     .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-     .descriptorCount = 200,
-     .stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS,
-     }
-  };
-
-  static constexpr VkDescriptorBindingFlags flags{
-    VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT};
-  static constexpr VkDescriptorBindingFlags bindingFlags[] = {flags, flags};
-
-  DescriptorSetLayout layout = DescriptorSetLayout::create(
-      logicalDevice, bindings, bindingFlags,
-      VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT);
+  auto [layout, metadata] =
+      DescriptorSetLayoutBuilder()
+          .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 200, VK_SHADER_STAGE_ALL_GRAPHICS,
+                      VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT
+                          | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT)
+          .addBinding(
+              1, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 200, VK_SHADER_STAGE_ALL_GRAPHICS,
+              VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT
+                  | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT)
+          .withFlags(VK_DESCRIPTOR_SET_LAYOUT_CREATE_UPDATE_AFTER_BIND_POOL_BIT)
+          .buildWithMetadata(logicalDevice);
   const VkDescriptorSetLayout vkLayout = layout.getVkDescriptorSetLayout();
-  _descriptorSetLayouts.emplace(layoutType, std::move(layout));
-  return vkLayout;
+  auto emplaced =
+      _descriptorSetLayouts.emplace(layoutType, std::make_pair(std::move(layout), metadata));
+  return std::make_pair(vkLayout, std::ref(emplaced.first->second.second));
 }
 
-VkDescriptorSetLayout PipelineManager::getOrCreateCameraLayout(
-    const LogicalDevice& logicalDevice, bool multiview) {
+std::pair<VkDescriptorSetLayout, std::reference_wrapper<DescriptorSetLayoutMetadata>>
+PipelineManager::getOrCreateCameraLayout(const LogicalDevice& logicalDevice, bool multiview) {
   static constexpr DescriptorSetType layoutType = DescriptorSetType::CAMERA;
   if (auto it = _descriptorSetLayouts.find(layoutType); it != _descriptorSetLayouts.cend()) {
-    return it->second.getVkDescriptorSetLayout();
+    return std::make_pair(it->second.first.getVkDescriptorSetLayout(), std::ref(it->second.second));
   }
 
-  static VkDescriptorSetLayoutBinding bindings[] = {
-    {
-     .binding = 0,
-     .descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
-     .descriptorCount = multiview ? 2u : 1u,
-     .stageFlags = VK_SHADER_STAGE_ALL_GRAPHICS,
-     },
-  };
+  auto [layout, metadata] =
+      DescriptorSetLayoutBuilder()
+          .addBinding(0, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, multiview ? 2u : 1u,
+                      VK_SHADER_STAGE_ALL_GRAPHICS)
+          .buildWithMetadata(logicalDevice);
 
-  DescriptorSetLayout layout = DescriptorSetLayout::create(logicalDevice, bindings);
   const VkDescriptorSetLayout vkLayout = layout.getVkDescriptorSetLayout();
-  _descriptorSetLayouts.emplace(layoutType, std::move(layout));
-  return vkLayout;
+  auto emplaced =
+      _descriptorSetLayouts.emplace(layoutType, std::make_pair(std::move(layout), metadata));
+  return std::make_pair(vkLayout, std::ref(emplaced.first->second.second));
 }
 
-VkDescriptorSetLayout PipelineManager::getOrCreateComputeLayout(
-    const LogicalDevice& logicalDevice) {
+std::pair<VkDescriptorSetLayout, std::reference_wrapper<DescriptorSetLayoutMetadata>>
+PipelineManager::getOrCreateComputeLayout(const LogicalDevice& logicalDevice) {
   static constexpr DescriptorSetType layoutType = DescriptorSetType::COMPUTE;
   if (auto it = _descriptorSetLayouts.find(layoutType); it != _descriptorSetLayouts.cend()) {
-    return it->second.getVkDescriptorSetLayout();
+    return std::make_pair(it->second.first.getVkDescriptorSetLayout(), std::ref(it->second.second));
   }
 
-  static constexpr VkDescriptorSetLayoutBinding bindings[] = {
-    {
-     .binding = 0,
-     .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-     .descriptorCount = 1u,
-     .stageFlags = VK_SHADER_STAGE_COMPUTE_BIT,
-     },
-  };
-
-  DescriptorSetLayout layout = DescriptorSetLayout::create(logicalDevice, bindings);
+  auto [layout, metadata] =
+      DescriptorSetLayoutBuilder()
+          .addBinding(0, VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1, VK_SHADER_STAGE_COMPUTE_BIT)
+          .buildWithMetadata(logicalDevice);
   const VkDescriptorSetLayout vkLayout = layout.getVkDescriptorSetLayout();
-  _descriptorSetLayouts.emplace(layoutType, std::move(layout));
-  return vkLayout;
+  auto emplaced =
+      _descriptorSetLayouts.emplace(layoutType, std::make_pair(std::move(layout), metadata));
+  return std::make_pair(vkLayout, std::ref(emplaced.first->second.second));
 }
 
 std::pair<PipelineLayout*, PipelineManager::PipelineLayoutMapIndex> PipelineManager::
@@ -181,7 +163,8 @@ constexpr VkPushConstantRange getPushConstantRange(
 
 }  // namespace
 
-PipelineHandle PipelineManager::createPBRProgram(const Renderpass& renderpass, bool multiview) {
+PipelineHandle PipelineManager::createPBRProgram(
+    const Renderpass& renderpass, const AttachmentLayout& attachmentLayout, bool multiview) {
   const LogicalDevice& logicalDevice = renderpass.getLogicalDevice();
   const Shader& vertex =
       addShader(logicalDevice, multiview ? "shader_pbr_multiview.vert.spv" : "shader_pbr.vert.spv",
@@ -193,14 +176,14 @@ PipelineHandle PipelineManager::createPBRProgram(const Renderpass& renderpass, b
       VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
   const auto [pipelineLayout, pipelineLayoutIndex] = getOrCreatePipelineLayout(
       PipelineLayoutKey{
-        {getOrCreateBindlessLayout(logicalDevice),
-         getOrCreateCameraLayout(logicalDevice, multiview)},
+        {getOrCreateBindlessLayout(logicalDevice).first,
+         getOrCreateCameraLayout(logicalDevice, multiview).first},
         {getPushConstantRange<PushConstantsModelDescriptorHandles32Bit>(shaderStageFlags)}
   },
       logicalDevice);
 
   lib::Buffer<VkPipelineColorBlendAttachmentState> colorBlendAttachments(
-      renderpass.getAttachmentsLayout().getColorAttachmentsCount(),
+      attachmentLayout.getColorAttachmentsCount(),
       VkPipelineColorBlendAttachmentState{
         .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT
                           | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT});
@@ -227,7 +210,7 @@ PipelineHandle PipelineManager::createPBRProgram(const Renderpass& renderpass, b
             .withPushConstantShaderStages(shaderStageFlags)
             .withViewportStateCreateInfo()
             .withRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, VK_CULL_MODE_BACK_BIT)
-            .withMultisampleStateCreateInfo(renderpass.getAttachmentsLayout().getNumMsaaSamples())
+            .withMultisampleStateCreateInfo(attachmentLayout.getNumMsaaSamples())
             .withColorBlendStateCreateInfo(std::move(colorBlendAttachments))
             .withDepthStencilStateCreateInfo(VK_COMPARE_OP_LESS_OR_EQUAL)
             .withFragmentShadingRateStateCreateInfo(
@@ -239,7 +222,7 @@ PipelineHandle PipelineManager::createPBRProgram(const Renderpass& renderpass, b
 }
 
 PipelineHandle PipelineManager::createPbrTesselationProgram(
-    const Renderpass& renderpass, bool multiview) {
+    const Renderpass& renderpass, const AttachmentLayout& attachmentLayout, bool multiview) {
   const LogicalDevice& logicalDevice = renderpass.getLogicalDevice();
   const Shader& vertex =
       addShader(logicalDevice, "shader_pbr_tesselation.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
@@ -257,14 +240,14 @@ PipelineHandle PipelineManager::createPbrTesselationProgram(
       | VK_SHADER_STAGE_FRAGMENT_BIT;
   const auto [pipelineLayout, pipelineLayoutIndex] = getOrCreatePipelineLayout(
       PipelineLayoutKey{
-        {getOrCreateBindlessLayout(logicalDevice),
-         getOrCreateCameraLayout(logicalDevice, multiview)},
+        {getOrCreateBindlessLayout(logicalDevice).first,
+         getOrCreateCameraLayout(logicalDevice, multiview).first},
         {getPushConstantRange<PushConstantsModelDescriptorHandles32Bit>(shaderStageFlags)}
   },
       logicalDevice);
 
   lib::Buffer<VkPipelineColorBlendAttachmentState> colorBlendAttachments(
-      renderpass.getAttachmentsLayout().getColorAttachmentsCount(),
+      attachmentLayout.getColorAttachmentsCount(),
       VkPipelineColorBlendAttachmentState{
         .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT
                           | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT});
@@ -292,7 +275,7 @@ PipelineHandle PipelineManager::createPbrTesselationProgram(
             .withPushConstantShaderStages(shaderStageFlags)
             .withViewportStateCreateInfo()
             .withRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, VK_CULL_MODE_BACK_BIT)
-            .withMultisampleStateCreateInfo(renderpass.getAttachmentsLayout().getNumMsaaSamples())
+            .withMultisampleStateCreateInfo(attachmentLayout.getNumMsaaSamples())
             .withColorBlendStateCreateInfo(std::move(colorBlendAttachments))
             .withDepthStencilStateCreateInfo(VK_COMPARE_OP_LESS_OR_EQUAL)
             .withFragmentShadingRateStateCreateInfo(
@@ -305,7 +288,7 @@ PipelineHandle PipelineManager::createPbrTesselationProgram(
 }
 
 PipelineHandle PipelineManager::createBlinnPhongTesselationProgram(
-    const Renderpass& renderpass, bool multiview) {
+    const Renderpass& renderpass, const AttachmentLayout& attachmentLayout, bool multiview) {
   const LogicalDevice& logicalDevice = renderpass.getLogicalDevice();
   const Shader& vertex =
       addShader(logicalDevice, "shader_blinn_phong.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
@@ -321,14 +304,14 @@ PipelineHandle PipelineManager::createBlinnPhongTesselationProgram(
       | VK_SHADER_STAGE_FRAGMENT_BIT;
   const auto [pipelineLayout, pipelineLayoutIndex] = getOrCreatePipelineLayout(
       PipelineLayoutKey{
-        {getOrCreateBindlessLayout(logicalDevice),
-         getOrCreateCameraLayout(logicalDevice, multiview)},
+        {getOrCreateBindlessLayout(logicalDevice).first,
+         getOrCreateCameraLayout(logicalDevice, multiview).first},
         {getPushConstantRange<PushConstantsModelDescriptorHandles32Bit>(shaderStageFlags)}
   },
       logicalDevice);
 
   lib::Buffer<VkPipelineColorBlendAttachmentState> colorBlendAttachments(
-      renderpass.getAttachmentsLayout().getColorAttachmentsCount(),
+      attachmentLayout.getColorAttachmentsCount(),
       VkPipelineColorBlendAttachmentState{
         .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT
                           | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT});
@@ -355,7 +338,7 @@ PipelineHandle PipelineManager::createBlinnPhongTesselationProgram(
             .withPushConstantShaderStages(shaderStageFlags)
             .withViewportStateCreateInfo()
             .withRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, VK_CULL_MODE_BACK_BIT)
-            .withMultisampleStateCreateInfo(renderpass.getAttachmentsLayout().getNumMsaaSamples())
+            .withMultisampleStateCreateInfo(attachmentLayout.getNumMsaaSamples())
             .withColorBlendStateCreateInfo(std::move(colorBlendAttachments))
             .withDepthStencilStateCreateInfo(VK_COMPARE_OP_LESS_OR_EQUAL)
             .withFragmentShadingRateStateCreateInfo(
@@ -367,7 +350,8 @@ PipelineHandle PipelineManager::createBlinnPhongTesselationProgram(
   return pipelineIndex;
 }
 
-PipelineHandle PipelineManager::createPbrEnvMappingProgram(const Renderpass& renderpass) {
+PipelineHandle PipelineManager::createPbrEnvMappingProgram(
+    const Renderpass& renderpass, const AttachmentLayout& attachmentLayout) {
   const LogicalDevice& logicalDevice = renderpass.getLogicalDevice();
   const Shader& vertex =
       addShader(logicalDevice, "pbr_env_mapping.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
@@ -378,12 +362,12 @@ PipelineHandle PipelineManager::createPbrEnvMappingProgram(const Renderpass& ren
       VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
   const auto [pipelineLayout, pipelineLayoutIndex] = getOrCreatePipelineLayout(
       PipelineLayoutKey{
-        {getOrCreateBindlessLayout(logicalDevice)},
+        {getOrCreateBindlessLayout(logicalDevice).first},
         {getPushConstantRange<PushConstantsModelDescriptorHandles32Bit>(shaderStageFlags)}},
       logicalDevice);
 
   lib::Buffer<VkPipelineColorBlendAttachmentState> colorBlendAttachments(
-      renderpass.getAttachmentsLayout().getColorAttachmentsCount(),
+      attachmentLayout.getColorAttachmentsCount(),
       VkPipelineColorBlendAttachmentState{
         .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT
                           | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT});
@@ -410,8 +394,7 @@ PipelineHandle PipelineManager::createPbrEnvMappingProgram(const Renderpass& ren
             .withPushConstantShaderStages(shaderStageFlags)
             .withViewportStateCreateInfo()
             .withRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, VK_CULL_MODE_FRONT_BIT)
-            .withMultisampleStateCreateInfo(
-                renderpass.getAttachmentsLayout().getNumMsaaSamples(), 0.2f)
+            .withMultisampleStateCreateInfo(attachmentLayout.getNumMsaaSamples(), 0.2f)
             .withColorBlendStateCreateInfo(std::move(colorBlendAttachments))
             .withDepthStencilStateCreateInfo(VK_COMPARE_OP_LESS_OR_EQUAL)
             .createPipeline(renderpass, *pipelineLayout),
@@ -420,7 +403,7 @@ PipelineHandle PipelineManager::createPbrEnvMappingProgram(const Renderpass& ren
 }
 
 PipelineHandle PipelineManager::createEnvMappingProgram(
-    const Renderpass& renderpass, bool multiview) {
+    const Renderpass& renderpass, const AttachmentLayout& attachmentLayout, bool multiview) {
   const LogicalDevice& logicalDevice = renderpass.getLogicalDevice();
   const Shader& vertex =
       addShader(logicalDevice,
@@ -433,14 +416,14 @@ PipelineHandle PipelineManager::createEnvMappingProgram(
       VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
   const auto [pipelineLayout, pipelineLayoutIndex] = getOrCreatePipelineLayout(
       PipelineLayoutKey{
-        {getOrCreateBindlessLayout(logicalDevice),
-         getOrCreateCameraLayout(logicalDevice, multiview)},
+        {getOrCreateBindlessLayout(logicalDevice).first,
+         getOrCreateCameraLayout(logicalDevice, multiview).first},
         {getPushConstantRange<PushConstantsModelDescriptorHandles32Bit>(shaderStageFlags)}
   },
       logicalDevice);
 
   lib::Buffer<VkPipelineColorBlendAttachmentState> colorBlendAttachments(
-      renderpass.getAttachmentsLayout().getColorAttachmentsCount(),
+      attachmentLayout.getColorAttachmentsCount(),
       VkPipelineColorBlendAttachmentState{
         .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT
                           | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT});
@@ -465,8 +448,7 @@ PipelineHandle PipelineManager::createEnvMappingProgram(
             .withPushConstantShaderStages(shaderStageFlags)
             .withViewportStateCreateInfo()
             .withRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, VK_CULL_MODE_BACK_BIT)
-            .withMultisampleStateCreateInfo(
-                renderpass.getAttachmentsLayout().getNumMsaaSamples(), 0.2f)
+            .withMultisampleStateCreateInfo(attachmentLayout.getNumMsaaSamples(), 0.2f)
             .withColorBlendStateCreateInfo(std::move(colorBlendAttachments))
             .withDepthStencilStateCreateInfo(VK_COMPARE_OP_LESS_OR_EQUAL)
             .createPipeline(renderpass, *pipelineLayout),
@@ -474,7 +456,8 @@ PipelineHandle PipelineManager::createEnvMappingProgram(
   return pipelineIndex;
 }
 
-PipelineHandle PipelineManager::createSkyboxProgram(const Renderpass& renderpass) {
+PipelineHandle PipelineManager::createSkyboxProgram(
+    const Renderpass& renderpass, const AttachmentLayout& attachmentLayout) {
   const LogicalDevice& logicalDevice = renderpass.getLogicalDevice();
   const Shader& vertex = addShader(logicalDevice, "skybox.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
   const Shader& fragment =
@@ -483,12 +466,12 @@ PipelineHandle PipelineManager::createSkyboxProgram(const Renderpass& renderpass
   const VkShaderStageFlags shaderStageFlags =
       VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
   const auto [pipelineLayout, pipelineLayoutIndex] = getOrCreatePipelineLayout(
-      PipelineLayoutKey{{getOrCreateBindlessLayout(logicalDevice)},
+      PipelineLayoutKey{{getOrCreateBindlessLayout(logicalDevice).first},
                         {getPushConstantRange<PushConstantsSkybox>(shaderStageFlags)}},
       logicalDevice);
 
   lib::Buffer<VkPipelineColorBlendAttachmentState> colorBlendAttachments(
-      renderpass.getAttachmentsLayout().getColorAttachmentsCount(),
+      attachmentLayout.getColorAttachmentsCount(),
       VkPipelineColorBlendAttachmentState{
         .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT
                           | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT});
@@ -511,8 +494,7 @@ PipelineHandle PipelineManager::createSkyboxProgram(const Renderpass& renderpass
             .withPushConstantShaderStages(shaderStageFlags)
             .withViewportStateCreateInfo()
             .withRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, VK_CULL_MODE_FRONT_BIT)
-            .withMultisampleStateCreateInfo(
-                renderpass.getAttachmentsLayout().getNumMsaaSamples(), 0.2f)
+            .withMultisampleStateCreateInfo(attachmentLayout.getNumMsaaSamples(), 0.2f)
             .withColorBlendStateCreateInfo(std::move(colorBlendAttachments))
             .withDepthStencilStateCreateInfo(VK_COMPARE_OP_LESS_OR_EQUAL)
             .createPipeline(renderpass, *pipelineLayout),
@@ -520,7 +502,8 @@ PipelineHandle PipelineManager::createSkyboxProgram(const Renderpass& renderpass
   return pipelineIndex;
 }
 
-PipelineHandle PipelineManager::createShadowProgram(const Renderpass& renderpass) {
+PipelineHandle PipelineManager::createShadowProgram(
+    const Renderpass& renderpass, const AttachmentLayout& attachmentLayout) {
   const LogicalDevice& logicalDevice = renderpass.getLogicalDevice();
   const Shader& vertex = addShader(logicalDevice, "shadow.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
   const Shader& fragment =
@@ -532,7 +515,7 @@ PipelineHandle PipelineManager::createShadowProgram(const Renderpass& renderpass
       logicalDevice);
 
   lib::Buffer<VkPipelineColorBlendAttachmentState> colorBlendAttachments(
-      renderpass.getAttachmentsLayout().getColorAttachmentsCount(),
+      attachmentLayout.getColorAttachmentsCount(),
       VkPipelineColorBlendAttachmentState{.colorWriteMask = VK_COLOR_COMPONENT_R_BIT});
 
   VertexInputDescriptionBuilder builder;
@@ -554,7 +537,7 @@ PipelineHandle PipelineManager::createShadowProgram(const Renderpass& renderpass
             .withViewportStateCreateInfo()
             .withRasterizationStateCreateInfo(
                 VK_POLYGON_MODE_FILL, VK_CULL_MODE_BACK_BIT, std::pair{0.7f, 2.0f})
-            .withMultisampleStateCreateInfo(renderpass.getAttachmentsLayout().getNumMsaaSamples())
+            .withMultisampleStateCreateInfo(attachmentLayout.getNumMsaaSamples())
             .withColorBlendStateCreateInfo(std::move(colorBlendAttachments))
             .withDepthStencilStateCreateInfo(VK_COMPARE_OP_LESS_OR_EQUAL)
             .createPipeline(renderpass, *pipelineLayout),
@@ -568,7 +551,7 @@ PipelineHandle PipelineManager::createFragmentShadingRateProgram(
       addShader(logicalDevice, "fov_fragment_shading_rate.comp.spv", VK_SHADER_STAGE_COMPUTE_BIT);
   static constexpr VkShaderStageFlags shaderStageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
   const auto [pipelineLayout, pipelineLayoutIndex] = getOrCreatePipelineLayout(
-      PipelineLayoutKey{{getOrCreateComputeLayout(logicalDevice)},
+      PipelineLayoutKey{{getOrCreateComputeLayout(logicalDevice).first},
                         {getPushConstantRange<PushConstantFov>(shaderStageFlags)}},
       logicalDevice);
   const PipelineHandle pipelineIndex = getNextHandle(_pipelines.size(), _freePipelineIndices);

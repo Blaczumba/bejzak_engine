@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <deque>
 #include <memory>
 #include <optional>
 #include <vector>
@@ -10,11 +11,13 @@
 #include "vulkan/wrapper/render_pass/attachment_layout.h"
 
 class Renderpass {
-  Renderpass(const LogicalDevice& logicalDeivce, VkRenderPass renderpass,
-             const AttachmentLayout& attachmentLayout) noexcept;
+  Renderpass(const LogicalDevice& logicalDeivce, VkRenderPass renderpass) noexcept;
 
 public:
   Renderpass() noexcept = default;
+
+  static Renderpass create(
+      const LogicalDevice& logicalDevice, const VkRenderPassCreateInfo2& createInfo);
 
   Renderpass(Renderpass&& renderpass) noexcept;
 
@@ -24,8 +27,6 @@ public:
 
   VkRenderPass getVkRenderPass() const noexcept;
 
-  const AttachmentLayout& getAttachmentsLayout() const noexcept;
-
   const LogicalDevice& getLogicalDevice() const;
 
 private:
@@ -34,7 +35,6 @@ private:
   VkRenderPass _renderpass = VK_NULL_HANDLE;
 
   const LogicalDevice* _logicalDevice = nullptr;
-  AttachmentLayout _attachmentsLayout;
 
   friend class RenderpassBuilder;
 };
@@ -63,9 +63,9 @@ class RenderpassBuilder {
 
     std::vector<VkAttachmentReference2> _inputAttachmentRefs;
     std::vector<VkAttachmentReference2> _colorAttachmentRefs;
-    std::vector<VkAttachmentReference2> _depthAttachmentRefs;
+    std::optional<VkAttachmentReference2> _depthAttachmentRef;
     std::vector<VkAttachmentReference2> _colorAttachmentResolveRefs;
-    std::optional<VkAttachmentReference2> _fragmentShadingRateAttachmentRef;
+    VkAttachmentReference2 _fragmentShadingRateAttachmentRef;
 
     VkFragmentShadingRateAttachmentInfoKHR _shadingRateAttachmentInfo;
   };
@@ -80,23 +80,29 @@ public:
   Subpass& createSubpass();
 
   RenderpassBuilder& withMultiView(
-      std::vector<uint32_t>&& viewMask, std::vector<uint32_t>&& correlationMask);
+      std::span<const uint32_t> viewMask, std::span<const uint32_t> correlationMask);
 
-  Renderpass build(const LogicalDevice& logicalDevice);
+  RenderpassBuilder& withMultiView(
+      std::initializer_list<uint32_t> viewMask, std::initializer_list<uint32_t> correlationMask);
+
+  Renderpass build(const LogicalDevice& logicalDevice, VkRenderPassCreateFlags flags = 0);
 
 private:
-  const AttachmentLayout& _attachmentLayout;
+  VkRenderPassCreateFlags _flags;
+  std::optional<VkRenderPassFragmentDensityMapCreateInfoEXT> _fragmentDensityMapCreateInfo;
 
   void* _pNext = nullptr;
+
+  AttachmentLayout _attachmentLayout;
 
   struct MultiViewInfo {
     std::vector<uint32_t> viewMasks;
     std::vector<uint32_t> correlationMasks;
   };
   std::optional<MultiViewInfo> _multiViewInfo;
-  VkRenderPassFragmentDensityMapCreateInfoEXT _fragmentDensityMapCreateInfo;
 
+  // For reference stability use deque.
+  std::deque<Subpass> _subpasses;
   std::vector<VkSubpassDependency2> _subpassDepencies;
-  // For reference stability use unique_ptr.
-  std::vector<std::unique_ptr<Subpass>> _subpasses;
+  lib::Buffer<VkSubpassDescription2> _subpassDescriptions;
 };

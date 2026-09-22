@@ -7,6 +7,7 @@
 #include "common/abstractions/contexts.h"
 #include "common/abstractions/graphics_context.h"
 #include "common/file/file_loader.h"
+#include "presentation_graphics_communication/presentation_graphics_communication.h"
 
 namespace xrw {
 
@@ -31,7 +32,9 @@ public:
   virtual void createResources() = 0;
 
   virtual std::unique_ptr<common::GraphicsContext> createGraphicsContext(
-      XrInstance xrInstance, XrSystemId systemId, const FileLoader& fileLoader) = 0;
+      XrInstance xrInstance, XrSystemId systemId,
+      std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer,
+      const FileLoader& fileLoader) = 0;
 };
 
 }  // namespace xrw

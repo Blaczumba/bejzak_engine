@@ -1,230 +1,19 @@
 #include "framebuffer.h"
 
-#include <cmath>
 #include <cstdint>
-#include <optional>
-#include <span>
-#include <vector>
+#include <utility>
 #include <vulkan/vulkan.h>
 
-#include "common/util/engine_exception.h"
+#include "lib/buffer/buffer.h"
 #include "vulkan/wrapper/logical_device/logical_device.h"
-#include "vulkan/wrapper/memory_objects/texture.h"
 #include "vulkan/wrapper/util/check.h"
-#include "vulkan/wrapper/util/util.h"
 
-namespace {
-
-Texture createColorAttachment(
-    const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkFormat format,
-    VkSampleCountFlagBits samples, VkExtent2D extent, uint32_t numLayers) {
-  Texture texture =
-      TextureBuilder()
-          .withAspect(VK_IMAGE_ASPECT_COLOR_BIT)
-          .withExtent(extent.width, extent.height)
-          .withFormat(format)
-          .withLayerCount(numLayers)
-          .withNumSamples(samples)
-          .withUsage(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT)
-          .buildImage(logicalDevice);
-  texture.transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-  texture.addCreateVkImageView(0, 1, 0, numLayers);
-  return texture;
-}
-
-Texture createDepthAttachment(
-    const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkFormat format,
-    VkSampleCountFlagBits samples, VkExtent2D extent, uint32_t numLayers) {
-  Texture texture =
-      TextureBuilder()
-          .withAspect(hasStencil(format) ? VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT :
-                                           VK_IMAGE_ASPECT_DEPTH_BIT)
-          .withExtent(extent.width, extent.height)
-          .withFormat(format)
-          .withLayerCount(numLayers)
-          .withNumSamples(samples)
-          .withUsage(
-              VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT)
-          .buildImage(logicalDevice);
-  texture.transitionLayout(
-      commandBuffer, hasStencil(format) ? VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL :
-                                          VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_OPTIMAL);
-  texture.addCreateVkImageView(0, 1, 0, numLayers);
-  return texture;
-}
-
-Texture createFragmentShadingRateAttachment(
-    const LogicalDevice& logicalDevice, VkCommandBuffer commandBuffer, VkFormat format,
-    VkSampleCountFlagBits samples, VkExtent2D extent, uint32_t numLayers) {
-  const VkPhysicalDeviceFragmentShadingRatePropertiesKHR& fsrProperties =
-      logicalDevice.getPhysicalDevice().getFragmentShadingRateProperties();
-  const VkExtent2D fsrTexelExtent = fsrProperties.maxFragmentShadingRateAttachmentTexelSize;
-  Texture texture =
-      TextureBuilder()
-          .withAspect(VK_IMAGE_ASPECT_COLOR_BIT)
-          .withExtent(static_cast<uint32_t>(
-                          std::ceil(extent.width / static_cast<float>(fsrTexelExtent.width))),
-                      static_cast<uint32_t>(
-                          std::ceil(extent.height / static_cast<float>(fsrTexelExtent.height))))
-          .withFormat(format)
-          .withLayerCount(numLayers)
-          .withNumSamples(samples)
-          .withUsage(VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR
-                     | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_STORAGE_BIT)
-          .buildImage(logicalDevice);
-  texture.transitionLayout(commandBuffer, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-  texture.addCreateVkImageView(0, 1, 0, numLayers);
-  return texture;
-}
-
-}  // namespace
-
-Framebuffer Framebuffer::create(const Renderpass& renderpass, VkExtent2D extent, uint32_t numLayers,
-                                std::span<const VkImageView> attachments) {
-  const VkFramebufferCreateInfo framebufferInfo = {
-    .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-    .renderPass = renderpass.getVkRenderPass(),
-    .attachmentCount = static_cast<uint32_t>(attachments.size()),
-    .pAttachments = attachments.data(),
-    .width = extent.width,
-    .height = extent.height,
-    .layers = 1};
-
-  VkFramebuffer framebuffer;
-  CHECK_VKCMD(vkCreateFramebuffer(renderpass.getLogicalDevice().getVkDevice(), &framebufferInfo,
-                                  nullptr, &framebuffer),
-              "Failed to create VkFramebuffer.");
-
-  return Framebuffer(
-      framebuffer, renderpass,
-      VkViewport{.width = static_cast<float>(extent.width),
-                 .height = static_cast<float>(extent.height),
-                 .minDepth = 0.0f,
-                 .maxDepth = 1.0f},
-      VkRect2D{.extent = extent});
-}
-
-Framebuffer Framebuffer::createFromSwapchain(
-    VkCommandBuffer commandBuffer, const Renderpass& renderpass, VkExtent2D swapchainExtent,
-    uint32_t numLayers, VkImageView swapchainImageView, std::vector<Texture>& attachments) {
-  const LogicalDevice& logicalDevice = renderpass.getLogicalDevice();
-  std::span<const VkAttachmentDescription2> attachmentDescriptions =
-      renderpass.getAttachmentsLayout().getVkAttachmentDescriptions();
-
-  std::vector<VkImageView> imageViews;
-  imageViews.reserve(attachmentDescriptions.size());
-  for (const VkAttachmentDescription2& description : attachmentDescriptions) {
-    switch (description.finalLayout) {
-      case VK_IMAGE_LAYOUT_PRESENT_SRC_KHR:
-        imageViews.push_back(swapchainImageView);
-        break;
-      case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-        {
-          Texture attachment = createColorAttachment(
-              logicalDevice, commandBuffer, description.format, description.samples,
-              swapchainExtent, numLayers);
-          imageViews.push_back(attachment.getVkImageView());
-          attachments.push_back(std::move(attachment));
-          break;
-        }
-      case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-        {
-          Texture attachment = createDepthAttachment(
-              logicalDevice, commandBuffer, description.format, description.samples,
-              swapchainExtent, numLayers);
-          imageViews.push_back(attachment.getVkImageView());
-          attachments.push_back(std::move(attachment));
-          break;
-        }
-      case VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR:
-      case VK_IMAGE_LAYOUT_GENERAL:
-        {
-          Texture attachment = createFragmentShadingRateAttachment(
-              logicalDevice, commandBuffer, description.format, description.samples,
-              swapchainExtent, numLayers);
-          imageViews.push_back(attachment.getVkImageView());
-          attachments.push_back(std::move(attachment));
-          break;
-        }
-      default:
-        throw EngineException("Not recognized type of VkImageLayout during Framebuffer creation.");
-    }
-  }
-
-  const VkFramebufferCreateInfo framebufferInfo = {
-    .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-    .renderPass = renderpass.getVkRenderPass(),
-    .attachmentCount = static_cast<uint32_t>(imageViews.size()),
-    .pAttachments = imageViews.data(),
-    .width = swapchainExtent.width,
-    .height = swapchainExtent.height,
-    .layers = 1};
-
-  VkFramebuffer framebuffer;
-  CHECK_VKCMD(vkCreateFramebuffer(renderpass.getLogicalDevice().getVkDevice(), &framebufferInfo,
-                                  nullptr, &framebuffer),
-              "Failed to create VkFramebuffer.");
-
-  return Framebuffer(
-      framebuffer, renderpass,
-      VkViewport{.width = static_cast<float>(swapchainExtent.width),
-                 .height = static_cast<float>(swapchainExtent.height),
-                 .minDepth = 0.0f,
-                 .maxDepth = 1.0f},
-      VkRect2D{.extent = swapchainExtent});
-}
-
-Framebuffer Framebuffer::createFromTextures(
-    const Renderpass& renderpass, std::span<const Texture> textures) {
-  std::vector<VkImageView> imageViews;
-  imageViews.reserve(textures.size());
-  std::optional<VkExtent2D> extent;
-  for (const Texture& texture : textures) {
-    imageViews.push_back(texture.getVkImageView());
-    if (!extent.has_value()) {
-      extent = texture.getVkExtent2D();
-    } else if (VkExtent2D tmpExtent = texture.getVkExtent2D();
-               extent->width != tmpExtent.width || extent->height != tmpExtent.height) {
-      throw EngineException("All images must have the same size to create a Framebuffer.");
-    }
-  }
-
-  if (!extent.has_value()) {
-    throw EngineException("Framebuffer must have an attachment.");
-  }
-
-  const VkFramebufferCreateInfo framebufferInfo = {
-    .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
-    .renderPass = renderpass.getVkRenderPass(),
-    .attachmentCount = static_cast<uint32_t>(imageViews.size()),
-    .pAttachments = imageViews.data(),
-    .width = extent->width,
-    .height = extent->height,
-    .layers = 1,
-  };
-
-  VkFramebuffer framebuffer;
-  CHECK_VKCMD(vkCreateFramebuffer(renderpass.getLogicalDevice().getVkDevice(), &framebufferInfo,
-                                  nullptr, &framebuffer),
-              "Failed to create VkFramebuffer.");
-
-  return Framebuffer(
-      framebuffer, renderpass,
-      VkViewport{.width = static_cast<float>(extent->width),
-                 .height = static_cast<float>(extent->height),
-                 .minDepth = 0.0f,
-                 .maxDepth = 1.0f},
-      VkRect2D{.extent = *extent});
-}
-
-Framebuffer::Framebuffer(VkFramebuffer framebuffer, const Renderpass& renderpass,
-                         const VkViewport& viewport, const VkRect2D& scissor) noexcept
-  : _framebuffer(framebuffer), _renderpass(&renderpass), _viewport(viewport), _scissor(scissor) {}
+Framebuffer::Framebuffer(const Renderpass& renderpass, VkFramebuffer framebuffer) noexcept
+  : _framebuffer(framebuffer), _renderpass(&renderpass) {}
 
 Framebuffer::Framebuffer(Framebuffer&& framebuffer) noexcept
   : _framebuffer(std::exchange(framebuffer._framebuffer, VK_NULL_HANDLE)),
-    _renderpass(std::exchange(framebuffer._renderpass, nullptr)), _viewport(framebuffer._viewport),
-    _scissor(framebuffer._scissor) {}
+    _renderpass(framebuffer._renderpass) {}
 
 void Framebuffer::destroy() {
   if (_framebuffer != VK_NULL_HANDLE) {
@@ -236,7 +25,7 @@ void Framebuffer::destroy() {
 }
 
 Framebuffer& Framebuffer::operator=(Framebuffer&& framebuffer) noexcept {
-  if (this == &framebuffer) {
+  if (&framebuffer == this) {
     return *this;
   }
 
@@ -244,8 +33,6 @@ Framebuffer& Framebuffer::operator=(Framebuffer&& framebuffer) noexcept {
 
   _framebuffer = std::exchange(framebuffer._framebuffer, VK_NULL_HANDLE);
   _renderpass = std::exchange(framebuffer._renderpass, nullptr);
-  _viewport = framebuffer._viewport;
-  _scissor = framebuffer._scissor;
   return *this;
 }
 
@@ -253,22 +40,64 @@ Framebuffer::~Framebuffer() {
   destroy();
 }
 
-VkExtent2D Framebuffer::getVkExtent() const noexcept {
-  return _scissor.extent;
+Framebuffer Framebuffer::create(
+    const Renderpass& renderpass, const VkFramebufferCreateInfo& createInfo) {
+  VkFramebuffer framebuffer;
+  CHECK_VKCMD(vkCreateFramebuffer(
+                  renderpass.getLogicalDevice().getVkDevice(), &createInfo, nullptr, &framebuffer),
+              "Failed to create VkFramebuffer.");
+
+  return Framebuffer(renderpass, framebuffer);
 }
 
-const VkViewport& Framebuffer::getViewport() const noexcept {
-  return _viewport;
+VkFramebuffer Framebuffer::getVkFramebuffer() const noexcept {
+  return _framebuffer;
 }
 
-const VkRect2D& Framebuffer::getScissor() const noexcept {
-  return _scissor;
+VkFramebuffer Framebuffer::getVkResource() const noexcept {
+  return _framebuffer;
 }
 
 const Renderpass& Framebuffer::getRenderpass() const {
   return *_renderpass;
 }
 
-VkFramebuffer Framebuffer::getVkFramebuffer() const noexcept {
-  return _framebuffer;
+FramebufferBuilder& FramebufferBuilder::addAttachment(VkImageView attachment) {
+  _attachments.push_back(attachment);
+  return *this;
+}
+
+FramebufferBuilder& FramebufferBuilder::withAttachments(std::span<const VkImageView> attachments) {
+  _attachments.assign_range(attachments);
+  return *this;
+}
+
+FramebufferBuilder& FramebufferBuilder::withAttachments(
+    std::initializer_list<VkImageView> attachments) {
+  _attachments.assign_range(attachments);
+  return *this;
+}
+
+FramebufferBuilder& FramebufferBuilder::withAttachments(
+    std::vector<VkImageView>&& attachments) noexcept {
+  _attachments = std::move(attachments);
+  return *this;
+}
+
+FramebufferMetadata FramebufferBuilder::getMetadata() const noexcept {
+  return FramebufferMetadata{.extent = _extent, .layers = _layers, .flags = _flags};
+}
+
+Framebuffer FramebufferBuilder::build(const Renderpass& renderpass, VkExtent2D extent,
+                                      uint32_t layers, VkFramebufferCreateFlags flags) {
+  const VkFramebufferCreateInfo createInfo = {
+    .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO,
+    .flags = _flags = flags,
+    .renderPass = renderpass.getVkRenderPass(),
+    .attachmentCount = static_cast<uint32_t>(_attachments.size()),
+    .pAttachments = _attachments.data(),
+    .width = _extent.width = extent.width,
+    .height = _extent.height = extent.height,
+    .layers = _layers = layers};
+  return Framebuffer::create(renderpass, createInfo);
 }

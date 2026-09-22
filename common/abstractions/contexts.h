@@ -1,11 +1,7 @@
 #pragma once
 
-#include <any>
-#include <mutex>
-#include <optional>
+#include <glm/glm.hpp>
 #include <span>
-#include <variant>
-#include <vector>
 
 #include "common/camera/camera.h"
 #include "common/util/resource_handles.h"
@@ -18,46 +14,6 @@ struct CameraContext {
   glm::mat4 proj;
   glm::vec3 viewDir;
 };
-
-struct DrawingContext {
-  uint32_t imageIndex;
-  std::vector<CameraContext> cameraContexts;
-  glm::u32vec2 screenSpaceViewPos;
-
-  std::mutex _mu;
-};
-
-enum class ObjectType : uint8_t {
-  RENDERPASS = 0,
-  FRAMEBUFFER,
-  TEXTURE,
-  BUFFER,
-  PIPELINE,
-};
-
-struct AttachmentLayout {};
-
-struct RenderpassCreateRequest {
-  ObjectType type = ObjectType::RENDERPASS;
-  std::optional<RenderpassHandle> returnHandle;
-
-  void* nextChunk;
-};
-
-// We can create Renderpass on the fly when needed by
-using RenderpassReference = std::variant<RenderpassCreateRequest*, RenderpassHandle>;
-
-struct FramebufferCreateRequest {
-  ObjectType type = ObjectType::FRAMEBUFFER;
-  std::optional<FramebufferHandle> returnHandle;
-
-  RenderpassReference renderpassRef;
-  void* nextChunk;
-};
-
-struct UpdateContextResponse {};
-
-struct UpdateContext {};
 
 struct PresentResources {
   int64_t imageFormat;

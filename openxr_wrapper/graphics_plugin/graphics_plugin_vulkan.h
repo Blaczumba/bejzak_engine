@@ -20,8 +20,8 @@
 #include "vulkan/wrapper/framebuffer/framebuffer.h"
 #include "vulkan/wrapper/instance/instance.h"
 #include "vulkan/wrapper/logical_device/logical_device.h"
-#include "vulkan/wrapper/memory_objects/texture.h"
 #include "vulkan/wrapper/physical_device/physical_device.h"
+#include "presentation_graphics_communication/presentation_graphics_communication.h"
 
 namespace xrw {
 
@@ -48,7 +48,7 @@ public:
   void createResources() override;
 
   std::unique_ptr<common::GraphicsContext> createGraphicsContext(
-      XrInstance xrInstance, XrSystemId systemId, const FileLoader& fileLoader) override;
+      XrInstance xrInstance, XrSystemId systemId, std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer, const FileLoader& fileLoader) override;
 
 private:
   const LogicalDevice* _logicalDevice;

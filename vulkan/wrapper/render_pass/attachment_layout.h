@@ -23,9 +23,15 @@ public:
 
   VkImageLayout getAttachmentVkImageLayout(uint32_t index) const;
 
+  std::span<const VkImageLayout> getAttachmentVkImageLayouts() const noexcept;
+
   AttachmentType getAttachmentType(uint32_t index) const;
 
+  std::span<const AttachmentType> getAttachmentTypes() const noexcept;
+
   VkImageAspectFlags getAttachmentAspectFlags(uint32_t index) const;
+
+  std::span<const VkImageAspectFlags> getAttachmentAspectFlags() const noexcept;
 
   size_t getAttachmentsCount() const noexcept;
 

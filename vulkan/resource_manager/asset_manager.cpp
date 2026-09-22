@@ -1,233 +1,230 @@
 #include "asset_manager.h"
 
 #include <algorithm>
-#include <format>
 #include <functional>
 #include <future>
 #include <memory>
-#include <numeric>
 #include <span>
-#include <string>
-#include <unordered_map>
+#include <tuple>
 #include <vulkan/vulkan.h>
 
+#include "common/buffer/index_buffer_lib.h"
+#include "common/buffer/vertex_buffer_lib.h"
 #include "vulkan/wrapper/logical_device/logical_device.h"
 #include "vulkan/wrapper/memory_objects/buffer.h"
-#include "vulkan/wrapper/util/index_buffer_util.h"
-
-using ImageData = AssetManager::ImageData;
-using VertexData = AssetManager::VertexData;
-
-AssetManager::AssetManager(
-    const LogicalDevice& logicalDevice, const FileLoader& fileLoader, std::launch launchPolicy)
-  : _logicalDevice(logicalDevice), _fileLoader(fileLoader), _launchPolicy(std::launch::deferred),
-    _freeImageDataIndices(MAX_STAGING_IMAGE_DATA_RESOURCES),
-    _freeVertexDataIndices(MAX_STAGING_VERTEX_DATA_RESOURCES) {
-  std::iota(_freeImageDataIndices.rbegin(), _freeImageDataIndices.rend(),
-            StagingImageDataResourceHandle(0));
-  std::iota(_freeVertexDataIndices.rbegin(), _freeVertexDataIndices.rend(),
-            StagingVertexDataResourceHandle(0));
-}
 
 std::unique_ptr<AssetManager> AssetManager::create(
-    const LogicalDevice& logicalDevice, const FileLoader& fileLoader, std::launch launchPolicy) {
-  return std::unique_ptr<AssetManager>(new AssetManager(logicalDevice, fileLoader, launchPolicy));
+    const LogicalDevice& logicalDevice, BufferManager& bufferManager) {
+  return std::unique_ptr<AssetManager>(new AssetManager(
+      logicalDevice, bufferManager, std::thread::hardware_concurrency() - 1, 2 * lib::GiB));
 }
 
-namespace {
-
-lib::Buffer<VkBufferImageCopy> translateToVkBufferImageCopy(
-    std::span<const ImageSubresource> imageSubresources) {
-  lib::Buffer<VkBufferImageCopy> vkSubresources(imageSubresources.size());
-  std::transform(std::cbegin(imageSubresources), std::cend(imageSubresources), vkSubresources.begin(),
-                 [](const ImageSubresource& subresource) {
-                   return VkBufferImageCopy{
-                     .bufferOffset = subresource.offset,
-                     .imageSubresource = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                                          .mipLevel = subresource.mipLevel,
-                                          .baseArrayLayer = subresource.baseArrayLayer,
-                                          .layerCount = subresource.layerCount},
-                     .imageExtent = {.width = subresource.width,
-                                          .height = subresource.height,
-                                          .depth = subresource.depth},
-                   };
-                 });
-  return vkSubresources;
+AssetManager::AssetManager(const LogicalDevice& logicalDevice, BufferManager& bufferManager,
+                           uint8_t threadCount, size_t size)
+  : _logicalDevice(logicalDevice), _bufferManager(bufferManager), _threads(threadCount),
+    _bufferSize(size / threadCount),
+    _alignment(logicalDevice.getPhysicalDevice().getStagingAlignment()) {
+  for (uint8_t i = 0; i < _threads.size(); i++) {
+    auto [buffer, metadata] =
+        BufferBuilder()
+            .withUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
+            .withSize(_bufferSize)
+            .buildStagingBufferWithMetadata(_logicalDevice);
+    _threads[i].bufferBlocks.push_back(ThreadData::BufferBlock{
+      .stagingBuffer = bufferManager.storeBuffer(std::move(buffer), metadata),
+      .virtualBlock = VirtualBlock::create(logicalDevice.getMemoryAllocator(), _bufferSize)});
+    _threads[i].thread = std::thread(&AssetManager::doWork, this, i);
+  }
+  _tasks.reserve(256);
 }
 
-}  // namespace
+void AssetManager::doWork(uint8_t threadIndex) {
+  ThreadData& thisThread = _threads[threadIndex];
+  std::function<void(ThreadData&, size_t, size_t)> task;
+  bool timedOut;
+  while (true) {
+    {
+      std::unique_lock lock(_mutex);
+      timedOut = !_conditionVariable.wait_for(lock, std::chrono::seconds(5), [this] {
+        return !_tasks.empty() || _stop;
+      });
 
-StagingImageDataResourceHandle AssetManager::loadImageAsync(const std::string& filePath) {
-  const StagingImageDataResourceHandle index = _freeImageDataIndices.back();
-  _freeImageDataIndices.pop_back();
-  _awaitingImageDataResources.emplace(
-      index, std::async(_launchPolicy, [this, filePath]() -> ImageData {
-        const auto [resource, dataPtr] =
-            loadImage(_fileLoader.loadFileToBuffer(filePath), filePath);
-        Buffer stagingBuffer = Buffer::createStagingBuffer(
-            _logicalDevice, resource.size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-        common::copyData(stagingBuffer.getMappedMemory(), 0,
-                         std::span(static_cast<const std::byte*>(resource.data), resource.size));
-        return ImageData(
-            std::move(stagingBuffer), resource.width, resource.height, resource.mipLevels,
-            resource.layerCount, translateToVkBufferImageCopy(resource.subresources));
-      }));
-  return index;
+      if (_stop) [[unlikely]] {
+        return;
+      }
+
+      if (!timedOut) {
+        task = std::move(_tasks.back());
+        _tasks.pop_back();
+      }
+    }
+
+    if (!timedOut) {
+      task(thisThread, _bufferSize, _alignment);
+    } else {
+      thisThread.virtualAllocationStrategy.cleanEmptyCounters();
+      cleanVirtualBlocks(thisThread);
+    }
+  }
 }
 
-StagingImageDataResourceHandle AssetManager::loadImageAsync(
-    std::shared_ptr<void> modelPtr, std::span<const std::byte> data) {
-  const StagingImageDataResourceHandle index = _freeImageDataIndices.back();
-  _freeImageDataIndices.pop_back();
-  _awaitingImageDataResources.emplace(
-      index, std::async(_launchPolicy, [this, modelPtr = std::move(modelPtr), data]() -> ImageData {
-        const auto [resource, dataPtr] = loadImage(data, "");  // TODO: refactor.
-        Buffer stagingBuffer = Buffer::createStagingBuffer(
-            _logicalDevice, resource.size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-        common::copyData(stagingBuffer.getMappedMemory(), 0,
-                         std::span(static_cast<const std::byte*>(resource.data), resource.size));
-        return ImageData(
-            std::move(stagingBuffer), resource.width, resource.height, resource.mipLevels,
-            resource.layerCount, translateToVkBufferImageCopy(resource.subresources));
-      }));
-  return index;
+void AssetManager::cleanVirtualBlocks(ThreadData& threadData) {
+  while (
+      threadData.bufferBlocks.size() > 1 && threadData.bufferBlocks.front().virtualBlock.empty()) {
+    if (!threadData.blockToBeReclaimed.has_value()) {
+      threadData.blockToBeReclaimed.emplace(std::move(threadData.bufferBlocks.front()));
+    }
+    threadData.bufferBlocks.pop_front();
+  }
 }
 
-StagingImageDataResourceHandle AssetManager::loadImageAsync(
-    std::shared_ptr<void> modelPtr, ImageResource&& imageResource) {
-  const StagingImageDataResourceHandle index = _freeImageDataIndices.back();
-  _freeImageDataIndices.pop_back();
-  _awaitingImageDataResources.emplace(
-      index,
-      std::async(
-          _launchPolicy,
-          [this, modelPtr = std::move(modelPtr),
-           imageResource = std::move(imageResource)]() -> ImageData {
-            Buffer stagingBuffer = Buffer::createStagingBuffer(
-                _logicalDevice, imageResource.size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT);
-            common::copyData(
-                stagingBuffer.getMappedMemory(), 0,
-                std::span(static_cast<const std::byte*>(imageResource.data), imageResource.size), 0,
-                imageResource.size);
-            return ImageData(std::move(stagingBuffer), imageResource.width, imageResource.height,
-                             imageResource.mipLevels, imageResource.layerCount,
-                             translateToVkBufferImageCopy(imageResource.subresources));
-          }));
-  return index;
+AssetManager::~AssetManager() {
+  {
+    std::lock_guard lck(_mutex);
+    _stop = true;
+  }
+  _conditionVariable.notify_all();
+  for (auto& thread : _threads) {
+    thread.thread.join();
+  }
 }
 
-StagingVertexDataResourceHandle AssetManager::loadVertexDataInterleavingAsync(
-    std::shared_ptr<void> modelPtr, std::span<const std::byte> indices, uint8_t indexSize,
+std::tuple<Ref<Buffer>, Ref<VirtualAllocation>, VirtualAllocationMetadata> AssetManager::allocate(
+    ThreadData& threadData, size_t size, size_t alignment, size_t blockSize) {
+  std::expected<std::tuple<VirtualAllocation, VirtualAllocationMetadata>, VirtualAllocation::Error>
+      expectedVirtualAllocation =
+          threadData.bufferBlocks.back().virtualBlock.createVirtualAllocation(size, alignment);
+  if (!expectedVirtualAllocation.has_value()) {
+    // Retry with the new buffer/block.
+    if (threadData.blockToBeReclaimed.has_value()) {
+      // Slower path: still very fast, if allocation didn't succeed then try to reuse the
+      // retired block.
+      threadData.bufferBlocks.push_back(std::move(*threadData.blockToBeReclaimed));
+      threadData.blockToBeReclaimed.reset();
+    } else {
+      // The slowest path: allocate new staging buffer and virtual block for the allocation.
+      auto [buffer, metadata] =
+          BufferBuilder()
+              .withUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
+              .withSize(std::max(blockSize, size))  // Rare situation when size is bigger than
+                                                    // blockSize.
+              .buildStagingBufferWithMetadata(_logicalDevice);
+      threadData.bufferBlocks.push_back(ThreadData::BufferBlock{
+        .stagingBuffer = _bufferManager.storeBuffer(std::move(buffer), metadata),
+        .virtualBlock = VirtualBlock::create(_logicalDevice.getMemoryAllocator(), blockSize)});
+    }
+    expectedVirtualAllocation =
+        threadData.bufferBlocks.back().virtualBlock.createVirtualAllocation(size, alignment);
+    if (!expectedVirtualAllocation.has_value()) [[unlikely]] {
+      throw EngineException("Failed to create virtual allocation.");
+    }
+  }
+  auto& [virtualAllocation, virtualAllocationMetadata] = expectedVirtualAllocation.value();
+  return std::make_tuple(threadData.bufferBlocks.back().stagingBuffer,
+                         threadData.virtualAllocationStrategy.transferResource(
+                             std::move(virtualAllocation), virtualAllocationMetadata),
+                         virtualAllocationMetadata);
+}
+
+std::shared_ptr<common::AssetManager::ImageData> AssetManager::loadImageAsync(
+    std::function<std::tuple<ImageResource, OwnedImageData>(void)>&& imageFunction) {
+  auto promise = std::make_shared<common::AssetManager::ImageData>();
+  {
+    std::lock_guard lock(_mutex);
+    _tasks.push_back([this, promise, imageFunction = std::move(imageFunction)](
+                         ThreadData& threadData, size_t blockSize, size_t alignment) {
+      auto [resource, dataPtr] = imageFunction();
+      auto [stagingBufferRef, virtualAllocationRef, virtualAllocationMetadata] =
+          allocate(threadData, resource.size, alignment, blockSize);
+      std::memcpy(WeakRef<Buffer>(stagingBufferRef).getMetadata().mappedMemory
+                      + virtualAllocationMetadata.offset,
+                  resource.data, resource.size);
+
+      promise->stagingBuffer = std::move(stagingBufferRef);
+      promise->virtualAllocation = std::move(virtualAllocationRef);
+      promise->width = resource.width;
+      promise->height = resource.height;
+      promise->mipLevels = resource.mipLevels;
+      promise->layerCount = resource.layerCount;
+      promise->copyRegions = std::move(resource.subresources);
+      promise->residentMips.store(0, std::memory_order_relaxed);
+      promise->loadState.store(
+          common::AssetManager::LoadState::FINISHED, std::memory_order_release);
+    });
+  }
+  _conditionVariable.notify_one();
+  return promise;
+}
+
+std::shared_ptr<common::AssetManager::ImageData> AssetManager::loadImageAsync(
+    std::shared_ptr<void> modelPtr, ImageResource&& resource) {
+  auto promise = std::make_shared<common::AssetManager::ImageData>();
+  {
+    std::lock_guard lock(_mutex);
+    _tasks.push_back(
+        [this, promise, modelPtr = std::move(modelPtr), resource = std::move(resource)](
+            ThreadData& threadData, size_t blockSize, size_t alignment) {
+          auto [stagingBufferRef, virtualAllocationRef, virtualAllocationMetadata] =
+              allocate(threadData, resource.size, alignment, blockSize);
+          std::memcpy(WeakRef<Buffer>(stagingBufferRef).getMetadata().mappedMemory
+                          + virtualAllocationMetadata.offset,
+                      resource.data, resource.size);
+
+          promise->stagingBuffer = std::move(stagingBufferRef);
+          promise->virtualAllocation = std::move(virtualAllocationRef);
+          promise->width = resource.width;
+          promise->height = resource.height;
+          promise->mipLevels = resource.mipLevels;
+          promise->layerCount = resource.layerCount;
+          promise->copyRegions = std::move(resource.subresources);
+          promise->residentMips.store(0, std::memory_order_relaxed);
+          promise->loadState.store(
+              common::AssetManager::LoadState::FINISHED, std::memory_order_release);
+        });
+  }
+  _conditionVariable.notify_one();
+  return promise;
+}
+
+std::shared_ptr<common::AssetManager::VertexData> AssetManager::loadVertexDataInterleavingAsync(
+    std::shared_ptr<void> modelPtr, std::span<const std::byte> indices, common::IndexType indexType,
     std::vector<common::BufferDescription>&& bufferDescriptions) {
-  const StagingVertexDataResourceHandle index = _freeVertexDataIndices.back();
-  _freeVertexDataIndices.pop_back();
-  _awaitingVertexDataResources.emplace(
-      index,
-      std::async(
-          _launchPolicy,
-          [this, modelPtr = std::move(modelPtr), indices, indexSize,
-           bufferDescriptions = std::move(bufferDescriptions)]() mutable -> VertexData {
-            VertexData vertexData;
-            const VkPhysicalDeviceType deviceType =
-                _logicalDevice.getPhysicalDevice().getPhysicalDeviceType();
+  auto promise = std::make_shared<common::AssetManager::VertexData>();
+  {
+    std::lock_guard lock(_mutex);
+    _tasks.push_back([this, promise, modelPtr = std::move(modelPtr), indices, indexType,
+                      bufferDescriptions = std::move(bufferDescriptions)](
+                         ThreadData& threadData, size_t blockSize, size_t alignment) mutable {
+      for (common::BufferDescription& description : bufferDescriptions) {
+        auto [stagingBufferRef, virtualAllocationRef, virtualAllocationMetadata] =
+            allocate(threadData, description.totalSize, alignment, blockSize);
+        common::copyDataInterleaving(
+            std::span(WeakRef<Buffer>(stagingBufferRef).getMetadata().mappedMemory
+                          + virtualAllocationMetadata.offset,
+                      virtualAllocationMetadata.size),
+            description.attributes);
+        promise->buffers.insert(
+            {std::move(description.name),
+             std::make_tuple(std::move(stagingBufferRef), std::move(virtualAllocationRef))});
+      }
 
-            struct {
-              VkBufferUsageFlags vertexBufferUsage = 0;
-              VkBufferUsageFlags indexBufferUsage = 0;
-            } additionalFlags;
+      const common::IndexType shrunkIndexType = common::getShrunkIndexSize(indices, indexType);
+      auto [stagingBufferRef, virtualAllocationRef, virtualAllocationMetadata] = allocate(
+          threadData,
+          indices.size() / static_cast<size_t>(indexType) * static_cast<size_t>(shrunkIndexType),
+          alignment, blockSize);
+      common::shrinkIndexData(std::span(WeakRef<Buffer>(stagingBufferRef).getMetadata().mappedMemory
+                                            + virtualAllocationMetadata.offset,
+                                        virtualAllocationMetadata.size),
+                              indices, shrunkIndexType, indexType);
 
-            // For integrated graphics we create buffers properly in place so that they do not need
-            // to be copied to the same memory later.
-            if (deviceType == VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU) {
-              additionalFlags.vertexBufferUsage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-              additionalFlags.indexBufferUsage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-            } else if (deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
-              additionalFlags.vertexBufferUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-              additionalFlags.indexBufferUsage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
-            }
-
-            for (common::BufferDescription& description : bufferDescriptions) {
-              Buffer vertexBuffer = Buffer::createStagingBuffer(
-                  _logicalDevice, description.totalSize, additionalFlags.vertexBufferUsage);
-              common::copyDataInterleaving(vertexBuffer.getMappedMemory(), description.attributes);
-              vertexData.buffers.insert({std::move(description.name), std::move(vertexBuffer)});
-            }
-
-            const size_t shrunkIndexSize = getShrunkIndexSize(indices, indexSize);
-            vertexData.indexBuffer = Buffer::createStagingBuffer(
-                _logicalDevice, indices.size() / indexSize * shrunkIndexSize,
-                additionalFlags.indexBufferUsage);
-            common::copyAndShrinkIndexData(
-                vertexData.indexBuffer.getMappedMemory(), indices, shrunkIndexSize, indexSize);
-
-            vertexData.indexType = getIndexType(shrunkIndexSize);
-
-            return vertexData;
-          }));
-
-  return index;
-}
-
-const ImageData& AssetManager::getImageData(StagingImageDataResourceHandle index) {
-  if (_imageDataResources.exists(*index)) [[likely]] {
-    return _imageDataResources.getValue(*index);
+      promise->indexType = shrunkIndexType;
+      promise->indexBuffer =
+          std::make_tuple(std::move(stagingBufferRef), std::move(virtualAllocationRef));
+      promise->loadState.store(
+          common::AssetManager::LoadState::FINISHED, std::memory_order_release);
+    });
   }
-
-  auto it = _awaitingImageDataResources.find(index);
-  if (it == _awaitingImageDataResources.cend()) [[unlikely]] {
-    throw EngineException(std::format("Failed to find index {} in AssetManager.", *index));
-  }
-
-  const ImageData& data = _imageDataResources.insertUnsafe(*index, it->second.get());
-  _awaitingImageDataResources.erase(it);
-  return data;
-}
-
-ImageData AssetManager::releaseImageData(StagingImageDataResourceHandle index) {
-  if (_imageDataResources.exists(*index)) [[likely]] {
-    ImageData data = std::move(_imageDataResources.getValue(*index));
-    _imageDataResources.eraseUnsafe(*index);
-    return data;
-  }
-
-  auto it = _awaitingImageDataResources.find(index);
-  if (it == _awaitingImageDataResources.cend()) [[unlikely]] {
-    throw EngineException(std::format("Failed to find index {} in AssetManager.", *index));
-  }
-
-  ImageData data = std::move(_imageDataResources.insertUnsafe(*index, it->second.get()));
-  _awaitingImageDataResources.erase(it);
-  return data;
-}
-
-const VertexData& AssetManager::getVertexData(StagingVertexDataResourceHandle index) {
-  if (_vertexDataResources.exists(*index)) [[likely]] {
-    return _vertexDataResources.getValue(*index);
-  }
-
-  auto it = _awaitingVertexDataResources.find(index);
-  if (it == _awaitingVertexDataResources.cend()) [[unlikely]] {
-    throw EngineException(std::format("Failed to find index {} in AssetManager.", *index));
-  }
-
-  const VertexData& data = _vertexDataResources.insertUnsafe(*index, it->second.get());
-  _awaitingVertexDataResources.erase(it);
-  return data;
-}
-
-VertexData AssetManager::releaseVertexData(StagingVertexDataResourceHandle index) {
-  if (_vertexDataResources.exists(*index)) [[likely]] {
-    VertexData data = std::move(_vertexDataResources.getValue(*index));
-    _vertexDataResources.eraseUnsafe(*index);
-    return data;
-  }
-
-  auto it = _awaitingVertexDataResources.find(index);
-  if (it == _awaitingVertexDataResources.cend()) [[unlikely]] {
-    throw EngineException(std::format("Failed to find index {} in AssetManager.", *index));
-  }
-
-  VertexData data = std::move(_vertexDataResources.insertUnsafe(*index, it->second.get()));
-  _awaitingVertexDataResources.erase(it);
-  return data;
+  _conditionVariable.notify_one();
+  return promise;
 }

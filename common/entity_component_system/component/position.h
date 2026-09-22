@@ -1,6 +1,5 @@
 #pragma once
 
-#include <glm/glm.hpp>
 #include <memory>
 
 #include "common/entity_component_system/entity/entity.h"

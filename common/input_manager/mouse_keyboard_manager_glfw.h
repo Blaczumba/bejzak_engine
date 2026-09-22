@@ -3,7 +3,6 @@
 #include <memory>
 
 #include "common/window/window_glfw.h"
-#include "glfw/glfw3.h"
 #include "mouse_keyboard_manager.h"
 
 class WindowGlfw;

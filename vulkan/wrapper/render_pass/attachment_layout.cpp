@@ -30,6 +30,10 @@ VkImageLayout AttachmentLayout::getAttachmentVkImageLayout(uint32_t index) const
   return _attachmentImageLayouts[index];
 }
 
+std::span<const VkImageLayout> AttachmentLayout::getAttachmentVkImageLayouts() const noexcept {
+  return _attachmentImageLayouts;
+}
+
 AttachmentType AttachmentLayout::getAttachmentType(uint32_t index) const {
   if (_attachmentTypes.size() <= index) [[unlikely]] {
     throw EngineException("Attachment index cannot exceed number of attachments.");
@@ -37,11 +41,19 @@ AttachmentType AttachmentLayout::getAttachmentType(uint32_t index) const {
   return _attachmentTypes[index];
 }
 
+std::span<const AttachmentType> AttachmentLayout::getAttachmentTypes() const noexcept {
+  return _attachmentTypes;
+}
+
 VkImageAspectFlags AttachmentLayout::getAttachmentAspectFlags(uint32_t index) const {
   if (_aspectFlags.size() <= index) [[unlikely]] {
     throw EngineException("Attachment index cannot exceed number of attachments.");
   }
   return _aspectFlags[index];
+}
+
+std::span<const VkImageAspectFlags> AttachmentLayout::getAttachmentAspectFlags() const noexcept {
+  return _aspectFlags;
 }
 
 size_t AttachmentLayout::getAttachmentsCount() const noexcept {

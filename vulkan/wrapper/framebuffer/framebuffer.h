@@ -1,28 +1,17 @@
 #pragma once
 
+#include <cstdint>
 #include <vector>
 #include <vulkan/vulkan.h>
 
 #include "lib/buffer/buffer.h"
-#include "vulkan/wrapper/memory_objects/texture.h"
 #include "vulkan/wrapper/render_pass/render_pass.h"
 
 class Framebuffer {
-  Framebuffer(VkFramebuffer framebuffer, const Renderpass& renderpass, const VkViewport& viewport,
-              const VkRect2D& scissor) noexcept;
+  Framebuffer(const Renderpass& renderpass, VkFramebuffer framebuffer) noexcept;
 
 public:
   Framebuffer() noexcept = default;
-
-  static Framebuffer create(const Renderpass& renderpass, VkExtent2D extent, uint32_t numLayers,
-                            std::span<const VkImageView> attachments);
-
-  static Framebuffer createFromSwapchain(
-      VkCommandBuffer commandBuffer, const Renderpass& renderpass, VkExtent2D swapchainExtent,
-      uint32_t numLayers, VkImageView swapchainImageView, std::vector<Texture>& attachments);
-
-  static Framebuffer createFromTextures(
-      const Renderpass& renderpass, std::span<const Texture> textures);
 
   Framebuffer(Framebuffer&& framebuffer) noexcept;
 
@@ -30,15 +19,14 @@ public:
 
   ~Framebuffer();
 
-  VkExtent2D getVkExtent() const noexcept;
-
-  const VkViewport& getViewport() const noexcept;
-
-  const VkRect2D& getScissor() const noexcept;
-
-  const Renderpass& getRenderpass() const;
+  static Framebuffer create(
+      const Renderpass& renderpass, const VkFramebufferCreateInfo& createInfo);
 
   VkFramebuffer getVkFramebuffer() const noexcept;
+
+  VkFramebuffer getVkResource() const noexcept;
+
+  const Renderpass& getRenderpass() const;
 
 private:
   void destroy();
@@ -46,7 +34,35 @@ private:
   VkFramebuffer _framebuffer = VK_NULL_HANDLE;
 
   const Renderpass* _renderpass = nullptr;
+};
 
-  VkViewport _viewport;
-  VkRect2D _scissor;
+struct FramebufferMetadata {
+  VkExtent2D extent;
+  uint32_t layers;
+  VkFramebufferCreateFlags flags;
+  // Other std::optional fields representing pNext metadata.
+};
+
+class FramebufferBuilder {
+public:
+  FramebufferBuilder& addAttachment(VkImageView attachment);
+
+  FramebufferBuilder& withAttachments(std::span<const VkImageView> attachments);
+
+  FramebufferBuilder& withAttachments(std::initializer_list<VkImageView> attachments);
+
+  FramebufferBuilder& withAttachments(std::vector<VkImageView>&& attachments) noexcept;
+
+  FramebufferMetadata getMetadata() const noexcept;
+
+  Framebuffer build(const Renderpass& renderpass, VkExtent2D extent, uint32_t layers,
+                    VkFramebufferCreateFlags flags = 0);
+
+private:
+  std::vector<VkImageView> _attachments;
+  VkExtent2D _extent;
+  uint32_t _layers;
+  VkFramebufferCreateFlags _flags;
+
+  void* _pNext = nullptr;
 };

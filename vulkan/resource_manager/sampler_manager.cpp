@@ -1,26 +1,28 @@
 #include "sampler_manager.h"
 
-#include "common/util/engine_exception.h"
-#include "vulkan/resource_manager/util.h"
+#include "vulkan/resource_manager/reference_counter_with_hashing.h"
+#include "vulkan/wrapper/sampler/sampler.h"
 
 std::unique_ptr<SamplerManager> SamplerManager::create() {
   return std::unique_ptr<SamplerManager>(new SamplerManager());
 }
 
-SamplerHandle SamplerManager::transferSampler(Sampler&& sampler) {
-  SamplerHandle handle = getNextHandle(_samplerMap.size(), _freeSamplerHandles);
-  if (!_samplerMap.insert(*handle, std::move(sampler))) {
-    throw EngineException("Failed to transfer the sampler into SamplerManager.");
-  }
-
-  return handle;
-}
-
-void SamplerManager::removeSampler(SamplerHandle handle) {
-  _freeSamplerHandles.push_back(handle);
-  _samplerMap.eraseUnsafe(*handle);
-}
-
-const Sampler& SamplerManager::getSampler(SamplerHandle handle) const {
-  return _samplerMap.getValue(*handle);
+Ref<Sampler> SamplerManager::getOrCreateSampler(
+    const LogicalDevice& logicalDevice, const SamplerMetadata& metadata) {
+  return getOrCreateResource(
+      [](const LogicalDevice& logicalDevice, const SamplerMetadata& metadata) {
+        return SamplerBuilder()
+            .withFlags(metadata.flags)
+            .withMinMagFilter(metadata.minFilter, metadata.magFilter)
+            .withMipmapMode(metadata.mipmapMode)
+            .withAddressMode(metadata.addressModeU, metadata.addressModeV, metadata.addressModeW)
+            .withMipLodBias(metadata.mipLodBias)
+            .withMaxAnisotropy(metadata.maxAnisotropy)
+            .withCompareOp(metadata.compareOp)
+            .withLodRange(metadata.minLod, metadata.maxLod)
+            .withBorderColor(metadata.borderColor)
+            .withUnnormalizedCoordinates(metadata.unnormalizedCoordinates)
+            .buildSampler(logicalDevice);
+      },
+      logicalDevice, metadata);
 }

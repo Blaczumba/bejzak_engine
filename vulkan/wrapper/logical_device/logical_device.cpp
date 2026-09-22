@@ -60,6 +60,7 @@ LogicalDevice& LogicalDevice::operator=(LogicalDevice&& logicalDevice) noexcept 
 
 LogicalDevice::~LogicalDevice() {
   if (_device != VK_NULL_HANDLE) {
+    vkDeviceWaitIdle(_device);
     _resourceDestroyer.reset();
     _memoryAllocator.reset();
     vkDestroyDevice(_device, nullptr);
@@ -99,7 +100,8 @@ VkDevice createVkDevice(const PhysicalDevice& physicalDevice) {
       .withStorage8BitExtension()
       .withStorage16BitExtension()
       .withFragmentShadingRateExtension()
-      .withFragmentDensityMapExtension();
+      .withFragmentDensityMapExtension()
+      .withSynchronization2();
 
   const VkPhysicalDeviceFeatures2 deviceFeaturesInfo = {
     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
@@ -174,6 +176,18 @@ VkImageView LogicalDevice::createImageView(const VkImageViewCreateInfo& imageVie
   CHECK_VKCMD(vkCreateImageView(_device, &imageViewCreateInfo, nullptr, &view),
               "Failed to create VkImageView.");
   return view;
+}
+
+VkResult LogicalDevice::waitForFences(
+    std::span<const VkFence> fences, VkBool32 waitAll, uint64_t timeout) {
+  return vkWaitForFences(
+      _device, static_cast<uint32_t>(fences.size()), fences.data(), waitAll, timeout);
+}
+
+VkResult LogicalDevice::waitForFences(
+    std::initializer_list<VkFence> fences, VkBool32 waitAll, uint64_t timeout) {
+  return vkWaitForFences(
+      _device, static_cast<uint32_t>(fences.size()), fences.begin(), waitAll, timeout);
 }
 
 VkDevice LogicalDevice::getVkDevice() const noexcept {

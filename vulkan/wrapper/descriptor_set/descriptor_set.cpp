@@ -5,8 +5,8 @@
 
 #include "descriptor_pool.h"
 #include "lib/buffer/buffer.h"
-#include "vulkan/wrapper/logical_device/logical_device.h"
-#include "vulkan/wrapper/util/check.h"
+#include "vulkan/wrapper/descriptor_set/descriptor_pool.h"
+#include "vulkan/wrapper/descriptor_set/lib.h"
 
 DescriptorSet::DescriptorSet(VkDescriptorSet descriptorSet,
                              const std::shared_ptr<const DescriptorPool>& descriptorPool) noexcept
@@ -28,43 +28,23 @@ DescriptorSet& DescriptorSet::operator=(DescriptorSet&& descriptorSet) noexcept 
 
 DescriptorSet DescriptorSet::create(
     const std::shared_ptr<const DescriptorPool>& descriptorPool, VkDescriptorSetLayout layout) {
-  const VkDescriptorSetAllocateInfo allocInfo = {
-    .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-    .descriptorPool = descriptorPool->getVkDescriptorPool(),
-    .descriptorSetCount = 1,
-    .pSetLayouts = &layout,
-  };
-
   VkDescriptorSet descriptorSet;
-  CHECK_VKCMD(vkAllocateDescriptorSets(
-                  descriptorPool->getLogicalDevice().getVkDevice(), &allocInfo, &descriptorSet),
-              "Failed to create VkDescriptorSet.");
+  internal::allocateDescriptorSets(*descriptorPool, std::span{&layout, 1}, &descriptorSet);
   return DescriptorSet(descriptorSet, descriptorPool);
 }
 
 std::vector<DescriptorSet> DescriptorSet::create(
-    const std::shared_ptr<const DescriptorPool>& descriptorPool, VkDescriptorSetLayout layout,
-    uint32_t numSets) {
-  const lib::Buffer<VkDescriptorSetLayout> layouts(numSets, layout);
-  const VkDescriptorSetAllocateInfo allocInfo = {
-    .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-    .descriptorPool = descriptorPool->getVkDescriptorPool(),
-    .descriptorSetCount = numSets,
-    .pSetLayouts = layouts.data(),
-  };
-
-  lib::Buffer<VkDescriptorSet> descriptorSets(numSets);
-  CHECK_VKCMD(vkAllocateDescriptorSets(descriptorPool->getLogicalDevice().getVkDevice(), &allocInfo,
-                                       descriptorSets.data()),
-              "Failed to create VkDescriptorSet.");
-
-  std::vector<DescriptorSet> descSets;
-  descSets.reserve(descriptorSets.size());
-  std::transform(descriptorSets.cbegin(), descriptorSets.cend(), std::back_inserter(descSets),
-                 [&](VkDescriptorSet descriptorSet) {
+    const std::shared_ptr<const DescriptorPool>& descriptorPool,
+    std::span<const VkDescriptorSetLayout> layouts) {
+  lib::Buffer<VkDescriptorSet> vkDescriptorSets(layouts.size());
+  internal::allocateDescriptorSets(*descriptorPool, layouts, vkDescriptorSets.data());
+  std::vector<DescriptorSet> descriptorSets;
+  descriptorSets.reserve(descriptorSets.size());
+  std::transform(vkDescriptorSets.cbegin(), vkDescriptorSets.cend(),
+                 std::back_inserter(descriptorSets), [&](VkDescriptorSet descriptorSet) {
                    return DescriptorSet(descriptorSet, descriptorPool);
                  });
-  return descSets;
+  return descriptorSets;
 }
 
 VkDescriptorSet DescriptorSet::getVkDescriptorSet() const noexcept {

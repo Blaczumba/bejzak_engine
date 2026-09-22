@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <initializer_list>
 #include <memory>
 #include <span>
 #include <utility>
@@ -15,7 +16,10 @@ class Buffer {
 public:
   Buffer() = default;
 
-  explicit Buffer(size_t size) : _buffer(size > 0 ? std::make_unique_for_overwrite<T[]>(size) : nullptr), _size(size) {}
+  ~Buffer() = default;
+
+  explicit Buffer(size_t size)
+    : _buffer(size > 0 ? std::make_unique_for_overwrite<T[]>(size) : nullptr), _size(size) {}
 
   Buffer(size_t size, T value) : Buffer(size) {
     std::fill(_buffer.get(), std::next(_buffer.get(), size), value);
@@ -63,6 +67,24 @@ public:
     }
     _buffer = std::move(other._buffer);
     _size = std::exchange(other._size, 0);
+    return *this;
+  }
+
+  Buffer& operator=(std::span<const T> other) noexcept {
+    if (_size != other.size()) {
+      _size = other.size();
+      _buffer = std::make_unique_for_overwrite<T[]>(_size);
+    }
+    std::copy(other.begin(), other.end(), _buffer.get());
+    return *this;
+  }
+
+  Buffer& operator=(std::initializer_list<T> other) noexcept {
+    if (_size != other.size()) {
+      _size = other.size();
+      _buffer = std::make_unique_for_overwrite<T[]>(_size);
+    }
+    std::copy(other.begin(), other.end(), _buffer.get());
     return *this;
   }
 

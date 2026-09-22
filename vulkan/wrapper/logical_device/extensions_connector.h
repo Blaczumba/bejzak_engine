@@ -1,5 +1,7 @@
 #pragma once
 
+#include <vulkan/vulkan.h>
+
 #include "vulkan/wrapper/physical_device/physical_device.h"
 
 class ExtensionsConnector {
@@ -30,6 +32,8 @@ public:
 
   ExtensionsConnector& withFragmentDensityMapExtension();
 
+  ExtensionsConnector& withSynchronization2();
+
   void* getNext() const;
 
 private:
@@ -45,4 +49,5 @@ private:
   VkPhysicalDevice16BitStorageFeatures _storage16Bit;
   VkPhysicalDeviceFragmentShadingRateFeaturesKHR _fragmentShadingRate;
   VkPhysicalDeviceFragmentDensityMapFeaturesEXT _fragmentDensityMap;
+  VkPhysicalDeviceSynchronization2Features _synchronization2;
 };

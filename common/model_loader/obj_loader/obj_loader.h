@@ -2,12 +2,12 @@
 
 #include <string>
 
+#include "common/abstractions/asset_manager.h"
 #include "common/model_loader/model_loader.h"
-#include "common/util/asset_manager.h"
 
 namespace common {
 
-VertexData loadObj(
+AssetData loadObj(
     common::AssetManager& assetManager, const std::string& name, std::string& stringData);
 
 }  // namespace common

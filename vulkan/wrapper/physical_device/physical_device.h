@@ -52,6 +52,8 @@ public:
 
   size_t getMemoryAlignment(size_t size) const noexcept;
 
+  size_t getStagingAlignment() const noexcept;
+
   lib::Buffer<const char*> getAvailableExtensions() const;
 
   const QueueFamilyIndices& getQueueFamilyIndices() const noexcept;

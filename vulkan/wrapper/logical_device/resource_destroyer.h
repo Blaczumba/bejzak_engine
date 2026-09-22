@@ -2,6 +2,7 @@
 
 #include <functional>
 #include <memory>
+#include <version>
 #include <vulkan/vulkan.h>
 
 #include "lib/thread/worker.h"
@@ -16,11 +17,11 @@ struct DestroyerContext {
 class ResourceDestroyer {
 public:
 // TODO: Change after std::move_only_function becomes a standard.
-#ifdef ANDROID
-  using Job = std::function<void(DestroyerContext)>;
-#else
+#ifdef __cpp_lib_move_only_function
   using Job = std::move_only_function<void(DestroyerContext)>;
-#endif  // ANDROID
+#else
+  using Job = std::function<void(DestroyerContext)>;
+#endif  // __cpp_lib_move_only_function
 
   virtual ~ResourceDestroyer() = default;
 
@@ -44,7 +45,7 @@ public:
                     MemoryAllocator* memoryAllocator) override;
 
 private:
-  lib::thread::Worker<16, DestroyerContext> _worker;
+  lib::thread::Worker<8, DestroyerContext> _worker;
 };
 
 class ImmediateResourceDestroyer : public ResourceDestroyer {

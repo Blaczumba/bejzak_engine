@@ -1,25 +1,20 @@
 #pragma once
 
 #include "common/util/resource_handles.h"
-#include "lib/sparse/sparse_map.h"
+#include "vulkan/resource_manager/hasher.h"
+#include "vulkan/resource_manager/ref.h"
+#include "vulkan/resource_manager/reference_counter_with_hashing.h"
+#include "vulkan/wrapper/logical_device/logical_device.h"
 #include "vulkan/wrapper/sampler/sampler.h"
 
-class SamplerManager {
-  SamplerManager() noexcept = default;
+class SamplerManager final : public ReferenceCounterWithHashing<Sampler> {
+  SamplerManager() = default;
 
 public:
   static std::unique_ptr<SamplerManager> create();
 
   ~SamplerManager() = default;
 
-  SamplerHandle transferSampler(Sampler&& sampler);
-
-  void removeSampler(SamplerHandle handle);
-
-  const Sampler& getSampler(SamplerHandle handle) const;
-
-private:
-  using SamplerMap = lib::SparseMap<Sampler, MAX_SAMPLERS>;
-  SamplerMap _samplerMap;
-  std::vector<SamplerHandle> _freeSamplerHandles;
+  Ref<Sampler> getOrCreateSampler(
+      const LogicalDevice& logicalDevice, const SamplerMetadata& metadata);
 };

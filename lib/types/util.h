@@ -2,8 +2,8 @@
 
 #include <cstdint>
 #include <limits>
-#include <type_traits>
 #include <memory>
+#include <type_traits>
 
 namespace lib {
 

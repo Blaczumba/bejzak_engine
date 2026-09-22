@@ -6,7 +6,7 @@
 
 namespace lib {
 
-template<typename T>
+template <typename T>
 constexpr T setNLeastSignificantBits(uint8_t n) {
   static_assert(
       std::is_unsigned_v<T>, "lib::setNLeastSignificantBits<T> operates only on unsiged types.");
@@ -21,4 +21,4 @@ constexpr T setNLeastSignificantBits(uint8_t n) {
   return (1 << n) - 1;
 }
 
-} // namespace lib
+}  // namespace lib

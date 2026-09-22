@@ -256,6 +256,11 @@ size_t PhysicalDevice::getMemoryAlignment(size_t size) const noexcept {
   return minUboAlignment > 0 ? (size + minUboAlignment - 1) & ~(minUboAlignment - 1) : size;
 }
 
+size_t PhysicalDevice::getStagingAlignment() const noexcept {
+  return std::max(_properties.properties.limits.minTexelBufferOffsetAlignment,
+                  _properties.properties.limits.optimalBufferCopyOffsetAlignment);
+}
+
 lib::Buffer<const char*> PhysicalDevice::getAvailableExtensions() const {
   lib::Buffer<const char*> extensions(_availableRequestedExtensions.size());
   std::transform(_availableRequestedExtensions.cbegin(), _availableRequestedExtensions.cend(),

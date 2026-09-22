@@ -1,7 +1,6 @@
 #include "graphics_plugin_vulkan.h"
 
 #include <algorithm>
-#include <array>
 #include <format>
 #include <openxr/openxr.h>
 #include <openxr/openxr_platform.h>
@@ -21,6 +20,7 @@
 #include "vulkan/wrapper/instance/extensions.h"
 #include "vulkan/wrapper/logical_device/extensions_connector.h"
 #include "vulkan/wrapper/util/check.h"
+#include "presentation_graphics_communication/presentation_graphics_communication.h"
 
 namespace xrw {
 
@@ -177,8 +177,8 @@ std::unique_ptr<Instance> createInstance(
     .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
     .pApplicationName = "VrApp",
     .pEngineName = "BejzakEngine",
-    .engineVersion = VK_MAKE_VERSION(1, 2, 0),
-    .apiVersion = VK_API_VERSION_1_2};
+    .engineVersion = VK_MAKE_VERSION(1, 3, 0),
+    .apiVersion = VK_API_VERSION_1_3};
 
 #ifdef VALIDATION_LAYERS_ENABLED
   const VkDebugUtilsMessengerCreateInfoEXT debugCreateInfo =
@@ -330,13 +330,16 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 }
 
 std::unique_ptr<common::GraphicsContext> GraphicsPluginVulkan::createGraphicsContext(
-    XrInstance xrInstance, XrSystemId systemId, const FileLoader& fileLoader) {
+    XrInstance xrInstance, XrSystemId systemId,
+    std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer,
+    const FileLoader& fileLoader) {
   static constexpr const char* extensions[] = {
     VK_EXT_DEBUG_UTILS_EXTENSION_NAME, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME};
-  std::unique_ptr<Instance> instance =
+  std::shared_ptr<Instance> instance =
       createInstance("VR BejzakEngine", extensions, debugCallback, xrInstance, systemId);
+DebugMessenger debugMessenger;
 #ifdef VALIDATION_LAYERS_ENABLED
-  DebugMessenger debugMessenger = DebugMessenger::create(*instance, debugCallback);
+  debugMessenger = DebugMessenger::create(*instance, debugCallback);
 #endif
   std::unique_ptr<PhysicalDevice> physicalDevice =
       createPhysicalDevice(xrInstance, systemId, *instance);
@@ -352,8 +355,8 @@ std::unique_ptr<common::GraphicsContext> GraphicsPluginVulkan::createGraphicsCon
     .queueFamilyIndex = *physicalDevice->getQueueFamilyIndices().graphicsFamily};
 
   return vlkn::GraphicsContext<true, true>::create(
-      std::move(instance), std::move(debugMessenger), std::move(physicalDevice),
-      std::move(logicalDevice), fileLoader);
+      instance, std::move(debugMessenger), std::move(physicalDevice), std::move(logicalDevice),
+      fileLoader, std::move(communicationLayer), nullptr);
 }
 
 }  // namespace xrw

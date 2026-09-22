@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <span>
 
 #include "common/abstractions/graphics_context.h"
 #include "common/abstractions/presentation.h"
@@ -9,19 +10,21 @@
 #include "openxr_wrapper/session/session.h"
 #include "openxr_wrapper/space/space.h"
 #include "openxr_wrapper/swapchain/swapchain.h"
+#include "presentation_graphics_communication/presentation_graphics_communication.h"
 
 namespace xrw {
 
 class Presentation final : public common::Presentation {
   Presentation(
-      std::unique_ptr<Platform>&& platform, std::unique_ptr<GraphicsPlugin>&& graphicsPlugin,
-      std::unique_ptr<common::GraphicsContext>&& graphicsContext,
-      std::unique_ptr<Instance>&& instance, std::unique_ptr<System>&& system,
-      std::unique_ptr<Session>&& session, std::vector<Swapchain>&& swapchains) noexcept;
+      std::unique_ptr<Platform> platform, std::unique_ptr<GraphicsPlugin> graphicsPlugin,
+               std::unique_ptr<common::GraphicsContext> graphicsContext,
+               std::shared_ptr<engine::PresentationGraphicsCommunication>& communicationLayer,
+      std::unique_ptr<Instance> instance, std::unique_ptr<System> system,
+      std::unique_ptr<Session> session, std::vector<Swapchain>&& swapchains) noexcept;
 
 public:
   static std::unique_ptr<common::Presentation> create(
-      std::unique_ptr<Platform>&& platform, common::GraphicsApi graphicsApi,
+      std::unique_ptr<Platform> platform, common::GraphicsApi graphicsApi,
       const FileLoader& fileLoader);
 
   ~Presentation() = default;
@@ -41,7 +44,7 @@ private:
 
   // TODO: refactor
   bool renderLayer(XrTime predictedDisplayTime,
-                   std::vector<XrCompositionLayerProjectionView>& projectionLayerViews,
+                   std::span<XrCompositionLayerProjectionView> projectionLayerViews,
                    XrCompositionLayerProjection& layer);
 
   void draw();
@@ -51,6 +54,7 @@ private:
 
   std::unique_ptr<Platform> _platform;
   std::unique_ptr<common::GraphicsContext> _graphicsContext;
+  std::shared_ptr<engine::PresentationGraphicsCommunication> _communicationLayer;
   std::unique_ptr<GraphicsPlugin> _graphicsPlugin;
   std::unique_ptr<Instance> _instance;
   std::unique_ptr<System> _system;

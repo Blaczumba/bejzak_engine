@@ -26,7 +26,7 @@ public:
     VmaAllocation allocation;
   };
 
-  Buffer createVkBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VmaMemoryUsage memoryUsage,
+  Buffer createVkBuffer(const VkBufferCreateInfo& bufferCreateInfo, VmaMemoryUsage memoryUsage,
                         VmaAllocationCreateFlags flags = 0U);
 
   void destroyVkBuffer(VkBuffer buffer, const VmaAllocation allocation);

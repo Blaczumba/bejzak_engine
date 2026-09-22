@@ -7,7 +7,7 @@ set(KTX_SOURCES
     ${KTX_DIR}/lib/memstream.c
     ${KTX_DIR}/lib/filestream.c)
 
-add_library(CommonImageLoader image_loader.h image_loader.cpp ${KTX_SOURCES})
+add_library(CommonImageLoader image_loader.h image_loader.cpp types.h ${KTX_SOURCES})
 
 target_include_directories(CommonImageLoader PUBLIC ${PROJECT_SOURCE_DIR})
 target_include_directories(CommonImageLoader PUBLIC ${PROJECT_SOURCE_DIR}/external/ktx/include)

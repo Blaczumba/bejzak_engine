@@ -5,11 +5,10 @@
 #include <format>
 #include <span>
 #include <stb_image/stb_image.h>
-#include <vector>
 
 #include "common/util/engine_exception.h"
 
-std::tuple<ImageResource, OwnedImageResources> loadImageStbi(std::span<const std::byte> imageData) {
+std::tuple<ImageResource, OwnedImageData> loadImageStbi(std::span<const std::byte> imageData) {
   int width, height, channels;
   stbi_uc* pixels = stbi_load_from_memory(
       reinterpret_cast<const stbi_uc*>(imageData.data()), static_cast<int>(imageData.size()),
@@ -35,7 +34,7 @@ std::tuple<ImageResource, OwnedImageResources> loadImageStbi(std::span<const std
       StbUniquePtr(pixels));
 }
 
-std::tuple<ImageResource, OwnedImageResources> loadImageKtx(std::span<const std::byte> imageData) {
+std::tuple<ImageResource, OwnedImageData> loadImageKtx(std::span<const std::byte> imageData) {
   ktxTexture* ktxTexture;
   if (ktxResult result = ktxTexture_CreateFromMemory(
           reinterpret_cast<const ktx_uint8_t*>(imageData.data()), imageData.size(),
@@ -77,7 +76,7 @@ std::tuple<ImageResource, OwnedImageResources> loadImageKtx(std::span<const std:
   return std::make_tuple(std::move(image), KtxUniquePtr(ktxTexture));
 }
 
-std::tuple<ImageResource, OwnedImageResources> loadImage(
+std::tuple<ImageResource, OwnedImageData> loadImage(
     std::span<const std::byte> imageData, std::string_view filePath) {
   if (filePath.ends_with(".ktx") || filePath.ends_with(".ktx2")) {
     return loadImageKtx(imageData);
