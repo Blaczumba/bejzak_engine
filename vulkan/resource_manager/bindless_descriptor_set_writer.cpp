@@ -1,12 +1,9 @@
 #include "bindless_descriptor_set_writer.h"
 
-#include <format>
-#include <ranges>
 #include <span>
 #include <vector>
 #include <vulkan/vulkan.h>
 
-#include "common/util/engine_exception.h"
 #include "vulkan/resource_manager/util.h"
 #include "vulkan/wrapper/descriptor_set/descriptor_pool.h"
 #include "vulkan/wrapper/descriptor_set/descriptor_set_writer_lib.h"
@@ -30,16 +27,11 @@ std::unique_ptr<BindlessDescriptorSetWriter> BindlessDescriptorSetWriter::create
 }
 
 UniformTextureHandle BindlessDescriptorSetWriter::writeTexture(
-    Ref<Image>& imageRef, Ref<Sampler>& samplerRef, VkImageView view, VkImageLayout layout,
-    VkSampler sampler) {
-  const UniformTextureHandle handle = getNextHandle(_texturesMap.size(), _missingTextures);
-  if (!_texturesMap.insert(*handle, TextureResources{imageRef, samplerRef})) [[unlikely]] {
-    throw EngineException(std::format(
-        "BindlessDescriptorSetWriter::storeTexture: Failed to insert Texture Handle = {}.",
-        *handle));
-  }
-
-  overwriteTexture(handle, view, layout, sampler);
+    Ref<Image>& image, Ref<Sampler>& sampler, VkImageView view, VkImageLayout layout) {
+  const UniformTextureHandle handle =
+      getNextHandleFromReclaimed(_nextTextureHandle, _reclaimedTextureHandles);
+  _textureDependencies.emplace(*handle, TextureResources{image, sampler});
+  overwriteTexture(handle, view, layout, sampler.getUnderlyingResource());
   return handle;
 }
 
@@ -103,35 +95,25 @@ std::vector<UniformTextureHandle> BindlessDescriptorSetWriter::storeTextures(
 }
 
 void BindlessDescriptorSetWriter::removeTexture(UniformTextureHandle handle) {
-  _missingTextures.push_back(handle);
-  _texturesMap.erase(*handle);
+  _reclaimedTextureHandles.push_back(handle);
+  _textureDependencies.erase(handle);
 }
 
 UniformBufferHandle BindlessDescriptorSetWriter::writeBuffer(
-    Ref<Buffer>& bufferRef, VkBuffer buffer, const BufferMetadata& metadata,
-    std::optional<size_t> size, size_t offset) {
-  const UniformBufferHandle handle = getNextHandle(_buffersMap.size(), _missingBuffers);
-  if (!_buffersMap.insert(*handle, BufferResources{bufferRef})) [[unlikely]] {
-    throw EngineException(std::format(
-        "BindlessDescriptorSetWriter::storeBuffer: Failed to insert Buffer Handle = {}.", *handle));
-  }
+    Ref<Buffer>& bufferRef, VkBufferUsageFlags usage, size_t range, size_t offset) {
+  const UniformBufferHandle handle =
+      getNextHandleFromReclaimed(_nextBufferHandle, _reclaimedBufferHandles);
+  _bufferDependencies.emplace(*handle, BufferResources{bufferRef});
 
-  size_t range = size.value_or(metadata.size);
-  if (range + offset > metadata.size) [[unlikely]] {
-    throw EngineException(
-        std::format(
-            "BindlessDescriptorSetWriter::storeBuffer: Buffer range " "(offset = {}, size " "= " "{" "}" ")" " " "e" "x" "c" "e" "e" "d" "s" " " "buffer size " "({}).",
-            offset, range, metadata.size));
-  }
-
-  const VkDescriptorBufferInfo bufferInfo = {.buffer = buffer, .offset = offset, .range = range};
+  const VkDescriptorBufferInfo bufferInfo = {
+    .buffer = bufferRef.getUnderlyingResource(), .offset = offset, .range = range};
   const VkWriteDescriptorSet write = {
     .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
     .dstSet = _descriptorSet.getVkDescriptorSet(),
     .dstBinding = UNIFORM_BINDING,
     .dstArrayElement = static_cast<uint32_t>(*handle),
     .descriptorCount = 1,
-    .descriptorType = getDescriptorType(metadata.usage),
+    .descriptorType = getDescriptorType(usage),
     .pBufferInfo = &bufferInfo};
 
   vkUpdateDescriptorSets(
@@ -179,6 +161,6 @@ std::vector<UniformBufferHandle> BindlessDescriptorSetWriter::storeBuffers(
 }
 
 void BindlessDescriptorSetWriter::removeBuffer(UniformBufferHandle handle) {
-  _missingBuffers.push_back(handle);
-  _buffersMap.erase(*handle);
+  _reclaimedBufferHandles.push_back(handle);
+  _bufferDependencies.erase(handle);
 }

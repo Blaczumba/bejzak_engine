@@ -221,8 +221,7 @@ Entity GCONTEXT_CLASS loadObject(
   _registry.addComponent<MaterialComponent>(
       entity,
       MaterialComponent{.diffuse = _bindlessWriter->writeTexture(
-                            imageRef, samplerRef, view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-                            _samplerManager->getUnderlyingResource(samplerRef.getHandle())),
+                            imageRef, samplerRef, view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL),
                         .pipelineHandle = pipelineHandle});
   Ref<Buffer> vertexBufferRef;
   Ref<VirtualAllocation> virtualAllocationRef;
@@ -284,8 +283,7 @@ void GCONTEXT_CLASS createDescriptorSets() {
             .withSize(sizeof(UniformBufferLight))
             .buildUniformBufferWithMetadata(*_logicalDevice);
     Ref<Buffer> lightBufferRef = _bufferManager.storeBuffer(std::move(buffer), metadata);
-    _lightHandle = _bindlessWriter->writeBuffer(
-        lightBufferRef, WeakRef<Buffer>(lightBufferRef).getUnderlyingResource(), metadata);
+    _lightHandle = _bindlessWriter->writeBuffer(lightBufferRef, metadata.usage, metadata.size);
 
     _ubLight.pos = glm::vec3(15.1891f, 2.66408f, -0.841221f);
     _ubLight.projView = glm::perspective(glm::radians(120.0f), 1.0f, 0.1f, 40.0f);
@@ -397,8 +395,7 @@ void GCONTEXT_CLASS createShadowResources() {
           .withBorderColor(VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE)
           .buildMetadata());
   _shadowHandle = _bindlessWriter->writeTexture(
-      _shadowMapRef, samplerRef, view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-      _samplerManager->getUnderlyingResource(samplerRef.getHandle()));
+      _shadowMapRef, samplerRef, view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
   _shadowAttachmentLayout.addShadowAttachment(
       VK_FORMAT_D32_SFLOAT, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
@@ -481,8 +478,7 @@ std::tuple<UniformTextureHandle, ImageHandle> GCONTEXT_CLASS getOrLoadTexture(
   VkImageView view = image.getVkImageView();
   Ref<Image> imageRef = _imageManager.storeImage(std::move(image), metadata);
   UniformTextureHandle handle = _bindlessWriter->writeTexture(
-      imageRef, samplerRef, view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-      _samplerManager->getUnderlyingResource(samplerRef.getHandle()));
+      imageRef, samplerRef, view, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
   const auto result = std::make_tuple(handle, imageRef.getHandle());
   it->second = result;

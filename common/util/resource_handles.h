@@ -4,9 +4,8 @@
 #include "lib/types/util.h"
 
 // Bindless descriptor set indexing.
-constexpr size_t MAX_UNIFORM_RESOURCES = 256;
-DEFINE_STRONG_INT(UniformBufferHandle, lib::SmallestIndex<MAX_UNIFORM_RESOURCES>::type);
-DEFINE_STRONG_INT(UniformTextureHandle, lib::SmallestIndex<MAX_UNIFORM_RESOURCES>::type);
+DEFINE_STRONG_INT(UniformBufferHandle, uint16_t);
+DEFINE_STRONG_INT(UniformTextureHandle, uint16_t);
 
 constexpr size_t MAX_BUFFERS = 512;
 DEFINE_STRONG_INT(BufferHandle, lib::SmallestIndex<MAX_BUFFERS>::type);
