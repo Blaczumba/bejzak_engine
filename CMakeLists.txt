@@ -75,16 +75,17 @@ add_definitions(-DGLM_FORCE_NO_CTOR_INIT)
 add_definitions(-DGLM_FORCE_DEPTH_ZERO_TO_ONE)
 
 if(NOT ANDROID)
+    set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
+    set(GLFW_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
+    set(GLFW_BUILD_DOCS     OFF CACHE BOOL "" FORCE)
+    set(GLFW_INSTALL        OFF CACHE BOOL "" FORCE)
+
     FetchContent_Declare(
         glfw
         GIT_REPOSITORY https://github.com/glfw/glfw.git
         GIT_TAG 3.3.8
     )
     FetchContent_MakeAvailable(glfw)
-    set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)
-    set(GLFW_BUILD_TESTS    OFF CACHE BOOL "" FORCE)
-    set(GLFW_BUILD_DOCS     OFF CACHE BOOL "" FORCE)
-    set(GLFW_INSTALL        OFF CACHE BOOL "" FORCE)
 
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 endif()
