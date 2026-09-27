@@ -1,29 +1,10 @@
 #include "socket.h"
 
 #include <cerrno>
-#include <chrono>
-#include <cstddef>
-#include <cstdint>
-#include <cstring>
-#include <expected>
-#include <span>
-#include <string_view>
-#include <system_error>
-#include <tuple>
 #include <utility>
-#include <variant>
-
-#ifdef _WIN32
-  #include <winsock2.h>
-  #include <ws2tcpip.h>
-#else
-  #include <arpa/inet.h>
-  #include <netinet/in.h>
-  #include <sys/socket.h>
-  #include <unistd.h>
-#endif
 
 namespace common::networking {
+
 namespace {
 
 std::error_code getLastError() noexcept {
@@ -42,18 +23,8 @@ std::unexpected<std::error_code> invalidAddressError() noexcept {
   return std::unexpected(std::make_error_code(std::errc::invalid_argument));
 }
 
-void init() noexcept {
-#ifdef _WIN32
-  static struct WSAInit {
-    WSAInit() {
-      WSADATA wsa{};
-      WSAStartup(MAKEWORD(2, 2), &wsa);
-    }
-    ~WSAInit() {
-      WSACleanup();
-    }
-  } wsa_init;
-#endif
+std::unexpected<std::error_code> addressFamilyMismatchError() noexcept {
+  return std::unexpected(std::make_error_code(std::errc::address_family_not_supported));
 }
 
 SocketResult<void> setOption(
@@ -82,20 +53,20 @@ SocketResult<void> setTimeoutOption(
 
 }  // namespace
 
-SocketResult<Endpoint> Endpoint::createIpv4(std::string_view address, uint16_t port) noexcept {
+SocketResult<Endpoint> Endpoint::createIpv4(const std::string& address, uint16_t port) noexcept {
   Endpoint ep;
   sockaddr_in addr{.sin_family = AF_INET, .sin_port = htons(port)};
-  if (inet_pton(AF_INET, address.data(), &addr.sin_addr) != 1) {
+  if (inet_pton(AF_INET, address.c_str(), &addr.sin_addr) != 1) {
     return invalidAddressError();
   }
   ep._storage = addr;
   return ep;
 }
 
-SocketResult<Endpoint> Endpoint::createIpv6(std::string_view address, uint16_t port) noexcept {
+SocketResult<Endpoint> Endpoint::createIpv6(const std::string& address, uint16_t port) noexcept {
   Endpoint ep;
   sockaddr_in6 addr{.sin6_family = AF_INET6, .sin6_port = htons(port)};
-  if (inet_pton(AF_INET6, address.data(), &addr.sin6_addr) != 1) {
+  if (inet_pton(AF_INET6, address.c_str(), &addr.sin6_addr) != 1) {
     return invalidAddressError();
   }
   ep._storage = addr;
@@ -136,36 +107,51 @@ socklen_t Endpoint::nativeSize() const noexcept {
       _storage);
 }
 
-Socket::Socket(int domain, int type, int protocol) {
-  init();
-  _handle = ::socket(domain, type, protocol);
+struct FamilyVisitor {
+  int operator()(const sockaddr_in& addr) const noexcept {
+    return addr.sin_family;
+  }
+
+  int operator()(const sockaddr_in6& addr) const noexcept {
+    return addr.sin6_family;
+  }
+};
+
+int Endpoint::family() const noexcept {
+  return std::visit(FamilyVisitor{}, _storage);
 }
 
-Socket::Socket(socket_t handle) noexcept : _handle(handle) {}
+#ifdef _WIN32
+Socket::WSAInit::WSAInit() {
+  WSADATA wsa{};
+  WSAStartup(MAKEWORD(2, 2), &wsa);
+}
+
+Socket::WSAInit::~WSAInit() {
+  WSACleanup();
+}
+#endif
+
+Socket::Socket(int domain, int type, int protocol)
+  : _handle(::socket(domain, type, protocol)), _domain(domain) {}
+
+Socket::Socket(socket_t handle, int domain) noexcept : _handle(handle), _domain(domain) {}
 
 Socket::Socket(Socket&& other) noexcept
-  : _handle(std::exchange(other._handle, INVALID_SOCKET_VAL)) {}
+  : _handle(std::exchange(other._handle, INVALID_SOCKET_VAL)),
+    _domain(std::exchange(other._domain, AF_UNSPEC)) {}
 
 Socket& Socket::operator=(Socket&& other) noexcept {
   if (this != &other) {
     (void)close();
     _handle = std::exchange(other._handle, INVALID_SOCKET_VAL);
+    _domain = std::exchange(other._domain, AF_UNSPEC);
   }
   return *this;
 }
 
 Socket::~Socket() {
   (void)close();
-}
-
-SocketResult<void> Socket::bind(const Endpoint& endpoint) noexcept {
-  if (_handle == INVALID_SOCKET_VAL) {
-    return invalidSocketError();
-  }
-  if (::bind(_handle, endpoint.nativeHandle(), endpoint.nativeSize()) != 0) {
-    return std::unexpected(getLastError());
-  }
-  return {};
 }
 
 SocketResult<void> Socket::close() noexcept {
@@ -199,19 +185,40 @@ SocketResult<void> Socket::setSendTimeout(std::chrono::milliseconds timeout) noe
 
 TcpSocket::TcpSocket(int domain) : Socket(domain, SOCK_STREAM, IPPROTO_TCP) {}
 
-TcpSocket::TcpSocket(socket_t socket) noexcept : Socket(socket) {}
+TcpSocket::TcpSocket(socket_t socket, int domain) noexcept : Socket(socket, domain) {}
 
 TcpSocket TcpSocket::createIpv4Socket() {
   return TcpSocket(AF_INET);
 }
-
 TcpSocket TcpSocket::createIpv6Socket() {
   return TcpSocket(AF_INET6);
+}
+
+TcpSocket& TcpSocket::operator=(TcpSocket&& other) noexcept {
+  if (this != &other) {
+    Socket::operator=(std::move(other));
+  }
+  return *this;
+}
+
+SocketResult<void> TcpSocket::bind(const std::string& ip, uint16_t port) noexcept {
+  SocketResult<Endpoint> endpoint =
+      _domain == AF_INET ? Endpoint::createIpv4(ip, port) : Endpoint::createIpv6(ip, port);
+  if (!endpoint) {
+    return std::unexpected(endpoint.error());
+  }
+  if (::bind(_handle, endpoint->nativeHandle(), endpoint->nativeSize()) != 0) {
+    return std::unexpected(getLastError());
+  }
+  return {};
 }
 
 SocketResult<void> TcpSocket::connect(const Endpoint& endpoint) noexcept {
   if (_handle == INVALID_SOCKET_VAL) {
     return invalidSocketError();
+  }
+  if (_domain != AF_UNSPEC && endpoint.family() != _domain) {
+    return addressFamilyMismatchError();
   }
   if (::connect(_handle, endpoint.nativeHandle(), endpoint.nativeSize()) != 0) {
     return std::unexpected(getLastError());
@@ -242,7 +249,7 @@ SocketResult<std::tuple<TcpSocket, Endpoint>> TcpSocket::accept() noexcept {
   }
 
   Endpoint clientEp = Endpoint::fromNative(reinterpret_cast<sockaddr*>(&clientAddr), clientSize);
-  return std::tuple{TcpSocket(client), clientEp};
+  return std::tuple{TcpSocket(client, _domain), clientEp};
 }
 
 SocketResult<int64_t> TcpSocket::send(std::span<const std::byte> buffer, int flags) noexcept {
@@ -289,15 +296,36 @@ UdpSocket::UdpSocket(int domain) : Socket(domain, SOCK_DGRAM, IPPROTO_UDP) {}
 UdpSocket UdpSocket::createIpv4Socket() {
   return UdpSocket(AF_INET);
 }
-
 UdpSocket UdpSocket::createIpv6Socket() {
   return UdpSocket(AF_INET6);
+}
+
+UdpSocket& UdpSocket::operator=(UdpSocket&& other) noexcept {
+  if (this != &other) {
+    Socket::operator=(std::move(other));
+  }
+  return *this;
+}
+
+SocketResult<void> UdpSocket::bind(const std::string& ip, uint16_t port) noexcept {
+  SocketResult<Endpoint> endpoint =
+      _domain == AF_INET ? Endpoint::createIpv4(ip, port) : Endpoint::createIpv6(ip, port);
+  if (!endpoint) {
+    return std::unexpected(endpoint.error());
+  }
+  if (::bind(_handle, endpoint->nativeHandle(), endpoint->nativeSize()) != 0) {
+    return std::unexpected(getLastError());
+  }
+  return {};
 }
 
 SocketResult<int64_t> UdpSocket::sendTo(
     std::span<const std::byte> buffer, const Endpoint& destination, int flags) noexcept {
   if (_handle == INVALID_SOCKET_VAL) {
     return invalidSocketError();
+  }
+  if (_domain != AF_UNSPEC && destination.family() != _domain) {
+    return addressFamilyMismatchError();
   }
   const auto sent = ::sendto(
       _handle, reinterpret_cast<const char*>(buffer.data()), static_cast<int>(buffer.size()), flags,

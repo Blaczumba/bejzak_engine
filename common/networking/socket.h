@@ -46,15 +46,17 @@ public:
 
   Endpoint() = default;
 
-  static SocketResult<Endpoint> createIpv4(std::string_view ip, uint16_t port) noexcept;
+  static SocketResult<Endpoint> createIpv4(const std::string& ip, uint16_t port) noexcept;
 
-  static SocketResult<Endpoint> createIpv6(std::string_view ip, uint16_t port) noexcept;
+  static SocketResult<Endpoint> createIpv6(const std::string& ip, uint16_t port) noexcept;
 
   static Endpoint fromNative(const sockaddr* addr, socklen_t len) noexcept;
 
   [[nodiscard]] const sockaddr* nativeHandle() const noexcept;
 
   [[nodiscard]] socklen_t nativeSize() const noexcept;
+
+  [[nodiscard]] int family() const noexcept;
 
 private:
   NativeStorage _storage{sockaddr_in{}};
@@ -74,8 +76,6 @@ public:
 
   Socket& operator=(const Socket&) = delete;
 
-  SocketResult<void> bind(const Endpoint& endpoint) noexcept;
-
   SocketResult<void> setReceiveTimeout(std::chrono::milliseconds timeout) noexcept;
 
   SocketResult<void> setSendTimeout(std::chrono::milliseconds timeout) noexcept;
@@ -87,16 +87,31 @@ public:
   [[nodiscard]] socket_t nativeHandle() const noexcept {
     return _handle;
   }
+  [[nodiscard]] int domain() const noexcept {
+    return _domain;
+  }
 
 protected:
-  explicit Socket(socket_t handle) noexcept;
+  explicit Socket(socket_t handle, int domain = AF_UNSPEC) noexcept;
+
   socket_t _handle = INVALID_SOCKET_VAL;
+  int _domain = AF_UNSPEC;
+
+private:
+#ifdef _WIN32
+  struct WSAInit {
+    WSAInit();
+
+    ~WSAInit();
+  };
+  static inline WSAInit s_wsaInit;
+#endif
 };
 
 class TcpSocket final : public Socket {
-  explicit TcpSocket(socket_t handle) noexcept;
+  explicit TcpSocket(socket_t handle, int domain) noexcept;
 
-  TcpSocket(int domain);
+  explicit TcpSocket(int domain);
 
 public:
   TcpSocket() noexcept = default;
@@ -109,7 +124,9 @@ public:
 
   TcpSocket(TcpSocket&& other) noexcept = default;
 
-  TcpSocket& operator=(TcpSocket&& other) noexcept = default;
+  TcpSocket& operator=(TcpSocket&& other) noexcept;
+
+  SocketResult<void> bind(const std::string& ip, uint16_t port) noexcept;
 
   SocketResult<void> connect(const Endpoint& endpoint) noexcept;
 
@@ -138,7 +155,9 @@ public:
 
   UdpSocket(UdpSocket&& other) noexcept = default;
 
-  UdpSocket& operator=(UdpSocket&& other) noexcept = default;
+  UdpSocket& operator=(UdpSocket&& other) noexcept;
+
+  SocketResult<void> bind(const std::string& ip, uint16_t port) noexcept;
 
   SocketResult<int64_t> sendTo(
       std::span<const std::byte> buffer, const Endpoint& destination, int flags = 0) noexcept;
