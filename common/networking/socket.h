@@ -3,16 +3,17 @@
 #include <chrono>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <expected>
 #include <span>
-#include <string>
 #include <string_view>
 #include <system_error>
 #include <tuple>
-#include <utility>
+#include <variant>
 
 #ifdef _WIN32
   #include <winsock2.h>
+  #include <ws2tcpip.h>
 #else
   #include <arpa/inet.h>
   #include <netinet/in.h>
@@ -22,15 +23,6 @@
 
 namespace common::networking {
 
-enum class ShutdownMode : uint8_t {
-  SEND = 0,
-  RECEIVE,
-  SEND_RECEIVE
-};
-
-template <typename T>
-using SocketResult = std::expected<T, std::error_code>;
-
 #ifdef _WIN32
 using socket_t = SOCKET;
 constexpr socket_t INVALID_SOCKET_VAL = INVALID_SOCKET;
@@ -38,6 +30,35 @@ constexpr socket_t INVALID_SOCKET_VAL = INVALID_SOCKET;
 using socket_t = int;
 constexpr socket_t INVALID_SOCKET_VAL = -1;
 #endif
+
+template <typename T>
+using SocketResult = std::expected<T, std::error_code>;
+
+enum class ShutdownMode : uint8_t {
+  SEND = 0,
+  RECEIVE,
+  SEND_RECEIVE
+};
+
+class Endpoint {
+public:
+  using NativeStorage = std::variant<sockaddr_in, sockaddr_in6>;
+
+  Endpoint() = default;
+
+  static SocketResult<Endpoint> createIpv4(std::string_view ip, uint16_t port) noexcept;
+
+  static SocketResult<Endpoint> createIpv6(std::string_view ip, uint16_t port) noexcept;
+
+  static Endpoint fromNative(const sockaddr* addr, socklen_t len) noexcept;
+
+  [[nodiscard]] const sockaddr* nativeHandle() const noexcept;
+
+  [[nodiscard]] socklen_t nativeSize() const noexcept;
+
+private:
+  NativeStorage _storage{sockaddr_in{}};
+};
 
 class Socket {
 public:
@@ -47,84 +68,75 @@ public:
 
   Socket& operator=(Socket&& other) noexcept;
 
-  ~Socket();
+  virtual ~Socket();
+
+  Socket(const Socket&) = delete;
+
+  Socket& operator=(const Socket&) = delete;
+
+  SocketResult<void> bind(const Endpoint& endpoint) noexcept;
+
+  SocketResult<void> setReceiveTimeout(std::chrono::milliseconds timeout) noexcept;
+
+  SocketResult<void> setSendTimeout(std::chrono::milliseconds timeout) noexcept;
 
   SocketResult<void> close() noexcept;
 
-  bool isValid() const noexcept;
+  [[nodiscard]] bool isValid() const noexcept;
+
+  [[nodiscard]] socket_t nativeHandle() const noexcept {
+    return _handle;
+  }
 
 protected:
-  explicit Socket(socket_t handle);
-
+  explicit Socket(socket_t handle) noexcept;
   socket_t _handle = INVALID_SOCKET_VAL;
 };
 
-class IpSocket : public Socket {
-protected:
-  IpSocket(int type, int protocol);
-
-  explicit IpSocket(socket_t handle);
-
-public:
-  ~IpSocket() = default;
-
-  IpSocket(IpSocket&& other) noexcept = default;
-
-  IpSocket& operator=(IpSocket&& other) noexcept = default;
-
-  SocketResult<void> bind(const std::string& address, uint16_t port);
-
-  SocketResult<void> bind(const char* const address, uint16_t port);
-
-  SocketResult<void> connect(const std::string& address, uint16_t port);
-
-  SocketResult<void> connect(const char* const address, uint16_t port);
-
-  SocketResult<int64_t> send(std::span<const char> buffer, int flags = 0);
-
-  SocketResult<int64_t> recv(std::span<char> buffer, int flags = 0);
-
-  SocketResult<void> setReceiveTimeout(std::chrono::milliseconds timeout);
-
-  SocketResult<void> setSendTimeout(std::chrono::milliseconds timeout);
-};
-
-class TcpSocket final : public IpSocket {
-  explicit TcpSocket(socket_t socket);
-
+class TcpSocket final : public Socket {
 public:
   TcpSocket();
 
-  ~TcpSocket() = default;
+  explicit TcpSocket(int domain);  // AF_INET or AF_INET6
+
+  explicit TcpSocket(socket_t handle) noexcept;
+
+  ~TcpSocket() override = default;
 
   TcpSocket(TcpSocket&& other) noexcept = default;
 
   TcpSocket& operator=(TcpSocket&& other) noexcept = default;
 
-  SocketResult<void> listen(int backlog = SOMAXCONN);
+  SocketResult<void> connect(const Endpoint& endpoint) noexcept;
 
-  SocketResult<std::tuple<TcpSocket, sockaddr_in>> accept();
+  SocketResult<void> listen(int backlog = SOMAXCONN) noexcept;
 
-  SocketResult<void> shutdown(ShutdownMode mode);
+  SocketResult<std::tuple<TcpSocket, Endpoint>> accept() noexcept;
+
+  SocketResult<int64_t> send(std::span<const std::byte> buffer, int flags = 0) noexcept;
+
+  SocketResult<int64_t> recv(std::span<std::byte> buffer, int flags = 0) noexcept;
+
+  SocketResult<void> shutdown(ShutdownMode mode) noexcept;
 };
 
-class UdpSocket final : public IpSocket {
+class UdpSocket final : public Socket {
 public:
   UdpSocket();
 
-  ~UdpSocket() = default;
+  explicit UdpSocket(int domain);  // AF_INET or AF_INET6
+
+  ~UdpSocket() override = default;
 
   UdpSocket(UdpSocket&& other) noexcept = default;
 
   UdpSocket& operator=(UdpSocket&& other) noexcept = default;
 
   SocketResult<int64_t> sendTo(
-      std::span<const char> buffer, const std::string& address, uint16_t port, int flags = 0);
+      std::span<const std::byte> buffer, const Endpoint& destination, int flags = 0) noexcept;
 
-  SocketResult<int64_t> sendTo(
-      std::span<const char> buffer, const char* const address, uint16_t port, int flags = 0);
-
-  SocketResult<std::tuple<int64_t, sockaddr_in>> recvFrom(std::span<char> buffer, int flags = 0);
+  SocketResult<std::tuple<int64_t, Endpoint>> recvFrom(
+      std::span<std::byte> buffer, int flags = 0) noexcept;
 };
 
 }  // namespace common::networking

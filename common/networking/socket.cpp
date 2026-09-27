@@ -1,15 +1,17 @@
-#include "common/networking/socket.h"
+#include "socket.h"
 
 #include <cerrno>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
+#include <cstring>
 #include <expected>
 #include <span>
-#include <string>
 #include <string_view>
 #include <system_error>
 #include <tuple>
 #include <utility>
+#include <variant>
 
 #ifdef _WIN32
   #include <winsock2.h>
@@ -18,7 +20,6 @@
   #include <arpa/inet.h>
   #include <netinet/in.h>
   #include <sys/socket.h>
-  #include <sys/time.h>
   #include <unistd.h>
 #endif
 
@@ -41,11 +42,11 @@ std::unexpected<std::error_code> invalidAddressError() noexcept {
   return std::unexpected(std::make_error_code(std::errc::invalid_argument));
 }
 
-void initWinsock() {
+void init() noexcept {
 #ifdef _WIN32
   static struct WSAInit {
     WSAInit() {
-      WSADATA wsa;
+      WSADATA wsa{};
       WSAStartup(MAKEWORD(2, 2), &wsa);
     }
     ~WSAInit() {
@@ -55,15 +56,8 @@ void initWinsock() {
 #endif
 }
 
-SocketResult<sockaddr_in> makeAddress(const char* const address, uint16_t port) {
-  sockaddr_in hint{.sin_family = AF_INET, .sin_port = htons(port)};
-  if (inet_pton(AF_INET, address, &hint.sin_addr) != 1) {
-    return invalidAddressError();
-  }
-  return hint;
-}
-
-SocketResult<void> setOption(socket_t handle, int level, int name, const void* value, size_t size) {
+SocketResult<void> setOption(
+    socket_t handle, int level, int name, const void* value, size_t size) noexcept {
   if (handle == INVALID_SOCKET_VAL) {
     return invalidSocketError();
   }
@@ -75,7 +69,8 @@ SocketResult<void> setOption(socket_t handle, int level, int name, const void* v
   return {};
 }
 
-SocketResult<void> setTimeoutOption(socket_t handle, int name, std::chrono::milliseconds timeout) {
+SocketResult<void> setTimeoutOption(
+    socket_t handle, int name, std::chrono::milliseconds timeout) noexcept {
 #ifdef _WIN32
   const DWORD value = static_cast<DWORD>(timeout.count());
 #else
@@ -87,33 +82,95 @@ SocketResult<void> setTimeoutOption(socket_t handle, int name, std::chrono::mill
 
 }  // namespace
 
-// Socket
+SocketResult<Endpoint> Endpoint::createIpv4(std::string_view address, uint16_t port) noexcept {
+  Endpoint ep;
+  sockaddr_in addr{.sin_family = AF_INET, .sin_port = htons(port)};
+  if (inet_pton(AF_INET, address.data(), &addr.sin_addr) != 1) {
+    return invalidAddressError();
+  }
+  ep._storage = addr;
+  return ep;
+}
+
+SocketResult<Endpoint> Endpoint::createIpv6(std::string_view address, uint16_t port) noexcept {
+  Endpoint ep;
+  sockaddr_in6 addr{.sin6_family = AF_INET6, .sin6_port = htons(port)};
+  if (inet_pton(AF_INET6, address.data(), &addr.sin6_addr) != 1) {
+    return invalidAddressError();
+  }
+  ep._storage = addr;
+  return ep;
+}
+
+Endpoint Endpoint::fromNative(const sockaddr* addr, socklen_t len) noexcept {
+  Endpoint ep;
+  if (!addr) {
+    return ep;
+  }
+
+  if (addr->sa_family == AF_INET && len >= sizeof(sockaddr_in)) {
+    sockaddr_in in{};
+    std::memcpy(&in, addr, sizeof(sockaddr_in));
+    ep._storage = in;
+  } else if (addr->sa_family == AF_INET6 && len >= sizeof(sockaddr_in6)) {
+    sockaddr_in6 in6{};
+    std::memcpy(&in6, addr, sizeof(sockaddr_in6));
+    ep._storage = in6;
+  }
+  return ep;
+}
+
+const sockaddr* Endpoint::nativeHandle() const noexcept {
+  return std::visit(
+      [](const auto& addr) -> const sockaddr* {
+        return reinterpret_cast<const sockaddr*>(&addr);
+      },
+      _storage);
+}
+
+socklen_t Endpoint::nativeSize() const noexcept {
+  return std::visit(
+      [](const auto& addr) -> socklen_t {
+        return sizeof(addr);
+      },
+      _storage);
+}
 
 Socket::Socket(int domain, int type, int protocol) {
-  initWinsock();
+  init();
   _handle = ::socket(domain, type, protocol);
 }
 
-Socket::Socket(socket_t handle) : _handle(handle) {}
+Socket::Socket(socket_t handle) noexcept : _handle(handle) {}
 
 Socket::Socket(Socket&& other) noexcept
   : _handle(std::exchange(other._handle, INVALID_SOCKET_VAL)) {}
 
 Socket& Socket::operator=(Socket&& other) noexcept {
   if (this != &other) {
-    close();
+    (void)close();
     _handle = std::exchange(other._handle, INVALID_SOCKET_VAL);
   }
   return *this;
 }
 
 Socket::~Socket() {
-  close();
+  (void)close();
+}
+
+SocketResult<void> Socket::bind(const Endpoint& endpoint) noexcept {
+  if (_handle == INVALID_SOCKET_VAL) {
+    return invalidSocketError();
+  }
+  if (::bind(_handle, endpoint.nativeHandle(), endpoint.nativeSize()) != 0) {
+    return std::unexpected(getLastError());
+  }
+  return {};
 }
 
 SocketResult<void> Socket::close() noexcept {
   if (_handle == INVALID_SOCKET_VAL) {
-    return invalidSocketError();
+    return {};
   }
   const socket_t tmp = std::exchange(_handle, INVALID_SOCKET_VAL);
 #ifdef _WIN32
@@ -132,87 +189,29 @@ bool Socket::isValid() const noexcept {
   return _handle != INVALID_SOCKET_VAL;
 }
 
-// IpSocket
-
-IpSocket::IpSocket(int type, int protocol) : Socket(AF_INET, type, protocol) {}
-
-IpSocket::IpSocket(socket_t handle) : Socket(handle) {}
-
-SocketResult<void> IpSocket::bind(const std::string& address, uint16_t port) {
-  return bind(address.c_str(), port);
-}
-
-SocketResult<void> IpSocket::bind(const char* const address, uint16_t port) {
-  if (_handle == INVALID_SOCKET_VAL) {
-    return invalidSocketError();
-  }
-  const auto hint = makeAddress(address, port);
-  if (!hint) {
-    return std::unexpected(hint.error());
-  }
-  if (::bind(_handle, reinterpret_cast<const sockaddr*>(&*hint), sizeof(*hint)) != 0) {
-    return std::unexpected(getLastError());
-  }
-  return {};
-}
-
-SocketResult<void> IpSocket::connect(const std::string& address, uint16_t port) {
-  return connect(address.c_str(), port);
-}
-
-SocketResult<void> IpSocket::connect(const char* const address, uint16_t port) {
-  if (_handle == INVALID_SOCKET_VAL) {
-    return invalidSocketError();
-  }
-  const auto hint = makeAddress(address, port);
-  if (!hint) {
-    return std::unexpected(hint.error());
-  }
-  if (::connect(_handle, reinterpret_cast<const sockaddr*>(&*hint), sizeof(*hint)) != 0) {
-    return std::unexpected(getLastError());
-  }
-  return {};
-}
-
-SocketResult<int64_t> IpSocket::send(std::span<const char> buffer, int flags) {
-  if (_handle == INVALID_SOCKET_VAL) {
-    return invalidSocketError();
-  }
-  const int64_t sent =
-      static_cast<int64_t>(::send(_handle, buffer.data(), static_cast<int>(buffer.size()), flags));
-  if (sent < 0) {
-    return std::unexpected(getLastError());
-  }
-  return sent;
-}
-
-SocketResult<int64_t> IpSocket::recv(std::span<char> buffer, int flags) {
-  if (_handle == INVALID_SOCKET_VAL) {
-    return invalidSocketError();
-  }
-  const int64_t received =
-      static_cast<int64_t>(::recv(_handle, buffer.data(), static_cast<int>(buffer.size()), flags));
-  if (received < 0) {
-    return std::unexpected(getLastError());
-  }
-  return received;
-}
-
-SocketResult<void> IpSocket::setReceiveTimeout(std::chrono::milliseconds timeout) {
+SocketResult<void> Socket::setReceiveTimeout(std::chrono::milliseconds timeout) noexcept {
   return setTimeoutOption(_handle, SO_RCVTIMEO, timeout);
 }
 
-SocketResult<void> IpSocket::setSendTimeout(std::chrono::milliseconds timeout) {
+SocketResult<void> Socket::setSendTimeout(std::chrono::milliseconds timeout) noexcept {
   return setTimeoutOption(_handle, SO_SNDTIMEO, timeout);
 }
 
-// TcpSocket
+TcpSocket::TcpSocket() : Socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) {}
+TcpSocket::TcpSocket(int domain) : Socket(domain, SOCK_STREAM, IPPROTO_TCP) {}
+TcpSocket::TcpSocket(socket_t socket) noexcept : Socket(socket) {}
 
-TcpSocket::TcpSocket(socket_t socket) : IpSocket(socket) {}
+SocketResult<void> TcpSocket::connect(const Endpoint& endpoint) noexcept {
+  if (_handle == INVALID_SOCKET_VAL) {
+    return invalidSocketError();
+  }
+  if (::connect(_handle, endpoint.nativeHandle(), endpoint.nativeSize()) != 0) {
+    return std::unexpected(getLastError());
+  }
+  return {};
+}
 
-TcpSocket::TcpSocket() : IpSocket(SOCK_STREAM, IPPROTO_TCP) {}
-
-SocketResult<void> TcpSocket::listen(int backlog) {
+SocketResult<void> TcpSocket::listen(int backlog) noexcept {
   if (_handle == INVALID_SOCKET_VAL) {
     return invalidSocketError();
   }
@@ -222,24 +221,50 @@ SocketResult<void> TcpSocket::listen(int backlog) {
   return {};
 }
 
-SocketResult<std::tuple<TcpSocket, sockaddr_in>> TcpSocket::accept() {
+SocketResult<std::tuple<TcpSocket, Endpoint>> TcpSocket::accept() noexcept {
   if (_handle == INVALID_SOCKET_VAL) {
     return invalidSocketError();
   }
-  sockaddr_in client_addr{};
-  socklen_t client_size = sizeof(client_addr);
-  TcpSocket client(::accept(_handle, reinterpret_cast<sockaddr*>(&client_addr), &client_size));
-  if (!client.isValid()) {
+  sockaddr_storage clientAddr{};
+  socklen_t clientSize = sizeof(clientAddr);
+
+  socket_t client = ::accept(_handle, reinterpret_cast<sockaddr*>(&clientAddr), &clientSize);
+  if (client == INVALID_SOCKET_VAL) {
     return std::unexpected(getLastError());
   }
-  return std::tuple{std::move(client), client_addr};
+
+  Endpoint clientEp = Endpoint::fromNative(reinterpret_cast<sockaddr*>(&clientAddr), clientSize);
+  return std::tuple{TcpSocket(client), clientEp};
 }
 
-SocketResult<void> TcpSocket::shutdown(ShutdownMode mode) {
+SocketResult<int64_t> TcpSocket::send(std::span<const std::byte> buffer, int flags) noexcept {
   if (_handle == INVALID_SOCKET_VAL) {
     return invalidSocketError();
   }
-  // Order must match ShutdownMode: SEND, RECEIVE, SEND_RECEIVE.
+  const auto sent = ::send(_handle, reinterpret_cast<const char*>(buffer.data()),
+                           static_cast<int>(buffer.size()), flags);
+  if (sent < 0) {
+    return std::unexpected(getLastError());
+  }
+  return static_cast<int64_t>(sent);
+}
+
+SocketResult<int64_t> TcpSocket::recv(std::span<std::byte> buffer, int flags) noexcept {
+  if (_handle == INVALID_SOCKET_VAL) {
+    return invalidSocketError();
+  }
+  const auto received = ::recv(
+      _handle, reinterpret_cast<char*>(buffer.data()), static_cast<int>(buffer.size()), flags);
+  if (received < 0) {
+    return std::unexpected(getLastError());
+  }
+  return static_cast<int64_t>(received);
+}
+
+SocketResult<void> TcpSocket::shutdown(ShutdownMode mode) noexcept {
+  if (_handle == INVALID_SOCKET_VAL) {
+    return invalidSocketError();
+  }
 #ifdef _WIN32
   static constexpr int modes[] = {SD_SEND, SD_RECEIVE, SD_BOTH};
 #else
@@ -251,48 +276,40 @@ SocketResult<void> TcpSocket::shutdown(ShutdownMode mode) {
   return {};
 }
 
-// UdpSocket
-
-UdpSocket::UdpSocket() : IpSocket(SOCK_DGRAM, IPPROTO_UDP) {}
-
-SocketResult<int64_t> UdpSocket::sendTo(
-    std::span<const char> buffer, const std::string& address, uint16_t port, int flags) {
-  return sendTo(buffer, address.c_str(), port, flags);
-}
+UdpSocket::UdpSocket() : Socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP) {}
+UdpSocket::UdpSocket(int domain) : Socket(domain, SOCK_DGRAM, IPPROTO_UDP) {}
 
 SocketResult<int64_t> UdpSocket::sendTo(
-    std::span<const char> buffer, const char* const address, uint16_t port, int flags) {
-  const auto hint = makeAddress(address, port);
-  if (!hint) {
-    return std::unexpected(hint.error());
-  }
-
+    std::span<const std::byte> buffer, const Endpoint& destination, int flags) noexcept {
   if (_handle == INVALID_SOCKET_VAL) {
     return invalidSocketError();
   }
-  const int64_t sent = static_cast<int64_t>(
-      ::sendto(_handle, buffer.data(), static_cast<int>(buffer.size()), flags,
-               reinterpret_cast<const sockaddr*>(&address), sizeof(address)));
+  const auto sent = ::sendto(
+      _handle, reinterpret_cast<const char*>(buffer.data()), static_cast<int>(buffer.size()), flags,
+      destination.nativeHandle(), destination.nativeSize());
   if (sent < 0) {
     return std::unexpected(getLastError());
   }
-  return sent;
+  return static_cast<int64_t>(sent);
 }
 
-SocketResult<std::tuple<int64_t, sockaddr_in>> UdpSocket::recvFrom(
-    std::span<char> buffer, int flags) {
+SocketResult<std::tuple<int64_t, Endpoint>> UdpSocket::recvFrom(
+    std::span<std::byte> buffer, int flags) noexcept {
   if (_handle == INVALID_SOCKET_VAL) {
     return invalidSocketError();
   }
-  sockaddr_in sender_addr{};
-  socklen_t sender_size = sizeof(sender_addr);
-  const int64_t received = static_cast<int64_t>(
-      ::recvfrom(_handle, buffer.data(), static_cast<int>(buffer.size()), flags,
-                 reinterpret_cast<sockaddr*>(&sender_addr), &sender_size));
+  sockaddr_storage senderAddr{};
+  socklen_t senderSize = sizeof(senderAddr);
+
+  const auto received =
+      ::recvfrom(_handle, reinterpret_cast<char*>(buffer.data()), static_cast<int>(buffer.size()),
+                 flags, reinterpret_cast<sockaddr*>(&senderAddr), &senderSize);
   if (received < 0) {
     return std::unexpected(getLastError());
   }
-  return std::tuple{received, sender_addr};
+
+  Endpoint senderEp = Endpoint::fromNative(reinterpret_cast<sockaddr*>(&senderAddr), senderSize);
+  return std::tuple{static_cast<int64_t>(received), senderEp};
 }
 
 }  // namespace common::networking
