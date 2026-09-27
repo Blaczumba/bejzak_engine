@@ -18,6 +18,7 @@
   #include <arpa/inet.h>
   #include <netinet/in.h>
   #include <sys/socket.h>
+  #include <sys/time.h>
   #include <unistd.h>
 #endif
 
@@ -54,6 +55,14 @@ void initWinsock() {
 #endif
 }
 
+SocketResult<sockaddr_in> makeAddress(const char* const address, uint16_t port) {
+  sockaddr_in hint{.sin_family = AF_INET, .sin_port = htons(port)};
+  if (inet_pton(AF_INET, address, &hint.sin_addr) != 1) {
+    return invalidAddressError();
+  }
+  return hint;
+}
+
 SocketResult<void> setOption(socket_t handle, int level, int name, const void* value, size_t size) {
   if (handle == INVALID_SOCKET_VAL) {
     return invalidSocketError();
@@ -77,6 +86,8 @@ SocketResult<void> setTimeoutOption(socket_t handle, int name, std::chrono::mill
 }
 
 }  // namespace
+
+// Socket
 
 Socket::Socket(int domain, int type, int protocol) {
   initWinsock();
@@ -121,27 +132,85 @@ bool Socket::isValid() const noexcept {
   return _handle != INVALID_SOCKET_VAL;
 }
 
-TcpSocket::TcpSocket(socket_t socket) : Socket(socket) {}
+// IpSocket
 
-TcpSocket::TcpSocket() : Socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) {}
+IpSocket::IpSocket(int type, int protocol) : Socket(AF_INET, type, protocol) {}
 
-SocketResult<void> TcpSocket::bind(const std::string& address, uint16_t port) {
+IpSocket::IpSocket(socket_t handle) : Socket(handle) {}
+
+SocketResult<void> IpSocket::bind(const std::string& address, uint16_t port) {
   return bind(address.c_str(), port);
 }
 
-SocketResult<void> TcpSocket::bind(const char* const address, uint16_t port) {
+SocketResult<void> IpSocket::bind(const char* const address, uint16_t port) {
   if (_handle == INVALID_SOCKET_VAL) {
     return invalidSocketError();
   }
-  sockaddr_in hint{.sin_family = AF_INET, .sin_port = htons(port)};
-  if (inet_pton(AF_INET, address, &hint.sin_addr) != 1) {
-    return invalidAddressError();
+  const auto hint = makeAddress(address, port);
+  if (!hint) {
+    return std::unexpected(hint.error());
   }
-  if (::bind(_handle, reinterpret_cast<sockaddr*>(&hint), sizeof(hint)) != 0) {
+  if (::bind(_handle, reinterpret_cast<const sockaddr*>(&*hint), sizeof(*hint)) != 0) {
     return std::unexpected(getLastError());
   }
   return {};
 }
+
+SocketResult<void> IpSocket::connect(const std::string& address, uint16_t port) {
+  return connect(address.c_str(), port);
+}
+
+SocketResult<void> IpSocket::connect(const char* const address, uint16_t port) {
+  if (_handle == INVALID_SOCKET_VAL) {
+    return invalidSocketError();
+  }
+  const auto hint = makeAddress(address, port);
+  if (!hint) {
+    return std::unexpected(hint.error());
+  }
+  if (::connect(_handle, reinterpret_cast<const sockaddr*>(&*hint), sizeof(*hint)) != 0) {
+    return std::unexpected(getLastError());
+  }
+  return {};
+}
+
+SocketResult<int64_t> IpSocket::send(std::span<const char> buffer, int flags) {
+  if (_handle == INVALID_SOCKET_VAL) {
+    return invalidSocketError();
+  }
+  const int64_t sent =
+      static_cast<int64_t>(::send(_handle, buffer.data(), static_cast<int>(buffer.size()), flags));
+  if (sent < 0) {
+    return std::unexpected(getLastError());
+  }
+  return sent;
+}
+
+SocketResult<int64_t> IpSocket::recv(std::span<char> buffer, int flags) {
+  if (_handle == INVALID_SOCKET_VAL) {
+    return invalidSocketError();
+  }
+  const int64_t received =
+      static_cast<int64_t>(::recv(_handle, buffer.data(), static_cast<int>(buffer.size()), flags));
+  if (received < 0) {
+    return std::unexpected(getLastError());
+  }
+  return received;
+}
+
+SocketResult<void> IpSocket::setReceiveTimeout(std::chrono::milliseconds timeout) {
+  return setTimeoutOption(_handle, SO_RCVTIMEO, timeout);
+}
+
+SocketResult<void> IpSocket::setSendTimeout(std::chrono::milliseconds timeout) {
+  return setTimeoutOption(_handle, SO_SNDTIMEO, timeout);
+}
+
+// TcpSocket
+
+TcpSocket::TcpSocket(socket_t socket) : IpSocket(socket) {}
+
+TcpSocket::TcpSocket() : IpSocket(SOCK_STREAM, IPPROTO_TCP) {}
 
 SocketResult<void> TcpSocket::listen(int backlog) {
   if (_handle == INVALID_SOCKET_VAL) {
@@ -166,64 +235,15 @@ SocketResult<std::tuple<TcpSocket, sockaddr_in>> TcpSocket::accept() {
   return std::tuple{std::move(client), client_addr};
 }
 
-SocketResult<void> TcpSocket::connect(const std::string& address, uint16_t port) {
-  return connect(address.c_str(), port);
-}
-
-SocketResult<void> TcpSocket::connect(const char* const address, uint16_t port) {
-  if (_handle == INVALID_SOCKET_VAL) {
-    return invalidSocketError();
-  }
-  sockaddr_in hint{.sin_family = AF_INET, .sin_port = htons(port)};
-  if (inet_pton(AF_INET, address, &hint.sin_addr) != 1) {
-    return invalidAddressError();
-  }
-  if (::connect(_handle, reinterpret_cast<sockaddr*>(&hint), sizeof(hint)) != 0) {
-    return std::unexpected(getLastError());
-  }
-  return {};
-}
-
-SocketResult<int64_t> TcpSocket::send(std::span<const char> buffer, int flags) {
-  if (_handle == INVALID_SOCKET_VAL) {
-    return invalidSocketError();
-  }
-  const int64_t sent =
-      static_cast<int64_t>(::send(_handle, buffer.data(), static_cast<int>(buffer.size()), flags));
-  if (sent < 0) {
-    return std::unexpected(getLastError());
-  }
-  return static_cast<int64_t>(sent);
-}
-
-SocketResult<int64_t> TcpSocket::recv(std::span<char> buffer, int flags) {
-  if (_handle == INVALID_SOCKET_VAL) {
-    return invalidSocketError();
-  }
-  const int64_t received =
-      static_cast<int64_t>(::recv(_handle, buffer.data(), static_cast<int>(buffer.size()), flags));
-  if (received < 0) {
-    return std::unexpected(getLastError());
-  }
-  return static_cast<int64_t>(received);
-}
-
-SocketResult<void> TcpSocket::setReceiveTimeout(std::chrono::milliseconds timeout) {
-  return setTimeoutOption(_handle, SO_RCVTIMEO, timeout);
-}
-
-SocketResult<void> TcpSocket::setSendTimeout(std::chrono::milliseconds timeout) {
-  return setTimeoutOption(_handle, SO_SNDTIMEO, timeout);
-}
-
 SocketResult<void> TcpSocket::shutdown(ShutdownMode mode) {
   if (_handle == INVALID_SOCKET_VAL) {
     return invalidSocketError();
   }
+  // Order must match ShutdownMode: SEND, RECEIVE, SEND_RECEIVE.
 #ifdef _WIN32
-  static constexpr int modes[] = {SD_RECEIVE, SD_SEND, SD_BOTH};
+  static constexpr int modes[] = {SD_SEND, SD_RECEIVE, SD_BOTH};
 #else
-  static constexpr int modes[] = {SHUT_RD, SHUT_WR, SHUT_RDWR};
+  static constexpr int modes[] = {SHUT_WR, SHUT_RD, SHUT_RDWR};
 #endif
   if (::shutdown(_handle, modes[static_cast<int>(mode)]) != 0) {
     return std::unexpected(getLastError());
@@ -231,6 +251,48 @@ SocketResult<void> TcpSocket::shutdown(ShutdownMode mode) {
   return {};
 }
 
-UdpSocket::UdpSocket() : Socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP) {}
+// UdpSocket
+
+UdpSocket::UdpSocket() : IpSocket(SOCK_DGRAM, IPPROTO_UDP) {}
+
+SocketResult<int64_t> UdpSocket::sendTo(
+    std::span<const char> buffer, const std::string& address, uint16_t port, int flags) {
+  return sendTo(buffer, address.c_str(), port, flags);
+}
+
+SocketResult<int64_t> UdpSocket::sendTo(
+    std::span<const char> buffer, const char* const address, uint16_t port, int flags) {
+  const auto hint = makeAddress(address, port);
+  if (!hint) {
+    return std::unexpected(hint.error());
+  }
+
+  if (_handle == INVALID_SOCKET_VAL) {
+    return invalidSocketError();
+  }
+  const int64_t sent = static_cast<int64_t>(
+      ::sendto(_handle, buffer.data(), static_cast<int>(buffer.size()), flags,
+               reinterpret_cast<const sockaddr*>(&address), sizeof(address)));
+  if (sent < 0) {
+    return std::unexpected(getLastError());
+  }
+  return sent;
+}
+
+SocketResult<std::tuple<int64_t, sockaddr_in>> UdpSocket::recvFrom(
+    std::span<char> buffer, int flags) {
+  if (_handle == INVALID_SOCKET_VAL) {
+    return invalidSocketError();
+  }
+  sockaddr_in sender_addr{};
+  socklen_t sender_size = sizeof(sender_addr);
+  const int64_t received = static_cast<int64_t>(
+      ::recvfrom(_handle, buffer.data(), static_cast<int>(buffer.size()), flags,
+                 reinterpret_cast<sockaddr*>(&sender_addr), &sender_size));
+  if (received < 0) {
+    return std::unexpected(getLastError());
+  }
+  return std::tuple{received, sender_addr};
+}
 
 }  // namespace common::networking

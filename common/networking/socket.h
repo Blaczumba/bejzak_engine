@@ -59,25 +59,22 @@ protected:
   socket_t _handle = INVALID_SOCKET_VAL;
 };
 
-class TcpSocket final : public Socket {
-  explicit TcpSocket(socket_t socket);
+class IpSocket : public Socket {
+protected:
+  IpSocket(int type, int protocol);
+
+  explicit IpSocket(socket_t handle);
 
 public:
-  TcpSocket();
+  ~IpSocket() = default;
 
-  ~TcpSocket() = default;
+  IpSocket(IpSocket&& other) noexcept = default;
 
-  TcpSocket(TcpSocket&& other) noexcept = default;
-
-  TcpSocket& operator=(TcpSocket&& other) noexcept = default;
+  IpSocket& operator=(IpSocket&& other) noexcept = default;
 
   SocketResult<void> bind(const std::string& address, uint16_t port);
 
   SocketResult<void> bind(const char* const address, uint16_t port);
-
-  SocketResult<void> listen(int backlog = SOMAXCONN);
-
-  SocketResult<std::tuple<TcpSocket, sockaddr_in>> accept();
 
   SocketResult<void> connect(const std::string& address, uint16_t port);
 
@@ -90,17 +87,44 @@ public:
   SocketResult<void> setReceiveTimeout(std::chrono::milliseconds timeout);
 
   SocketResult<void> setSendTimeout(std::chrono::milliseconds timeout);
+};
+
+class TcpSocket final : public IpSocket {
+  explicit TcpSocket(socket_t socket);
+
+public:
+  TcpSocket();
+
+  ~TcpSocket() = default;
+
+  TcpSocket(TcpSocket&& other) noexcept = default;
+
+  TcpSocket& operator=(TcpSocket&& other) noexcept = default;
+
+  SocketResult<void> listen(int backlog = SOMAXCONN);
+
+  SocketResult<std::tuple<TcpSocket, sockaddr_in>> accept();
 
   SocketResult<void> shutdown(ShutdownMode mode);
 };
 
-class UdpSocket final : public Socket {
+class UdpSocket final : public IpSocket {
 public:
   UdpSocket();
 
   ~UdpSocket() = default;
 
-private:
+  UdpSocket(UdpSocket&& other) noexcept = default;
+
+  UdpSocket& operator=(UdpSocket&& other) noexcept = default;
+
+  SocketResult<int64_t> sendTo(
+      std::span<const char> buffer, const std::string& address, uint16_t port, int flags = 0);
+
+  SocketResult<int64_t> sendTo(
+      std::span<const char> buffer, const char* const address, uint16_t port, int flags = 0);
+
+  SocketResult<std::tuple<int64_t, sockaddr_in>> recvFrom(std::span<char> buffer, int flags = 0);
 };
 
 }  // namespace common::networking
