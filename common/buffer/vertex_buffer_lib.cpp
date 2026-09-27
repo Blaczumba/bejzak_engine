@@ -12,7 +12,7 @@
 
 namespace common {
 
-void copyDataInterleaving(
+size_t copyInterleavingDataAndGetStride(
     std::span<std::byte> dst, std::span<const AttributeDescription> attributes) {
   if (attributes.empty()) {
     throw EngineException("AttributeDescriptions cannot be empty.");
@@ -40,12 +40,13 @@ void copyDataInterleaving(
                  });
   stride += attributes.back().size;
 
-  for (size_t j = 0, running_stride = 0; j < count; j++, running_stride += stride) {
+  for (size_t j = 0, running_offset = 0; j < count; j++, running_offset += stride) {
     for (const auto& [offset, attribute] : std::views::zip(offsetMemory, attributes)) {
-      std::memcpy(offset + running_stride,
+      std::memcpy(offset + running_offset,
                   static_cast<uint8_t*>(attribute.data) + j * attribute.size, attribute.size);
     }
   }
+  return stride;
 }
 
 std::vector<BufferDescription> analyzeConfig(

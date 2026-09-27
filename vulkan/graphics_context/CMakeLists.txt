@@ -1,4 +1,4 @@
-add_library(VulkanLayer graphics_context.h presentation.h presentation.cpp presentation_lib.h presentation_lib.cpp graphics_context.cpp graphics_context_lib.h graphics_context_lib.cpp)
+add_library(VulkanLayer transfer_thread.cpp graphics_context.h presentation.h presentation.cpp presentation_lib.h presentation_lib.cpp graphics_context.cpp graphics_context_lib.h graphics_context_lib.cpp)
 
 target_link_libraries(VulkanLayer PUBLIC Vulkan::Vulkan)
 target_link_libraries(VulkanLayer PRIVATE glm::glm)

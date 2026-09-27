@@ -6,11 +6,7 @@
 #include <variant>
 #include <vulkan/vulkan.h>
 
-std::span<const std::byte> BufferMetadata::getMappedMemoryAsSpan() const noexcept {
-  return std::span(mappedMemory, size);
-}
-
-std::span<std::byte> BufferMetadata::getMappedMemoryAsSpan() noexcept {
+std::span<std::byte> BufferMetadata::getMappedMemoryAsSpan() const noexcept {
   return std::span(mappedMemory, size);
 }
 
@@ -125,7 +121,7 @@ BufferResources createBuffer(
 
 }  // namespace
 
-const VkBuffer& Buffer::getVkBuffer() const noexcept {
+VkBuffer Buffer::getVkBuffer() const noexcept {
   return _buffer;
 }
 

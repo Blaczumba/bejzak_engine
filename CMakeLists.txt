@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.21)
+cmake_minimum_required(VERSION 3.25)
 include(FetchContent)
 include(CheckIPOSupported)
 
@@ -118,7 +118,7 @@ target_link_libraries(${COMMON_ENGINE_NAME} INTERFACE
     CommonObject CommonUtil
     CommonScene CommonFileLoader
     CommonModelLoader CommonMath CommonBuffer
-    CommonAbstractions CommonRef
+    CommonAbstractions CommonRef CommonNetworking
 )
 target_link_libraries(${ENGINE_NAME} INTERFACE ${COMMON_ENGINE_NAME})
 

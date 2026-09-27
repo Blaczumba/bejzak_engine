@@ -24,7 +24,7 @@ namespace common {
 class AssetManager {
 public:
   enum class LoadState : uint8_t {
-    PENDING,
+    PENDING = 0,
     PARTIAL,
     FINISHED
   };
@@ -42,8 +42,8 @@ public:
   };
 
   struct VertexData {
-    lib::DynamicAssociationList<std::string,
-                                std::tuple<Ref<RefType::Buffer>, Ref<RefType::VirtualAllocation>>>
+    lib::DynamicAssociationList<
+        std::string, std::tuple<Ref<RefType::Buffer>, Ref<RefType::VirtualAllocation>, size_t>>
         buffers;
     std::tuple<Ref<RefType::Buffer>, Ref<RefType::VirtualAllocation>> indexBuffer;
     IndexType indexType;
@@ -62,5 +62,11 @@ public:
 };
 
 void waitForAssetToLoad(const std::atomic<AssetManager::LoadState>& loadState);
+
+void waitForAssetUntilChangesState(
+    const std::atomic<AssetManager::LoadState>& loadState, AssetManager::LoadState unexpectedState);
+
+void waitForAssetUntilReachesState(
+    const std::atomic<AssetManager::LoadState>& loadState, AssetManager::LoadState expectedState);
 
 }  // namespace common

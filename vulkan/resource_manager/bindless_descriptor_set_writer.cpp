@@ -53,54 +53,13 @@ void BindlessDescriptorSetWriter::overwriteTexture(
       _descriptorSet.getDescriptorPool().getLogicalDevice().getVkDevice(), 1, &write, 0, nullptr);
 }
 
-std::vector<UniformTextureHandle> BindlessDescriptorSetWriter::storeTextures(
-    std::span<const Image> textures) {
-  std::vector<UniformTextureHandle> handles;
-  // handles.reserve(textures.size());
-  // for (uint32_t i = 0; i < textures.size(); i++) {
-  //   const UniformTextureHandle handle = getNextHandle(_texturesMap.size(), _missingTextures);
-  //   if (!_texturesMap.insert(*handle)) [[unlikely]] {
-  //     throw EngineException(std::format(
-  //         "BindlessDescriptorSetWriter::storeTextures: Failed to insert Texture Handle = {}.",
-  //         *handle));
-  //   }
-
-  //  handles.push_back(handle);
-  //}
-
-  // lib::Buffer<VkDescriptorImageInfo> imageInfos(textures.size());
-  // lib::Buffer<VkWriteDescriptorSet> writes(textures.size());
-
-  // for (auto&& [imageInfo, write, handle, texture] :
-  //      std::views::zip(imageInfos, writes, handles, textures)) {
-  //   imageInfo = VkDescriptorImageInfo{
-  //     // TODO: Use samplers.
-  //     .sampler = VK_NULL_HANDLE,
-  //     .imageView = texture.getVkImageView(),
-  //     .imageLayout = texture.getVkImageLayout()};
-
-  //  write = VkWriteDescriptorSet{
-  //    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-  //    .dstSet = _descriptorSet.getVkDescriptorSet(),
-  //    .dstBinding = TEXTURE_BINDING,
-  //    .dstArrayElement = static_cast<uint32_t>(*handle),
-  //    .descriptorCount = 1,
-  //    .descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-  //    .pImageInfo = &imageInfo};
-  //}
-
-  // vkUpdateDescriptorSets(_descriptorSet.getDescriptorPool().getLogicalDevice().getVkDevice(),
-  //                        static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
-  return handles;
-}
-
 void BindlessDescriptorSetWriter::removeTexture(UniformTextureHandle handle) {
   _reclaimedTextureHandles.push_back(handle);
   _textureDependencies.erase(handle);
 }
 
 UniformBufferHandle BindlessDescriptorSetWriter::writeBuffer(
-    Ref<Buffer>& bufferRef, VkBufferUsageFlags usage, size_t range, size_t offset) {
+    const Ref<Buffer>& bufferRef, VkBufferUsageFlags usage, size_t range, size_t offset) {
   const UniformBufferHandle handle =
       getNextHandleFromReclaimed(_nextBufferHandle, _reclaimedBufferHandles);
   _bufferDependencies.emplace(*handle, BufferResources{bufferRef});
@@ -120,44 +79,6 @@ UniformBufferHandle BindlessDescriptorSetWriter::writeBuffer(
       _descriptorSet.getDescriptorPool().getLogicalDevice().getVkDevice(), 1, &write, 0, nullptr);
 
   return handle;
-}
-
-std::vector<UniformBufferHandle> BindlessDescriptorSetWriter::storeBuffers(
-    std::span<const Buffer> buffers) {
-  std::vector<UniformBufferHandle> handles;
-  // handles.reserve(buffers.size());
-  // for (uint32_t i = 0; i < buffers.size(); i++) {
-  //   const UniformBufferHandle handle = getNextHandle(_buffersMap.size(), _missingBuffers);
-  //   if (!_buffersMap.insert(*handle)) [[unlikely]] {
-  //     throw EngineException(std::format(
-  //         "BindlessDescriptorSetWriter::storeBuffers: Failed to insert Buffer Handle = {}.",
-  //         *handle));
-  //   }
-
-  //  handles.push_back(handle);
-  //}
-
-  // lib::Buffer<VkDescriptorBufferInfo> bufferInfos(buffers.size());
-  // lib::Buffer<VkWriteDescriptorSet> writes(buffers.size());
-
-  // for (auto&& [bufferInfo, write, handle, buffer] :
-  //      std::views::zip(bufferInfos, writes, handles, buffers)) {
-  //   bufferInfo = VkDescriptorBufferInfo{.buffer = buffer.getVkBuffer(), .range =
-  //   buffer.getSize()};
-
-  //  write = VkWriteDescriptorSet{
-  //    .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-  //    .dstSet = _descriptorSet.getVkDescriptorSet(),
-  //    .dstBinding = UNIFORM_BINDING,
-  //    .dstArrayElement = static_cast<uint32_t>(*handle),
-  //    .descriptorCount = 1,
-  //    .descriptorType = getDescriptorType(buffer.getUsage()),
-  //    .pBufferInfo = &bufferInfo};
-  //}
-
-  // vkUpdateDescriptorSets(_descriptorSet.getDescriptorPool().getLogicalDevice().getVkDevice(),
-  //                        static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
-  return handles;
 }
 
 void BindlessDescriptorSetWriter::removeBuffer(UniformBufferHandle handle) {

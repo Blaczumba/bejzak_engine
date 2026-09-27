@@ -18,7 +18,7 @@ struct BufferDescription {
   size_t totalSize;
 };
 
-void copyDataInterleaving(
+size_t copyInterleavingDataAndGetStride(
     std::span<std::byte> dst, std::span<const AttributeDescription> attributes);
 
 template <typename... Type>

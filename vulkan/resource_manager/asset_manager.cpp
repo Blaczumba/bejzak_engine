@@ -2,7 +2,6 @@
 
 #include <algorithm>
 #include <functional>
-#include <future>
 #include <memory>
 #include <span>
 #include <tuple>
@@ -111,7 +110,8 @@ std::tuple<Ref<Buffer>, Ref<VirtualAllocation>, VirtualAllocationMetadata> Asset
               .buildStagingBufferWithMetadata(_logicalDevice);
       threadData.bufferBlocks.push_back(ThreadData::BufferBlock{
         .stagingBuffer = _bufferManager.storeBuffer(std::move(buffer), metadata),
-        .virtualBlock = VirtualBlock::create(_logicalDevice.getMemoryAllocator(), blockSize)});
+        .virtualBlock =
+            VirtualBlock::create(_logicalDevice.getMemoryAllocator(), std::max(blockSize, size))});
     }
     expectedVirtualAllocation =
         threadData.bufferBlocks.back().virtualBlock.createVirtualAllocation(size, alignment);
@@ -199,16 +199,15 @@ AssetManager::loadVertexDataInterleavingAsync(
       for (common::BufferDescription& description : bufferDescriptions) {
         auto [stagingBufferRef, virtualAllocationRef, virtualAllocationMetadata] =
             allocate(threadData, description.totalSize, alignment, blockSize);
-        common::copyDataInterleaving(
+        const size_t stride = common::copyInterleavingDataAndGetStride(
             std::span(WeakRef<Buffer>(stagingBufferRef).getMetadata().mappedMemory
                           + virtualAllocationMetadata.offset,
                       virtualAllocationMetadata.size),
             description.attributes);
-        promise->buffers.insert(
-            {std::move(description.name),
-             std::make_tuple(std::move(stagingBufferRef), std::move(virtualAllocationRef))});
+        promise->buffers.insert({std::move(description.name),
+                                 std::make_tuple(std::move(stagingBufferRef),
+                                                 std::move(virtualAllocationRef), stride)});
       }
-
       const common::IndexType shrunkIndexType = common::getShrunkIndexSize(indices, indexType);
       auto [stagingBufferRef, virtualAllocationRef, virtualAllocationMetadata] = allocate(
           threadData,

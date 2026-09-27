@@ -13,68 +13,68 @@ class StrongInt {
   T _value;
 
 public:
-  StrongInt() noexcept = default;
+  constexpr StrongInt() noexcept = default;
 
-  explicit StrongInt(T value) noexcept : _value(value) {}
+  constexpr explicit StrongInt(T value) noexcept : _value(value) {}
 
   ~StrongInt() = default;
 
-  T value() const noexcept {
+  constexpr T value() const noexcept {
     return _value;
   }
 
-  T operator*() const noexcept {
+  constexpr T operator*() const noexcept {
     return _value;
   }
 
-  bool operator==(const StrongInt& other) const noexcept {
+  constexpr bool operator==(const StrongInt& other) const noexcept {
     return _value == other._value;
   }
 
-  bool operator!=(const StrongInt& other) const noexcept {
+  constexpr bool operator!=(const StrongInt& other) const noexcept {
     return _value != other._value;
   }
 
-  bool operator<(const StrongInt& other) const noexcept {
+  constexpr bool operator<(const StrongInt& other) const noexcept {
     return _value < other._value;
   }
 
-  bool operator<=(const StrongInt& other) const noexcept {
+  constexpr bool operator<=(const StrongInt& other) const noexcept {
     return _value <= other._value;
   }
 
-  bool operator>(const StrongInt& other) const noexcept {
+  constexpr bool operator>(const StrongInt& other) const noexcept {
     return _value > other._value;
   }
 
-  bool operator>=(const StrongInt& other) const noexcept {
+  constexpr bool operator>=(const StrongInt& other) const noexcept {
     return _value >= other._value;
   }
 
-  StrongInt& operator+=(const StrongInt& other) noexcept {
+  constexpr StrongInt& operator+=(const StrongInt& other) noexcept {
     _value += other._value;
     return *this;
   }
 
-  StrongInt& operator-=(const StrongInt& other) noexcept {
+  constexpr StrongInt& operator-=(const StrongInt& other) noexcept {
     _value -= other._value;
     return *this;
   }
 
-  StrongInt operator+(const StrongInt& other) const noexcept {
+  constexpr StrongInt operator+(const StrongInt& other) const noexcept {
     return StrongInt(_value + other._value);
   }
 
-  StrongInt operator-(const StrongInt& other) const noexcept {
+  constexpr StrongInt operator-(const StrongInt& other) const noexcept {
     return StrongInt(_value - other._value);
   }
 
-  StrongInt& operator++() noexcept {
+  constexpr StrongInt& operator++() noexcept {
     ++_value;
     return *this;
   }
 
-  StrongInt operator++(int) noexcept {
+  constexpr StrongInt operator++(int) noexcept {
     StrongInt temp = *this;
     ++_value;
     return temp;

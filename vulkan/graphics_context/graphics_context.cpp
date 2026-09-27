@@ -225,7 +225,8 @@ Entity GCONTEXT_CLASS loadObject(
                         .pipelineHandle = pipelineHandle});
   Ref<Buffer> vertexBufferRef;
   Ref<VirtualAllocation> virtualAllocationRef;
-  std::tie(vertexBufferRef, virtualAllocationRef) = cubeData.vertexData->buffers.at("P");
+  std::tie(vertexBufferRef, virtualAllocationRef, std::ignore) =
+      cubeData.vertexData->buffers.at("P");
   MeshComponent msh = {
     .aabb = createAABBfromVertices(
         std::span(reinterpret_cast<glm::vec3*>(vertexBufferRef.getMetadata().mappedMemory
@@ -234,13 +235,14 @@ Entity GCONTEXT_CLASS loadObject(
         glm::mat4(1.0f))};
   Ref<Buffer> pBufferRef;
   Ref<VirtualAllocation> pVirtualAllocationRef;
-  std::tie(pBufferRef, pVirtualAllocationRef) = cubeData.vertexData->buffers.at("P");
+  std::tie(pBufferRef, pVirtualAllocationRef, std::ignore) = cubeData.vertexData->buffers.at("P");
   msh.vertexBufferPrimitiveHandle = copyStagingToGpuBuffer(
       *_logicalDevice, &_bufferManager, commandBuffer, pBufferRef, pVirtualAllocationRef,
       VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
   Ref<Buffer> ptnBufferRef;
   Ref<VirtualAllocation> ptnVirtualAllocationRef;
-  std::tie(ptnBufferRef, ptnVirtualAllocationRef) = cubeData.vertexData->buffers.at("PTN");
+  std::tie(ptnBufferRef, ptnVirtualAllocationRef, std::ignore) =
+      cubeData.vertexData->buffers.at("PTN");
   msh.vertexBufferHandle = copyStagingToGpuBuffer(
       *_logicalDevice, &_bufferManager, commandBuffer, ptnBufferRef, ptnVirtualAllocationRef,
       VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
@@ -262,17 +264,17 @@ void GCONTEXT_CLASS createDescriptorSets() {
   const uint32_t size =
       _logicalDevice->getPhysicalDevice().getMemoryAlignment(sizeof(UniformBufferCamera));
   {
-    _dynamicUniformBuffersCamera =
+    auto [buffer, metadata] =
         BufferBuilder()
             .withUsage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)
             .withSize((MULTIVIEW_PRESENTATION ? 2 : 1) * MAX_FRAMES_IN_FLIGHT * size)
             .buildUniformBufferWithMetadata(*_logicalDevice);
+    _dynamicUniformBuffersCamera = _bufferManager.storeBuffer(std::move(buffer), metadata);
   }
 
   _dynamicDescriptorSetWriter.storeDynamicBuffer(
-      std::get<Buffer>(_dynamicUniformBuffersCamera),
-      std::get<BufferMetadata>(_dynamicUniformBuffersCamera).usage, size,
-      MULTIVIEW_PRESENTATION ? 2 : 1);
+      _dynamicUniformBuffersCamera.getUnderlyingResource(),
+      _dynamicUniformBuffersCamera.getMetadata().usage, size, MULTIVIEW_PRESENTATION ? 2 : 1);
   _dynamicDescriptorSetWriter.writeDescriptorSet(
       _logicalDevice->getVkDevice(), _dynamicDescriptorSet.getVkDescriptorSet());
 
@@ -282,8 +284,8 @@ void GCONTEXT_CLASS createDescriptorSets() {
             .withUsage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)
             .withSize(sizeof(UniformBufferLight))
             .buildUniformBufferWithMetadata(*_logicalDevice);
-    Ref<Buffer> lightBufferRef = _bufferManager.storeBuffer(std::move(buffer), metadata);
-    _lightHandle = _bindlessWriter->writeBuffer(lightBufferRef, metadata.usage, metadata.size);
+    _lightHandle = _bindlessWriter->writeBuffer(
+        _bufferManager.storeBuffer(std::move(buffer), metadata), metadata.usage, metadata.size);
 
     _ubLight.pos = glm::vec3(15.1891f, 2.66408f, -0.841221f);
     _ubLight.projView = glm::perspective(glm::radians(120.0f), 1.0f, 0.1f, 40.0f);
@@ -523,13 +525,13 @@ void GCONTEXT_CLASS loadObjects(
     common::waitForAssetToLoad(vData.loadState);
     Ref<Buffer> ptntBufferRef;
     Ref<VirtualAllocation> ptntVirtualAllocationRef;
-    std::tie(ptntBufferRef, ptntVirtualAllocationRef) = vData.buffers.at("PTNT");
+    std::tie(ptntBufferRef, ptntVirtualAllocationRef, std::ignore) = vData.buffers.at("PTNT");
     msh.vertexBufferHandle = copyStagingToGpuBuffer(
         *_logicalDevice, &_bufferManager, commandBuffer, ptntBufferRef, ptntVirtualAllocationRef,
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
     Ref<Buffer> pBufferRef;
     Ref<VirtualAllocation> pVirtualAllocationRef;
-    std::tie(pBufferRef, pVirtualAllocationRef) = vData.buffers.at("P");
+    std::tie(pBufferRef, pVirtualAllocationRef, std::ignore) = vData.buffers.at("P");
     msh.vertexBufferPrimitiveHandle = copyStagingToGpuBuffer(
         *_logicalDevice, &_bufferManager, commandBuffer, pBufferRef, pVirtualAllocationRef,
         VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
@@ -684,7 +686,7 @@ void GCONTEXT_CLASS updateUniformBuffer(uint32_t currentFrame) {
     _ubCamera.pos = cameraContext.position;
     _ubCamera.viewDir = cameraContext.viewDir;
     common::copyObject(
-        std::get<BufferMetadata>(_dynamicUniformBuffersCamera).getMappedMemoryAsSpan(), _ubCamera,
+        _dynamicUniformBuffersCamera.getMetadata().getMappedMemoryAsSpan(), _ubCamera,
         (cameraContexts.size() * currentFrame + i)
             * _physicalDevice->getMemoryAlignment(sizeof(_ubCamera)));
   }
@@ -1015,6 +1017,7 @@ GCONTEXT_TEMPLATE
 void GCONTEXT_CLASS draw() {
   updateUniformBuffer(_currentFrame);
 
+  // Consider reseting the pool periodically or set the flag.
   CHECK_VKCMD(_primaryCommandBuffer[_currentFrame].resetCommandBuffer(),
               "Failed to reset primary command buffer.");
   for (int i = 0; i < MAX_THREADS_IN_POOL; i++) {

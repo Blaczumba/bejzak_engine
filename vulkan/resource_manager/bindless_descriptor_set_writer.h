@@ -32,16 +32,10 @@ public:
   void overwriteTexture(
       UniformTextureHandle handle, VkImageView view, VkImageLayout layout, VkSampler sampler);
 
-  // TODO: refactor.
-  std::vector<UniformTextureHandle> storeTextures(std::span<const Image> images);
-
   void removeTexture(UniformTextureHandle handle);
 
   UniformBufferHandle writeBuffer(
-      Ref<Buffer>& bufferRef, VkBufferUsageFlags flags, size_t range, size_t offset = 0);
-
-  // TODO: refactor.
-  std::vector<UniformBufferHandle> storeBuffers(std::span<const Buffer> buffers);
+      const Ref<Buffer>& bufferRef, VkBufferUsageFlags flags, size_t range, size_t offset = 0);
 
   void removeBuffer(UniformBufferHandle handle);
 

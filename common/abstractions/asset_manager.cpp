@@ -11,4 +11,18 @@ void waitForAssetToLoad(const std::atomic<AssetManager::LoadState>& loadState) {
   }
 }
 
+void waitForAssetUntilChangesState(const std::atomic<AssetManager::LoadState>& loadState,
+                                   AssetManager::LoadState unexpectedState) {
+  while (loadState.load(std::memory_order_acquire) == unexpectedState) {
+    std::this_thread::yield();
+  }
+}
+
+void waitForAssetUntilReachesState(
+    const std::atomic<AssetManager::LoadState>& loadState, AssetManager::LoadState expectedState) {
+  while (loadState.load(std::memory_order_acquire) < expectedState) {
+    std::this_thread::yield();
+  }
+}
+
 }  // namespace common

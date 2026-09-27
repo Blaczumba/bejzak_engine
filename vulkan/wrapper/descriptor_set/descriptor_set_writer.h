@@ -25,11 +25,11 @@ public:
       const Buffer& buffer, VkBufferUsageFlags usage, VkDeviceSize range, VkDeviceSize offset = 0);
 
   DescriptorSetWriter& storeDynamicBuffer(
-      const Buffer& buffer, VkBufferUsageFlags usage, uint32_t dynamicElementSize,
+      VkBuffer buffer, VkBufferUsageFlags usage, uint32_t dynamicElementSize,
       uint32_t descriptorCount = 1);
 
   DescriptorSetWriter& storeBufferArrayElement(
-      const Buffer& buffer, VkBufferUsageFlags usage, VkDeviceSize range, VkDeviceSize offset);
+      VkBuffer buffer, VkBufferUsageFlags usage, VkDeviceSize range, VkDeviceSize offset);
 
   void writeDescriptorSet(VkDevice device, const VkDescriptorSet descriptorSet);
 

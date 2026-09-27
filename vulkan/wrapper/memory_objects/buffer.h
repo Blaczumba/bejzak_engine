@@ -20,8 +20,7 @@ public:
 
   ~Buffer();
 
-  // TODO: Do not return the reference.
-  const VkBuffer& getVkBuffer() const noexcept;
+  VkBuffer getVkBuffer() const noexcept;
 
   VkBuffer getUnderlyingResource() const noexcept;
 
@@ -46,9 +45,7 @@ struct BufferMetadata {
   VkSharingMode sharingMode;
   std::vector<uint32_t> queueFamilyIndices;
   // Other std::optional fields representing pNext metadata.
-  std::span<const std::byte> getMappedMemoryAsSpan() const noexcept;
-
-  std::span<std::byte> getMappedMemoryAsSpan() noexcept;
+  std::span<std::byte> getMappedMemoryAsSpan() const noexcept;
 };
 
 class BufferBuilder {

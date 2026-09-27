@@ -55,15 +55,13 @@ DescriptorSetWriter& DescriptorSetWriter::storeBuffer(
 }
 
 DescriptorSetWriter& DescriptorSetWriter::storeDynamicBuffer(
-    const Buffer& buffer, VkBufferUsageFlags usage, uint32_t dynamicElementSize,
+    VkBuffer buffer, VkBufferUsageFlags usage, uint32_t dynamicElementSize,
     uint32_t descriptorCount) {
   _arrayElement = 0;
   _bufferInfos.reserve(descriptorCount);
   for (uint32_t i = 0; i < descriptorCount; i++) {
     _bufferInfos.push_back(VkDescriptorBufferInfo{
-      .buffer = buffer.getVkBuffer(),
-      .offset = i * dynamicElementSize,
-      .range = dynamicElementSize});
+      .buffer = buffer, .offset = i * dynamicElementSize, .range = dynamicElementSize});
     _dynamicBuffersBaseSizes.push_back(dynamicElementSize);
     _descriptorWrites.push_back(VkWriteDescriptorSet{
       .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
@@ -79,9 +77,9 @@ DescriptorSetWriter& DescriptorSetWriter::storeDynamicBuffer(
 }
 
 DescriptorSetWriter& DescriptorSetWriter::storeBufferArrayElement(
-    const Buffer& buffer, VkBufferUsageFlags usage, VkDeviceSize range, VkDeviceSize offset) {
+    VkBuffer buffer, VkBufferUsageFlags usage, VkDeviceSize range, VkDeviceSize offset) {
   _bufferInfos.push_back(
-      VkDescriptorBufferInfo{.buffer = buffer.getVkBuffer(), .offset = offset, .range = range});
+      VkDescriptorBufferInfo{.buffer = buffer, .offset = offset, .range = range});
 
   _descriptorWrites.push_back(VkWriteDescriptorSet{
     .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
