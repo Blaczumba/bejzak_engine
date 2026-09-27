@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <expected>
@@ -12,7 +13,6 @@
 
 #ifdef _WIN32
   #include <winsock2.h>
-  #include <ws2tcpip.h>
 #else
   #include <arpa/inet.h>
   #include <netinet/in.h>
@@ -21,6 +21,12 @@
 #endif
 
 namespace common::networking {
+
+enum class ShutdownMode : uint8_t {
+  SEND = 0,
+  RECEIVE,
+  SEND_RECEIVE
+};
 
 template <typename T>
 using SocketResult = std::expected<T, std::error_code>;
@@ -77,9 +83,15 @@ public:
 
   SocketResult<void> connect(const char* const address, uint16_t port);
 
-  SocketResult<size_t> send(std::span<const char> buffer, int flags = 0);
+  SocketResult<int64_t> send(std::span<const char> buffer, int flags = 0);
 
-  SocketResult<size_t> recv(std::span<char> buffer, int flags = 0);
+  SocketResult<int64_t> recv(std::span<char> buffer, int flags = 0);
+
+  SocketResult<void> setReceiveTimeout(std::chrono::milliseconds timeout);
+
+  SocketResult<void> setSendTimeout(std::chrono::milliseconds timeout);
+
+  SocketResult<void> shutdown(ShutdownMode mode);
 };
 
 class UdpSocket final : public Socket {

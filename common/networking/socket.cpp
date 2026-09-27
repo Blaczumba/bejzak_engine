@@ -1,6 +1,7 @@
 #include "common/networking/socket.h"
 
 #include <cerrno>
+#include <chrono>
 #include <cstdint>
 #include <expected>
 #include <span>
@@ -51,6 +52,28 @@ void initWinsock() {
     }
   } wsa_init;
 #endif
+}
+
+SocketResult<void> setOption(socket_t handle, int level, int name, const void* value, size_t size) {
+  if (handle == INVALID_SOCKET_VAL) {
+    return invalidSocketError();
+  }
+  if (::setsockopt(
+          handle, level, name, static_cast<const char*>(value), static_cast<socklen_t>(size))
+      != 0) {
+    return std::unexpected(getLastError());
+  }
+  return {};
+}
+
+SocketResult<void> setTimeoutOption(socket_t handle, int name, std::chrono::milliseconds timeout) {
+#ifdef _WIN32
+  const DWORD value = static_cast<DWORD>(timeout.count());
+#else
+  timeval value{.tv_sec = static_cast<time_t>(timeout.count() / 1000),
+                .tv_usec = static_cast<suseconds_t>((timeout.count() % 1000) * 1000)};
+#endif
+  return setOption(handle, SOL_SOCKET, name, &value, sizeof(value));
 }
 
 }  // namespace
@@ -140,7 +163,7 @@ SocketResult<std::tuple<TcpSocket, sockaddr_in>> TcpSocket::accept() {
   if (!client.isValid()) {
     return std::unexpected(getLastError());
   }
-  return std::make_tuple(std::move(client), client_addr);
+  return std::tuple{std::move(client), client_addr};
 }
 
 SocketResult<void> TcpSocket::connect(const std::string& address, uint16_t port) {
@@ -161,26 +184,51 @@ SocketResult<void> TcpSocket::connect(const char* const address, uint16_t port) 
   return {};
 }
 
-SocketResult<size_t> TcpSocket::send(std::span<const char> buffer, int flags) {
+SocketResult<int64_t> TcpSocket::send(std::span<const char> buffer, int flags) {
   if (_handle == INVALID_SOCKET_VAL) {
     return invalidSocketError();
   }
-  const auto sent = ::send(_handle, buffer.data(), static_cast<int>(buffer.size()), flags);
+  const int64_t sent =
+      static_cast<int64_t>(::send(_handle, buffer.data(), static_cast<int>(buffer.size()), flags));
   if (sent < 0) {
     return std::unexpected(getLastError());
   }
-  return static_cast<size_t>(sent);
+  return static_cast<int64_t>(sent);
 }
 
-SocketResult<size_t> TcpSocket::recv(std::span<char> buffer, int flags) {
+SocketResult<int64_t> TcpSocket::recv(std::span<char> buffer, int flags) {
   if (_handle == INVALID_SOCKET_VAL) {
     return invalidSocketError();
   }
-  const auto received = ::recv(_handle, buffer.data(), static_cast<int>(buffer.size()), flags);
+  const int64_t received =
+      static_cast<int64_t>(::recv(_handle, buffer.data(), static_cast<int>(buffer.size()), flags));
   if (received < 0) {
     return std::unexpected(getLastError());
   }
-  return static_cast<size_t>(received);
+  return static_cast<int64_t>(received);
+}
+
+SocketResult<void> TcpSocket::setReceiveTimeout(std::chrono::milliseconds timeout) {
+  return setTimeoutOption(_handle, SO_RCVTIMEO, timeout);
+}
+
+SocketResult<void> TcpSocket::setSendTimeout(std::chrono::milliseconds timeout) {
+  return setTimeoutOption(_handle, SO_SNDTIMEO, timeout);
+}
+
+SocketResult<void> TcpSocket::shutdown(ShutdownMode mode) {
+  if (_handle == INVALID_SOCKET_VAL) {
+    return invalidSocketError();
+  }
+#ifdef _WIN32
+  static constexpr int modes[] = {SD_RECEIVE, SD_SEND, SD_BOTH};
+#else
+  static constexpr int modes[] = {SHUT_RD, SHUT_WR, SHUT_RDWR};
+#endif
+  if (::shutdown(_handle, modes[static_cast<int>(mode)]) != 0) {
+    return std::unexpected(getLastError());
+  }
+  return {};
 }
 
 UdpSocket::UdpSocket() : Socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP) {}
