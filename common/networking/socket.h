@@ -94,12 +94,16 @@ protected:
 };
 
 class TcpSocket final : public Socket {
-public:
-  TcpSocket();
-
-  explicit TcpSocket(int domain);  // AF_INET or AF_INET6
-
   explicit TcpSocket(socket_t handle) noexcept;
+
+  TcpSocket(int domain);
+
+public:
+  TcpSocket() noexcept = default;
+
+  static TcpSocket createIpv4Socket();
+
+  static TcpSocket createIpv6Socket();
 
   ~TcpSocket() override = default;
 
@@ -121,10 +125,14 @@ public:
 };
 
 class UdpSocket final : public Socket {
-public:
-  UdpSocket();
+  explicit UdpSocket(int domain);
 
-  explicit UdpSocket(int domain);  // AF_INET or AF_INET6
+public:
+  UdpSocket() noexcept = default;
+
+  static UdpSocket createIpv4Socket();
+
+  static UdpSocket createIpv6Socket();
 
   ~UdpSocket() override = default;
 

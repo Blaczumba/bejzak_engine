@@ -197,9 +197,17 @@ SocketResult<void> Socket::setSendTimeout(std::chrono::milliseconds timeout) noe
   return setTimeoutOption(_handle, SO_SNDTIMEO, timeout);
 }
 
-TcpSocket::TcpSocket() : Socket(AF_INET, SOCK_STREAM, IPPROTO_TCP) {}
 TcpSocket::TcpSocket(int domain) : Socket(domain, SOCK_STREAM, IPPROTO_TCP) {}
+
 TcpSocket::TcpSocket(socket_t socket) noexcept : Socket(socket) {}
+
+TcpSocket TcpSocket::createIpv4Socket() {
+  return TcpSocket(AF_INET);
+}
+
+TcpSocket TcpSocket::createIpv6Socket() {
+  return TcpSocket(AF_INET6);
+}
 
 SocketResult<void> TcpSocket::connect(const Endpoint& endpoint) noexcept {
   if (_handle == INVALID_SOCKET_VAL) {
@@ -276,8 +284,15 @@ SocketResult<void> TcpSocket::shutdown(ShutdownMode mode) noexcept {
   return {};
 }
 
-UdpSocket::UdpSocket() : Socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP) {}
 UdpSocket::UdpSocket(int domain) : Socket(domain, SOCK_DGRAM, IPPROTO_UDP) {}
+
+UdpSocket UdpSocket::createIpv4Socket() {
+  return UdpSocket(AF_INET);
+}
+
+UdpSocket UdpSocket::createIpv6Socket() {
+  return UdpSocket(AF_INET6);
+}
 
 SocketResult<int64_t> UdpSocket::sendTo(
     std::span<const std::byte> buffer, const Endpoint& destination, int flags) noexcept {
