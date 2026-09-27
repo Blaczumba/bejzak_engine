@@ -157,6 +157,8 @@ public:
 
   UdpSocket& operator=(UdpSocket&& other) noexcept;
 
+  SocketResult<void> setBroadcastEnablement(bool enable) noexcept;
+
   SocketResult<void> bind(const std::string& ip, uint16_t port) noexcept;
 
   SocketResult<int64_t> sendTo(

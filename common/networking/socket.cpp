@@ -307,6 +307,16 @@ UdpSocket& UdpSocket::operator=(UdpSocket&& other) noexcept {
   return *this;
 }
 
+SocketResult<void> UdpSocket::setBroadcastEnablement(bool enable) noexcept {
+  int broadcastEnable = enable ? 1 : 0;
+  if (::setsockopt(_handle, SOL_SOCKET, SO_BROADCAST,
+                   reinterpret_cast<const char*>(&broadcastEnable), sizeof(broadcastEnable))
+      < 0) {
+    return std::unexpected(getLastError());
+  }
+  return {};
+}
+
 SocketResult<void> UdpSocket::bind(const std::string& ip, uint16_t port) noexcept {
   SocketResult<Endpoint> endpoint =
       _domain == AF_INET ? Endpoint::createIpv4(ip, port) : Endpoint::createIpv6(ip, port);
