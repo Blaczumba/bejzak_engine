@@ -55,10 +55,6 @@ public:
 
     Subpass& withShadingRateAttachment(uint32_t binding, uint32_t texelWidth, uint32_t texelHeight);
 
-    Subpass& withFragmentDensityMapAttachment();
-
-    Subpass& withFragmentDensityMapAttachment(uint32_t binding);
-
     VkSubpassDescription2 getVkSubpassDescription(uint32_t viewMask = 0) const;
 
   private:
@@ -73,7 +69,6 @@ public:
     VkAttachmentReference2 _fragmentShadingRateAttachmentRef;
 
     VkFragmentShadingRateAttachmentInfoKHR _shadingRateAttachmentInfo;
-    VkRenderPassFragmentDensityMapCreateInfoEXT _fragmentDensityMapAttachmentInfo;
   };
 
   RenderpassBuilder(const AttachmentLayout& attachmentLayout);

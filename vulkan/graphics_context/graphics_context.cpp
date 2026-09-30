@@ -1187,9 +1187,6 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
   if (supportedFeature
       == FragmentShadingOptimizationImageFeature::SupportedFeature::FRAGMENT_SHADING_RATE) {
     subpass.withShadingRateAttachment(fsrTexelSize.width, fsrTexelSize.height);
-  } else if (supportedFeature
-             == FragmentShadingOptimizationImageFeature::SupportedFeature::FRAGMENT_DENSITY_MAP) {
-    subpass.withFragmentDensityMapAttachment();
   }
 
   _renderPass =
