@@ -131,6 +131,36 @@ RenderpassBuilder::Subpass& RenderpassBuilder::Subpass::withShadingRateAttachmen
   return *this;
 }
 
+
+RenderpassBuilder::Subpass& RenderpassBuilder::Subpass::withFragmentDensityMapAttachment() {
+  for (uint32_t binding = 0; binding < _attachmentLayout.getAttachmentsCount(); binding++) {
+    if (_attachmentLayout.getAttachmentType(binding) == AttachmentType::FRAGMENT_DENSITY_MAP) {
+      return withFragmentDensityMapAttachment(binding);
+    }
+  }
+
+  throw EngineException(
+      "The attachment layout does not contain a fragment shading rate attachment.");
+}
+
+RenderpassBuilder::Subpass& RenderpassBuilder::Subpass::withFragmentDensityMapAttachment(uint32_t binding) {
+  if (_attachmentLayout.getAttachmentType(binding) != AttachmentType::FRAGMENT_DENSITY_MAP) {
+    throw EngineException(
+        "The specified attachment binding does not correspond to a fragment density map "
+        "attachment.");
+  }
+
+  _fragmentDensityMapAttachmentInfo = VkRenderPassFragmentDensityMapCreateInfoEXT {
+    .sType = VK_STRUCTURE_TYPE_RENDER_PASS_FRAGMENT_DENSITY_MAP_CREATE_INFO_EXT,
+    .fragmentDensityMapAttachment = VkAttachmentReference {
+        .attachment = binding,
+        .layout = _attachmentLayout.getAttachmentVkImageLayout(binding)}
+  };
+
+  chainExtendedField(&_pNext, _fragmentDensityMapAttachmentInfo);
+  return *this;
+}
+
 VkSubpassDescription2 RenderpassBuilder::Subpass::getVkSubpassDescription(uint32_t viewMask) const {
   return VkSubpassDescription2{
     .sType = VK_STRUCTURE_TYPE_SUBPASS_DESCRIPTION_2,
@@ -161,19 +191,6 @@ Renderpass RenderpassBuilder::build(
   for (int i = 0; i < _subpasses.size(); i++) {
     _subpassDescriptions[i] = _subpasses[i].getVkSubpassDescription(
         _multiViewInfo.has_value() ? _multiViewInfo->viewMasks[i] : 0);
-  }
-
-  std::span<const AttachmentType> attachmentTypes = _attachmentLayout.getAttachmentTypes();
-  auto it = std::find(std::cbegin(attachmentTypes), std::cend(attachmentTypes),
-                      AttachmentType::FRAGMENT_DENSITY_MAP);
-  if (it != std::cend(attachmentTypes)) {
-    const uint32_t attachment = std::distance(std::cbegin(attachmentTypes), it);
-    _fragmentDensityMapCreateInfo = VkRenderPassFragmentDensityMapCreateInfoEXT{
-      .sType = VK_STRUCTURE_TYPE_RENDER_PASS_FRAGMENT_DENSITY_MAP_CREATE_INFO_EXT,
-      .fragmentDensityMapAttachment = VkAttachmentReference{
-                                                            attachment, _attachmentLayout.getAttachmentVkImageLayout(attachment)}
-    };
-    chainExtendedField(&_pNext, *_fragmentDensityMapCreateInfo);
   }
 
   const VkRenderPassCreateInfo2 renderPassCreateInfo = {

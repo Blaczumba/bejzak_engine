@@ -118,6 +118,9 @@ std::tuple<Image, ImageMetadata> createAttachment(
 void createFsrContents(const LogicalDevice& logicalDevice, Image& image,
                        const ImageMetadata& metadata, const CommandBuffer& commandBuffer);
 
+void createFdmContents(const LogicalDevice& logicalDevice, Image& image,
+                       const ImageMetadata& metadata, const CommandBuffer& commandBuffer);
+
 }  // namespace
 
 GCONTEXT_TEMPLATE
@@ -785,7 +788,7 @@ void GCONTEXT_CLASS recordCommandBuffer(const glm::mat4& cameraProj, const glm::
       {_computeDescriptorSet.getVkDescriptorSet()});
   primaryCommandBuffer.dispatchCompute(16, 16);
 
-  const ImageMetadata& fsrTextureMetadata = _fsrTextureHandle.getMetadata();
+  const ImageMetadata& fsrTextureMetadata = _fragmentShadingOptimizationImageRef.getMetadata();
   static DependencyInfoBuilder dependencyInfoBuilder;
   dependencyInfoBuilder.clearBuilders()
       .addImageMemoryBarrier()
@@ -794,7 +797,7 @@ void GCONTEXT_CLASS recordCommandBuffer(const glm::mat4& cameraProj, const glm::
                     VK_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR)
       .withLayouts(
           VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR)
-      .withImage(_fsrTextureHandle.getUnderlyingResource(),
+      .withImage(_fragmentShadingOptimizationImageRef.getUnderlyingResource(),
                  VkImageSubresourceRange{
                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                    .baseMipLevel = 0,
@@ -1074,7 +1077,8 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
       .addColorAttachment(
           swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE)
       .addDepthAttachment(VK_FORMAT_D24_UNORM_S8_UINT, VK_ATTACHMENT_STORE_OP_DONT_CARE)
-      .addFragmentShadingRateAttachment();
+      .addFragmentDensityMapAttachment();
+      // .addFragmentShadingRateAttachment(); TODO: Switch
 
   lib::Buffer<Ref<Image>> attachmentRefs;
   lib::Buffer<VkImageView> attachmentViews(3);
@@ -1095,31 +1099,55 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
     Ref<Image> depthAttachmentHandle =
         _imageManager.storeImage(std::move(depthAtachment), depthAtachmentMetadata);
 
-    const VkPhysicalDeviceFragmentShadingRatePropertiesKHR& fsrProperties =
-        _physicalDevice->getFragmentShadingRateProperties();
-    const VkExtent2D fsrTexelExtent = fsrProperties.maxFragmentShadingRateAttachmentTexelSize;
-    const VkExtent2D fsrExtent = VkExtent2D{
-      static_cast<uint32_t>(std::ceil(extent.width / static_cast<float>(fsrTexelExtent.width))),
-      static_cast<uint32_t>(std::ceil(extent.height / static_cast<float>(fsrTexelExtent.height)))};
-    auto [fsrTexture, fsrTextureMetadata] = createAttachment(
-        *_logicalDevice, VK_FORMAT_R8_UINT, VK_SAMPLE_COUNT_1_BIT, fsrExtent,
-        presentResources.numLayers, VK_IMAGE_ASPECT_COLOR_BIT,
-        VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR | VK_IMAGE_USAGE_TRANSFER_DST_BIT
-            | VK_IMAGE_USAGE_STORAGE_BIT);
-    createFsrContents(*_logicalDevice, fsrTexture, fsrTextureMetadata, handle);
+    if (false) { // Fragment Shading Rate is the chosen extension.
+      const VkPhysicalDeviceFragmentShadingRatePropertiesKHR& fsrProperties =
+          _physicalDevice->getFragmentShadingRateProperties();
+      const VkExtent2D fsrTexelExtent = fsrProperties.maxFragmentShadingRateAttachmentTexelSize;
+      const VkExtent2D fsrExtent = VkExtent2D{
+          static_cast<uint32_t>(std::ceil(extent.width / static_cast<float>(fsrTexelExtent.width))),
+          static_cast<uint32_t>(std::ceil(extent.height / static_cast<float>(fsrTexelExtent.height)))};
+      auto [fsrTexture, fsrTextureMetadata] = createAttachment(
+          *_logicalDevice, VK_FORMAT_R8_UINT, VK_SAMPLE_COUNT_1_BIT, fsrExtent,
+          presentResources.numLayers, VK_IMAGE_ASPECT_COLOR_BIT,
+          VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR | VK_IMAGE_USAGE_TRANSFER_DST_BIT
+              | VK_IMAGE_USAGE_STORAGE_BIT);
+      createFsrContents(*_logicalDevice, fsrTexture, fsrTextureMetadata, handle);
 
-    attachmentViews[2] = fsrTexture.getVkImageView();
-    _computeDescriptorSetWriter.storeImageStorage(
-        fsrTexture.getVkImageView(), VK_IMAGE_LAYOUT_GENERAL);
-    _computeDescriptorSetWriter.writeDescriptorSet(
-        _logicalDevice->getVkDevice(), _computeDescriptorSet.getVkDescriptorSet());
+      attachmentViews[2] = fsrTexture.getVkImageView();
+      _computeDescriptorSetWriter.storeImageStorage(
+          fsrTexture.getVkImageView(), VK_IMAGE_LAYOUT_GENERAL);
+      _computeDescriptorSetWriter.writeDescriptorSet(
+          _logicalDevice->getVkDevice(), _computeDescriptorSet.getVkDescriptorSet());
 
-    Ref<Image> fsrAttachmentHandle = _fsrTextureHandle =
-        _imageManager.storeImage(std::move(fsrTexture), fsrTextureMetadata);
+      _fragmentShadingOptimizationImageRef =
+                                           _imageManager.storeImage(std::move(fsrTexture), fsrTextureMetadata);
+    } else {
+      const VkPhysicalDeviceFragmentDensityMapPropertiesEXT& fdmProperties =
+          _physicalDevice->getFragmentDensityMapProperties();
+      const VkExtent2D fdmTexelExtent = fdmProperties.minFragmentDensityTexelSize;
+      const VkExtent2D fdmExtent = VkExtent2D{
+          static_cast<uint32_t>(std::ceil(extent.width / static_cast<float>(fdmTexelExtent.width))),
+          static_cast<uint32_t>(std::ceil(extent.height / static_cast<float>(fdmTexelExtent.height)))};
+      auto [fdmTexture, fdmTextureMetadata] = createAttachment(
+          *_logicalDevice, VK_FORMAT_R8G8_UNORM, VK_SAMPLE_COUNT_1_BIT, fdmExtent,
+          presentResources.numLayers, VK_IMAGE_ASPECT_COLOR_BIT,
+          VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT | VK_IMAGE_USAGE_TRANSFER_DST_BIT
+              | VK_IMAGE_USAGE_STORAGE_BIT);
+      createFdmContents(*_logicalDevice, fdmTexture, fdmTextureMetadata, handle);
+
+      attachmentViews[2] = fdmTexture.getVkImageView();
+      _computeDescriptorSetWriter.storeImageStorage(
+          fdmTexture.getVkImageView(), VK_IMAGE_LAYOUT_GENERAL);
+      _computeDescriptorSetWriter.writeDescriptorSet(
+          _logicalDevice->getVkDevice(), _computeDescriptorSet.getVkDescriptorSet());
+
+      _fragmentShadingOptimizationImageRef =
+          _imageManager.storeImage(std::move(fdmTexture), fdmTextureMetadata);
+    }
 
     attachmentRefs = lib::Buffer<Ref<Image>>{
       std::move(collorAttachmentHandle), std::move(depthAttachmentHandle),
-      std::move(fsrAttachmentHandle)};
+      _fragmentShadingOptimizationImageRef};
   }
 
   RenderpassBuilder renderpassBuilder(_attachmentLayout);
@@ -1134,7 +1162,8 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
       .addOutputAttachment(0)
       .addOutputAttachment(1)
       .addOutputAttachment(2)
-      .withShadingRateAttachment(fsrTexelSize.width, fsrTexelSize.height);
+      .withFragmentDensityMapAttachment();
+      // .withShadingRateAttachment(fsrTexelSize.width, fsrTexelSize.height); TODO: Switch
   _renderPass =
       renderpassBuilder
           .addDependency(
@@ -1301,6 +1330,37 @@ void createFsrContents(const LogicalDevice& logicalDevice, Image& image,
                            .baseArrayLayer = layer,
                            .layerCount = 1},
       .imageExtent = metadata.imageExtent,
+    };
+  }
+
+  commandBuffer.transitionImageLayout(
+      image.getVkImage(), metadata.imageAspect, VK_IMAGE_LAYOUT_UNDEFINED,
+      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, metadata.mipLevels, 0, metadata.arrayLayers);
+  commandBuffer.copyBufferToImage(stagingBuffer.getVkBuffer(), image.getVkImage(), imageCopy);
+  commandBuffer.transitionImageLayout(
+      image.getVkImage(), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+      VK_IMAGE_LAYOUT_GENERAL, 0, metadata.mipLevels, 0, metadata.arrayLayers);
+}
+
+void createFdmContents(const LogicalDevice& logicalDevice, Image& image,
+                       const ImageMetadata& metadata, const CommandBuffer& commandBuffer) {
+  const lib::Buffer<std::byte> buffer(
+      static_cast<size_t>(metadata.imageExtent.width * metadata.imageExtent.height * 2),
+      std::byte{255});
+  auto [stagingBuffer, stagingMetadata] =
+      BufferBuilder()
+          .withSize(buffer.size())
+          .withUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
+          .buildStagingBufferWithMetadata(logicalDevice);
+  common::copyData(stagingMetadata.getMappedMemoryAsSpan(), std::span(buffer));
+  lib::Buffer<VkBufferImageCopy> imageCopy(metadata.arrayLayers);
+  for (uint32_t layer = 0; layer < imageCopy.size(); layer++) {
+    imageCopy[layer] = VkBufferImageCopy{
+        .imageSubresource = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+            .mipLevel = 0,
+            .baseArrayLayer = layer,
+            .layerCount = 1},
+        .imageExtent = metadata.imageExtent,
     };
   }
 

@@ -63,7 +63,7 @@ private:
 
 class Socket {
 public:
-  Socket(int domain, int type, int protocol = 0);
+  Socket(int domain, int type, int protocol);
 
   Socket(Socket&& other) noexcept;
 

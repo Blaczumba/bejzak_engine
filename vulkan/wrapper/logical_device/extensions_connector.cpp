@@ -115,8 +115,7 @@ ExtensionsConnector& ExtensionsConnector::withFragmentShadingRateExtension() {
 ExtensionsConnector& ExtensionsConnector::withFragmentDensityMapExtension() {
   _fragmentDensityMap = VkPhysicalDeviceFragmentDensityMapFeaturesEXT{
     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_FEATURES_EXT,
-    .fragmentDensityMap = VK_TRUE,
-    .fragmentDensityMapDynamic = VK_TRUE};
+    .fragmentDensityMap = VK_TRUE};
 
   chainExtensionFeature(
       &_next, _fragmentDensityMap, _physicalDevice, VK_EXT_FRAGMENT_DENSITY_MAP_EXTENSION_NAME);

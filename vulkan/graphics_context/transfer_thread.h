@@ -7,6 +7,7 @@
 #include <span>
 #include <thread>
 #include <variant>
+#include <list>
 
 #include "common/abstractions/asset_manager.h"
 #include "lib/types/strong_int.h"

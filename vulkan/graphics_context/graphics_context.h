@@ -175,7 +175,7 @@ private:
 
   // Fragment rate shading.
   Pipeline* _fsrPipeline;
-  Ref<Image> _fsrTextureHandle;
+  Ref<Image> _fragmentShadingOptimizationImageRef;
 
   void setup();
 
