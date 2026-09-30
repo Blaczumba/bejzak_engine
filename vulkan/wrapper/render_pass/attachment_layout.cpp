@@ -190,9 +190,9 @@ AttachmentLayout& AttachmentLayout::addFragmentShadingRateAttachment() {
 
 AttachmentLayout& AttachmentLayout::addFragmentDensityMapAttachment() {
   _attachmentDescriptions.push_back(createDescription(
-      VK_FORMAT_R8G8_UNORM, VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_LOAD,
-      VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT,
-      VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT));
+      VK_FORMAT_R8G8_UNORM, VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+      VK_ATTACHMENT_STORE_OP_DONT_CARE, VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT,
+      VK_IMAGE_LAYOUT_GENERAL));
   _attachmentImageLayouts.push_back(VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT);
   _attachmentTypes.push_back(AttachmentType::FRAGMENT_DENSITY_MAP);
   _aspectFlags.push_back(VK_IMAGE_ASPECT_COLOR_BIT);

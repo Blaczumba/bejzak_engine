@@ -138,7 +138,7 @@ void CommandBuffer::bindPipeline(
 }
 
 void CommandBuffer::pipelineBarrier(const VkDependencyInfo* dependencyInfo) const noexcept {
-  vkCmdPipelineBarrier2(_commandBuffer, dependencyInfo);
+  // vkCmdPipelineBarrier2(_commandBuffer, dependencyInfo);
 }
 
 void CommandBuffer::bindVertexBuffers(

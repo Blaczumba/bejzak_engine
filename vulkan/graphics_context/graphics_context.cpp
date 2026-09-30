@@ -115,10 +115,10 @@ std::tuple<Image, ImageMetadata> createAttachment(
     const LogicalDevice& logicalDevice, VkFormat format, VkSampleCountFlagBits samples,
     VkExtent2D extent, uint32_t numLayers, VkImageAspectFlags aspect, VkImageUsageFlags usage);
 
-void createFsrContents(const LogicalDevice& logicalDevice, Image& image,
+void createFsrContents(const LogicalDevice& logicalDevice, Image& image, Buffer& stagingBuffer, BufferMetadata& stagingMetadata, lib::Buffer<std::byte>& copyBuffer,
                        const ImageMetadata& metadata, const CommandBuffer& commandBuffer);
 
-void createFdmContents(const LogicalDevice& logicalDevice, Image& image,
+void createFdmContents(const LogicalDevice& logicalDevice, Image& image, Buffer& stagingBuffer, BufferMetadata& stagingMetadata, lib::Buffer<std::byte>& copyBuffer,
                        const ImageMetadata& metadata, const CommandBuffer& commandBuffer);
 
 }  // namespace
@@ -1090,13 +1090,16 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
   }
 
   lib::Buffer<Ref<Image>> attachmentRefs;
-  lib::Buffer<VkImageView> attachmentViews(3);
+  std::vector<VkImageView> attachmentViews;
   {
+    Buffer stagingBuffer;
+    BufferMetadata stagingBufferMetadata;
+    lib::Buffer<std::byte> copyBuffer;
     SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
     auto [colorAttachment, colorAttachmentMetadata] = createAttachment(
         *_logicalDevice, swapchainImageFormat, msaaSamples, extent, presentResources.numLayers,
         VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
-    attachmentViews[0] = colorAttachment.getVkImageView();
+    attachmentViews.push_back(colorAttachment.getVkImageView());
     Ref<Image> collorAttachmentHandle =
         _imageManager.storeImage(std::move(colorAttachment), colorAttachmentMetadata);
 
@@ -1104,7 +1107,7 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
         *_logicalDevice, VK_FORMAT_D24_UNORM_S8_UINT, msaaSamples, extent,
         presentResources.numLayers, VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
         VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT);
-    attachmentViews[1] = depthAtachment.getVkImageView();
+    attachmentViews.push_back(depthAtachment.getVkImageView());
     Ref<Image> depthAttachmentHandle =
         _imageManager.storeImage(std::move(depthAtachment), depthAtachmentMetadata);
 
@@ -1122,9 +1125,9 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
           presentResources.numLayers, VK_IMAGE_ASPECT_COLOR_BIT,
           VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR | VK_IMAGE_USAGE_TRANSFER_DST_BIT
               | VK_IMAGE_USAGE_STORAGE_BIT);
-      createFsrContents(*_logicalDevice, fsrTexture, fsrTextureMetadata, handle);
+      createFsrContents(*_logicalDevice, fsrTexture, stagingBuffer, stagingBufferMetadata, copyBuffer, fsrTextureMetadata, handle);
 
-      attachmentViews[2] = fsrTexture.getVkImageView();
+      attachmentViews.push_back(fsrTexture.getVkImageView());
       _computeDescriptorSetWriter.storeImageStorage(
           fsrTexture.getVkImageView(), VK_IMAGE_LAYOUT_GENERAL);
       _computeDescriptorSetWriter.writeDescriptorSet(
@@ -1150,9 +1153,9 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
           presentResources.numLayers, VK_IMAGE_ASPECT_COLOR_BIT,
           VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT | VK_IMAGE_USAGE_TRANSFER_DST_BIT
               | VK_IMAGE_USAGE_STORAGE_BIT);
-      createFdmContents(*_logicalDevice, fdmTexture, fdmTextureMetadata, handle);
+      createFdmContents(*_logicalDevice, fdmTexture, stagingBuffer, stagingBufferMetadata, copyBuffer, fdmTextureMetadata, handle);
 
-      attachmentViews[2] = fdmTexture.getVkImageView();
+      attachmentViews.push_back(fdmTexture.getVkImageView());
       _computeDescriptorSetWriter.storeImageStorage(
           fdmTexture.getVkImageView(), VK_IMAGE_LAYOUT_GENERAL);
       _computeDescriptorSetWriter.writeDescriptorSet(
@@ -1337,16 +1340,16 @@ std::tuple<Image, ImageMetadata> createAttachment(
   return std::make_tuple(std::move(image), imageMetadata);
 }
 
-void createFsrContents(const LogicalDevice& logicalDevice, Image& image,
+void createFsrContents(const LogicalDevice& logicalDevice, Image& image, Buffer& stagingBuffer, BufferMetadata& stagingMetadata, lib::Buffer<std::byte>& copyBuffer,
                        const ImageMetadata& metadata, const CommandBuffer& commandBuffer) {
-  const lib::Buffer<std::byte> buffer(
+  copyBuffer = lib::Buffer<std::byte>(
       static_cast<size_t>(metadata.imageExtent.width * metadata.imageExtent.height), std::byte{10});
-  auto [stagingBuffer, stagingMetadata] =
+  std::tie(stagingBuffer, stagingMetadata) =
       BufferBuilder()
-          .withSize(buffer.size())
+          .withSize(copyBuffer.size())
           .withUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
           .buildStagingBufferWithMetadata(logicalDevice);
-  common::copyData(stagingMetadata.getMappedMemoryAsSpan(), std::span(buffer));
+  common::copyData(stagingMetadata.getMappedMemoryAsSpan(), std::span(copyBuffer));
   lib::Buffer<VkBufferImageCopy> imageCopy(metadata.arrayLayers);
   for (uint32_t layer = 0; layer < imageCopy.size(); layer++) {
     imageCopy[layer] = VkBufferImageCopy{
@@ -1367,17 +1370,17 @@ void createFsrContents(const LogicalDevice& logicalDevice, Image& image,
       VK_IMAGE_LAYOUT_GENERAL, 0, metadata.mipLevels, 0, metadata.arrayLayers);
 }
 
-void createFdmContents(const LogicalDevice& logicalDevice, Image& image,
+void createFdmContents(const LogicalDevice& logicalDevice, Image& image, Buffer& stagingBuffer, BufferMetadata& stagingMetadata, lib::Buffer<std::byte>& copyBuffer,
                        const ImageMetadata& metadata, const CommandBuffer& commandBuffer) {
-  const lib::Buffer<std::byte> buffer(
+  copyBuffer = lib::Buffer<std::byte>(
       static_cast<size_t>(metadata.imageExtent.width * metadata.imageExtent.height * 2),
       std::byte{255});
-  auto [stagingBuffer, stagingMetadata] =
+  std::tie(stagingBuffer, stagingMetadata) =
       BufferBuilder()
-          .withSize(buffer.size())
+          .withSize(copyBuffer.size())
           .withUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
           .buildStagingBufferWithMetadata(logicalDevice);
-  common::copyData(stagingMetadata.getMappedMemoryAsSpan(), std::span(buffer));
+  common::copyData(stagingMetadata.getMappedMemoryAsSpan(), std::span(copyBuffer));
   lib::Buffer<VkBufferImageCopy> imageCopy(metadata.arrayLayers);
   for (uint32_t layer = 0; layer < imageCopy.size(); layer++) {
     imageCopy[layer] = VkBufferImageCopy{
