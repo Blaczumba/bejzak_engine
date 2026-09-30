@@ -18,6 +18,7 @@
 #include "common/scene/octree.h"
 #include "common/util/primitives.h"
 #include "presentation_graphics_communication/presentation_graphics_communication.h"
+#include "vulkan/graphics_context/extended_features_manager.h"
 #include "vulkan/graphics_context/presentation_lib.h"
 #include "vulkan/resource_manager/asset_manager.h"
 #include "vulkan/resource_manager/bindless_descriptor_set_writer.h"
@@ -176,6 +177,7 @@ private:
   // Fragment rate shading.
   Pipeline* _fsrPipeline;
   Ref<Image> _fragmentShadingOptimizationImageRef;
+  FragmentShadingOptimizationImageFeature _fragmentShadingOptimizationImageFeature;
 
   void setup();
 

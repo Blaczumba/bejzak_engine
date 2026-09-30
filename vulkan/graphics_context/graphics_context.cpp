@@ -1070,15 +1070,24 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
   static constexpr VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_2_BIT;
   const VkFormat swapchainImageFormat = static_cast<VkFormat>(presentResources.imageFormat);
   const VkExtent2D extent = VkExtent2D{presentResources.width, presentResources.height};
-
+  _fragmentShadingOptimizationImageFeature = FragmentShadingOptimizationImageFeature(
+      *_physicalDevice,
+      FragmentShadingOptimizationImageFeature::SupportedFeature::FRAGMENT_SHADING_RATE);
+  const FragmentShadingOptimizationImageFeature::SupportedFeature supportedFeature =
+      _fragmentShadingOptimizationImageFeature.getFeature();
   _attachmentLayout = AttachmentLayout(msaaSamples);
   _attachmentLayout
       .addColorResolvePresentAttachment(swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE)
       .addColorAttachment(
           swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE)
-      .addDepthAttachment(VK_FORMAT_D24_UNORM_S8_UINT, VK_ATTACHMENT_STORE_OP_DONT_CARE)
-      .addFragmentDensityMapAttachment();
-      // .addFragmentShadingRateAttachment(); TODO: Switch
+      .addDepthAttachment(VK_FORMAT_D24_UNORM_S8_UINT, VK_ATTACHMENT_STORE_OP_DONT_CARE);
+  if (supportedFeature
+      == FragmentShadingOptimizationImageFeature::SupportedFeature::FRAGMENT_SHADING_RATE) {
+    _attachmentLayout.addFragmentShadingRateAttachment();
+  } else if (supportedFeature
+             == FragmentShadingOptimizationImageFeature::SupportedFeature::FRAGMENT_DENSITY_MAP) {
+    _attachmentLayout.addFragmentDensityMapAttachment();
+  }
 
   lib::Buffer<Ref<Image>> attachmentRefs;
   lib::Buffer<VkImageView> attachmentViews(3);
@@ -1099,13 +1108,15 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
     Ref<Image> depthAttachmentHandle =
         _imageManager.storeImage(std::move(depthAtachment), depthAtachmentMetadata);
 
-    if (false) { // Fragment Shading Rate is the chosen extension.
+    if (supportedFeature
+        == FragmentShadingOptimizationImageFeature::SupportedFeature::FRAGMENT_SHADING_RATE) {
       const VkPhysicalDeviceFragmentShadingRatePropertiesKHR& fsrProperties =
           _physicalDevice->getFragmentShadingRateProperties();
       const VkExtent2D fsrTexelExtent = fsrProperties.maxFragmentShadingRateAttachmentTexelSize;
       const VkExtent2D fsrExtent = VkExtent2D{
-          static_cast<uint32_t>(std::ceil(extent.width / static_cast<float>(fsrTexelExtent.width))),
-          static_cast<uint32_t>(std::ceil(extent.height / static_cast<float>(fsrTexelExtent.height)))};
+        static_cast<uint32_t>(std::ceil(extent.width / static_cast<float>(fsrTexelExtent.width))),
+        static_cast<uint32_t>(
+            std::ceil(extent.height / static_cast<float>(fsrTexelExtent.height)))};
       auto [fsrTexture, fsrTextureMetadata] = createAttachment(
           *_logicalDevice, VK_FORMAT_R8_UINT, VK_SAMPLE_COUNT_1_BIT, fsrExtent,
           presentResources.numLayers, VK_IMAGE_ASPECT_COLOR_BIT,
@@ -1120,14 +1131,20 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
           _logicalDevice->getVkDevice(), _computeDescriptorSet.getVkDescriptorSet());
 
       _fragmentShadingOptimizationImageRef =
-                                           _imageManager.storeImage(std::move(fsrTexture), fsrTextureMetadata);
-    } else {
+          _imageManager.storeImage(std::move(fsrTexture), fsrTextureMetadata);
+
+      attachmentRefs = lib::Buffer<Ref<Image>>{
+        std::move(collorAttachmentHandle), std::move(depthAttachmentHandle),
+        _fragmentShadingOptimizationImageRef};
+    } else if (supportedFeature
+               == FragmentShadingOptimizationImageFeature::SupportedFeature::FRAGMENT_DENSITY_MAP) {
       const VkPhysicalDeviceFragmentDensityMapPropertiesEXT& fdmProperties =
           _physicalDevice->getFragmentDensityMapProperties();
       const VkExtent2D fdmTexelExtent = fdmProperties.minFragmentDensityTexelSize;
       const VkExtent2D fdmExtent = VkExtent2D{
-          static_cast<uint32_t>(std::ceil(extent.width / static_cast<float>(fdmTexelExtent.width))),
-          static_cast<uint32_t>(std::ceil(extent.height / static_cast<float>(fdmTexelExtent.height)))};
+        static_cast<uint32_t>(std::ceil(extent.width / static_cast<float>(fdmTexelExtent.width))),
+        static_cast<uint32_t>(
+            std::ceil(extent.height / static_cast<float>(fdmTexelExtent.height)))};
       auto [fdmTexture, fdmTextureMetadata] = createAttachment(
           *_logicalDevice, VK_FORMAT_R8G8_UNORM, VK_SAMPLE_COUNT_1_BIT, fdmExtent,
           presentResources.numLayers, VK_IMAGE_ASPECT_COLOR_BIT,
@@ -1143,11 +1160,14 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
 
       _fragmentShadingOptimizationImageRef =
           _imageManager.storeImage(std::move(fdmTexture), fdmTextureMetadata);
-    }
 
-    attachmentRefs = lib::Buffer<Ref<Image>>{
-      std::move(collorAttachmentHandle), std::move(depthAttachmentHandle),
-      _fragmentShadingOptimizationImageRef};
+      attachmentRefs = lib::Buffer<Ref<Image>>{
+        std::move(collorAttachmentHandle), std::move(depthAttachmentHandle),
+        _fragmentShadingOptimizationImageRef};
+    } else {
+      attachmentRefs = lib::Buffer<Ref<Image>>{
+        std::move(collorAttachmentHandle), std::move(depthAttachmentHandle)};
+    }
   }
 
   RenderpassBuilder renderpassBuilder(_attachmentLayout);
@@ -1158,12 +1178,20 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
 
   const VkExtent2D fsrTexelSize =
       _physicalDevice->getFragmentShadingRateProperties().maxFragmentShadingRateAttachmentTexelSize;
-  renderpassBuilder.createSubpass()
-      .addOutputAttachment(0)
-      .addOutputAttachment(1)
-      .addOutputAttachment(2)
-      .withFragmentDensityMapAttachment();
-      // .withShadingRateAttachment(fsrTexelSize.width, fsrTexelSize.height); TODO: Switch
+  RenderpassBuilder::Subpass& subpass =
+      renderpassBuilder.createSubpass()
+          .addOutputAttachment(0)
+          .addOutputAttachment(1)
+          .addOutputAttachment(2);
+
+  if (supportedFeature
+      == FragmentShadingOptimizationImageFeature::SupportedFeature::FRAGMENT_SHADING_RATE) {
+    subpass.withShadingRateAttachment(fsrTexelSize.width, fsrTexelSize.height);
+  } else if (supportedFeature
+             == FragmentShadingOptimizationImageFeature::SupportedFeature::FRAGMENT_DENSITY_MAP) {
+    subpass.withFragmentDensityMapAttachment();
+  }
+
   _renderPass =
       renderpassBuilder
           .addDependency(
@@ -1356,11 +1384,11 @@ void createFdmContents(const LogicalDevice& logicalDevice, Image& image,
   lib::Buffer<VkBufferImageCopy> imageCopy(metadata.arrayLayers);
   for (uint32_t layer = 0; layer < imageCopy.size(); layer++) {
     imageCopy[layer] = VkBufferImageCopy{
-        .imageSubresource = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .mipLevel = 0,
-            .baseArrayLayer = layer,
-            .layerCount = 1},
-        .imageExtent = metadata.imageExtent,
+      .imageSubresource = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                           .mipLevel = 0,
+                           .baseArrayLayer = layer,
+                           .layerCount = 1},
+      .imageExtent = metadata.imageExtent,
     };
   }
 

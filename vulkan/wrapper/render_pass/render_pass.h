@@ -40,6 +40,7 @@ private:
 };
 
 class RenderpassBuilder {
+public:
   class Subpass {
   public:
     Subpass(const AttachmentLayout& attachmentLayout) noexcept;
@@ -75,7 +76,6 @@ class RenderpassBuilder {
     VkRenderPassFragmentDensityMapCreateInfoEXT _fragmentDensityMapAttachmentInfo;
   };
 
-public:
   RenderpassBuilder(const AttachmentLayout& attachmentLayout);
 
   RenderpassBuilder& addDependency(

@@ -53,15 +53,13 @@ CountingSemaphoreTransferIndex TransferThread::transferImageData(
     Ref<Image> imageRef, std::shared_ptr<common::AssetManager::ImageData> imageData) {
   CountingSemaphoreTransferIndex index(_nextIndex.fetch_add(1, std::memory_order_relaxed));
   _processingQueue.push_back(ImageProcessingState{
-    .index = index,
-    .imageRef = std::move(imageRef),
-    .imageData = std::move(imageData)});
+    .index = index, .imageRef = std::move(imageRef), .imageData = std::move(imageData)});
   return index;
 }
 
-CountingSemaphoreTransferIndex TransferThread::
-    transferVertexData(Ref<Buffer> bufferRef, Ref<VirtualAllocation> virtualAllocationRef,
-                       std::shared_ptr<common::AssetManager::VertexData> vertexData) {
+CountingSemaphoreTransferIndex TransferThread::transferVertexData(
+    Ref<Buffer> bufferRef, Ref<VirtualAllocation> virtualAllocationRef,
+    std::shared_ptr<common::AssetManager::VertexData> vertexData) {
   CountingSemaphoreTransferIndex index(_nextIndex.fetch_add(1, std::memory_order_relaxed));
   _processingQueue.push_back(VertexProcessingState{
     .index = index,
@@ -117,17 +115,17 @@ std::tuple<Ref<Buffer>, Ref<VirtualAllocation>, VirtualAllocationMetadata> Trans
 }
 
 void TransferThread::doWork() {
-  //struct BudgetCalculator {
-  //  size_t operator()(const ImageProcessingState& imageProcessingState) {
-  //    return imageProces
-  //  }
+  // struct BudgetCalculator {
+  //   size_t operator()(const ImageProcessingState& imageProcessingState) {
+  //     return imageProces
+  //   }
 
   //  size_t operator()(const VertexProcessingState& vertexProcessingState) {
 
   //  }
   //};
-  //std::array<VkBufferCopy, 
-  //while (!_stop) {
+  // std::array<VkBufferCopy,
+  // while (!_stop) {
   //  {
   //    std::unique_lock lck(_mutex);
   //    _conditionVariable.wait(lck, [this]() {

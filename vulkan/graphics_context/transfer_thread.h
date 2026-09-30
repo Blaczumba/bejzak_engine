@@ -1,5 +1,6 @@
 #pragma once
 
+#include <list>
 #include <memory>
 #include <mutex>
 #include <queue>
@@ -7,7 +8,6 @@
 #include <span>
 #include <thread>
 #include <variant>
-#include <list>
 
 #include "common/abstractions/asset_manager.h"
 #include "lib/types/strong_int.h"
@@ -40,7 +40,8 @@ public:
       std::span<std::shared_ptr<common::AssetManager::ImageData>> imageData);
 
   CountingSemaphoreTransferIndex transferVertexData(
-      Ref<Buffer> bufferRef, Ref<VirtualAllocation> virtualAllocationRef, std::shared_ptr<common::AssetManager::VertexData> vertexData);
+      Ref<Buffer> bufferRef, Ref<VirtualAllocation> virtualAllocationRef,
+      std::shared_ptr<common::AssetManager::VertexData> vertexData);
 
   VkSemaphore getTimelineSemaphore() const noexcept;
 

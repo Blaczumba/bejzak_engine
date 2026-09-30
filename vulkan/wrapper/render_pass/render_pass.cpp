@@ -131,7 +131,6 @@ RenderpassBuilder::Subpass& RenderpassBuilder::Subpass::withShadingRateAttachmen
   return *this;
 }
 
-
 RenderpassBuilder::Subpass& RenderpassBuilder::Subpass::withFragmentDensityMapAttachment() {
   for (uint32_t binding = 0; binding < _attachmentLayout.getAttachmentsCount(); binding++) {
     if (_attachmentLayout.getAttachmentType(binding) == AttachmentType::FRAGMENT_DENSITY_MAP) {
@@ -143,18 +142,18 @@ RenderpassBuilder::Subpass& RenderpassBuilder::Subpass::withFragmentDensityMapAt
       "The attachment layout does not contain a fragment shading rate attachment.");
 }
 
-RenderpassBuilder::Subpass& RenderpassBuilder::Subpass::withFragmentDensityMapAttachment(uint32_t binding) {
+RenderpassBuilder::Subpass& RenderpassBuilder::Subpass::withFragmentDensityMapAttachment(
+    uint32_t binding) {
   if (_attachmentLayout.getAttachmentType(binding) != AttachmentType::FRAGMENT_DENSITY_MAP) {
     throw EngineException(
         "The specified attachment binding does not correspond to a fragment density map "
         "attachment.");
   }
 
-  _fragmentDensityMapAttachmentInfo = VkRenderPassFragmentDensityMapCreateInfoEXT {
+  _fragmentDensityMapAttachmentInfo = VkRenderPassFragmentDensityMapCreateInfoEXT{
     .sType = VK_STRUCTURE_TYPE_RENDER_PASS_FRAGMENT_DENSITY_MAP_CREATE_INFO_EXT,
-    .fragmentDensityMapAttachment = VkAttachmentReference {
-        .attachment = binding,
-        .layout = _attachmentLayout.getAttachmentVkImageLayout(binding)}
+    .fragmentDensityMapAttachment = VkAttachmentReference{
+                                                          .attachment = binding, .layout = _attachmentLayout.getAttachmentVkImageLayout(binding)}
   };
 
   chainExtendedField(&_pNext, _fragmentDensityMapAttachmentInfo);

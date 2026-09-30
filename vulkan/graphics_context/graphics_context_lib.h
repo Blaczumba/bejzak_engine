@@ -7,6 +7,7 @@
 #include "common/buffer/index_buffer_lib.h"
 #include "common/model_loader/image_loader/types.h"
 #include "lib/buffer/buffer.h"
+#include "vulkan/wrapper/memory_objects/image.h"
 
 namespace vlkn::internal {
 
