@@ -166,8 +166,7 @@ VkPhysicalDevice getBestPhysicalDevice(
 }
 
 template <typename T>
-void chainExtendedField(void** next, T& feature, VkStructureType sType) {
-  feature.sType = sType;
+void chainExtendedField(void** next, T& feature) {
   feature.pNext = *next;
   *next = (void*)&feature;
 }
@@ -181,8 +180,8 @@ PhysicalDevice::PhysicalDevice(VkPhysicalDevice physicalDevice, const Instance& 
     _queueFamilyIndices(queueFamilyIndices) {
   _properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
   _properties.pNext = nullptr;
-  chainExtendedField(&_properties.pNext, _fsrProperties,
-                     VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_PROPERTIES_KHR);
+  chainExtendedField(&_properties.pNext, _fsrProperties);
+  chainExtendedField(&_properties.pNext, _fdmProperties);
   vkGetPhysicalDeviceProperties2(physicalDevice, &_properties);
 }
 
@@ -226,6 +225,11 @@ float PhysicalDevice::getMaxSamplerAnisotropy() const noexcept {
 
 VkPhysicalDeviceType PhysicalDevice::getPhysicalDeviceType() const noexcept {
   return _properties.properties.deviceType;
+}
+
+const VkPhysicalDeviceFragmentDensityMapPropertiesEXT&
+PhysicalDevice::getFragmentDensityMapProperties() const noexcept {
+  return _fdmProperties;
 }
 
 const VkPhysicalDeviceFragmentShadingRatePropertiesKHR&

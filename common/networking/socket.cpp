@@ -56,7 +56,9 @@ SocketResult<void> setTimeoutOption(
 SocketResult<Endpoint> Endpoint::createIpv4(const std::string& address, uint16_t port) noexcept {
   Endpoint ep;
   sockaddr_in addr{.sin_family = AF_INET, .sin_port = htons(port)};
-  if (inet_pton(AF_INET, address.c_str(), &addr.sin_addr) != 1) {
+  if (int returnCode = inet_pton(AF_INET, address.c_str(), &addr.sin_addr); returnCode <= -1) {
+    return std::unexpected(getLastError());
+  } else if (returnCode == 0) {
     return invalidAddressError();
   }
   ep._storage = addr;
@@ -66,7 +68,9 @@ SocketResult<Endpoint> Endpoint::createIpv4(const std::string& address, uint16_t
 SocketResult<Endpoint> Endpoint::createIpv6(const std::string& address, uint16_t port) noexcept {
   Endpoint ep;
   sockaddr_in6 addr{.sin6_family = AF_INET6, .sin6_port = htons(port)};
-  if (inet_pton(AF_INET6, address.c_str(), &addr.sin6_addr) != 1) {
+  if (int returnCode = inet_pton(AF_INET6, address.c_str(), &addr.sin6_addr); returnCode <= -1) {
+    return std::unexpected(getLastError());
+  } else if (returnCode == 0) {
     return invalidAddressError();
   }
   ep._storage = addr;

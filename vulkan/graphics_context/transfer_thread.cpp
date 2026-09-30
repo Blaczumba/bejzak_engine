@@ -15,7 +15,7 @@ constexpr size_t INDEX_BUFFER_BLOCK_SIZE_UINT8 = 4 * lib::MiB;
 constexpr size_t INDEX_BUFFER_BLOCK_SIZE_UINT16 = 32 * lib::MiB;
 constexpr size_t INDEX_BUFFER_BLOCK_SIZE_UINT32 = 8 * lib::MiB;
 constexpr size_t THREAD_LOCAL_PROCESSING_SIZE = 32;
-constexpr size_t BUDGET = 50 * lib::MiB;
+constexpr size_t BUDGET = 40 * lib::MiB;
 
 constexpr size_t allocatorIndexFromIndexType(common::IndexType indexType) {
   switch (indexType) {
@@ -50,10 +50,26 @@ TransferThread::TransferThread(
     _fence(FenceBuilder().build(logicalDevice, VK_FENCE_CREATE_SIGNALED_BIT)) {}
 
 CountingSemaphoreTransferIndex TransferThread::transferImageData(
-    std::shared_ptr<common::AssetManager::ImageData> imageData) {}
+    Ref<Image> imageRef, std::shared_ptr<common::AssetManager::ImageData> imageData) {
+  CountingSemaphoreTransferIndex index(_nextIndex.fetch_add(1, std::memory_order_relaxed));
+  _processingQueue.push_back(ImageProcessingState{
+    .index = index,
+    .imageRef = std::move(imageRef),
+    .imageData = std::move(imageData)});
+  return index;
+}
 
-CountingSemaphoreTransferIndex TransferThread::transferVertexData(
-    std::shared_ptr<common::AssetManager::VertexData> vertexData) {}
+CountingSemaphoreTransferIndex TransferThread::
+    transferVertexData(Ref<Buffer> bufferRef, Ref<VirtualAllocation> virtualAllocationRef,
+                       std::shared_ptr<common::AssetManager::VertexData> vertexData) {
+  CountingSemaphoreTransferIndex index(_nextIndex.fetch_add(1, std::memory_order_relaxed));
+  _processingQueue.push_back(VertexProcessingState{
+    .index = index,
+    .bufferRef = std::move(bufferRef),
+    .virtualAllocationRef = std::move(virtualAllocationRef),
+    .vertexData = std::move(vertexData)});
+  return index;
+}
 
 VkSemaphore TransferThread::getTimelineSemaphore() const noexcept {
   return _timelineSemaphore.getVkSemaphore();
@@ -101,24 +117,36 @@ std::tuple<Ref<Buffer>, Ref<VirtualAllocation>, VirtualAllocationMetadata> Trans
 }
 
 void TransferThread::doWork() {
-  // TODO: Change to std::inplace_vector.
-  std::array<ProcessingState, THREAD_LOCAL_PROCESSING_SIZE> processingBuffer;
-  while (!_stop) {
-    {
-      std::unique_lock lck(_mutex);
-      _conditionVariable.wait(lck, [this]() {
-        return !_processingQueue.empty() || _stop;
-      });
+  //struct BudgetCalculator {
+  //  size_t operator()(const ImageProcessingState& imageProcessingState) {
+  //    return imageProces
+  //  }
 
-      if (_stop) [[unlikely]] {
-        break;
-      }
+  //  size_t operator()(const VertexProcessingState& vertexProcessingState) {
 
-      size_t budget = 0;
-    }
+  //  }
+  //};
+  //std::array<VkBufferCopy, 
+  //while (!_stop) {
+  //  {
+  //    std::unique_lock lck(_mutex);
+  //    _conditionVariable.wait(lck, [this]() {
+  //      return !_processingQueue.empty() || _stop;
+  //    });
 
-    // Here use
-  }
+  //    if (_stop) [[unlikely]] {
+  //      break;
+  //    }
+
+  //    size_t budget = 0;
+  //    for (auto it = _processingQueue.cbegin(); it != _processingQueue.cend() && budget < BUDGET;
+  //         it++) {
+  //      budget += std::visit()
+  //    }
+  //  }
+
+  //  // Here use
+  //}
 }
 
 }  // namespace vlkn

@@ -33,25 +33,28 @@ public:
   ~TransferThread();
 
   CountingSemaphoreTransferIndex transferImageData(
-      std::shared_ptr<common::AssetManager::ImageData> imageData);
+      Ref<Image> imageRef, std::shared_ptr<common::AssetManager::ImageData>);
 
   std::vector<CountingSemaphoreTransferIndex> transferImageData(
       std::span<std::shared_ptr<common::AssetManager::ImageData>> imageData);
 
   CountingSemaphoreTransferIndex transferVertexData(
-      std::shared_ptr<common::AssetManager::VertexData> vertexData);
+      Ref<Buffer> bufferRef, Ref<VirtualAllocation> virtualAllocationRef, std::shared_ptr<common::AssetManager::VertexData> vertexData);
 
   VkSemaphore getTimelineSemaphore() const noexcept;
 
 private:
   struct ImageProcessingState {
     CountingSemaphoreTransferIndex index;
+    Ref<Image> imageRef;
     std::shared_ptr<common::AssetManager::ImageData> imageData;
     std::optional<uint32_t> processedMipLevel;
   };
 
   struct VertexProcessingState {
     CountingSemaphoreTransferIndex index;
+    Ref<Buffer> bufferRef;
+    Ref<VirtualAllocation> virtualAllocationRef;
     std::shared_ptr<common::AssetManager::VertexData> vertexData;
   };
 
@@ -80,7 +83,7 @@ private:
   Semaphore _timelineSemaphore;
   Fence _fence;
   CountingSemaphoreTransferIndex _lastProcessedIndex;
-  CountingSemaphoreTransferIndex _nextIndex = CountingSemaphoreTransferIndex(0);
+  std::atomic<size_t> _nextIndex = 0;
 
   // Map whose keys are buffer strides.
   std::unordered_map<size_t, BufferAllocator> _vertexBufferAllocators;
@@ -90,7 +93,7 @@ private:
   AllocationStrategy<VirtualAllocation, AllocationPolicy::POOL_BASED> _virtualAllocationStrategy;
 
   std::thread _thread;
-  std::deque<ProcessingState> _processingQueue;
+  std::list<ProcessingState> _processingQueue;
 
   std::mutex _mutex;
   std::condition_variable _conditionVariable;
