@@ -229,6 +229,7 @@ void Renderpass::destroy() {
     _logicalDevice->destroyResource([renderpass = _renderpass](DestroyerContext context) {
       vkDestroyRenderPass(context.device, renderpass, context.allocationCallbacks);
     });
+    _renderpass = VK_NULL_HANDLE;
   }
 }
 

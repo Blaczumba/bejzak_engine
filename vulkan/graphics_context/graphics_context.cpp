@@ -1179,8 +1179,6 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
     renderpassBuilder.withMultiView({mask}, {mask});
   }
 
-  const VkExtent2D fsrTexelSize =
-      _physicalDevice->getFragmentShadingRateProperties().maxFragmentShadingRateAttachmentTexelSize;
   RenderpassBuilder::Subpass& subpass =
       renderpassBuilder.createSubpass()
           .addOutputAttachment(0)
@@ -1189,6 +1187,8 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
 
   if (supportedFeature
       == FragmentShadingOptimizationImageFeature::SupportedFeature::FRAGMENT_SHADING_RATE) {
+    const VkExtent2D fsrTexelSize =
+        _physicalDevice->getFragmentShadingRateProperties().maxFragmentShadingRateAttachmentTexelSize;
     subpass.withShadingRateAttachment(fsrTexelSize.width, fsrTexelSize.height);
   }
 
@@ -1204,9 +1204,9 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
               VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
           .build(*_logicalDevice);
 
-  auto imageViews = std::span<const VkImageView>(
-      reinterpret_cast<const VkImageView*>(presentResources.imageViews.data()),
-      presentResources.imageViews.size());
+  auto imageViews = std::span(
+      reinterpret_cast<const VkImageView*>(presentResources.imageViews),
+      presentResources.imageViewsCount);
   for (VkImageView imageView : imageViews) {
     FramebufferBuilder framebufferBuilder;
     framebufferBuilder.addAttachment(imageView);

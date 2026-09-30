@@ -91,8 +91,8 @@ void GraphicsPluginVulkan::createSwapchainContext(
     .width = width,
     .height = height,
     .numLayers = layerCount,
-    .imageViews =
-        std::span(reinterpret_cast<const std::byte*>(imageViews.data()), imageViews.size()),
+    .imageViews = imageViews.data(),
+    .imageViewsCount = static_cast<uint32_t>(imageViews.size()),
     .multiview = (layerCount == 2)};
 }
 

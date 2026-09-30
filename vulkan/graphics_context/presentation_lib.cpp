@@ -52,8 +52,8 @@ common::PresentResources PresentationContext::getPresentResources() const {
     .width = width,
     .height = height,
     .numLayers = 1,
-    .imageViews =
-        std::span(reinterpret_cast<const std::byte*>(imageViews.data()), imageViews.size()),
+    .imageViews = imageViews.data(),
+    .imageViewsCount = static_cast<uint32_t>(imageViews.size()),
     .multiview = false,
   };
 }

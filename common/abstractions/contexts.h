@@ -20,7 +20,8 @@ struct PresentResources {
   uint32_t width;
   uint32_t height;
   uint32_t numLayers;
-  std::span<const std::byte> imageViews;  // Type erasure.
+  const void* imageViews;  // Type erasure.
+  uint32_t imageViewsCount;
   bool multiview;
 };
 

@@ -21,6 +21,7 @@ void Framebuffer::destroy() {
         [framebuffer = _framebuffer](DestroyerContext context) {
           vkDestroyFramebuffer(context.device, framebuffer, context.allocationCallbacks);
         });
+    _framebuffer = VK_NULL_HANDLE;
   }
 }
 
