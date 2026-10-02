@@ -80,6 +80,8 @@ public:
 
   PipelineHandle createFragmentShadingRateProgram(const LogicalDevice& logicalDevice);
 
+  PipelineHandle createFragmentDensityMapProgram(const LogicalDevice& logicalDevice);
+
 private:
   PipelineLayoutMap _pipelineLayouts;
   std::vector<PipelineLayoutMapIndex> _freePipelineLayoutIndices;

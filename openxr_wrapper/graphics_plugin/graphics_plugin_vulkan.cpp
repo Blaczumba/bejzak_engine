@@ -265,7 +265,8 @@ std::unique_ptr<LogicalDevice> createLogicalDevice(
       .withInheritedViewportScissorExtension()
       .withMultiviewExtension()
 //      .withFragmentShadingRateExtension()
-      .withFragmentDensityMapExtension();
+      .withFragmentDensityMapExtension()
+      .withSynchronization2();
 
   const VkPhysicalDeviceFeatures2 deviceFeaturesInfo = {
     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,

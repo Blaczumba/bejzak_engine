@@ -175,7 +175,7 @@ private:
   UniformBufferHandle _lightHandle;
 
   // Fragment rate shading.
-  Pipeline* _fsrPipeline;
+  Pipeline* _fragmentShadingOptimizationPipeline;
   Ref<Image> _fragmentShadingOptimizationImageRef;
   FragmentShadingOptimizationImageFeature _fragmentShadingOptimizationImageFeature;
 

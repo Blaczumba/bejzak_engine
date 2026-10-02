@@ -15,7 +15,7 @@
 std::unique_ptr<AssetManager> AssetManager::create(
     const LogicalDevice& logicalDevice, BufferManager& bufferManager) {
   return std::unique_ptr<AssetManager>(new AssetManager(
-      logicalDevice, bufferManager, std::thread::hardware_concurrency() - 1, 2 * lib::GiB));
+      logicalDevice, bufferManager, std::thread::hardware_concurrency() - 1, 1 * lib::GiB));
 }
 
 AssetManager::AssetManager(const LogicalDevice& logicalDevice, BufferManager& bufferManager,

@@ -199,8 +199,11 @@ Renderpass::Renderpass(const LogicalDevice& logicalDeivce, VkRenderPass renderpa
 Renderpass Renderpass::create(
     const LogicalDevice& logicalDevice, const VkRenderPassCreateInfo2& createInfo) {
   VkRenderPass renderpass;
-  CHECK_VKCMD(vkCreateRenderPass2(logicalDevice.getVkDevice(), &createInfo, nullptr, &renderpass),
-              "Failed to create VkRenderPass.");
+  static auto pfnCreateRenderPass2 = reinterpret_cast<PFN_vkCreateRenderPass2KHR>(
+      vkGetDeviceProcAddr(logicalDevice.getVkDevice(), "vkCreateRenderPass2KHR"));
+  CHECK_VKCMD(pfnCreateRenderPass2(logicalDevice.getVkDevice(), &createInfo, nullptr, &renderpass), "Failed to create VkRenderPass.");
+//  CHECK_VKCMD(vkCreateRenderPass2(logicalDevice.getVkDevice(), &createInfo, nullptr, &renderpass),
+//              "Failed to create VkRenderPass.");
   return Renderpass(logicalDevice, renderpass);
 }
 

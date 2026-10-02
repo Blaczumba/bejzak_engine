@@ -125,7 +125,7 @@ void createFdmContents(const LogicalDevice& logicalDevice, Image& image, Buffer&
 
 GCONTEXT_TEMPLATE
 void GCONTEXT_CLASS setup() {
-  const std::vector<common::AssetData> sponzaData =
+  std::vector<common::AssetData> sponzaData =
       common::LoadGltfFromFile(*_assetManager, _fileLoader, MODELS_PATH "sponza/scene.gltf");
   //     std::vector<common::VertexData> antiqueCandleStickData = common::LoadGltfFromFile(
   //         *_assetManager, MODELS_PATH "ornate_antique_candlestick/scene.gltf");
@@ -435,8 +435,13 @@ void GCONTEXT_CLASS createGraphicsPipelines() {
   //_envMappingPipeline =
   //_pipelineManager->getPipeline(_pipelineManager->createPbrEnvMappingProgram(
   //    _envMappingRenderPass, _envMappingAttachmentLayout));
-  _fsrPipeline = _pipelineManager->getPipeline(
-      _pipelineManager->createFragmentShadingRateProgram(*_logicalDevice));
+  if (_fragmentShadingOptimizationImageFeature.getFeature() == FragmentShadingOptimizationImageFeature::SupportedFeature::FRAGMENT_SHADING_RATE) {
+    _fragmentShadingOptimizationPipeline = _pipelineManager->getPipeline(
+        _pipelineManager->createFragmentShadingRateProgram(*_logicalDevice));
+  } else if (_fragmentShadingOptimizationImageFeature.getFeature() == FragmentShadingOptimizationImageFeature::SupportedFeature::FRAGMENT_DENSITY_MAP) {
+    _fragmentShadingOptimizationPipeline = _pipelineManager->getPipeline(
+        _pipelineManager->createFragmentDensityMapProgram(*_logicalDevice));
+  }
 }
 
 GCONTEXT_TEMPLATE
@@ -776,37 +781,69 @@ void GCONTEXT_CLASS recordCommandBuffer(const glm::mat4& cameraProj, const glm::
   const CommandBuffer& primaryCommandBuffer = _primaryCommandBuffer[_currentFrame];
   CommandBuffer::BeginInfoBuilder().beginCommandBuffer(
       primaryCommandBuffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+  if (_fragmentShadingOptimizationImageFeature.getFeature() == FragmentShadingOptimizationImageFeature::SupportedFeature::FRAGMENT_SHADING_RATE) {
+    const PushConstantFov fsrPc = {screenPos};
+    primaryCommandBuffer.pushConstants(
+        _fragmentShadingOptimizationPipeline->getVkPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT,
+        std::span{reinterpret_cast<const std::byte *>(&fsrPc), sizeof(fsrPc)});
+    primaryCommandBuffer.bindPipeline(
+        _fragmentShadingOptimizationPipeline->getVkPipelineBindPoint(), _fragmentShadingOptimizationPipeline->getVkPipeline());
+    primaryCommandBuffer.bindDescriptorSets(
+        _fragmentShadingOptimizationPipeline->getVkPipelineBindPoint(), _fragmentShadingOptimizationPipeline->getVkPipelineLayout(),
+        {_computeDescriptorSet.getVkDescriptorSet()});
+    primaryCommandBuffer.dispatchCompute(16, 16);
 
-  const PushConstantFov fsrPc = {screenPos};
-  primaryCommandBuffer.pushConstants(
-      _fsrPipeline->getVkPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT,
-      std::span{reinterpret_cast<const std::byte*>(&fsrPc), sizeof(fsrPc)});
-  primaryCommandBuffer.bindPipeline(
-      _fsrPipeline->getVkPipelineBindPoint(), _fsrPipeline->getVkPipeline());
-  primaryCommandBuffer.bindDescriptorSets(
-      _fsrPipeline->getVkPipelineBindPoint(), _fsrPipeline->getVkPipelineLayout(),
-      {_computeDescriptorSet.getVkDescriptorSet()});
-  primaryCommandBuffer.dispatchCompute(16, 16);
+    const ImageMetadata &fsrTextureMetadata = _fragmentShadingOptimizationImageRef.getMetadata();
+    static DependencyInfoBuilder dependencyInfoBuilder;
+    dependencyInfoBuilder.clearBuilders()
+        .addImageMemoryBarrier()
+        .withSrcMasks(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_ACCESS_SHADER_WRITE_BIT)
+        .withDstMasks(VK_PIPELINE_STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR,
+                      VK_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR)
+        .withLayouts(
+            VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR)
+        .withImage(_fragmentShadingOptimizationImageRef.getUnderlyingResource(),
+                   VkImageSubresourceRange{
+                       .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                       .baseMipLevel = 0,
+                       .levelCount = fsrTextureMetadata.mipLevels,
+                       .baseArrayLayer = 0,
+                       .layerCount = fsrTextureMetadata.arrayLayers,
+                   });
+    const VkDependencyInfo dependencyInfo = dependencyInfoBuilder.build();
+    primaryCommandBuffer.pipelineBarrier(&dependencyInfo);
+  } else if (_fragmentShadingOptimizationImageFeature.getFeature() == FragmentShadingOptimizationImageFeature::SupportedFeature::FRAGMENT_DENSITY_MAP) {
+    const PushConstantFov fdmPc = {screenPos};
+    primaryCommandBuffer.pushConstants(
+        _fragmentShadingOptimizationPipeline->getVkPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT,
+        std::span{reinterpret_cast<const std::byte *>(&fdmPc), sizeof(fdmPc)});
+    primaryCommandBuffer.bindPipeline(
+        _fragmentShadingOptimizationPipeline->getVkPipelineBindPoint(), _fragmentShadingOptimizationPipeline->getVkPipeline());
+    primaryCommandBuffer.bindDescriptorSets(
+        _fragmentShadingOptimizationPipeline->getVkPipelineBindPoint(), _fragmentShadingOptimizationPipeline->getVkPipelineLayout(),
+        {_computeDescriptorSet.getVkDescriptorSet()});
+    const ImageMetadata &fdmTextureMetadata = _fragmentShadingOptimizationImageRef.getMetadata();
+    primaryCommandBuffer.dispatchCompute(16, 16, fdmTextureMetadata.arrayLayers);
 
-  const ImageMetadata& fsrTextureMetadata = _fragmentShadingOptimizationImageRef.getMetadata();
-  static DependencyInfoBuilder dependencyInfoBuilder;
-  dependencyInfoBuilder.clearBuilders()
-      .addImageMemoryBarrier()
-      .withSrcMasks(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_ACCESS_SHADER_WRITE_BIT)
-      .withDstMasks(VK_PIPELINE_STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR,
-                    VK_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR)
-      .withLayouts(
-          VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR)
-      .withImage(_fragmentShadingOptimizationImageRef.getUnderlyingResource(),
-                 VkImageSubresourceRange{
-                   .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                   .baseMipLevel = 0,
-                   .levelCount = fsrTextureMetadata.mipLevels,
-                   .baseArrayLayer = 0,
-                   .layerCount = fsrTextureMetadata.arrayLayers,
-                 });
-  const VkDependencyInfo dependencyInfo = dependencyInfoBuilder.build();
-  primaryCommandBuffer.pipelineBarrier(&dependencyInfo);
+    static DependencyInfoBuilder dependencyInfoBuilder;
+    dependencyInfoBuilder.clearBuilders()
+        .addImageMemoryBarrier()
+        .withSrcMasks(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_ACCESS_SHADER_WRITE_BIT)
+        .withDstMasks(VK_PIPELINE_STAGE_FRAGMENT_DENSITY_PROCESS_BIT_EXT,
+                      VK_ACCESS_FRAGMENT_DENSITY_MAP_READ_BIT_EXT)
+        .withLayouts(
+            VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT)
+        .withImage(_fragmentShadingOptimizationImageRef.getUnderlyingResource(),
+                   VkImageSubresourceRange{
+                       .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                       .baseMipLevel = 0,
+                       .levelCount = fdmTextureMetadata.mipLevels,
+                       .baseArrayLayer = 0,
+                       .layerCount = fdmTextureMetadata.arrayLayers,
+                   });
+    const VkDependencyInfo dependencyInfo = dependencyInfoBuilder.build();
+    primaryCommandBuffer.pipelineBarrier(&dependencyInfo);
+  }
 
   const auto [framebuffer, framebufferMetadata] =
       _framebuffers[imageIndex].getUnderlyingResourceWithMetadata();
