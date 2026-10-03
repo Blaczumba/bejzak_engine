@@ -64,8 +64,9 @@ Presentation::Presentation(
     std::unique_ptr<Instance> instance, std::unique_ptr<System> system,
     std::unique_ptr<Session> session, std::vector<Swapchain>&& swapchains) noexcept
   : _platform(std::move(platform)), _graphicsPlugin(std::move(graphicsPlugin)),
-    _graphicsContext(std::move(graphicsContext)), _communicationLayer(communicationLayer), _instance(std::move(instance)),
-    _system(std::move(system)), _session(std::move(session)), _swapchains(std::move(swapchains)) {}
+    _graphicsContext(std::move(graphicsContext)), _communicationLayer(communicationLayer),
+    _instance(std::move(instance)), _system(std::move(system)), _session(std::move(session)),
+    _swapchains(std::move(swapchains)) {}
 
 std::unique_ptr<common::Presentation> Presentation::create(
     std::unique_ptr<Platform> platform, common::GraphicsApi graphicsApi,
@@ -84,8 +85,9 @@ std::unique_ptr<common::Presentation> Presentation::create(
           .withViewConfigType(VIEW_CONFIG_TYPE)
           .build(*session, *graphicsPlugin);
   return std::unique_ptr<common::Presentation>(new Presentation(
-      std::move(platform), std::move(graphicsPlugin), std::move(graphicsContext), communicationLayer,
-      std::move(instance), std::move(system), std::move(session), std::move(swapchains)));
+      std::move(platform), std::move(graphicsPlugin), std::move(graphicsContext),
+      communicationLayer, std::move(instance), std::move(system), std::move(session),
+      std::move(swapchains)));
 }
 
 void Presentation::run() {
@@ -206,9 +208,9 @@ void Presentation::pollActions() {
   }
 }
 
-bool Presentation::renderLayer(XrTime predictedDisplayTime,
-                               std::span<XrCompositionLayerProjectionView> projectionLayerViews,
-                               XrCompositionLayerProjection& layer) {
+bool Presentation::renderLayer(
+    XrTime predictedDisplayTime, std::span<XrCompositionLayerProjectionView> projectionLayerViews,
+    XrCompositionLayerProjection& layer) {
   XrViewState viewState = {.type = XR_TYPE_VIEW_STATE};
 
   const XrViewLocateInfo viewLocateInfo = {
@@ -218,7 +220,8 @@ bool Presentation::renderLayer(XrTime predictedDisplayTime,
     .space = _space->getXrSpace()};
 
   uint32_t viewCountOutput;
-  std::array<XrView, IMAGES_IN_LAYER> views = {XrView{.type = XR_TYPE_VIEW}, XrView{.type = XR_TYPE_VIEW}};
+  std::array<XrView, IMAGES_IN_LAYER> views = {
+    XrView{.type = XR_TYPE_VIEW}, XrView{.type = XR_TYPE_VIEW}};
   CHECK_XRCMD(xrLocateViews(_session->getXrSession(), &viewLocateInfo, &viewState, views.size(),
                             &viewCountOutput, views.data()),
               "Failed to xrLocateViews.");
@@ -231,8 +234,8 @@ bool Presentation::renderLayer(XrTime predictedDisplayTime,
   const xrw::Swapchain& viewSwapchain = _swapchains[0];
   std::array<common::CameraContext, IMAGES_IN_LAYER> cameraContexts;
   for (uint32_t i = 0; i < IMAGES_IN_LAYER; i++) {
-    const XrCompositionLayerProjectionView& projectionLayerView =
-        projectionLayerViews[i] = XrCompositionLayerProjectionView{
+    const XrCompositionLayerProjectionView& projectionLayerView = projectionLayerViews[i] =
+        XrCompositionLayerProjectionView{
           .type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW,
           .pose = views[i].pose,
           .fov = views[i].fov,

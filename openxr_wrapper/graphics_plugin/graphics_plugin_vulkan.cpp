@@ -13,14 +13,16 @@
 #include "common/util/engine_exception.h"
 #include "lib/buffer/buffer.h"
 #include "openxr_wrapper/util/check.h"
+#include "presentation_graphics_communication/presentation_graphics_communication.h"
 #include "vulkan/graphics_context/graphics_context.h"
 #include "vulkan/wrapper/command_buffer/command_buffer.h"
 #include "vulkan/wrapper/debug_messenger/debug_messenger.h"
 #include "vulkan/wrapper/debug_messenger/debug_messenger_utils.h"
 #include "vulkan/wrapper/instance/extensions.h"
+#include "vulkan/wrapper/instance/validation_layers.h"
 #include "vulkan/wrapper/logical_device/extensions_connector.h"
+#include "vulkan/wrapper/logical_device/optional_extended_features.h"
 #include "vulkan/wrapper/util/check.h"
-#include "presentation_graphics_communication/presentation_graphics_communication.h"
 
 namespace xrw {
 
@@ -241,7 +243,8 @@ std::unique_ptr<PhysicalDevice> createPhysicalDevice(
   return PhysicalDevice::wrap(physicalDevice, instance);
 }
 
-std::unique_ptr<LogicalDevice> createLogicalDevice(
+std::tuple<std::unique_ptr<LogicalDevice>, LogicalDeviceOptionalExtendedFeatures>
+createLogicalDevice(
     XrInstance xrInstance, XrSystemId systemId, const PhysicalDevice& physicalDevice) {
   const QueueFamilyIndices& indices = physicalDevice.getQueueFamilyIndices();
   const std::set<uint32_t> uniqueQueueFamilies = {*indices.graphicsFamily, *indices.presentFamily,
@@ -255,18 +258,20 @@ std::unique_ptr<LogicalDevice> createLogicalDevice(
                      .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
                      .queueFamilyIndex = queueFamilyIndex,
                      .queueCount = 1,
-                     .pQueuePriorities= &queuePriority};
+                     .pQueuePriorities = &queuePriority};
                  });
 
+  LogicalDeviceOptionalExtendedFeatures extendedFeatures;
   ExtensionsConnector extensionsConnector(physicalDevice);
   extensionsConnector.withDescriptorIndexingExtension()
       .withBufferDeviceAddressExtension()
       .withIndexTypeUint8Extension()
       .withInheritedViewportScissorExtension()
       .withMultiviewExtension()
-//      .withFragmentShadingRateExtension()
-      .withFragmentDensityMapExtension()
       .withSynchronization2();
+  const char* fragmentShadingRateAttachmentExtension;
+  std::tie(extendedFeatures.fragmentShadingRateModifier, fragmentShadingRateAttachmentExtension) =
+      AttachmentBasedFragmentShadingRateModifier::create(physicalDevice, extensionsConnector);
 
   const VkPhysicalDeviceFeatures2 deviceFeaturesInfo = {
     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
@@ -277,8 +282,14 @@ std::unique_ptr<LogicalDevice> createLogicalDevice(
                  .depthClamp = VK_TRUE,
                  .samplerAnisotropy = VK_TRUE}
   };
+  std::unordered_set<const char*> deviceExtensions = {fragmentShadingRateAttachmentExtension};
+  for (const char* extension : requestedDeviceExtensions) {
+    if (physicalDevice.hasAvailableExtension(extension)) {
+      deviceExtensions.insert(extension);
+    }
+  }
+  lib::Buffer<const char*> extensions(deviceExtensions.cbegin(), deviceExtensions.cend());
 
-  const lib::Buffer<const char*> extensions = physicalDevice.getAvailableExtensions();
   const VkDeviceCreateInfo deviceCreateInfo = {
     .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
     .pNext = &deviceFeaturesInfo,
@@ -313,7 +324,7 @@ std::unique_ptr<LogicalDevice> createLogicalDevice(
                                          &vulkanDeviceCreateResult),
               "Failed to xrCreateVulkanDeviceKHR.");
   CHECK_VKCMD(vulkanDeviceCreateResult, "Failed to create VkDevice.");
-  return LogicalDevice::wrapPtr(logicalDevice, physicalDevice);
+  return {LogicalDevice::wrapPtr(logicalDevice, physicalDevice), extendedFeatures};
 }
 
 }  // namespace
@@ -339,13 +350,13 @@ std::unique_ptr<common::GraphicsContext> GraphicsPluginVulkan::createGraphicsCon
     VK_EXT_DEBUG_UTILS_EXTENSION_NAME, VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME};
   std::shared_ptr<Instance> instance =
       createInstance("VR BejzakEngine", extensions, debugCallback, xrInstance, systemId);
-DebugMessenger debugMessenger;
+  DebugMessenger debugMessenger;
 #ifdef VALIDATION_LAYERS_ENABLED
   debugMessenger = DebugMessenger::create(*instance, debugCallback);
 #endif
   std::unique_ptr<PhysicalDevice> physicalDevice =
       createPhysicalDevice(xrInstance, systemId, *instance);
-  std::unique_ptr<LogicalDevice> logicalDevice =
+  auto [logicalDevice, extendedFeatures] =
       createLogicalDevice(xrInstance, systemId, *physicalDevice);
   _logicalDevice = logicalDevice.get();
 
@@ -358,7 +369,7 @@ DebugMessenger debugMessenger;
 
   return vlkn::GraphicsContext<true, true>::create(
       instance, std::move(debugMessenger), std::move(physicalDevice), std::move(logicalDevice),
-      fileLoader, std::move(communicationLayer), nullptr);
+      extendedFeatures, fileLoader, std::move(communicationLayer), nullptr);
 }
 
 }  // namespace xrw

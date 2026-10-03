@@ -9,13 +9,22 @@
 namespace {
 
 template <typename T>
-void chainExtensionFeature(void** next, T& feature, const PhysicalDevice& physicalDevice,
-                           std::optional<std::string_view> extension = std::nullopt) {
-  if (extension.has_value() && !physicalDevice.hasAvailableExtension(*extension)) [[unlikely]] {
-    // TODO: LOG info that it is not covered.
-    return;
+void chainExtensionFeature(
+    void** next, T& feature, const PhysicalDevice& physicalDevice, const char* extension,
+    std::unordered_set<const char*>& requestedExtensions) {
+  if (extension != nullptr) {
+    if (!physicalDevice.hasAvailableExtension(extension)) {
+      return;
+    }
+    requestedExtensions.insert(extension);
   }
 
+  feature.pNext = *next;
+  *next = (void*)&feature;
+}
+
+template <typename T>
+void chainExtensionFeature(void** next, T& feature) {
   feature.pNext = *next;
   *next = (void*)&feature;
 }
@@ -30,8 +39,8 @@ ExtensionsConnector& ExtensionsConnector::withIndexTypeUint8Extension() {
     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INDEX_TYPE_UINT8_FEATURES_EXT,
     .indexTypeUint8 = VK_TRUE};
 
-  chainExtensionFeature(
-      &_next, _indexTypeUint8, _physicalDevice, VK_EXT_INDEX_TYPE_UINT8_EXTENSION_NAME);
+  chainExtensionFeature(&_next, _indexTypeUint8, _physicalDevice,
+                        VK_EXT_INDEX_TYPE_UINT8_EXTENSION_NAME, _requestedDeviceExtensions);
   return *this;
 }
 
@@ -40,7 +49,8 @@ ExtensionsConnector& ExtensionsConnector::withBufferDeviceAddressExtension() {
     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
     .bufferDeviceAddress = VK_TRUE};
 
-  chainExtensionFeature(&_next, _bufferDeviceAddress, _physicalDevice);
+  chainExtensionFeature(
+      &_next, _bufferDeviceAddress, _physicalDevice, nullptr, _requestedDeviceExtensions);
   return *this;
 }
 
@@ -49,8 +59,9 @@ ExtensionsConnector& ExtensionsConnector::withInheritedViewportScissorExtension(
     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_INHERITED_VIEWPORT_SCISSOR_FEATURES_NV,
     .inheritedViewportScissor2D = VK_TRUE};
 
-  chainExtensionFeature(&_next, _inheritedViewportScissor, _physicalDevice,
-                        VK_NV_INHERITED_VIEWPORT_SCISSOR_EXTENSION_NAME);
+  chainExtensionFeature(
+      &_next, _inheritedViewportScissor, _physicalDevice,
+      VK_NV_INHERITED_VIEWPORT_SCISSOR_EXTENSION_NAME, _requestedDeviceExtensions);
   return *this;
 }
 
@@ -66,7 +77,8 @@ ExtensionsConnector& ExtensionsConnector::withDescriptorIndexingExtension() {
     .descriptorBindingPartiallyBound = VK_TRUE,
     .runtimeDescriptorArray = VK_TRUE};
 
-  chainExtensionFeature(&_next, _descriptorIndexing, _physicalDevice);
+  chainExtensionFeature(
+      &_next, _descriptorIndexing, _physicalDevice, nullptr, _requestedDeviceExtensions);
   return *this;
 }
 
@@ -74,7 +86,7 @@ ExtensionsConnector& ExtensionsConnector::withMultiviewExtension() {
   _multiview = VkPhysicalDeviceMultiviewFeatures{
     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MULTIVIEW_FEATURES, .multiview = VK_TRUE};
 
-  chainExtensionFeature(&_next, _multiview, _physicalDevice);
+  chainExtensionFeature(&_next, _multiview, _physicalDevice, nullptr, _requestedDeviceExtensions);
   return *this;
 }
 
@@ -85,7 +97,7 @@ ExtensionsConnector& ExtensionsConnector::withStorage8BitExtension() {
     .uniformAndStorageBuffer8BitAccess = VK_TRUE,
     .storagePushConstant8 = VK_TRUE};
 
-  chainExtensionFeature(&_next, _storage8Bit, _physicalDevice);
+  chainExtensionFeature(&_next, _storage8Bit, _physicalDevice, nullptr, _requestedDeviceExtensions);
   return *this;
 }
 
@@ -96,30 +108,24 @@ ExtensionsConnector& ExtensionsConnector::withStorage16BitExtension() {
     .uniformAndStorageBuffer16BitAccess = VK_TRUE,
     .storagePushConstant16 = VK_TRUE};
 
-  chainExtensionFeature(&_next, _storage16Bit, _physicalDevice);
+  chainExtensionFeature(
+      &_next, _storage16Bit, _physicalDevice, nullptr, _requestedDeviceExtensions);
   return *this;
 }
 
-ExtensionsConnector& ExtensionsConnector::withFragmentShadingRateExtension() {
-  _fragmentShadingRate = VkPhysicalDeviceFragmentShadingRateFeaturesKHR{
-    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_FEATURES_KHR,
-    .pipelineFragmentShadingRate = VK_FALSE,
-    .primitiveFragmentShadingRate = VK_FALSE,
-    .attachmentFragmentShadingRate = VK_TRUE};
-
-  chainExtensionFeature(
-      &_next, _fragmentShadingRate, _physicalDevice, VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME);
+ExtensionsConnector& ExtensionsConnector::withFragmentShadingRateExtension(
+    const VkPhysicalDeviceFragmentShadingRateFeaturesKHR& features) {
+  _fragmentShadingRate = features;
+  chainExtensionFeature(&_next, _fragmentShadingRate, _physicalDevice,
+                        VK_KHR_FRAGMENT_SHADING_RATE_EXTENSION_NAME, _requestedDeviceExtensions);
   return *this;
 }
 
-ExtensionsConnector& ExtensionsConnector::withFragmentDensityMapExtension() {
-  _fragmentDensityMap = VkPhysicalDeviceFragmentDensityMapFeaturesEXT{
-    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_FEATURES_EXT,
-    .fragmentDensityMap = VK_TRUE,
-    .fragmentDensityMapNonSubsampledImages = VK_TRUE};
-
-  chainExtensionFeature(
-      &_next, _fragmentDensityMap, _physicalDevice, VK_EXT_FRAGMENT_DENSITY_MAP_EXTENSION_NAME);
+ExtensionsConnector& ExtensionsConnector::withFragmentDensityMapExtension(
+    const VkPhysicalDeviceFragmentDensityMapFeaturesEXT& features) {
+  _fragmentDensityMap = features;
+  chainExtensionFeature(&_next, _fragmentDensityMap, _physicalDevice,
+                        VK_EXT_FRAGMENT_DENSITY_MAP_EXTENSION_NAME, _requestedDeviceExtensions);
   return *this;
 }
 
@@ -128,7 +134,8 @@ ExtensionsConnector& ExtensionsConnector::withSynchronization2() {
     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES,
     .synchronization2 = VK_TRUE};
 
-  chainExtensionFeature(&_next, _synchronization2, _physicalDevice);
+  chainExtensionFeature(
+      &_next, _synchronization2, _physicalDevice, nullptr, _requestedDeviceExtensions);
   return *this;
 }
 

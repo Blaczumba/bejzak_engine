@@ -1,5 +1,5 @@
 add_library(LogicalDevice logical_device.h logical_device.cpp
-        extensions_connector.h extensions_connector.cpp resource_destroyer.h resource_destroyer.cpp)
+        extensions_connector.h extensions_connector.cpp resource_destroyer.h resource_destroyer.cpp modifiers.h modifiers.cpp "optional_extended_features.h")
 
 target_link_libraries(LogicalDevice PUBLIC PhysicalDevice MemoryAllocator)
 

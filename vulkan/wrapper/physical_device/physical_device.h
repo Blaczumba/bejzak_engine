@@ -57,8 +57,6 @@ public:
 
   size_t getStagingAlignment() const noexcept;
 
-  lib::Buffer<const char*> getAvailableExtensions() const;
-
   const QueueFamilyIndices& getQueueFamilyIndices() const noexcept;
 
   const SwapChainSupportDetails getSwapchainSupportDetails(VkSurfaceKHR surface) const;

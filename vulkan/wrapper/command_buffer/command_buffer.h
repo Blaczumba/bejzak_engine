@@ -63,7 +63,7 @@ public:
 
   void bindPipeline(VkPipelineBindPoint pipelineBindPoint, VkPipeline pipeline) const noexcept;
 
-  void pipelineBarrier(const VkDependencyInfo* dependencyInfo) const noexcept;
+  void pipelineBarrier(const VkDependencyInfo& dependencyInfo) const noexcept;
 
   void bindIndexBuffer(
       VkBuffer buffer, VkIndexType indexType, VkDeviceSize offset = 0) const noexcept;

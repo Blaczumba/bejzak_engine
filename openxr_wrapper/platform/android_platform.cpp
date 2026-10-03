@@ -72,7 +72,7 @@ AndroidPlatform::AndroidPlatform(struct android_app* app) : _app(app) {
         reinterpret_cast<const XrLoaderInitInfoBaseHeaderKHR*>(&loader_init_info_android));
   }
 
-  _instance_create_info_android = XrInstanceCreateInfoAndroidKHR {
+  _instance_create_info_android = XrInstanceCreateInfoAndroidKHR{
     .type = XR_TYPE_INSTANCE_CREATE_INFO_ANDROID_KHR,
     .applicationVM = _app->activity->vm,
     .applicationActivity = _app->activity->clazz};

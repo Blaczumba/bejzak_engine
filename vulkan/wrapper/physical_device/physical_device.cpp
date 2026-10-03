@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cstdint>
+#include <iterator>
 #include <memory>
 #include <ranges>
 #include <string_view>
@@ -10,7 +11,6 @@
 
 #include "common/util/engine_exception.h"
 #include "lib/buffer/buffer.h"
-#include "vulkan/wrapper/instance/extensions.h"
 
 namespace {
 
@@ -24,18 +24,12 @@ std::unordered_set<std::string_view> checkDeviceExtensionSupport(VkPhysicalDevic
 
   std::unordered_set<std::string_view> availableExtensionNames;
   availableExtensionNames.reserve(extensionCount);
-  for (const VkExtensionProperties& ext : availableExtensions) {
-    availableExtensionNames.emplace(ext.extensionName);
-  }
-
-  std::unordered_set<std::string_view> supportedRequestedExtensions;
-  for (const char* requested : requestedDeviceExtensions) {
-    if (availableExtensionNames.contains(requested)) {
-      supportedRequestedExtensions.emplace(requested);
-    }
-  }
-
-  return supportedRequestedExtensions;
+  std::transform(availableExtensions.cbegin(), availableExtensions.cend(),
+                 std::inserter(availableExtensionNames, availableExtensionNames.begin()),
+                 [](const VkExtensionProperties& properties) {
+                   return properties.extensionName;
+                 });
+  return availableExtensionNames;
 }
 
 bool areQueueFamilyIndicesComplete(const QueueFamilyIndices& indices) {
@@ -263,15 +257,6 @@ size_t PhysicalDevice::getMemoryAlignment(size_t size) const noexcept {
 size_t PhysicalDevice::getStagingAlignment() const noexcept {
   return std::max(_properties.properties.limits.minTexelBufferOffsetAlignment,
                   _properties.properties.limits.optimalBufferCopyOffsetAlignment);
-}
-
-lib::Buffer<const char*> PhysicalDevice::getAvailableExtensions() const {
-  lib::Buffer<const char*> extensions(_availableRequestedExtensions.size());
-  std::transform(_availableRequestedExtensions.cbegin(), _availableRequestedExtensions.cend(),
-                 extensions.begin(), [](std::string_view extension) {
-                   return extension.data();
-                 });
-  return extensions;
 }
 
 const QueueFamilyIndices& PhysicalDevice::getQueueFamilyIndices() const noexcept {

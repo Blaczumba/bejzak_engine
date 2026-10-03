@@ -15,12 +15,11 @@
 namespace xrw {
 
 class Presentation final : public common::Presentation {
-  Presentation(
-      std::unique_ptr<Platform> platform, std::unique_ptr<GraphicsPlugin> graphicsPlugin,
+  Presentation(std::unique_ptr<Platform> platform, std::unique_ptr<GraphicsPlugin> graphicsPlugin,
                std::unique_ptr<common::GraphicsContext> graphicsContext,
                std::shared_ptr<engine::PresentationGraphicsCommunication>& communicationLayer,
-      std::unique_ptr<Instance> instance, std::unique_ptr<System> system,
-      std::unique_ptr<Session> session, std::vector<Swapchain>&& swapchains) noexcept;
+               std::unique_ptr<Instance> instance, std::unique_ptr<System> system,
+               std::unique_ptr<Session> session, std::vector<Swapchain>&& swapchains) noexcept;
 
 public:
   static std::unique_ptr<common::Presentation> create(
@@ -43,9 +42,9 @@ private:
   void pollActions();
 
   // TODO: refactor
-  bool renderLayer(XrTime predictedDisplayTime,
-                   std::span<XrCompositionLayerProjectionView> projectionLayerViews,
-                   XrCompositionLayerProjection& layer);
+  bool renderLayer(
+      XrTime predictedDisplayTime, std::span<XrCompositionLayerProjectionView> projectionLayerViews,
+      XrCompositionLayerProjection& layer);
 
   void draw();
 

@@ -17,21 +17,21 @@ enum class QueueType : uint8_t {
   TRANSFER
 };
 
-class LogicalDevice {
-  LogicalDevice(VkDevice logicalDevice, const PhysicalDevice& physicalDevice,
-                std::unique_ptr<ResourceDestroyer>&& resourceDestroyer) noexcept;
+struct LogicalDeviceOptionalExtendedFeatures;
 
+class LogicalDevice {
 public:
   LogicalDevice() noexcept = default;
 
-  static LogicalDevice create(const PhysicalDevice& physicalDevice,
-                              std::unique_ptr<ResourceDestroyer>&& resourceDestroyer = std::
-                                  make_unique<ThreadedResourceDestroyer>());
-
-  static std::unique_ptr<LogicalDevice> createPtr(
+  static std::tuple<LogicalDevice, LogicalDeviceOptionalExtendedFeatures> create(
       const PhysicalDevice& physicalDevice,
       std::unique_ptr<ResourceDestroyer>&& resourceDestroyer = std::
           make_unique<ThreadedResourceDestroyer>());
+
+  static std::tuple<std::unique_ptr<LogicalDevice>, LogicalDeviceOptionalExtendedFeatures>
+  createPtr(const PhysicalDevice& physicalDevice,
+            std::unique_ptr<ResourceDestroyer>&& resourceDestroyer = std::
+                make_unique<ThreadedResourceDestroyer>());
 
   static LogicalDevice wrap(VkDevice device, const PhysicalDevice& physicalDevice,
                             std::unique_ptr<ResourceDestroyer>&& resourceDestroyer = std::
@@ -75,6 +75,9 @@ public:
   VkQueue getTransferVkQueue() const noexcept;
 
 private:
+  LogicalDevice(VkDevice logicalDevice, const PhysicalDevice& physicalDevice,
+                std::unique_ptr<ResourceDestroyer>&& resourceDestroyer) noexcept;
+
   VkDevice _device = VK_NULL_HANDLE;
 
   const PhysicalDevice* _physicalDevice = nullptr;

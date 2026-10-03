@@ -5,7 +5,7 @@
 
 #include "common/util/engine_exception.h"
 #include "vulkan/wrapper/debug_messenger/debug_messenger_utils.h"
-#include "vulkan/wrapper/instance/extensions.h"
+#include "vulkan/wrapper/instance/validation_layers.h"
 #include "vulkan/wrapper/util/check.h"
 
 Instance::Instance(VkInstance instance) noexcept : _instance(instance) {}

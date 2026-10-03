@@ -42,7 +42,7 @@ std::unique_ptr<common::Presentation> Presentation::create(
   Surface surface = Surface::create(*instance, *window);
   std::unique_ptr<PhysicalDevice> physicalDevice =
       PhysicalDevice::create(*instance, surface.getVkSurface());
-  std::unique_ptr<LogicalDevice> logicalDevice = LogicalDevice::createPtr(*physicalDevice);
+  auto [logicalDevice, extendedFeatures] = LogicalDevice::createPtr(*physicalDevice);
 
   const auto [width, height] = window->getFramebufferSize();
   Swapchain swapchain =
@@ -59,7 +59,7 @@ std::unique_ptr<common::Presentation> Presentation::create(
   auto graphicsContext =
       lib::dynamicUniqueCast<GraphicsContext<false, false>>(GraphicsContext<false, false>::create(
           instance, std::move(debugMessenger), std::move(physicalDevice), std::move(logicalDevice),
-          fileLoader, communicationLayer, std::move(presentationContext)));
+          extendedFeatures, fileLoader, communicationLayer, std::move(presentationContext)));
   return std::unique_ptr<Presentation>(new Presentation(
       std::move(window), std::move(instance), std::move(surface), presentationContextPtr,
       std::move(graphicsContext), std::move(communicationLayer), fileLoader));

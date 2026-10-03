@@ -15,13 +15,13 @@
 #include "common/abstractions/contexts.h"
 #include "common/abstractions/graphics_context.h"
 #include "graphics_plugin.h"
+#include "presentation_graphics_communication/presentation_graphics_communication.h"
 #include "vulkan/wrapper/command_buffer/command_buffer.h"
 #include "vulkan/wrapper/debug_messenger/debug_messenger.h"
 #include "vulkan/wrapper/framebuffer/framebuffer.h"
 #include "vulkan/wrapper/instance/instance.h"
 #include "vulkan/wrapper/logical_device/logical_device.h"
 #include "vulkan/wrapper/physical_device/physical_device.h"
-#include "presentation_graphics_communication/presentation_graphics_communication.h"
 
 namespace xrw {
 
@@ -48,7 +48,9 @@ public:
   void createResources() override;
 
   std::unique_ptr<common::GraphicsContext> createGraphicsContext(
-      XrInstance xrInstance, XrSystemId systemId, std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer, const FileLoader& fileLoader) override;
+      XrInstance xrInstance, XrSystemId systemId,
+      std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer,
+      const FileLoader& fileLoader) override;
 
 private:
   const LogicalDevice* _logicalDevice;

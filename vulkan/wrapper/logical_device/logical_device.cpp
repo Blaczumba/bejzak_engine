@@ -10,7 +10,10 @@
 #include "common/util/engine_exception.h"
 #include "lib/buffer/buffer.h"
 #include "vulkan/wrapper/instance/extensions.h"
+#include "vulkan/wrapper/instance/validation_layers.h"
 #include "vulkan/wrapper/logical_device/extensions_connector.h"
+#include "vulkan/wrapper/logical_device/modifiers.h"
+#include "vulkan/wrapper/logical_device/optional_extended_features.h"
 #include "vulkan/wrapper/logical_device/resource_destroyer.h"
 #include "vulkan/wrapper/memory_allocator/allocation.h"
 #include "vulkan/wrapper/memory_allocator/memory_allocator.h"
@@ -73,7 +76,8 @@ void LogicalDevice::destroyResource(ResourceDestroyer::Job destroyResource) cons
 
 namespace {
 
-VkDevice createVkDevice(const PhysicalDevice& physicalDevice) {
+std::tuple<VkDevice, LogicalDeviceOptionalExtendedFeatures> createVkDevice(
+    const PhysicalDevice& physicalDevice) {
   const QueueFamilyIndices& indices = physicalDevice.getQueueFamilyIndices();
   const std::set<uint32_t> uniqueQueueFamilies = {*indices.graphicsFamily, *indices.presentFamily,
                                                   *indices.computeFamily, *indices.transferFamily};
@@ -91,17 +95,19 @@ VkDevice createVkDevice(const PhysicalDevice& physicalDevice) {
                      .pQueuePriorities = &queuePriority};
                  });
 
+  LogicalDeviceOptionalExtendedFeatures extendedFeatures;
   ExtensionsConnector extensionsConnector(physicalDevice);
   extensionsConnector.withDescriptorIndexingExtension()
       .withBufferDeviceAddressExtension()
       .withIndexTypeUint8Extension()
-      .withInheritedViewportScissorExtension()
+      .withInheritedViewportScissorExtension()  // This should be the optional extension.
       .withMultiviewExtension()
       .withStorage8BitExtension()
       .withStorage16BitExtension()
-      .withFragmentShadingRateExtension()
-      .withFragmentDensityMapExtension()
       .withSynchronization2();
+  const char* fragmentShadingRateAttachmentExtension;
+  std::tie(extendedFeatures.fragmentShadingRateModifier, fragmentShadingRateAttachmentExtension) =
+      AttachmentBasedFragmentShadingRateModifier::create(physicalDevice, extensionsConnector);
 
   const VkPhysicalDeviceFeatures2 deviceFeaturesInfo = {
     .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
@@ -112,10 +118,17 @@ VkDevice createVkDevice(const PhysicalDevice& physicalDevice) {
                                          .sampleRateShading = VK_TRUE,
                                          .depthClamp = VK_TRUE,
                                          .samplerAnisotropy = VK_TRUE,
+                                         .shaderStorageImageArrayDynamicIndexing = VK_TRUE,
                                          .shaderInt16 = VK_TRUE}
   };
 
-  const lib::Buffer<const char*> extensions = physicalDevice.getAvailableExtensions();
+  std::unordered_set<const char*> deviceExtensions = {fragmentShadingRateAttachmentExtension};
+  for (const char* extension : requestedDeviceExtensions) {
+    if (physicalDevice.hasAvailableExtension(extension)) {
+      deviceExtensions.insert(extension);
+    }
+  }
+  lib::Buffer<const char*> extensions(deviceExtensions.cbegin(), deviceExtensions.cend());
 
   const VkDeviceCreateInfo createInfo = {
     .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -134,21 +147,25 @@ VkDevice createVkDevice(const PhysicalDevice& physicalDevice) {
   CHECK_VKCMD(
       vkCreateDevice(physicalDevice.getVkPhysicalDevice(), &createInfo, nullptr, &logicalDevice),
       "Failed to create LogicalDevice!");
-  return logicalDevice;
+  return {logicalDevice, extendedFeatures};
 }
 
 }  // namespace
 
-LogicalDevice LogicalDevice::create(
+std::tuple<LogicalDevice, LogicalDeviceOptionalExtendedFeatures> LogicalDevice::create(
     const PhysicalDevice& physicalDevice, std::unique_ptr<ResourceDestroyer>&& resourceDestroyer) {
-  return LogicalDevice(
-      createVkDevice(physicalDevice), physicalDevice, std::move(resourceDestroyer));
+  auto [logicalDevice, extensionsFeatures] = createVkDevice(physicalDevice);
+  return {
+    LogicalDevice(logicalDevice, physicalDevice, std::move(resourceDestroyer)), extensionsFeatures};
 }
 
-std::unique_ptr<LogicalDevice> LogicalDevice::createPtr(
+std::tuple<std::unique_ptr<LogicalDevice>, LogicalDeviceOptionalExtendedFeatures>
+LogicalDevice::createPtr(
     const PhysicalDevice& physicalDevice, std::unique_ptr<ResourceDestroyer>&& resourceDestroyer) {
-  return std::unique_ptr<LogicalDevice>(new LogicalDevice(
-      createVkDevice(physicalDevice), physicalDevice, std::move(resourceDestroyer)));
+  auto [logicalDevice, extensionsFeatures] = createVkDevice(physicalDevice);
+  return {std::unique_ptr<LogicalDevice>(
+              new LogicalDevice(logicalDevice, physicalDevice, std::move(resourceDestroyer))),
+          extensionsFeatures};
 }
 
 LogicalDevice LogicalDevice::wrap(VkDevice device, const PhysicalDevice& physicalDevice,

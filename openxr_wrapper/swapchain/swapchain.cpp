@@ -8,11 +8,11 @@
 namespace xrw {
 
 Swapchain::Swapchain(XrSwapchain swapchain, uint32_t width, uint32_t height) noexcept
-    : _swapchain(swapchain), _width(width), _height(height) {}
+  : _swapchain(swapchain), _width(width), _height(height) {}
 
 Swapchain::Swapchain(Swapchain&& swapchain) noexcept
-    : _swapchain(std::exchange(swapchain._swapchain, XR_NULL_HANDLE)),
-    _width(swapchain._width), _height(swapchain._height) {}
+  : _swapchain(std::exchange(swapchain._swapchain, XR_NULL_HANDLE)), _width(swapchain._width),
+    _height(swapchain._height) {}
 
 Swapchain& Swapchain::operator=(Swapchain&& swapchain) noexcept {
   if (this == &swapchain) {
@@ -24,7 +24,6 @@ Swapchain& Swapchain::operator=(Swapchain&& swapchain) noexcept {
   _height = swapchain._height;
   return *this;
 }
-
 
 Swapchain::~Swapchain() {
   if (_swapchain != XR_NULL_HANDLE) {
@@ -133,8 +132,8 @@ std::vector<Swapchain> SwapchainBuilder::build(
     graphicsPlugin.createSwapchainContext(swapchain, *format, configView.recommendedImageRectWidth,
                                           configView.recommendedImageRectHeight, _arraySize);
 
-    swapchains.push_back(Swapchain(swapchain, configView.recommendedImageRectWidth,
-                            configView.recommendedImageRectHeight));
+    swapchains.push_back(Swapchain(
+        swapchain, configView.recommendedImageRectWidth, configView.recommendedImageRectHeight));
   }
   return swapchains;
 }

@@ -18,7 +18,6 @@
 #include "common/scene/octree.h"
 #include "common/util/primitives.h"
 #include "presentation_graphics_communication/presentation_graphics_communication.h"
-#include "vulkan/graphics_context/extended_features_manager.h"
 #include "vulkan/graphics_context/presentation_lib.h"
 #include "vulkan/resource_manager/asset_manager.h"
 #include "vulkan/resource_manager/bindless_descriptor_set_writer.h"
@@ -35,6 +34,8 @@
 #include "vulkan/wrapper/framebuffer/framebuffer.h"
 #include "vulkan/wrapper/instance/instance.h"
 #include "vulkan/wrapper/logical_device/logical_device.h"
+#include "vulkan/wrapper/logical_device/modifiers.h"
+#include "vulkan/wrapper/logical_device/optional_extended_features.h"
 #include "vulkan/wrapper/memory_objects/buffer.h"
 #include "vulkan/wrapper/memory_objects/image.h"
 #include "vulkan/wrapper/physical_device/physical_device.h"
@@ -56,17 +57,18 @@ namespace vlkn {
 
 template <bool SYNCED_OUTSIDE, bool MULTIVIEW_PRESENTATION>
 class GraphicsContext final : public common::GraphicsContext {
-  GraphicsContext(std::shared_ptr<Instance> instance, DebugMessenger&& debugMessenger,
-                  std::unique_ptr<PhysicalDevice> physicalDevice,
-                  std::unique_ptr<LogicalDevice> logicalDevice, const FileLoader& fileLoader,
-                  std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer,
-                  std::unique_ptr<PresentationContext> presentationContext = nullptr);
+  GraphicsContext(
+      std::shared_ptr<Instance> instance, DebugMessenger&& debugMessenger,
+      std::unique_ptr<PhysicalDevice> physicalDevice, std::unique_ptr<LogicalDevice> logicalDevice,
+      LogicalDeviceOptionalExtendedFeatures extendedFeatures, const FileLoader& fileLoader,
+      std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer,
+      std::unique_ptr<PresentationContext> presentationContext = nullptr);
 
 public:
   static std::unique_ptr<common::GraphicsContext> create(
       std::shared_ptr<Instance> instance, DebugMessenger&& debugMessenger,
       std::unique_ptr<PhysicalDevice> physicalDevice, std::unique_ptr<LogicalDevice> logicalDevice,
-      const FileLoader& fileLoader,
+      LogicalDeviceOptionalExtendedFeatures extendedFeatures, const FileLoader& fileLoader,
       std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer,
       std::unique_ptr<PresentationContext> presentationContext);
 
@@ -89,6 +91,7 @@ private:
   DebugMessenger _debugMessenger;
   std::unique_ptr<PhysicalDevice> _physicalDevice;
   std::unique_ptr<LogicalDevice> _logicalDevice;
+  LogicalDeviceOptionalExtendedFeatures _extendedFeatures;
   std::unique_ptr<PresentationContext> _presentationContext;
   std::shared_ptr<engine::PresentationGraphicsCommunication> _communicationLayer;
 
@@ -177,7 +180,6 @@ private:
   // Fragment rate shading.
   Pipeline* _fragmentShadingOptimizationPipeline;
   Ref<Image> _fragmentShadingOptimizationImageRef;
-  FragmentShadingOptimizationImageFeature _fragmentShadingOptimizationImageFeature;
 
   void setup();
 
@@ -217,7 +219,7 @@ private:
       std::span<uint32_t> dynamicUniformBufferOffsets);
 
   void recordCommandBuffer(const glm::mat4& cameraProj, const glm::mat4& cameraView,
-                           uint32_t imageIndex, glm::u32vec2 screenPos);
+                           uint32_t imageIndex, std::pair<uint32_t, uint32_t> screenPos);
 };
 
 // The two specializations are explicitly instantiated in graphics_context.cpp.

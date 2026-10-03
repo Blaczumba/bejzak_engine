@@ -28,9 +28,11 @@ public:
 
   ExtensionsConnector& withStorage16BitExtension();
 
-  ExtensionsConnector& withFragmentShadingRateExtension();
+  ExtensionsConnector& withFragmentShadingRateExtension(
+      const VkPhysicalDeviceFragmentShadingRateFeaturesKHR& features);
 
-  ExtensionsConnector& withFragmentDensityMapExtension();
+  ExtensionsConnector& withFragmentDensityMapExtension(
+      const VkPhysicalDeviceFragmentDensityMapFeaturesEXT& features);
 
   ExtensionsConnector& withSynchronization2();
 
@@ -50,4 +52,6 @@ private:
   VkPhysicalDeviceFragmentShadingRateFeaturesKHR _fragmentShadingRate;
   VkPhysicalDeviceFragmentDensityMapFeaturesEXT _fragmentDensityMap;
   VkPhysicalDeviceSynchronization2Features _synchronization2;
+
+  std::unordered_set<const char*> _requestedDeviceExtensions;
 };
