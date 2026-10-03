@@ -115,10 +115,12 @@ std::tuple<Image, ImageMetadata> createAttachment(
     const LogicalDevice& logicalDevice, VkFormat format, VkSampleCountFlagBits samples,
     VkExtent2D extent, uint32_t numLayers, VkImageAspectFlags aspect, VkImageUsageFlags usage);
 
-void createFsrContents(const LogicalDevice& logicalDevice, Image& image, Buffer& stagingBuffer, BufferMetadata& stagingMetadata, lib::Buffer<std::byte>& copyBuffer,
+void createFsrContents(const LogicalDevice& logicalDevice, Image& image, Buffer& stagingBuffer,
+                       BufferMetadata& stagingMetadata, lib::Buffer<std::byte>& copyBuffer,
                        const ImageMetadata& metadata, const CommandBuffer& commandBuffer);
 
-void createFdmContents(const LogicalDevice& logicalDevice, Image& image, Buffer& stagingBuffer, BufferMetadata& stagingMetadata, lib::Buffer<std::byte>& copyBuffer,
+void createFdmContents(const LogicalDevice& logicalDevice, Image& image, Buffer& stagingBuffer,
+                       BufferMetadata& stagingMetadata, lib::Buffer<std::byte>& copyBuffer,
                        const ImageMetadata& metadata, const CommandBuffer& commandBuffer);
 
 }  // namespace
@@ -435,10 +437,12 @@ void GCONTEXT_CLASS createGraphicsPipelines() {
   //_envMappingPipeline =
   //_pipelineManager->getPipeline(_pipelineManager->createPbrEnvMappingProgram(
   //    _envMappingRenderPass, _envMappingAttachmentLayout));
-  if (_fragmentShadingOptimizationImageFeature.getFeature() == FragmentShadingOptimizationImageFeature::SupportedFeature::FRAGMENT_SHADING_RATE) {
+  if (_fragmentShadingOptimizationImageFeature.getFeature()
+      == FragmentShadingOptimizationImageFeature::SupportedFeature::FRAGMENT_SHADING_RATE) {
     _fragmentShadingOptimizationPipeline = _pipelineManager->getPipeline(
         _pipelineManager->createFragmentShadingRateProgram(*_logicalDevice));
-  } else if (_fragmentShadingOptimizationImageFeature.getFeature() == FragmentShadingOptimizationImageFeature::SupportedFeature::FRAGMENT_DENSITY_MAP) {
+  } else if (_fragmentShadingOptimizationImageFeature.getFeature()
+             == FragmentShadingOptimizationImageFeature::SupportedFeature::FRAGMENT_DENSITY_MAP) {
     _fragmentShadingOptimizationPipeline = _pipelineManager->getPipeline(
         _pipelineManager->createFragmentDensityMapProgram(*_logicalDevice));
   }
@@ -781,19 +785,22 @@ void GCONTEXT_CLASS recordCommandBuffer(const glm::mat4& cameraProj, const glm::
   const CommandBuffer& primaryCommandBuffer = _primaryCommandBuffer[_currentFrame];
   CommandBuffer::BeginInfoBuilder().beginCommandBuffer(
       primaryCommandBuffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-  if (_fragmentShadingOptimizationImageFeature.getFeature() == FragmentShadingOptimizationImageFeature::SupportedFeature::FRAGMENT_SHADING_RATE) {
+  if (_fragmentShadingOptimizationImageFeature.getFeature()
+      == FragmentShadingOptimizationImageFeature::SupportedFeature::FRAGMENT_SHADING_RATE) {
     const PushConstantFov fsrPc = {screenPos};
     primaryCommandBuffer.pushConstants(
         _fragmentShadingOptimizationPipeline->getVkPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT,
-        std::span{reinterpret_cast<const std::byte *>(&fsrPc), sizeof(fsrPc)});
+        std::span{reinterpret_cast<const std::byte*>(&fsrPc), sizeof(fsrPc)});
     primaryCommandBuffer.bindPipeline(
-        _fragmentShadingOptimizationPipeline->getVkPipelineBindPoint(), _fragmentShadingOptimizationPipeline->getVkPipeline());
+        _fragmentShadingOptimizationPipeline->getVkPipelineBindPoint(),
+        _fragmentShadingOptimizationPipeline->getVkPipeline());
     primaryCommandBuffer.bindDescriptorSets(
-        _fragmentShadingOptimizationPipeline->getVkPipelineBindPoint(), _fragmentShadingOptimizationPipeline->getVkPipelineLayout(),
+        _fragmentShadingOptimizationPipeline->getVkPipelineBindPoint(),
+        _fragmentShadingOptimizationPipeline->getVkPipelineLayout(),
         {_computeDescriptorSet.getVkDescriptorSet()});
     primaryCommandBuffer.dispatchCompute(16, 16);
 
-    const ImageMetadata &fsrTextureMetadata = _fragmentShadingOptimizationImageRef.getMetadata();
+    const ImageMetadata& fsrTextureMetadata = _fragmentShadingOptimizationImageRef.getMetadata();
     static DependencyInfoBuilder dependencyInfoBuilder;
     dependencyInfoBuilder.clearBuilders()
         .addImageMemoryBarrier()
@@ -804,25 +811,28 @@ void GCONTEXT_CLASS recordCommandBuffer(const glm::mat4& cameraProj, const glm::
             VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR)
         .withImage(_fragmentShadingOptimizationImageRef.getUnderlyingResource(),
                    VkImageSubresourceRange{
-                       .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                       .baseMipLevel = 0,
-                       .levelCount = fsrTextureMetadata.mipLevels,
-                       .baseArrayLayer = 0,
-                       .layerCount = fsrTextureMetadata.arrayLayers,
+                     .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                     .baseMipLevel = 0,
+                     .levelCount = fsrTextureMetadata.mipLevels,
+                     .baseArrayLayer = 0,
+                     .layerCount = fsrTextureMetadata.arrayLayers,
                    });
     const VkDependencyInfo dependencyInfo = dependencyInfoBuilder.build();
     primaryCommandBuffer.pipelineBarrier(&dependencyInfo);
-  } else if (_fragmentShadingOptimizationImageFeature.getFeature() == FragmentShadingOptimizationImageFeature::SupportedFeature::FRAGMENT_DENSITY_MAP) {
+  } else if (_fragmentShadingOptimizationImageFeature.getFeature()
+             == FragmentShadingOptimizationImageFeature::SupportedFeature::FRAGMENT_DENSITY_MAP) {
     const PushConstantFov fdmPc = {screenPos};
     primaryCommandBuffer.pushConstants(
         _fragmentShadingOptimizationPipeline->getVkPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT,
-        std::span{reinterpret_cast<const std::byte *>(&fdmPc), sizeof(fdmPc)});
+        std::span{reinterpret_cast<const std::byte*>(&fdmPc), sizeof(fdmPc)});
     primaryCommandBuffer.bindPipeline(
-        _fragmentShadingOptimizationPipeline->getVkPipelineBindPoint(), _fragmentShadingOptimizationPipeline->getVkPipeline());
+        _fragmentShadingOptimizationPipeline->getVkPipelineBindPoint(),
+        _fragmentShadingOptimizationPipeline->getVkPipeline());
     primaryCommandBuffer.bindDescriptorSets(
-        _fragmentShadingOptimizationPipeline->getVkPipelineBindPoint(), _fragmentShadingOptimizationPipeline->getVkPipelineLayout(),
+        _fragmentShadingOptimizationPipeline->getVkPipelineBindPoint(),
+        _fragmentShadingOptimizationPipeline->getVkPipelineLayout(),
         {_computeDescriptorSet.getVkDescriptorSet()});
-    const ImageMetadata &fdmTextureMetadata = _fragmentShadingOptimizationImageRef.getMetadata();
+    const ImageMetadata& fdmTextureMetadata = _fragmentShadingOptimizationImageRef.getMetadata();
     primaryCommandBuffer.dispatchCompute(16, 16, fdmTextureMetadata.arrayLayers);
 
     static DependencyInfoBuilder dependencyInfoBuilder;
@@ -831,15 +841,14 @@ void GCONTEXT_CLASS recordCommandBuffer(const glm::mat4& cameraProj, const glm::
         .withSrcMasks(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_ACCESS_SHADER_WRITE_BIT)
         .withDstMasks(VK_PIPELINE_STAGE_FRAGMENT_DENSITY_PROCESS_BIT_EXT,
                       VK_ACCESS_FRAGMENT_DENSITY_MAP_READ_BIT_EXT)
-        .withLayouts(
-            VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT)
+        .withLayouts(VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT)
         .withImage(_fragmentShadingOptimizationImageRef.getUnderlyingResource(),
                    VkImageSubresourceRange{
-                       .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                       .baseMipLevel = 0,
-                       .levelCount = fdmTextureMetadata.mipLevels,
-                       .baseArrayLayer = 0,
-                       .layerCount = fdmTextureMetadata.arrayLayers,
+                     .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                     .baseMipLevel = 0,
+                     .levelCount = fdmTextureMetadata.mipLevels,
+                     .baseArrayLayer = 0,
+                     .layerCount = fdmTextureMetadata.arrayLayers,
                    });
     const VkDependencyInfo dependencyInfo = dependencyInfoBuilder.build();
     primaryCommandBuffer.pipelineBarrier(&dependencyInfo);
@@ -1129,9 +1138,6 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
   lib::Buffer<Ref<Image>> attachmentRefs;
   std::vector<VkImageView> attachmentViews;
   {
-    Buffer stagingBuffer;
-    BufferMetadata stagingBufferMetadata;
-    lib::Buffer<std::byte> copyBuffer;
     SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
     auto [colorAttachment, colorAttachmentMetadata] = createAttachment(
         *_logicalDevice, swapchainImageFormat, msaaSamples, extent, presentResources.numLayers,
@@ -1160,15 +1166,17 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
       auto [fsrTexture, fsrTextureMetadata] = createAttachment(
           *_logicalDevice, VK_FORMAT_R8_UINT, VK_SAMPLE_COUNT_1_BIT, fsrExtent,
           presentResources.numLayers, VK_IMAGE_ASPECT_COLOR_BIT,
-          VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR | VK_IMAGE_USAGE_TRANSFER_DST_BIT
-              | VK_IMAGE_USAGE_STORAGE_BIT);
-      createFsrContents(*_logicalDevice, fsrTexture, stagingBuffer, stagingBufferMetadata, copyBuffer, fsrTextureMetadata, handle);
+          VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR | VK_IMAGE_USAGE_STORAGE_BIT);
 
       attachmentViews.push_back(fsrTexture.getVkImageView());
       _computeDescriptorSetWriter.storeImageStorage(
           fsrTexture.getVkImageView(), VK_IMAGE_LAYOUT_GENERAL);
       _computeDescriptorSetWriter.writeDescriptorSet(
           _logicalDevice->getVkDevice(), _computeDescriptorSet.getVkDescriptorSet());
+
+      handle.transitionImageLayout(fsrTexture.getVkImage(), VK_IMAGE_ASPECT_COLOR_BIT,
+                                   VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, 0,
+                                   fsrTextureMetadata.mipLevels, 0, fsrTextureMetadata.arrayLayers);
 
       _fragmentShadingOptimizationImageRef =
           _imageManager.storeImage(std::move(fsrTexture), fsrTextureMetadata);
@@ -1188,15 +1196,16 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
       auto [fdmTexture, fdmTextureMetadata] = createAttachment(
           *_logicalDevice, VK_FORMAT_R8G8_UNORM, VK_SAMPLE_COUNT_1_BIT, fdmExtent,
           presentResources.numLayers, VK_IMAGE_ASPECT_COLOR_BIT,
-          VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT | VK_IMAGE_USAGE_TRANSFER_DST_BIT
-              | VK_IMAGE_USAGE_STORAGE_BIT);
-      createFdmContents(*_logicalDevice, fdmTexture, stagingBuffer, stagingBufferMetadata, copyBuffer, fdmTextureMetadata, handle);
+          VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT | VK_IMAGE_USAGE_STORAGE_BIT);
 
       attachmentViews.push_back(fdmTexture.getVkImageView());
       _computeDescriptorSetWriter.storeImageStorage(
           fdmTexture.getVkImageView(), VK_IMAGE_LAYOUT_GENERAL);
       _computeDescriptorSetWriter.writeDescriptorSet(
           _logicalDevice->getVkDevice(), _computeDescriptorSet.getVkDescriptorSet());
+      handle.transitionImageLayout(fdmTexture.getVkImage(), VK_IMAGE_ASPECT_COLOR_BIT,
+                                   VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL, 0,
+                                   fdmTextureMetadata.mipLevels, 0, fdmTextureMetadata.arrayLayers);
 
       _fragmentShadingOptimizationImageRef =
           _imageManager.storeImage(std::move(fdmTexture), fdmTextureMetadata);
@@ -1224,8 +1233,8 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
 
   if (supportedFeature
       == FragmentShadingOptimizationImageFeature::SupportedFeature::FRAGMENT_SHADING_RATE) {
-    const VkExtent2D fsrTexelSize =
-        _physicalDevice->getFragmentShadingRateProperties().maxFragmentShadingRateAttachmentTexelSize;
+    const VkExtent2D fsrTexelSize = _physicalDevice->getFragmentShadingRateProperties()
+                                        .maxFragmentShadingRateAttachmentTexelSize;
     subpass.withShadingRateAttachment(fsrTexelSize.width, fsrTexelSize.height);
   }
 
@@ -1241,9 +1250,8 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
               VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
           .build(*_logicalDevice);
 
-  auto imageViews = std::span(
-      reinterpret_cast<const VkImageView*>(presentResources.imageViews),
-      presentResources.imageViewsCount);
+  auto imageViews = std::span(reinterpret_cast<const VkImageView*>(presentResources.imageViews),
+                              presentResources.imageViewsCount);
   for (VkImageView imageView : imageViews) {
     FramebufferBuilder framebufferBuilder;
     framebufferBuilder.addAttachment(imageView);
@@ -1377,7 +1385,8 @@ std::tuple<Image, ImageMetadata> createAttachment(
   return std::make_tuple(std::move(image), imageMetadata);
 }
 
-void createFsrContents(const LogicalDevice& logicalDevice, Image& image, Buffer& stagingBuffer, BufferMetadata& stagingMetadata, lib::Buffer<std::byte>& copyBuffer,
+void createFsrContents(const LogicalDevice& logicalDevice, Image& image, Buffer& stagingBuffer,
+                       BufferMetadata& stagingMetadata, lib::Buffer<std::byte>& copyBuffer,
                        const ImageMetadata& metadata, const CommandBuffer& commandBuffer) {
   copyBuffer = lib::Buffer<std::byte>(
       static_cast<size_t>(metadata.imageExtent.width * metadata.imageExtent.height), std::byte{10});
@@ -1407,7 +1416,8 @@ void createFsrContents(const LogicalDevice& logicalDevice, Image& image, Buffer&
       VK_IMAGE_LAYOUT_GENERAL, 0, metadata.mipLevels, 0, metadata.arrayLayers);
 }
 
-void createFdmContents(const LogicalDevice& logicalDevice, Image& image, Buffer& stagingBuffer, BufferMetadata& stagingMetadata, lib::Buffer<std::byte>& copyBuffer,
+void createFdmContents(const LogicalDevice& logicalDevice, Image& image, Buffer& stagingBuffer,
+                       BufferMetadata& stagingMetadata, lib::Buffer<std::byte>& copyBuffer,
                        const ImageMetadata& metadata, const CommandBuffer& commandBuffer) {
   copyBuffer = lib::Buffer<std::byte>(
       static_cast<size_t>(metadata.imageExtent.width * metadata.imageExtent.height * 2),

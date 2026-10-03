@@ -138,8 +138,9 @@ void CommandBuffer::bindPipeline(
 }
 
 void CommandBuffer::pipelineBarrier(const VkDependencyInfo* dependencyInfo) const noexcept {
-  static auto pfnCmdPipelineBarrier2 = reinterpret_cast<PFN_vkCmdPipelineBarrier2>(
-      vkGetDeviceProcAddr(_commandPool->getLogicalDevice().getVkDevice(), "vkCmdPipelineBarrier2KHR"));
+  static auto pfnCmdPipelineBarrier2 =
+      reinterpret_cast<PFN_vkCmdPipelineBarrier2>(vkGetDeviceProcAddr(
+          _commandPool->getLogicalDevice().getVkDevice(), "vkCmdPipelineBarrier2KHR"));
   pfnCmdPipelineBarrier2(_commandBuffer, dependencyInfo);
   // vkCmdPipelineBarrier2(_commandBuffer, dependencyInfo);
 }

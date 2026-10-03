@@ -29,3 +29,4 @@ glslc.exe -I "%SCRIPT_DIR%\bindless.glsl" -I "%SCRIPT_DIR%\32bit_push_constants.
 glslc.exe -I "%SCRIPT_DIR%\bindless.glsl" -I "%SCRIPT_DIR%\32bit_push_constants.glsl" -I "%SCRIPT_DIR%\16bit_push_constants.glsl" -fshader-stage=frag "%SCRIPT_DIR%\shader_pbr.frag.glsl" -O -o "%SCRIPT_DIR%\shader_pbr.frag.spv"
 
 glslc.exe -fshader-stage=compute "%SCRIPT_DIR%\fov_fragment_shading_rate.comp.glsl" -O -o "%SCRIPT_DIR%\fov_fragment_shading_rate.comp.spv"
+glslc.exe -fshader-stage=compute "%SCRIPT_DIR%\fov_fragment_density_map.comp.glsl" -O -o "%SCRIPT_DIR%\fov_fragment_density_map.comp.spv"

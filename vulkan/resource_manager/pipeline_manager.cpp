@@ -213,9 +213,9 @@ PipelineHandle PipelineManager::createPBRProgram(
             .withMultisampleStateCreateInfo(attachmentLayout.getNumMsaaSamples())
             .withColorBlendStateCreateInfo(std::move(colorBlendAttachments))
             .withDepthStencilStateCreateInfo(VK_COMPARE_OP_LESS_OR_EQUAL)
-//            .withFragmentShadingRateStateCreateInfo(
-//                {1, 1}, VK_FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP_KHR,
-//                VK_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE_KHR)
+            .withFragmentShadingRateStateCreateInfo(
+                {1, 1}, VK_FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP_KHR,
+                VK_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE_KHR)
             .createPipeline(renderpass, *pipelineLayout),
         pipelineLayoutIndex});
   return pipelineIndex;
@@ -564,7 +564,8 @@ PipelineHandle PipelineManager::createFragmentShadingRateProgram(
   return pipelineIndex;
 }
 
-PipelineHandle PipelineManager::createFragmentDensityMapProgram(const LogicalDevice& logicalDevice) {
+PipelineHandle PipelineManager::createFragmentDensityMapProgram(
+    const LogicalDevice& logicalDevice) {
   const Shader& compute =
       addShader(logicalDevice, "fov_fragment_density_map.comp.spv", VK_SHADER_STAGE_COMPUTE_BIT);
   static constexpr VkShaderStageFlags shaderStageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
