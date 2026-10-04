@@ -1102,7 +1102,7 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
       auto [optimizationImage, optimizationImageMetadata] =
           std::move(*optionalFragmentShadingOptimizationImage);
       VkImageView imageView = ImageViewBuilder().buildAndAddToImage(
-          optimizationImage, optimizationImageMetadata, 0, 1, 0,
+          optimizationImage, optimizationImageMetadata, 0, optimizationImageMetadata.mipLevels, 0,
           optimizationImageMetadata.arrayLayers);
       attachmentViews.push_back(imageView);
       _computeDescriptorSetWriter.storeImageStorage(imageView, VK_IMAGE_LAYOUT_GENERAL);

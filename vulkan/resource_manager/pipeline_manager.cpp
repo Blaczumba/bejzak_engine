@@ -213,9 +213,9 @@ PipelineHandle PipelineManager::createPBRProgram(
             .withMultisampleStateCreateInfo(attachmentLayout.getNumMsaaSamples())
             .withColorBlendStateCreateInfo(std::move(colorBlendAttachments))
             .withDepthStencilStateCreateInfo(VK_COMPARE_OP_LESS_OR_EQUAL)
-            .withFragmentShadingRateStateCreateInfo(
-                {1, 1}, VK_FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP_KHR,
-                VK_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE_KHR)
+//            .withFragmentShadingRateStateCreateInfo(
+//                {1, 1}, VK_FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP_KHR,
+//                VK_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE_KHR)
             .createPipeline(renderpass, *pipelineLayout),
         pipelineLayoutIndex});
   return pipelineIndex;
@@ -278,9 +278,9 @@ PipelineHandle PipelineManager::createPbrTesselationProgram(
             .withMultisampleStateCreateInfo(attachmentLayout.getNumMsaaSamples())
             .withColorBlendStateCreateInfo(std::move(colorBlendAttachments))
             .withDepthStencilStateCreateInfo(VK_COMPARE_OP_LESS_OR_EQUAL)
-            .withFragmentShadingRateStateCreateInfo(
-                {1, 1}, VK_FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP_KHR,
-                VK_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE_KHR)
+//            .withFragmentShadingRateStateCreateInfo(
+//                {1, 1}, VK_FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP_KHR,
+//                VK_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE_KHR)
             .withTessellationStateCreateInfo(3)
             .createPipeline(renderpass, *pipelineLayout),
         pipelineLayoutIndex});
@@ -341,9 +341,9 @@ PipelineHandle PipelineManager::createBlinnPhongTesselationProgram(
             .withMultisampleStateCreateInfo(attachmentLayout.getNumMsaaSamples())
             .withColorBlendStateCreateInfo(std::move(colorBlendAttachments))
             .withDepthStencilStateCreateInfo(VK_COMPARE_OP_LESS_OR_EQUAL)
-            .withFragmentShadingRateStateCreateInfo(
-                {1, 1}, VK_FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP_KHR,
-                VK_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE_KHR)
+//            .withFragmentShadingRateStateCreateInfo(
+//                {1, 1}, VK_FRAGMENT_SHADING_RATE_COMBINER_OP_KEEP_KHR,
+//                VK_FRAGMENT_SHADING_RATE_COMBINER_OP_REPLACE_KHR)
             .withTessellationStateCreateInfo(3)
             .createPipeline(renderpass, *pipelineLayout),
         pipelineLayoutIndex});

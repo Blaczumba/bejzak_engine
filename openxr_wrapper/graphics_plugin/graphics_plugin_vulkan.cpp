@@ -334,6 +334,9 @@ std::unique_ptr<common::GraphicsContext> GraphicsPluginVulkan::createGraphicsCon
       .withSynchronization2();
   PhysicalDeviceOptionalExtendedFeatures extendedFeatures;
   const char* fragmentShadingRateAttachmentExtension;
+  std::tie(extendedFeatures.fragmentShadingRateModifier, fragmentShadingRateAttachmentExtension)
+      = AttachmentBasedFragmentShadingRateModifier::create(*physicalDevice, extensionsConnector);
+
   std::unique_ptr<LogicalDevice> logicalDevice = createLogicalDevice(
       xrInstance, systemId, *physicalDevice, extensionsConnector.getVkPhysicalDeviceFeatures2(),
       extensionsConnector.getAvailableRequestedDeviceExtensions());

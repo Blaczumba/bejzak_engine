@@ -4,6 +4,7 @@
 #include <memory>
 #include <optional>
 #include <string_view>
+#include <string>
 #include <unordered_set>
 #include <vulkan/vulkan.h>
 
@@ -76,5 +77,5 @@ private:
 
   QueueFamilyIndices _queueFamilyIndices;
 
-  const std::unordered_set<std::string_view> _availableRequestedExtensions;
+  const std::unordered_set<std::string> _availableRequestedExtensions;
 };

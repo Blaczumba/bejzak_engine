@@ -3,20 +3,19 @@
 #include <algorithm>
 #include <cstdint>
 #include <iterator>
-#include <memory>
 #include <ranges>
 #include <string_view>
+#include <string>
 #include <unordered_set>
 #include <vulkan/vulkan.h>
 
 #include "common/util/engine_exception.h"
 #include "lib/buffer/buffer.h"
-#include "vulkan/wrapper/physical_device/extensions_connector.h"
 #include "vulkan/wrapper/physical_device/optional_extended_features.h"
 
 namespace {
 
-std::unordered_set<std::string_view> checkDeviceExtensionSupport(VkPhysicalDevice device) {
+std::unordered_set<std::string> checkDeviceExtensionSupport(VkPhysicalDevice device) {
   uint32_t extensionCount;
   vkEnumerateDeviceExtensionProperties(device, nullptr, &extensionCount, nullptr);
 
@@ -24,7 +23,7 @@ std::unordered_set<std::string_view> checkDeviceExtensionSupport(VkPhysicalDevic
   vkEnumerateDeviceExtensionProperties(
       device, nullptr, &extensionCount, availableExtensions.data());
 
-  std::unordered_set<std::string_view> availableExtensionNames;
+  std::unordered_set<std::string> availableExtensionNames;
   availableExtensionNames.reserve(extensionCount);
   std::transform(availableExtensions.cbegin(), availableExtensions.cend(),
                  std::inserter(availableExtensionNames, availableExtensionNames.begin()),
@@ -211,7 +210,7 @@ const Instance& PhysicalDevice::getInstance() const noexcept {
 }
 
 bool PhysicalDevice::hasAvailableExtension(std::string_view extension) const noexcept {
-  return _availableRequestedExtensions.contains(extension);
+  return _availableRequestedExtensions.contains(std::string(extension));
 }
 
 float PhysicalDevice::getMaxSamplerAnisotropy() const noexcept {
