@@ -17,21 +17,21 @@ enum class QueueType : uint8_t {
   TRANSFER
 };
 
-struct LogicalDeviceOptionalExtendedFeatures;
-
 class LogicalDevice {
 public:
   LogicalDevice() noexcept = default;
 
-  static std::tuple<LogicalDevice, LogicalDeviceOptionalExtendedFeatures> create(
-      const PhysicalDevice& physicalDevice,
+  static LogicalDevice create(
+      const PhysicalDevice& physicalDevice, const VkPhysicalDeviceFeatures2& physicalDeviceFeatures,
+      std::span<const char*> extensions,
       std::unique_ptr<ResourceDestroyer>&& resourceDestroyer = std::
           make_unique<ThreadedResourceDestroyer>());
 
-  static std::tuple<std::unique_ptr<LogicalDevice>, LogicalDeviceOptionalExtendedFeatures>
-  createPtr(const PhysicalDevice& physicalDevice,
-            std::unique_ptr<ResourceDestroyer>&& resourceDestroyer = std::
-                make_unique<ThreadedResourceDestroyer>());
+  static std::unique_ptr<LogicalDevice> createPtr(
+      const PhysicalDevice& physicalDevice, const VkPhysicalDeviceFeatures2& physicalDeviceFeatures,
+      std::span<const char*> extensions,
+      std::unique_ptr<ResourceDestroyer>&& resourceDestroyer = std::
+          make_unique<ThreadedResourceDestroyer>());
 
   static LogicalDevice wrap(VkDevice device, const PhysicalDevice& physicalDevice,
                             std::unique_ptr<ResourceDestroyer>&& resourceDestroyer = std::
@@ -51,12 +51,6 @@ public:
   void destroyResource(ResourceDestroyer::Job destroyResource) const;
 
   VkImageView createImageView(const VkImageViewCreateInfo& imageViewCreateInfo) const;
-
-  VkResult waitForFences(
-      std::span<const VkFence> fences, VkBool32 waitAll = VK_FALSE, uint64_t timeout = UINT64_MAX);
-
-  VkResult waitForFences(std::initializer_list<VkFence> fences, VkBool32 waitAll = VK_FALSE,
-                         uint64_t timeout = UINT64_MAX);
 
   VkDevice getVkDevice() const noexcept;
 

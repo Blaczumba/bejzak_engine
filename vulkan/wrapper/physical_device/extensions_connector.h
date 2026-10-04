@@ -1,5 +1,6 @@
 #pragma once
 
+#include <optional>
 #include <vulkan/vulkan.h>
 
 #include "vulkan/wrapper/physical_device/physical_device.h"
@@ -36,22 +37,24 @@ public:
 
   ExtensionsConnector& withSynchronization2();
 
-  void* getNext() const;
+  VkPhysicalDeviceFeatures2 getVkPhysicalDeviceFeatures2() const;
+
+  lib::Buffer<const char*> getAvailableRequestedDeviceExtensions() noexcept;
 
 private:
   const PhysicalDevice& _physicalDevice;
 
   void* _next = nullptr;
-  VkPhysicalDeviceIndexTypeUint8FeaturesEXT _indexTypeUint8;
-  VkPhysicalDeviceBufferDeviceAddressFeatures _bufferDeviceAddress;
-  VkPhysicalDeviceDescriptorIndexingFeatures _descriptorIndexing;
-  VkPhysicalDeviceInheritedViewportScissorFeaturesNV _inheritedViewportScissor;
-  VkPhysicalDeviceMultiviewFeatures _multiview;
-  VkPhysicalDevice8BitStorageFeatures _storage8Bit;
-  VkPhysicalDevice16BitStorageFeatures _storage16Bit;
-  VkPhysicalDeviceFragmentShadingRateFeaturesKHR _fragmentShadingRate;
-  VkPhysicalDeviceFragmentDensityMapFeaturesEXT _fragmentDensityMap;
-  VkPhysicalDeviceSynchronization2Features _synchronization2;
+  std::optional<VkPhysicalDeviceIndexTypeUint8FeaturesEXT> _indexTypeUint8;
+  std::optional<VkPhysicalDeviceBufferDeviceAddressFeatures> _bufferDeviceAddress;
+  std::optional<VkPhysicalDeviceDescriptorIndexingFeatures> _descriptorIndexing;
+  std::optional<VkPhysicalDeviceInheritedViewportScissorFeaturesNV> _inheritedViewportScissor;
+  std::optional<VkPhysicalDeviceMultiviewFeatures> _multiview;
+  std::optional<VkPhysicalDevice8BitStorageFeatures> _storage8Bit;
+  std::optional<VkPhysicalDevice16BitStorageFeatures> _storage16Bit;
+  std::optional<VkPhysicalDeviceFragmentShadingRateFeaturesKHR> _fragmentShadingRate;
+  std::optional<VkPhysicalDeviceFragmentDensityMapFeaturesEXT> _fragmentDensityMap;
+  std::optional<VkPhysicalDeviceSynchronization2Features> _synchronization2;
 
-  std::unordered_set<const char*> _requestedDeviceExtensions;
+  std::unordered_set<const char*> _availableRequestedDeviceExtensions;
 };

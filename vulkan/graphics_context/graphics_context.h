@@ -34,10 +34,10 @@
 #include "vulkan/wrapper/framebuffer/framebuffer.h"
 #include "vulkan/wrapper/instance/instance.h"
 #include "vulkan/wrapper/logical_device/logical_device.h"
-#include "vulkan/wrapper/logical_device/modifiers.h"
-#include "vulkan/wrapper/logical_device/optional_extended_features.h"
 #include "vulkan/wrapper/memory_objects/buffer.h"
 #include "vulkan/wrapper/memory_objects/image.h"
+#include "vulkan/wrapper/physical_device/modifiers.h"
+#include "vulkan/wrapper/physical_device/optional_extended_features.h"
 #include "vulkan/wrapper/physical_device/physical_device.h"
 #include "vulkan/wrapper/render_pass/render_pass.h"
 #include "vulkan/wrapper/synchronization/fence.h"
@@ -60,7 +60,7 @@ class GraphicsContext final : public common::GraphicsContext {
   GraphicsContext(
       std::shared_ptr<Instance> instance, DebugMessenger&& debugMessenger,
       std::unique_ptr<PhysicalDevice> physicalDevice, std::unique_ptr<LogicalDevice> logicalDevice,
-      LogicalDeviceOptionalExtendedFeatures extendedFeatures, const FileLoader& fileLoader,
+      PhysicalDeviceOptionalExtendedFeatures extendedFeatures, const FileLoader& fileLoader,
       std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer,
       std::unique_ptr<PresentationContext> presentationContext = nullptr);
 
@@ -68,7 +68,7 @@ public:
   static std::unique_ptr<common::GraphicsContext> create(
       std::shared_ptr<Instance> instance, DebugMessenger&& debugMessenger,
       std::unique_ptr<PhysicalDevice> physicalDevice, std::unique_ptr<LogicalDevice> logicalDevice,
-      LogicalDeviceOptionalExtendedFeatures extendedFeatures, const FileLoader& fileLoader,
+      PhysicalDeviceOptionalExtendedFeatures extendedFeatures, const FileLoader& fileLoader,
       std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer,
       std::unique_ptr<PresentationContext> presentationContext);
 
@@ -91,7 +91,7 @@ private:
   DebugMessenger _debugMessenger;
   std::unique_ptr<PhysicalDevice> _physicalDevice;
   std::unique_ptr<LogicalDevice> _logicalDevice;
-  LogicalDeviceOptionalExtendedFeatures _extendedFeatures;
+  PhysicalDeviceOptionalExtendedFeatures _extendedFeatures;
   std::unique_ptr<PresentationContext> _presentationContext;
   std::shared_ptr<engine::PresentationGraphicsCommunication> _communicationLayer;
 

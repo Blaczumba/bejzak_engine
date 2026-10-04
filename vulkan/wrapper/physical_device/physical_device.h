@@ -10,6 +10,8 @@
 #include "lib/buffer/buffer.h"
 #include "vulkan/wrapper/instance/instance.h"
 
+struct PhysicalDeviceOptionalExtendedFeatures;
+
 struct QueueFamilyIndices {
   std::optional<uint32_t> graphicsFamily;
   std::optional<uint32_t> presentFamily;

@@ -11,9 +11,6 @@
 #include "lib/buffer/buffer.h"
 #include "vulkan/wrapper/instance/extensions.h"
 #include "vulkan/wrapper/instance/validation_layers.h"
-#include "vulkan/wrapper/logical_device/extensions_connector.h"
-#include "vulkan/wrapper/logical_device/modifiers.h"
-#include "vulkan/wrapper/logical_device/optional_extended_features.h"
 #include "vulkan/wrapper/logical_device/resource_destroyer.h"
 #include "vulkan/wrapper/memory_allocator/allocation.h"
 #include "vulkan/wrapper/memory_allocator/memory_allocator.h"
@@ -76,8 +73,9 @@ void LogicalDevice::destroyResource(ResourceDestroyer::Job destroyResource) cons
 
 namespace {
 
-std::tuple<VkDevice, LogicalDeviceOptionalExtendedFeatures> createVkDevice(
-    const PhysicalDevice& physicalDevice) {
+VkDevice createVkDevice(
+    const PhysicalDevice& physicalDevice, const VkPhysicalDeviceFeatures2& physicalDeviceFeatures,
+    std::span<const char*> extensions) {
   const QueueFamilyIndices& indices = physicalDevice.getQueueFamilyIndices();
   const std::set<uint32_t> uniqueQueueFamilies = {*indices.graphicsFamily, *indices.presentFamily,
                                                   *indices.computeFamily, *indices.transferFamily};
@@ -95,44 +93,9 @@ std::tuple<VkDevice, LogicalDeviceOptionalExtendedFeatures> createVkDevice(
                      .pQueuePriorities = &queuePriority};
                  });
 
-  LogicalDeviceOptionalExtendedFeatures extendedFeatures;
-  ExtensionsConnector extensionsConnector(physicalDevice);
-  extensionsConnector.withDescriptorIndexingExtension()
-      .withBufferDeviceAddressExtension()
-      .withIndexTypeUint8Extension()
-      .withInheritedViewportScissorExtension()  // This should be the optional extension.
-      .withMultiviewExtension()
-      .withStorage8BitExtension()
-      .withStorage16BitExtension()
-      .withSynchronization2();
-  const char* fragmentShadingRateAttachmentExtension;
-  std::tie(extendedFeatures.fragmentShadingRateModifier, fragmentShadingRateAttachmentExtension) =
-      AttachmentBasedFragmentShadingRateModifier::create(physicalDevice, extensionsConnector);
-
-  const VkPhysicalDeviceFeatures2 deviceFeaturesInfo = {
-    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-    .pNext = extensionsConnector.getNext(),
-    .features = VkPhysicalDeviceFeatures{
-                                         .geometryShader = VK_TRUE,
-                                         .tessellationShader = VK_TRUE,
-                                         .sampleRateShading = VK_TRUE,
-                                         .depthClamp = VK_TRUE,
-                                         .samplerAnisotropy = VK_TRUE,
-                                         .shaderStorageImageArrayDynamicIndexing = VK_TRUE,
-                                         .shaderInt16 = VK_TRUE}
-  };
-
-  std::unordered_set<const char*> deviceExtensions = {fragmentShadingRateAttachmentExtension};
-  for (const char* extension : requestedDeviceExtensions) {
-    if (physicalDevice.hasAvailableExtension(extension)) {
-      deviceExtensions.insert(extension);
-    }
-  }
-  lib::Buffer<const char*> extensions(deviceExtensions.cbegin(), deviceExtensions.cend());
-
   const VkDeviceCreateInfo createInfo = {
     .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-    .pNext = &deviceFeaturesInfo,
+    .pNext = &physicalDeviceFeatures,
     .queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size()),
     .pQueueCreateInfos = queueCreateInfos.data(),
 #ifdef VALIDATION_LAYERS_ENABLED
@@ -147,25 +110,24 @@ std::tuple<VkDevice, LogicalDeviceOptionalExtendedFeatures> createVkDevice(
   CHECK_VKCMD(
       vkCreateDevice(physicalDevice.getVkPhysicalDevice(), &createInfo, nullptr, &logicalDevice),
       "Failed to create LogicalDevice!");
-  return {logicalDevice, extendedFeatures};
+  return logicalDevice;
 }
 
 }  // namespace
 
-std::tuple<LogicalDevice, LogicalDeviceOptionalExtendedFeatures> LogicalDevice::create(
-    const PhysicalDevice& physicalDevice, std::unique_ptr<ResourceDestroyer>&& resourceDestroyer) {
-  auto [logicalDevice, extensionsFeatures] = createVkDevice(physicalDevice);
-  return {
-    LogicalDevice(logicalDevice, physicalDevice, std::move(resourceDestroyer)), extensionsFeatures};
+LogicalDevice LogicalDevice::create(
+    const PhysicalDevice& physicalDevice, const VkPhysicalDeviceFeatures2& physicalDeviceFeatures,
+    std::span<const char*> extensions, std::unique_ptr<ResourceDestroyer>&& resourceDestroyer) {
+  return LogicalDevice(createVkDevice(physicalDevice, physicalDeviceFeatures, extensions),
+                       physicalDevice, std::move(resourceDestroyer));
 }
 
-std::tuple<std::unique_ptr<LogicalDevice>, LogicalDeviceOptionalExtendedFeatures>
-LogicalDevice::createPtr(
-    const PhysicalDevice& physicalDevice, std::unique_ptr<ResourceDestroyer>&& resourceDestroyer) {
-  auto [logicalDevice, extensionsFeatures] = createVkDevice(physicalDevice);
-  return {std::unique_ptr<LogicalDevice>(
-              new LogicalDevice(logicalDevice, physicalDevice, std::move(resourceDestroyer))),
-          extensionsFeatures};
+std::unique_ptr<LogicalDevice> LogicalDevice::createPtr(
+    const PhysicalDevice& physicalDevice, const VkPhysicalDeviceFeatures2& physicalDeviceFeatures,
+    std::span<const char*> extensions, std::unique_ptr<ResourceDestroyer>&& resourceDestroyer) {
+  return std::unique_ptr<LogicalDevice>(
+      new LogicalDevice(createVkDevice(physicalDevice, physicalDeviceFeatures, extensions),
+                        physicalDevice, std::move(resourceDestroyer)));
 }
 
 LogicalDevice LogicalDevice::wrap(VkDevice device, const PhysicalDevice& physicalDevice,
@@ -193,18 +155,6 @@ VkImageView LogicalDevice::createImageView(const VkImageViewCreateInfo& imageVie
   CHECK_VKCMD(vkCreateImageView(_device, &imageViewCreateInfo, nullptr, &view),
               "Failed to create VkImageView.");
   return view;
-}
-
-VkResult LogicalDevice::waitForFences(
-    std::span<const VkFence> fences, VkBool32 waitAll, uint64_t timeout) {
-  return vkWaitForFences(
-      _device, static_cast<uint32_t>(fences.size()), fences.data(), waitAll, timeout);
-}
-
-VkResult LogicalDevice::waitForFences(
-    std::initializer_list<VkFence> fences, VkBool32 waitAll, uint64_t timeout) {
-  return vkWaitForFences(
-      _device, static_cast<uint32_t>(fences.size()), fences.begin(), waitAll, timeout);
 }
 
 VkDevice LogicalDevice::getVkDevice() const noexcept {

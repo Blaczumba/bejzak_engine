@@ -935,7 +935,7 @@ GCONTEXT_TEMPLATE
 GCONTEXT_CLASS GraphicsContext(
     std::shared_ptr<Instance> instance, DebugMessenger&& debugMessenger,
     std::unique_ptr<PhysicalDevice> physicalDevice, std::unique_ptr<LogicalDevice> logicalDevice,
-    LogicalDeviceOptionalExtendedFeatures extendedFeatures, const FileLoader& fileLoader,
+    PhysicalDeviceOptionalExtendedFeatures extendedFeatures, const FileLoader& fileLoader,
     std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer,
     std::unique_ptr<PresentationContext> presentationContext)
   : _instance(std::move(instance)), _debugMessenger(std::move(debugMessenger)),
@@ -997,7 +997,7 @@ GCONTEXT_TEMPLATE
 std::unique_ptr<common::GraphicsContext> GCONTEXT_CLASS create(
     std::shared_ptr<Instance> instance, DebugMessenger&& debugMessenger,
     std::unique_ptr<PhysicalDevice> physicalDevice, std::unique_ptr<LogicalDevice> logicalDevice,
-    LogicalDeviceOptionalExtendedFeatures extendedFeatures, const FileLoader& fileLoader,
+    PhysicalDeviceOptionalExtendedFeatures extendedFeatures, const FileLoader& fileLoader,
     std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer,
     std::unique_ptr<PresentationContext> presentationContext) {
   return std::unique_ptr<GraphicsContext<SYNCED_OUTSIDE, MULTIVIEW_PRESENTATION>>(

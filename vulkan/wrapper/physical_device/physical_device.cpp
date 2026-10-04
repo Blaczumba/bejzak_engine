@@ -11,6 +11,8 @@
 
 #include "common/util/engine_exception.h"
 #include "lib/buffer/buffer.h"
+#include "vulkan/wrapper/physical_device/extensions_connector.h"
+#include "vulkan/wrapper/physical_device/optional_extended_features.h"
 
 namespace {
 
@@ -186,7 +188,6 @@ std::unique_ptr<PhysicalDevice> PhysicalDevice::create(
   if (bestDevice == VK_NULL_HANDLE) {
     throw EngineException("Failed to find physical device.");
   }
-
   return std::unique_ptr<PhysicalDevice>(
       new PhysicalDevice(bestDevice, instance, findQueueFamilyIndices(bestDevice, surface)));
 }

@@ -8,6 +8,8 @@
 #include "vulkan/graphics_context/presentation_lib.h"
 #include "vulkan/wrapper/instance/instance.h"
 #include "vulkan/wrapper/logical_device/logical_device.h"
+#include "vulkan/wrapper/physical_device/extensions_connector.h"
+#include "vulkan/wrapper/physical_device/optional_extended_features.h"
 #include "vulkan/wrapper/physical_device/physical_device.h"
 #include "vulkan/wrapper/surface/surface.h"
 #include "vulkan/wrapper/swapchain/swapchain.h"
@@ -42,7 +44,23 @@ std::unique_ptr<common::Presentation> Presentation::create(
   Surface surface = Surface::create(*instance, *window);
   std::unique_ptr<PhysicalDevice> physicalDevice =
       PhysicalDevice::create(*instance, surface.getVkSurface());
-  auto [logicalDevice, extendedFeatures] = LogicalDevice::createPtr(*physicalDevice);
+  std::unique_ptr<ExtensionsConnector> extensionsConnector =
+      std::make_unique<ExtensionsConnector>(*physicalDevice);
+  extensionsConnector->withDescriptorIndexingExtension()
+      .withBufferDeviceAddressExtension()
+      .withIndexTypeUint8Extension()
+      .withInheritedViewportScissorExtension()  // This should be the optional extension.
+      .withMultiviewExtension()
+      .withStorage8BitExtension()
+      .withStorage16BitExtension()
+      .withSynchronization2();
+  PhysicalDeviceOptionalExtendedFeatures extendedFeatures;
+  const char* fragmentShadingRateAttachmentExtension;
+  std::tie(extendedFeatures.fragmentShadingRateModifier, fragmentShadingRateAttachmentExtension) =
+      AttachmentBasedFragmentShadingRateModifier::create(*physicalDevice, *extensionsConnector);
+  std::unique_ptr<LogicalDevice> logicalDevice = LogicalDevice::createPtr(
+      *physicalDevice, extensionsConnector->getVkPhysicalDeviceFeatures2(),
+      extensionsConnector->getAvailableRequestedDeviceExtensions());
 
   const auto [width, height] = window->getFramebufferSize();
   Swapchain swapchain =

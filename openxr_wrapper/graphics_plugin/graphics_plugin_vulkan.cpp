@@ -18,10 +18,9 @@
 #include "vulkan/wrapper/command_buffer/command_buffer.h"
 #include "vulkan/wrapper/debug_messenger/debug_messenger.h"
 #include "vulkan/wrapper/debug_messenger/debug_messenger_utils.h"
-#include "vulkan/wrapper/instance/extensions.h"
 #include "vulkan/wrapper/instance/validation_layers.h"
-#include "vulkan/wrapper/logical_device/extensions_connector.h"
-#include "vulkan/wrapper/logical_device/optional_extended_features.h"
+#include "vulkan/wrapper/physical_device/extensions_connector.h"
+#include "vulkan/wrapper/physical_device/optional_extended_features.h"
 #include "vulkan/wrapper/util/check.h"
 
 namespace xrw {
@@ -243,9 +242,9 @@ std::unique_ptr<PhysicalDevice> createPhysicalDevice(
   return PhysicalDevice::wrap(physicalDevice, instance);
 }
 
-std::tuple<std::unique_ptr<LogicalDevice>, LogicalDeviceOptionalExtendedFeatures>
-createLogicalDevice(
-    XrInstance xrInstance, XrSystemId systemId, const PhysicalDevice& physicalDevice) {
+std::unique_ptr<LogicalDevice> createLogicalDevice(
+    XrInstance xrInstance, XrSystemId systemId, const PhysicalDevice& physicalDevice,
+    const VkPhysicalDeviceFeatures2& physicalDeviceFeatures, std::span<const char*> extensions) {
   const QueueFamilyIndices& indices = physicalDevice.getQueueFamilyIndices();
   const std::set<uint32_t> uniqueQueueFamilies = {*indices.graphicsFamily, *indices.presentFamily,
                                                   *indices.computeFamily, *indices.transferFamily};
@@ -261,38 +260,9 @@ createLogicalDevice(
                      .pQueuePriorities = &queuePriority};
                  });
 
-  LogicalDeviceOptionalExtendedFeatures extendedFeatures;
-  ExtensionsConnector extensionsConnector(physicalDevice);
-  extensionsConnector.withDescriptorIndexingExtension()
-      .withBufferDeviceAddressExtension()
-      .withIndexTypeUint8Extension()
-      .withInheritedViewportScissorExtension()
-      .withMultiviewExtension()
-      .withSynchronization2();
-  const char* fragmentShadingRateAttachmentExtension;
-  std::tie(extendedFeatures.fragmentShadingRateModifier, fragmentShadingRateAttachmentExtension) =
-      AttachmentBasedFragmentShadingRateModifier::create(physicalDevice, extensionsConnector);
-
-  const VkPhysicalDeviceFeatures2 deviceFeaturesInfo = {
-    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
-    .pNext = extensionsConnector.getNext(),
-    .features = {.geometryShader = VK_TRUE,
-                 .tessellationShader = VK_TRUE,
-                 .sampleRateShading = VK_TRUE,
-                 .depthClamp = VK_TRUE,
-                 .samplerAnisotropy = VK_TRUE}
-  };
-  std::unordered_set<const char*> deviceExtensions = {fragmentShadingRateAttachmentExtension};
-  for (const char* extension : requestedDeviceExtensions) {
-    if (physicalDevice.hasAvailableExtension(extension)) {
-      deviceExtensions.insert(extension);
-    }
-  }
-  lib::Buffer<const char*> extensions(deviceExtensions.cbegin(), deviceExtensions.cend());
-
   const VkDeviceCreateInfo deviceCreateInfo = {
     .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-    .pNext = &deviceFeaturesInfo,
+    .pNext = &physicalDeviceFeatures,
     .queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size()),
     .pQueueCreateInfos = queueCreateInfos.data(),
 #ifdef VALIDATION_LAYERS_ENABLED
@@ -324,7 +294,7 @@ createLogicalDevice(
                                          &vulkanDeviceCreateResult),
               "Failed to xrCreateVulkanDeviceKHR.");
   CHECK_VKCMD(vulkanDeviceCreateResult, "Failed to create VkDevice.");
-  return {LogicalDevice::wrapPtr(logicalDevice, physicalDevice), extendedFeatures};
+  return LogicalDevice::wrapPtr(logicalDevice, physicalDevice);
 }
 
 }  // namespace
@@ -356,8 +326,17 @@ std::unique_ptr<common::GraphicsContext> GraphicsPluginVulkan::createGraphicsCon
 #endif
   std::unique_ptr<PhysicalDevice> physicalDevice =
       createPhysicalDevice(xrInstance, systemId, *instance);
-  auto [logicalDevice, extendedFeatures] =
-      createLogicalDevice(xrInstance, systemId, *physicalDevice);
+  ExtensionsConnector extensionsConnector(*physicalDevice);
+  extensionsConnector.withDescriptorIndexingExtension()
+      .withBufferDeviceAddressExtension()
+      .withIndexTypeUint8Extension()
+      .withMultiviewExtension()
+      .withSynchronization2();
+  PhysicalDeviceOptionalExtendedFeatures extendedFeatures;
+  const char* fragmentShadingRateAttachmentExtension;
+  std::unique_ptr<LogicalDevice> logicalDevice = createLogicalDevice(
+      xrInstance, systemId, *physicalDevice, extensionsConnector.getVkPhysicalDeviceFeatures2(),
+      extensionsConnector.getAvailableRequestedDeviceExtensions());
   _logicalDevice = logicalDevice.get();
 
   _graphicsBinding = XrGraphicsBindingVulkanKHR{
