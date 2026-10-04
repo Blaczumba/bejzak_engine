@@ -22,24 +22,20 @@ public:
   LogicalDevice() noexcept = default;
 
   static LogicalDevice create(
-      const PhysicalDevice& physicalDevice, const VkPhysicalDeviceFeatures2& physicalDeviceFeatures,
-      std::span<const char*> extensions,
-      std::unique_ptr<ResourceDestroyer>&& resourceDestroyer = std::
-          make_unique<ThreadedResourceDestroyer>());
+      const PhysicalDevice& physicalDevice, const VkDeviceCreateInfo& deviceCreateInfo,
+      std::unique_ptr<ResourceDestroyer> resourceDestroyer);
 
   static std::unique_ptr<LogicalDevice> createPtr(
-      const PhysicalDevice& physicalDevice, const VkPhysicalDeviceFeatures2& physicalDeviceFeatures,
-      std::span<const char*> extensions,
-      std::unique_ptr<ResourceDestroyer>&& resourceDestroyer = std::
-          make_unique<ThreadedResourceDestroyer>());
+      const PhysicalDevice& physicalDevice, const VkDeviceCreateInfo& deviceCreateInfo,
+      std::unique_ptr<ResourceDestroyer> resourceDestroyer);
 
   static LogicalDevice wrap(VkDevice device, const PhysicalDevice& physicalDevice,
-                            std::unique_ptr<ResourceDestroyer>&& resourceDestroyer = std::
+                            std::unique_ptr<ResourceDestroyer> resourceDestroyer = std::
                                 make_unique<ThreadedResourceDestroyer>());
 
   static std::unique_ptr<LogicalDevice> wrapPtr(
       VkDevice device, const PhysicalDevice& physicalDevice,
-      std::unique_ptr<ResourceDestroyer>&& resourceDestroyer = std::
+      std::unique_ptr<ResourceDestroyer> resourceDestroyer = std::
           make_unique<ThreadedResourceDestroyer>());
 
   LogicalDevice(LogicalDevice&& logicalDevice) noexcept;
@@ -69,8 +65,9 @@ public:
   VkQueue getTransferVkQueue() const noexcept;
 
 private:
-  LogicalDevice(VkDevice logicalDevice, const PhysicalDevice& physicalDevice,
-                std::unique_ptr<ResourceDestroyer>&& resourceDestroyer) noexcept;
+  LogicalDevice(VkDevice logicalDevice, const PhysicalDevice& physicalDevice, VkQueue graphicsQueue,
+                VkQueue presentQueue, VkQueue computeQueue, VkQueue transferQueue,
+                std::unique_ptr<ResourceDestroyer> resourceDestroyer) noexcept;
 
   VkDevice _device = VK_NULL_HANDLE;
 
@@ -82,4 +79,38 @@ private:
   VkQueue _presentQueue = VK_NULL_HANDLE;
   VkQueue _computeQueue = VK_NULL_HANDLE;
   VkQueue _transferQueue = VK_NULL_HANDLE;
+};
+
+enum class ResourceDestroyerType : uint8_t {
+  SYNCHRONOUS = 0,
+  DEFERRED
+};
+
+class LogicalDeviceBuilder {
+public:
+  LogicalDeviceBuilder& withPhysicalDeviceFeatures2(
+      const VkPhysicalDeviceFeatures2& physicalDeviceFeatures) noexcept;
+
+  LogicalDeviceBuilder& withValidationLayers(lib::Buffer<const char*>&& validationLayers) noexcept;
+
+  LogicalDeviceBuilder& withValidationLayers(
+      std::span<const char* const> validationLayers) noexcept;
+
+  LogicalDeviceBuilder& withExtensions(lib::Buffer<const char*>&& extensions) noexcept;
+
+  LogicalDeviceBuilder& withExtensions(std::span<const char* const> extensions) noexcept;
+
+  LogicalDeviceBuilder& withResourceDestroyerType(ResourceDestroyerType type) noexcept;
+
+  LogicalDevice build(const PhysicalDevice& physicalDevice);
+
+  std::unique_ptr<LogicalDevice> buildPtr(const PhysicalDevice& physicalDevice);
+
+private:
+  std::optional<VkPhysicalDeviceFeatures2> _physicalDeviceFeatures2;
+  lib::Buffer<const char*> _validationLayers;
+  lib::Buffer<const char*> _extensions;
+  ResourceDestroyerType _resourceDestroyerType = ResourceDestroyerType::SYNCHRONOUS;
+  VkDeviceCreateInfo _deviceCreateInfo{
+    .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO, .pNext = nullptr};
 };

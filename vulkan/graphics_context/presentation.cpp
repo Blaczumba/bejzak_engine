@@ -7,6 +7,7 @@
 #include "vulkan/graphics_context/graphics_context.h"
 #include "vulkan/graphics_context/presentation_lib.h"
 #include "vulkan/wrapper/instance/instance.h"
+#include "vulkan/wrapper/instance/validation_layers.h"
 #include "vulkan/wrapper/logical_device/logical_device.h"
 #include "vulkan/wrapper/physical_device/extensions_connector.h"
 #include "vulkan/wrapper/physical_device/optional_extended_features.h"
@@ -44,6 +45,7 @@ std::unique_ptr<common::Presentation> Presentation::create(
   Surface surface = Surface::create(*instance, *window);
   std::unique_ptr<PhysicalDevice> physicalDevice =
       PhysicalDevice::create(*instance, surface.getVkSurface());
+
   std::unique_ptr<ExtensionsConnector> extensionsConnector =
       std::make_unique<ExtensionsConnector>(*physicalDevice);
   extensionsConnector->withDescriptorIndexingExtension()
@@ -58,9 +60,15 @@ std::unique_ptr<common::Presentation> Presentation::create(
   const char* fragmentShadingRateAttachmentExtension;
   std::tie(extendedFeatures.fragmentShadingRateModifier, fragmentShadingRateAttachmentExtension) =
       AttachmentBasedFragmentShadingRateModifier::create(*physicalDevice, *extensionsConnector);
-  std::unique_ptr<LogicalDevice> logicalDevice = LogicalDevice::createPtr(
-      *physicalDevice, extensionsConnector->getVkPhysicalDeviceFeatures2(),
-      extensionsConnector->getAvailableRequestedDeviceExtensions());
+
+  std::unique_ptr<LogicalDevice> logicalDevice =
+      LogicalDeviceBuilder()
+          .withPhysicalDeviceFeatures2(extensionsConnector->getVkPhysicalDeviceFeatures2())
+          .withExtensions(extensionsConnector->getAvailableRequestedDeviceExtensions())
+#ifdef VALIDATION_LAYERS_ENABLED
+          .withValidationLayers(validationLayers)
+#endif  // VALIDATION_LAYERS_ENABLED
+          .buildPtr(*physicalDevice);
 
   const auto [width, height] = window->getFramebufferSize();
   Swapchain swapchain =
