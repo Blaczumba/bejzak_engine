@@ -35,6 +35,9 @@ public:
   ExtensionsConnector& withFragmentDensityMapExtension(
       const VkPhysicalDeviceFragmentDensityMapFeaturesEXT& features);
 
+  ExtensionsConnector& withFragmentDensityMapOffsetExtension(
+      const VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM& features);
+
   ExtensionsConnector& withSynchronization2();
 
   VkPhysicalDeviceFeatures2 getVkPhysicalDeviceFeatures2() const;
@@ -54,6 +57,7 @@ private:
   std::optional<VkPhysicalDevice16BitStorageFeatures> _storage16Bit;
   std::optional<VkPhysicalDeviceFragmentShadingRateFeaturesKHR> _fragmentShadingRate;
   std::optional<VkPhysicalDeviceFragmentDensityMapFeaturesEXT> _fragmentDensityMap;
+  std::optional<VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM> _fragmentDensityMapOffset;
   std::optional<VkPhysicalDeviceSynchronization2Features> _synchronization2;
 
   std::unordered_set<const char*> _availableRequestedDeviceExtensions;

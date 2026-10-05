@@ -115,44 +115,12 @@ std::tuple<Image, ImageMetadata> createAttachment(
     const LogicalDevice& logicalDevice, VkFormat format, VkSampleCountFlagBits samples,
     VkExtent2D extent, uint32_t numLayers, VkImageAspectFlags aspect, VkImageUsageFlags usage);
 
-void createFsrContents(const LogicalDevice& logicalDevice, Image& image, Buffer& stagingBuffer,
-                       BufferMetadata& stagingMetadata, lib::Buffer<std::byte>& copyBuffer,
-                       const ImageMetadata& metadata, const CommandBuffer& commandBuffer);
-
-void createFdmContents(const LogicalDevice& logicalDevice, Image& image, Buffer& stagingBuffer,
-                       BufferMetadata& stagingMetadata, lib::Buffer<std::byte>& copyBuffer,
-                       const ImageMetadata& metadata, const CommandBuffer& commandBuffer);
-
 }  // namespace
 
 GCONTEXT_TEMPLATE
 void GCONTEXT_CLASS setup() {
   std::vector<common::AssetData> sponzaData =
-      common::LoadGltfFromFile(*_assetManager, _fileLoader, MODELS_PATH "sponza/scene.gltf");
-  //     std::vector<common::VertexData> antiqueCandleStickData = common::LoadGltfFromFile(
-  //         *_assetManager, MODELS_PATH "ornate_antique_candlestick/scene.gltf");
-  //     std::for_each(
-  //         antiqueCandleStickData.begin(), antiqueCandleStickData.end(), [](common::VertexData&
-  //         data) {
-  //           data.model = data.model * glm::translate(glm::mat4(1.0f), glm::vec3(7.0f, -2.0f,
-  //           .0f))
-  //                        * glm::scale(glm::mat4(1.0f), glm::vec3(0.02f, 0.02f, 0.02f));
-  //         });
-  /*std::vector<common::VertexData> lanternData =
-      common::LoadGltfFromFile(*_assetManager, MODELS_PATH "ornate_lantern_3d_model/scene.gltf");
-  std::for_each(lanternData.begin(), lanternData.end(), [](common::VertexData& data) {
-    data.model = data.model * glm::translate(glm::mat4(1.0f), glm::vec3(8.5f, 4.25f, 0.0f))
-                 * glm::scale(glm::mat4(1.0f), glm::vec3(1.5f, 1.5f, 1.5f));
-  });*/
-  // std::vector<common::VertexData> spartanData =
-  //     common::LoadGltfFromFile(*_assetManager, MODELS_PATH "pbr_spartan_helmet/scene.gltf");
-  // std::for_each(spartanData.begin(), spartanData.end(), [](common::VertexData& data) {
-  //   data.model = data.model * glm::translate(glm::mat4(1.0f), glm::vec3(1000.0f, 16.0f,
-  //   -250.0f))
-  //                * glm::rotate(glm::mat4(1.0f), glm::radians(-25.0f), glm::vec3(1.0f, 0.0f,
-  //                0.0f))
-  //                * glm::scale(glm::mat4(1.0f), glm::vec3(2.5f, 2.5f, 2.5f));
-  // });
+      common::LoadGltfFromFile(*_assetManager, _fileLoader, MODELS_PATH "sponza-gltf-pbr/sponza.glb");
 
   createDescriptorSets();
   createEnvMappingResources();
@@ -161,9 +129,6 @@ void GCONTEXT_CLASS setup() {
   createCommandBuffers();
   createSyncObjects();
   loadObjects(sponzaData, _graphicsPipelineHandle);
-  // loadObjects(antiqueCandleStickData, _graphicsPipelineHandle);
-  // loadObjects(lanternData, _graphicsTesselationPipelineHandle);
-  // loadObjects(spartanData, _graphicsTesselationPipelineHandle);
 
   {
     SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
@@ -292,11 +257,13 @@ void GCONTEXT_CLASS createDescriptorSets() {
     _lightHandle = _bindlessWriter->writeBuffer(
         _bufferManager.storeBuffer(std::move(buffer), metadata), metadata.usage, metadata.size);
 
-    _ubLight.pos = glm::vec3(15.1891f, 2.66408f, -0.841221f);
+//    _ubLight.pos = glm::vec3(15.1891f, 2.66408f, -0.841221f);
+    _ubLight.pos = glm::vec3(-6.35149f, 5.81116f, 0.970902f);
     _ubLight.projView = glm::perspective(glm::radians(120.0f), 1.0f, 0.1f, 40.0f);
     _ubLight.projView[1][1] = -_ubLight.projView[1][1];
     _ubLight.projView = _ubLight.projView
-                        * glm::lookAt(_ubLight.pos, glm::vec3(-3.82383f, 3.66503f, 1.30751f),
+//                        * glm::lookAt(_ubLight.pos, glm::vec3(-3.82383f, 3.66503f, 1.30751f),
+                        * glm::lookAt(_ubLight.pos, glm::vec3(0.0f, 1.0f, -1.0f),
                                       glm::vec3(0.0f, 1.0f, 0.0f));
     common::copyObject(metadata.getMappedMemoryAsSpan(), _ubLight);
     _lightBuffer = std::move(buffer);
@@ -438,17 +405,17 @@ void GCONTEXT_CLASS createGraphicsPipelines() {
   //_pipelineManager->getPipeline(_pipelineManager->createPbrEnvMappingProgram(
   //    _envMappingRenderPass, _envMappingAttachmentLayout));
 
-  // TODO: We should not expose the actually used features.
   if (_extendedFeatures.fragmentShadingRateModifier.getSelectedFeature()
       == AttachmentBasedFragmentShadingRateModifier::SupportedFeature::FRAGMENT_SHADING_RATE) {
     _fragmentShadingOptimizationPipeline = _pipelineManager->getPipeline(
         _pipelineManager->createFragmentShadingRateProgram(*_logicalDevice));
   } else if (
       _extendedFeatures.fragmentShadingRateModifier.getSelectedFeature()
-      == AttachmentBasedFragmentShadingRateModifier::SupportedFeature::FRAGMENT_DENSITY_MAP) {
+          == AttachmentBasedFragmentShadingRateModifier::SupportedFeature::FRAGMENT_DENSITY_MAP) {
     _fragmentShadingOptimizationPipeline = _pipelineManager->getPipeline(
         _pipelineManager->createFragmentDensityMapProgram(*_logicalDevice));
   }
+  // TODO: We should not expose the actually used features.
 }
 
 GCONTEXT_TEMPLATE
@@ -790,20 +757,20 @@ void GCONTEXT_CLASS recordCommandBuffer(
   CommandBuffer::BeginInfoBuilder().beginCommandBuffer(
       primaryCommandBuffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
-  primaryCommandBuffer.bindPipeline(_fragmentShadingOptimizationPipeline->getVkPipelineBindPoint(),
-                                    _fragmentShadingOptimizationPipeline->getVkPipeline());
-  primaryCommandBuffer.bindDescriptorSets(
-      _fragmentShadingOptimizationPipeline->getVkPipelineBindPoint(),
-      _fragmentShadingOptimizationPipeline->getVkPipelineLayout(),
-      {_computeDescriptorSet.getVkDescriptorSet()});
-  DependencyInfoBuilder dependencyInfoBuilder;
-  auto [fragmentShadingVkImage, fragmentShadingMetadata] =
-      _fragmentShadingOptimizationImageRef.getUnderlyingResourceWithMetadata();
-  _extendedFeatures.fragmentShadingRateModifier.dispatchComputeFragmentShadingOptimizationImage(
-      primaryCommandBuffer, fragmentShadingVkImage, fragmentShadingMetadata.arrayLayers,
-      _fragmentShadingOptimizationPipeline->getVkPipelineLayout(), screenPos,
-      dependencyInfoBuilder);
-  primaryCommandBuffer.pipelineBarrier(dependencyInfoBuilder.build());
+//  primaryCommandBuffer.bindPipeline(_fragmentShadingOptimizationPipeline->getVkPipelineBindPoint(),
+//                                    _fragmentShadingOptimizationPipeline->getVkPipeline());
+//  primaryCommandBuffer.bindDescriptorSets(
+//      _fragmentShadingOptimizationPipeline->getVkPipelineBindPoint(),
+//      _fragmentShadingOptimizationPipeline->getVkPipelineLayout(),
+//      {_computeDescriptorSet.getVkDescriptorSet()});
+//  DependencyInfoBuilder dependencyInfoBuilder;
+//  auto [fragmentShadingVkImage, fragmentShadingMetadata] =
+//      _fragmentShadingOptimizationImageRef.getUnderlyingResourceWithMetadata();
+//  _extendedFeatures.fragmentShadingRateModifier.dispatchComputeFragmentShadingOptimizationImage(
+//      primaryCommandBuffer, fragmentShadingVkImage, fragmentShadingMetadata.arrayLayers,
+//      _fragmentShadingOptimizationPipeline->getVkPipelineLayout(), screenPos,
+//      dependencyInfoBuilder);
+//  primaryCommandBuffer.pipelineBarrier(dependencyInfoBuilder.build());
 
   const auto [framebuffer, framebufferMetadata] =
       _framebuffers[imageIndex].getUnderlyingResourceWithMetadata();
@@ -1082,7 +1049,7 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
     SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
     auto [colorAttachment, colorAttachmentMetadata] = createAttachment(
         *_logicalDevice, swapchainImageFormat, msaaSamples, extent, presentResources.numLayers,
-        VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT);
+        VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT);
     attachmentViews.push_back(colorAttachment.getVkImageView());
     Ref<Image> collorAttachmentHandle =
         _imageManager.storeImage(std::move(colorAttachment), colorAttachmentMetadata);
@@ -1097,7 +1064,7 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
 
     std::optional<std::tuple<Image, ImageMetadata>> optionalFragmentShadingOptimizationImage =
         _extendedFeatures.fragmentShadingRateModifier.createFragmentShadingOptimizationImage(
-            *_logicalDevice, extent, {16, 16}, presentResources.numLayers);
+            *_logicalDevice, *_singleTimeCommandPool, extent, {16, 16}, presentResources.numLayers);
     if (optionalFragmentShadingOptimizationImage.has_value()) {
       auto [optimizationImage, optimizationImageMetadata] =
           std::move(*optionalFragmentShadingOptimizationImage);
@@ -1110,7 +1077,7 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
           _logicalDevice->getVkDevice(), _computeDescriptorSet.getVkDescriptorSet());
       handle.transitionImageLayout(
           optimizationImage.getVkImage(), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-          VK_IMAGE_LAYOUT_GENERAL, 0, optimizationImageMetadata.mipLevels, 0,
+          VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT, 0, optimizationImageMetadata.mipLevels, 0,
           optimizationImageMetadata.arrayLayers);
       _fragmentShadingOptimizationImageRef =
           _imageManager.storeImage(std::move(optimizationImage), optimizationImageMetadata);
@@ -1281,69 +1248,6 @@ std::tuple<Image, ImageMetadata> createAttachment(
           .buildImageWithMetadata(logicalDevice);
   ImageViewBuilder().buildAndAddToImage(image, imageMetadata, 0, 1, 0, numLayers);
   return std::make_tuple(std::move(image), imageMetadata);
-}
-
-void createFsrContents(const LogicalDevice& logicalDevice, Image& image, Buffer& stagingBuffer,
-                       BufferMetadata& stagingMetadata, lib::Buffer<std::byte>& copyBuffer,
-                       const ImageMetadata& metadata, const CommandBuffer& commandBuffer) {
-  copyBuffer = lib::Buffer<std::byte>(
-      static_cast<size_t>(metadata.imageExtent.width * metadata.imageExtent.height), std::byte{10});
-  std::tie(stagingBuffer, stagingMetadata) =
-      BufferBuilder()
-          .withSize(copyBuffer.size())
-          .withUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
-          .buildStagingBufferWithMetadata(logicalDevice);
-  common::copyData(stagingMetadata.getMappedMemoryAsSpan(), std::span(copyBuffer));
-  lib::Buffer<VkBufferImageCopy> imageCopy(metadata.arrayLayers);
-  for (uint32_t layer = 0; layer < imageCopy.size(); layer++) {
-    imageCopy[layer] = VkBufferImageCopy{
-      .imageSubresource = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                           .mipLevel = 0,
-                           .baseArrayLayer = layer,
-                           .layerCount = 1},
-      .imageExtent = metadata.imageExtent,
-    };
-  }
-
-  commandBuffer.transitionImageLayout(
-      image.getVkImage(), metadata.imageAspect, VK_IMAGE_LAYOUT_UNDEFINED,
-      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, metadata.mipLevels, 0, metadata.arrayLayers);
-  commandBuffer.copyBufferToImage(stagingBuffer.getVkBuffer(), image.getVkImage(), imageCopy);
-  commandBuffer.transitionImageLayout(
-      image.getVkImage(), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-      VK_IMAGE_LAYOUT_GENERAL, 0, metadata.mipLevels, 0, metadata.arrayLayers);
-}
-
-void createFdmContents(const LogicalDevice& logicalDevice, Image& image, Buffer& stagingBuffer,
-                       BufferMetadata& stagingMetadata, lib::Buffer<std::byte>& copyBuffer,
-                       const ImageMetadata& metadata, const CommandBuffer& commandBuffer) {
-  copyBuffer = lib::Buffer<std::byte>(
-      static_cast<size_t>(metadata.imageExtent.width * metadata.imageExtent.height * 2),
-      std::byte{255});
-  std::tie(stagingBuffer, stagingMetadata) =
-      BufferBuilder()
-          .withSize(copyBuffer.size())
-          .withUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
-          .buildStagingBufferWithMetadata(logicalDevice);
-  common::copyData(stagingMetadata.getMappedMemoryAsSpan(), std::span(copyBuffer));
-  lib::Buffer<VkBufferImageCopy> imageCopy(metadata.arrayLayers);
-  for (uint32_t layer = 0; layer < imageCopy.size(); layer++) {
-    imageCopy[layer] = VkBufferImageCopy{
-      .imageSubresource = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                           .mipLevel = 0,
-                           .baseArrayLayer = layer,
-                           .layerCount = 1},
-      .imageExtent = metadata.imageExtent,
-    };
-  }
-
-  commandBuffer.transitionImageLayout(
-      image.getVkImage(), metadata.imageAspect, VK_IMAGE_LAYOUT_UNDEFINED,
-      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, metadata.mipLevels, 0, metadata.arrayLayers);
-  commandBuffer.copyBufferToImage(stagingBuffer.getVkBuffer(), image.getVkImage(), imageCopy);
-  commandBuffer.transitionImageLayout(
-      image.getVkImage(), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-      VK_IMAGE_LAYOUT_GENERAL, 0, metadata.mipLevels, 0, metadata.arrayLayers);
 }
 
 }  // namespace

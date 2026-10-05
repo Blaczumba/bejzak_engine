@@ -8,6 +8,7 @@
 
 #include "vulkan/wrapper/builders/dependency_info_builder.h"
 #include "vulkan/wrapper/command_buffer/command_buffer.h"
+#include "vulkan/wrapper/command_buffer/command_pool.h"
 #include "vulkan/wrapper/memory_objects/image.h"
 #include "vulkan/wrapper/physical_device/extensions_connector.h"
 #include "vulkan/wrapper/physical_device/physical_device.h"
@@ -32,6 +33,7 @@ class AttachmentBasedFragmentShadingRateModifier {
 public:
   enum class SupportedFeature : uint8_t {
     FRAGMENT_DENSITY_MAP = 0,
+    FRAGMENT_DENSITY_MAP_OFFSET,
     FRAGMENT_SHADING_RATE,
     NONE  // This must be the last option in the enum.
   };
@@ -53,7 +55,7 @@ public:
   SupportedFeature getSelectedFeature() const noexcept;
 
   std::optional<std::tuple<Image, ImageMetadata>> createFragmentShadingOptimizationImage(
-      const LogicalDevice& logicalDevice, VkExtent2D extent, VkExtent2D preferredTexelSize,
+      const LogicalDevice& logicalDevice, const CommandPool& commandPool, VkExtent2D extent, VkExtent2D preferredTexelSize,
       uint32_t numLayers) const;
 
   void dispatchComputeFragmentShadingOptimizationImage(

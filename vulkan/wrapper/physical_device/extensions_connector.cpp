@@ -159,6 +159,18 @@ ExtensionsConnector& ExtensionsConnector::withFragmentDensityMapExtension(
   return *this;
 }
 
+ExtensionsConnector& ExtensionsConnector::withFragmentDensityMapOffsetExtension(
+    const VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM& features) {
+  bool isAlreadyChained = _fragmentDensityMapOffset.has_value();
+  _fragmentDensityMapOffset = features;
+  if (!isAlreadyChained) {
+    chainExtensionFeature(
+        &_next, *_fragmentDensityMapOffset, _physicalDevice, VK_QCOM_FRAGMENT_DENSITY_MAP_OFFSET_EXTENSION_NAME,
+        _availableRequestedDeviceExtensions);
+  }
+  return *this;
+}
+
 ExtensionsConnector& ExtensionsConnector::withSynchronization2() {
   bool isAlreadyChained = _synchronization2.has_value();
   _synchronization2 = VkPhysicalDeviceSynchronization2Features{
