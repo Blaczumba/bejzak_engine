@@ -8,11 +8,11 @@
 #include <vulkan/vulkan.h>
 
 #include "vulkan/wrapper/builders/dependency_info_builder.h"
-#include "vulkan/wrapper/command_buffer/single_time_command_buffer.h"
-#include "vulkan/wrapper/command_buffer/command_pool.h"
 #include "vulkan/wrapper/command_buffer/command_buffer.h"
-#include "vulkan/wrapper/memory_objects/image.h"
+#include "vulkan/wrapper/command_buffer/command_pool.h"
+#include "vulkan/wrapper/command_buffer/single_time_command_buffer.h"
 #include "vulkan/wrapper/memory_objects/buffer.h"
+#include "vulkan/wrapper/memory_objects/image.h"
 #include "vulkan/wrapper/physical_device/extensions_connector.h"
 #include "vulkan/wrapper/physical_device/physical_device.h"
 #include "vulkan/wrapper/pipeline/graphics_pipeline_builder.h"
@@ -27,13 +27,12 @@ void chainExtendedField(VkPhysicalDeviceFeatures2& deviceFeatures, T& feature) {
   deviceFeatures.pNext = &feature;
 }
 
-VkExtent2D clampExtent(VkExtent2D extent, VkExtent2D preferredTexelSize, VkExtent2D minClamp, VkExtent2D maxClamp) {
-  VkExtent2D texelSize{
-      std::clamp(preferredTexelSize.width, minClamp.width,
-                 maxClamp.width),
-      std::clamp(preferredTexelSize.height, minClamp.height,
-                 maxClamp.height)};
-  return VkExtent2D{(extent.width + texelSize.width - 1) / texelSize.width, (extent.height + texelSize.height - 1) / texelSize.height};
+VkExtent2D clampExtent(
+    VkExtent2D extent, VkExtent2D preferredTexelSize, VkExtent2D minClamp, VkExtent2D maxClamp) {
+  VkExtent2D texelSize{std::clamp(preferredTexelSize.width, minClamp.width, maxClamp.width),
+                       std::clamp(preferredTexelSize.height, minClamp.height, maxClamp.height)};
+  return VkExtent2D{(extent.width + texelSize.width - 1) / texelSize.width,
+                    (extent.height + texelSize.height - 1) / texelSize.height};
 }
 
 }  // namespace
@@ -68,9 +67,11 @@ AttachmentBasedFragmentShadingRateModifier::create(
 
   std::bitset<FEATURES_NUMBER> supportedFeatures;
   supportedFeatures[static_cast<size_t>(SupportedFeature::FRAGMENT_DENSITY_MAP)] =
-      fdmFeatures.fragmentDensityMap && fdmFeatures.fragmentDensityMapDynamic && fdmFeatures.fragmentDensityMapNonSubsampledImages;
+      fdmFeatures.fragmentDensityMap && fdmFeatures.fragmentDensityMapDynamic
+      && fdmFeatures.fragmentDensityMapNonSubsampledImages;
   supportedFeatures[static_cast<size_t>(SupportedFeature::FRAGMENT_DENSITY_MAP_OFFSET)] =
-      fdmFeatures.fragmentDensityMap && fdmFeatures.fragmentDensityMapNonSubsampledImages && fdmOffsetQcomFeatures.fragmentDensityMapOffset;
+      fdmFeatures.fragmentDensityMap && fdmFeatures.fragmentDensityMapNonSubsampledImages
+      && fdmOffsetQcomFeatures.fragmentDensityMapOffset;
   supportedFeatures[static_cast<size_t>(SupportedFeature::FRAGMENT_SHADING_RATE)] =
       fsrFeatures.attachmentFragmentShadingRate;
 
@@ -126,12 +127,14 @@ void AttachmentBasedFragmentShadingRateModifier::modify(GraphicsPipelineBuilder&
 void AttachmentBasedFragmentShadingRateModifier::modify(AttachmentLayout& layout) const {
   switch (_selectedFeature) {
     case SupportedFeature::FRAGMENT_DENSITY_MAP:
-    case SupportedFeature::FRAGMENT_DENSITY_MAP_OFFSET:
       layout.addFragmentDensityMapAttachment();
-      return;
+      break;
+    case SupportedFeature::FRAGMENT_DENSITY_MAP_OFFSET:
+      layout.addFragmentDensityMapOffsetAttachment();
+      break;
     case SupportedFeature::FRAGMENT_SHADING_RATE:
       layout.addFragmentShadingRateAttachment();
-      return;
+      break;
   }
 }
 
@@ -142,75 +145,111 @@ AttachmentBasedFragmentShadingRateModifier::getSelectedFeature() const noexcept 
 
 std::optional<std::tuple<Image, ImageMetadata>>
 AttachmentBasedFragmentShadingRateModifier::createFragmentShadingOptimizationImage(
-    const LogicalDevice& logicalDevice, const CommandPool& commandPool, VkExtent2D extent, VkExtent2D preferredTexelSize,
-    uint32_t numLayers) const {
+    const LogicalDevice& logicalDevice, const CommandPool& commandPool, VkExtent2D extent,
+    VkExtent2D preferredTexelSize, uint32_t numLayers) const {
   // TODO: What if _physicalDevice is nullptr?
   VkFormat format;
   VkImageCreateFlags flags{};
   VkImageUsageFlags usage;
   VkExtent2D optimizationExtent;
   switch (_selectedFeature) {
-    case SupportedFeature::FRAGMENT_DENSITY_MAP: {
-      format = VK_FORMAT_R8G8_UNORM;
-      usage = VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT | VK_IMAGE_USAGE_STORAGE_BIT;
-      const VkPhysicalDeviceFragmentDensityMapPropertiesEXT& fdmProperties =
-          _physicalDevice->getFragmentDensityMapProperties();
-      optimizationExtent = clampExtent(extent, preferredTexelSize, fdmProperties.minFragmentDensityTexelSize, fdmProperties.maxFragmentDensityTexelSize);
-      break;
-    }
-    case SupportedFeature::FRAGMENT_DENSITY_MAP_OFFSET: {
-      format = VK_FORMAT_R8G8_UNORM;
-      flags = VK_IMAGE_CREATE_FRAGMENT_DENSITY_MAP_OFFSET_BIT_QCOM;
-      usage = VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-      const VkPhysicalDeviceFragmentDensityMapPropertiesEXT& fdmProperties =
-          _physicalDevice->getFragmentDensityMapProperties();
-      optimizationExtent = clampExtent(extent, preferredTexelSize, fdmProperties.minFragmentDensityTexelSize, fdmProperties.maxFragmentDensityTexelSize);
-      break;
-    }
-    case SupportedFeature::FRAGMENT_SHADING_RATE: {
-      format = VK_FORMAT_R8_UINT;
-      usage = VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR | VK_IMAGE_USAGE_STORAGE_BIT;
-      const VkPhysicalDeviceFragmentShadingRatePropertiesKHR& fsrProperties =
-          _physicalDevice->getFragmentShadingRateProperties();
-      optimizationExtent = clampExtent(extent, preferredTexelSize, fsrProperties.minFragmentShadingRateAttachmentTexelSize, fsrProperties.maxFragmentShadingRateAttachmentTexelSize);
-      break;
-    }
+    case SupportedFeature::FRAGMENT_DENSITY_MAP:
+      {
+        format = VK_FORMAT_R8G8_UNORM;
+        usage = VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT | VK_IMAGE_USAGE_STORAGE_BIT;
+        const VkPhysicalDeviceFragmentDensityMapPropertiesEXT& fdmProperties =
+            _physicalDevice->getFragmentDensityMapProperties();
+        optimizationExtent =
+            clampExtent(extent, preferredTexelSize, fdmProperties.minFragmentDensityTexelSize,
+                        fdmProperties.maxFragmentDensityTexelSize);
+        break;
+      }
+    case SupportedFeature::FRAGMENT_DENSITY_MAP_OFFSET:
+      {
+        format = VK_FORMAT_R8G8_UNORM;
+        flags = VK_IMAGE_CREATE_FRAGMENT_DENSITY_MAP_OFFSET_BIT_QCOM;
+        usage = VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        const VkPhysicalDeviceFragmentDensityMapPropertiesEXT& fdmProperties =
+            _physicalDevice->getFragmentDensityMapProperties();
+        optimizationExtent =
+            clampExtent(extent, preferredTexelSize, fdmProperties.minFragmentDensityTexelSize,
+                        fdmProperties.maxFragmentDensityTexelSize);
+        break;
+      }
+    case SupportedFeature::FRAGMENT_SHADING_RATE:
+      {
+        format = VK_FORMAT_R8_UINT;
+        usage =
+            VK_IMAGE_USAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR | VK_IMAGE_USAGE_STORAGE_BIT;
+        const VkPhysicalDeviceFragmentShadingRatePropertiesKHR& fsrProperties =
+            _physicalDevice->getFragmentShadingRateProperties();
+        optimizationExtent = clampExtent(
+            extent, preferredTexelSize, fsrProperties.minFragmentShadingRateAttachmentTexelSize,
+            fsrProperties.maxFragmentShadingRateAttachmentTexelSize);
+        SingleTimeCommandBuffer handle(commandPool);
+        break;
+      }
     default:
       return std::nullopt;
   }
-  auto [image, metadata] = ImageBuilder()
-      .withFormat(format)
-      .withNumSamples(VK_SAMPLE_COUNT_1_BIT)
-      .withExtent(optimizationExtent)
-      .withLayerCount(numLayers)
-      .withAspect(VK_IMAGE_ASPECT_COLOR_BIT)
-      .withUsage(usage)
-      .withFlags(flags)
-      .buildImageWithMetadata(logicalDevice);
+  auto [image, metadata] =
+      ImageBuilder()
+          .withFormat(format)
+          .withNumSamples(VK_SAMPLE_COUNT_1_BIT)
+          .withExtent(optimizationExtent)
+          .withLayerCount(numLayers)
+          .withAspect(VK_IMAGE_ASPECT_COLOR_BIT)
+          .withUsage(usage)
+          .withFlags(flags)
+          .buildImageWithMetadata(logicalDevice);
 
-  if (_selectedFeature == SupportedFeature::FRAGMENT_DENSITY_MAP_OFFSET) {
-    // TODO: This should be written from config;
-    lib::Buffer<std::byte> copyBuffer(metadata.imageExtent.width * metadata.imageExtent.height * 2, std::byte{255});
-    auto [buffer, bufferMetadata] = BufferBuilder()
-        .withSize(copyBuffer.size())
-        .withUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
-        .buildStagingBufferWithMetadata(logicalDevice);
-    std::memcpy(bufferMetadata.mappedMemory, copyBuffer.data(), copyBuffer.size());
-    lib::Buffer<VkBufferImageCopy> imageCopy(numLayers);
-    for (uint32_t layer = 0; layer < imageCopy.size(); layer++) {
-      imageCopy[layer] = VkBufferImageCopy {
-        .imageSubresource = {
-            .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-            .mipLevel = 0,
-            .baseArrayLayer = layer,
-            .layerCount = 1},
+  VkImageLayout inLayout;
+  VkImageLayout outLayout;
+  switch (_selectedFeature) {
+    case SupportedFeature::FRAGMENT_DENSITY_MAP_OFFSET:
+      {
+        // TODO: This should be written from config;
+        lib::Buffer<std::byte> copyBuffer(
+            metadata.imageExtent.width * metadata.imageExtent.height * 2, std::byte{255});
+        auto [buffer, bufferMetadata] =
+            BufferBuilder()
+                .withSize(copyBuffer.size())
+                .withUsage(VK_BUFFER_USAGE_TRANSFER_SRC_BIT)
+                .buildStagingBufferWithMetadata(logicalDevice);
+        std::memcpy(bufferMetadata.mappedMemory, copyBuffer.data(), copyBuffer.size());
+        lib::Buffer<VkBufferImageCopy> imageCopy(numLayers);
+        for (uint32_t layer = 0; layer < imageCopy.size(); layer++) {
+          imageCopy[layer] = VkBufferImageCopy{
+            .imageSubresource = {.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                                 .mipLevel = 0,
+                                 .baseArrayLayer = layer,
+                                 .layerCount = 1},
             .imageExtent = metadata.imageExtent,
-            };
-    }
-    SingleTimeCommandBuffer handle(commandPool);
-    handle.transitionImageLayout(image.getVkImage(), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, 1, 0, numLayers);
-    handle.copyBufferToImage(buffer.getVkBuffer(), image.getVkImage(), imageCopy);
+          };
+        }
+        SingleTimeCommandBuffer handle(commandPool);
+        handle.transitionImageLayout(
+            image.getVkImage(), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, 1, 0, numLayers);
+        handle.copyBufferToImage(buffer.getVkBuffer(), image.getVkImage(), imageCopy);
+        inLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+        outLayout = VK_IMAGE_LAYOUT_GENERAL;
+        break;
+      }
+    case SupportedFeature::FRAGMENT_DENSITY_MAP:
+      {
+        inLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        outLayout = VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT;
+      }
+    case SupportedFeature::FRAGMENT_SHADING_RATE:
+      {
+        inLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        outLayout = VK_IMAGE_LAYOUT_GENERAL;
+      }
   }
+  SingleTimeCommandBuffer handle(commandPool);
+  handle.transitionImageLayout(
+      image.getVkImage(), VK_IMAGE_ASPECT_COLOR_BIT, inLayout, outLayout, 0, 1, 0, numLayers);
   return std::tuple{std::move(image), metadata};
 }
 
@@ -218,7 +257,8 @@ void AttachmentBasedFragmentShadingRateModifier::dispatchComputeFragmentShadingO
     const CommandBuffer& commandBuffer, VkImage image, uint32_t layers, VkPipelineLayout layout,
     std::pair<uint32_t, uint32_t> foveationPoint,
     DependencyInfoBuilder& dependencyInfoBuilder) const {
-  if (_selectedFeature != SupportedFeature::FRAGMENT_DENSITY_MAP && _selectedFeature != SupportedFeature::FRAGMENT_SHADING_RATE) {
+  if (_selectedFeature != SupportedFeature::FRAGMENT_DENSITY_MAP
+      && _selectedFeature != SupportedFeature::FRAGMENT_SHADING_RATE) {
     return;
   }
   commandBuffer.pushConstants(

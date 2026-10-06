@@ -165,8 +165,8 @@ ExtensionsConnector& ExtensionsConnector::withFragmentDensityMapOffsetExtension(
   _fragmentDensityMapOffset = features;
   if (!isAlreadyChained) {
     chainExtensionFeature(
-        &_next, *_fragmentDensityMapOffset, _physicalDevice, VK_QCOM_FRAGMENT_DENSITY_MAP_OFFSET_EXTENSION_NAME,
-        _availableRequestedDeviceExtensions);
+        &_next, *_fragmentDensityMapOffset, _physicalDevice,
+        VK_QCOM_FRAGMENT_DENSITY_MAP_OFFSET_EXTENSION_NAME, _availableRequestedDeviceExtensions);
   }
   return *this;
 }

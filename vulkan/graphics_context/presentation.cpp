@@ -59,7 +59,9 @@ std::unique_ptr<common::Presentation> Presentation::create(
   PhysicalDeviceOptionalExtendedFeatures extendedFeatures;
   const char* fragmentShadingRateAttachmentExtension;
   std::tie(extendedFeatures.fragmentShadingRateModifier, fragmentShadingRateAttachmentExtension) =
-      AttachmentBasedFragmentShadingRateModifier::create(*physicalDevice, *extensionsConnector);
+      AttachmentBasedFragmentShadingRateModifier::create(
+          *physicalDevice, *extensionsConnector,
+          AttachmentBasedFragmentShadingRateModifier::SupportedFeature::FRAGMENT_SHADING_RATE);
 
   std::unique_ptr<LogicalDevice> logicalDevice =
       LogicalDeviceBuilder()

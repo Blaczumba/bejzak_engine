@@ -55,8 +55,8 @@ public:
   SupportedFeature getSelectedFeature() const noexcept;
 
   std::optional<std::tuple<Image, ImageMetadata>> createFragmentShadingOptimizationImage(
-      const LogicalDevice& logicalDevice, const CommandPool& commandPool, VkExtent2D extent, VkExtent2D preferredTexelSize,
-      uint32_t numLayers) const;
+      const LogicalDevice& logicalDevice, const CommandPool& commandPool, VkExtent2D extent,
+      VkExtent2D preferredTexelSize, uint32_t numLayers) const;
 
   void dispatchComputeFragmentShadingOptimizationImage(
       const CommandBuffer& commandBuffer, VkImage image, uint32_t layers, VkPipelineLayout layout,

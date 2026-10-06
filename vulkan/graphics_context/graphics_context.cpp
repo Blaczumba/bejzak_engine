@@ -119,8 +119,8 @@ std::tuple<Image, ImageMetadata> createAttachment(
 
 GCONTEXT_TEMPLATE
 void GCONTEXT_CLASS setup() {
-  std::vector<common::AssetData> sponzaData =
-      common::LoadGltfFromFile(*_assetManager, _fileLoader, MODELS_PATH "sponza-gltf-pbr/sponza.glb");
+  std::vector<common::AssetData> sponzaData = common::LoadGltfFromFile(
+      *_assetManager, _fileLoader, MODELS_PATH "sponza-gltf-pbr/sponza.glb");
 
   createDescriptorSets();
   createEnvMappingResources();
@@ -257,14 +257,15 @@ void GCONTEXT_CLASS createDescriptorSets() {
     _lightHandle = _bindlessWriter->writeBuffer(
         _bufferManager.storeBuffer(std::move(buffer), metadata), metadata.usage, metadata.size);
 
-//    _ubLight.pos = glm::vec3(15.1891f, 2.66408f, -0.841221f);
+    //    _ubLight.pos = glm::vec3(15.1891f, 2.66408f, -0.841221f);
     _ubLight.pos = glm::vec3(-6.35149f, 5.81116f, 0.970902f);
     _ubLight.projView = glm::perspective(glm::radians(120.0f), 1.0f, 0.1f, 40.0f);
     _ubLight.projView[1][1] = -_ubLight.projView[1][1];
-    _ubLight.projView = _ubLight.projView
-//                        * glm::lookAt(_ubLight.pos, glm::vec3(-3.82383f, 3.66503f, 1.30751f),
-                        * glm::lookAt(_ubLight.pos, glm::vec3(0.0f, 1.0f, -1.0f),
-                                      glm::vec3(0.0f, 1.0f, 0.0f));
+    _ubLight.projView =
+        _ubLight.projView
+        //                        * glm::lookAt(_ubLight.pos,
+        //                        glm::vec3(-3.82383f, 3.66503f, 1.30751f),
+        * glm::lookAt(_ubLight.pos, glm::vec3(0.0f, 1.0f, -1.0f), glm::vec3(0.0f, 1.0f, 0.0f));
     common::copyObject(metadata.getMappedMemoryAsSpan(), _ubLight);
     _lightBuffer = std::move(buffer);
   }
@@ -411,7 +412,7 @@ void GCONTEXT_CLASS createGraphicsPipelines() {
         _pipelineManager->createFragmentShadingRateProgram(*_logicalDevice));
   } else if (
       _extendedFeatures.fragmentShadingRateModifier.getSelectedFeature()
-          == AttachmentBasedFragmentShadingRateModifier::SupportedFeature::FRAGMENT_DENSITY_MAP) {
+      == AttachmentBasedFragmentShadingRateModifier::SupportedFeature::FRAGMENT_DENSITY_MAP) {
     _fragmentShadingOptimizationPipeline = _pipelineManager->getPipeline(
         _pipelineManager->createFragmentDensityMapProgram(*_logicalDevice));
   }
@@ -757,20 +758,23 @@ void GCONTEXT_CLASS recordCommandBuffer(
   CommandBuffer::BeginInfoBuilder().beginCommandBuffer(
       primaryCommandBuffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
-//  primaryCommandBuffer.bindPipeline(_fragmentShadingOptimizationPipeline->getVkPipelineBindPoint(),
-//                                    _fragmentShadingOptimizationPipeline->getVkPipeline());
-//  primaryCommandBuffer.bindDescriptorSets(
-//      _fragmentShadingOptimizationPipeline->getVkPipelineBindPoint(),
-//      _fragmentShadingOptimizationPipeline->getVkPipelineLayout(),
-//      {_computeDescriptorSet.getVkDescriptorSet()});
-//  DependencyInfoBuilder dependencyInfoBuilder;
-//  auto [fragmentShadingVkImage, fragmentShadingMetadata] =
-//      _fragmentShadingOptimizationImageRef.getUnderlyingResourceWithMetadata();
-//  _extendedFeatures.fragmentShadingRateModifier.dispatchComputeFragmentShadingOptimizationImage(
-//      primaryCommandBuffer, fragmentShadingVkImage, fragmentShadingMetadata.arrayLayers,
-//      _fragmentShadingOptimizationPipeline->getVkPipelineLayout(), screenPos,
-//      dependencyInfoBuilder);
-//  primaryCommandBuffer.pipelineBarrier(dependencyInfoBuilder.build());
+  if (_fragmentShadingOptimizationPipeline != nullptr) {
+    primaryCommandBuffer.bindPipeline(
+        _fragmentShadingOptimizationPipeline->getVkPipelineBindPoint(),
+        _fragmentShadingOptimizationPipeline->getVkPipeline());
+    primaryCommandBuffer.bindDescriptorSets(
+        _fragmentShadingOptimizationPipeline->getVkPipelineBindPoint(),
+        _fragmentShadingOptimizationPipeline->getVkPipelineLayout(),
+        {_computeDescriptorSet.getVkDescriptorSet()});
+    DependencyInfoBuilder dependencyInfoBuilder;
+    auto [fragmentShadingVkImage, fragmentShadingMetadata] =
+        _fragmentShadingOptimizationImageRef.getUnderlyingResourceWithMetadata();
+    _extendedFeatures.fragmentShadingRateModifier.dispatchComputeFragmentShadingOptimizationImage(
+        primaryCommandBuffer, fragmentShadingVkImage, fragmentShadingMetadata.arrayLayers,
+        _fragmentShadingOptimizationPipeline->getVkPipelineLayout(), screenPos,
+        dependencyInfoBuilder);
+    primaryCommandBuffer.pipelineBarrier(dependencyInfoBuilder.build());
+  }
 
   const auto [framebuffer, framebufferMetadata] =
       _framebuffers[imageIndex].getUnderlyingResourceWithMetadata();
@@ -1045,49 +1049,43 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
 
   lib::Buffer<Ref<Image>> attachmentRefs;
   std::vector<VkImageView> attachmentViews;
-  {
-    SingleTimeCommandBuffer handle(*_singleTimeCommandPool);
-    auto [colorAttachment, colorAttachmentMetadata] = createAttachment(
-        *_logicalDevice, swapchainImageFormat, msaaSamples, extent, presentResources.numLayers,
-        VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT);
-    attachmentViews.push_back(colorAttachment.getVkImageView());
-    Ref<Image> collorAttachmentHandle =
-        _imageManager.storeImage(std::move(colorAttachment), colorAttachmentMetadata);
+  auto [colorAttachment, colorAttachmentMetadata] = createAttachment(
+      *_logicalDevice, swapchainImageFormat, msaaSamples, extent, presentResources.numLayers,
+      VK_IMAGE_ASPECT_COLOR_BIT,
+      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT);
+  attachmentViews.push_back(colorAttachment.getVkImageView());
+  Ref<Image> collorAttachmentHandle =
+      _imageManager.storeImage(std::move(colorAttachment), colorAttachmentMetadata);
 
-    auto [depthAtachment, depthAtachmentMetadata] = createAttachment(
-        *_logicalDevice, VK_FORMAT_D24_UNORM_S8_UINT, msaaSamples, extent,
-        presentResources.numLayers, VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
-        VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT);
-    attachmentViews.push_back(depthAtachment.getVkImageView());
-    Ref<Image> depthAttachmentHandle =
-        _imageManager.storeImage(std::move(depthAtachment), depthAtachmentMetadata);
+  auto [depthAtachment, depthAtachmentMetadata] = createAttachment(
+      *_logicalDevice, VK_FORMAT_D24_UNORM_S8_UINT, msaaSamples, extent, presentResources.numLayers,
+      VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
+      VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT);
+  attachmentViews.push_back(depthAtachment.getVkImageView());
+  Ref<Image> depthAttachmentHandle =
+      _imageManager.storeImage(std::move(depthAtachment), depthAtachmentMetadata);
 
-    std::optional<std::tuple<Image, ImageMetadata>> optionalFragmentShadingOptimizationImage =
-        _extendedFeatures.fragmentShadingRateModifier.createFragmentShadingOptimizationImage(
-            *_logicalDevice, *_singleTimeCommandPool, extent, {16, 16}, presentResources.numLayers);
-    if (optionalFragmentShadingOptimizationImage.has_value()) {
-      auto [optimizationImage, optimizationImageMetadata] =
-          std::move(*optionalFragmentShadingOptimizationImage);
-      VkImageView imageView = ImageViewBuilder().buildAndAddToImage(
-          optimizationImage, optimizationImageMetadata, 0, optimizationImageMetadata.mipLevels, 0,
-          optimizationImageMetadata.arrayLayers);
-      attachmentViews.push_back(imageView);
-      _computeDescriptorSetWriter.storeImageStorage(imageView, VK_IMAGE_LAYOUT_GENERAL);
-      _computeDescriptorSetWriter.writeDescriptorSet(
-          _logicalDevice->getVkDevice(), _computeDescriptorSet.getVkDescriptorSet());
-      handle.transitionImageLayout(
-          optimizationImage.getVkImage(), VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-          VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT, 0, optimizationImageMetadata.mipLevels, 0,
-          optimizationImageMetadata.arrayLayers);
-      _fragmentShadingOptimizationImageRef =
-          _imageManager.storeImage(std::move(optimizationImage), optimizationImageMetadata);
-      attachmentRefs = lib::Buffer<Ref<Image>>{
-        std::move(collorAttachmentHandle), std::move(depthAttachmentHandle),
-        _fragmentShadingOptimizationImageRef};
-    } else {
-      attachmentRefs = lib::Buffer<Ref<Image>>{
-        std::move(collorAttachmentHandle), std::move(depthAttachmentHandle)};
-    }
+  std::optional<std::tuple<Image, ImageMetadata>> optionalFragmentShadingOptimizationImage =
+      _extendedFeatures.fragmentShadingRateModifier.createFragmentShadingOptimizationImage(
+          *_logicalDevice, *_singleTimeCommandPool, extent, {16, 16}, presentResources.numLayers);
+  if (optionalFragmentShadingOptimizationImage.has_value()) {
+    auto [optimizationImage, optimizationImageMetadata] =
+        std::move(*optionalFragmentShadingOptimizationImage);
+    VkImageView imageView = ImageViewBuilder().buildAndAddToImage(
+        optimizationImage, optimizationImageMetadata, 0, optimizationImageMetadata.mipLevels, 0,
+        optimizationImageMetadata.arrayLayers);
+    attachmentViews.push_back(imageView);
+    _computeDescriptorSetWriter.storeImageStorage(imageView, VK_IMAGE_LAYOUT_GENERAL);
+    _computeDescriptorSetWriter.writeDescriptorSet(
+        _logicalDevice->getVkDevice(), _computeDescriptorSet.getVkDescriptorSet());
+    _fragmentShadingOptimizationImageRef =
+        _imageManager.storeImage(std::move(optimizationImage), optimizationImageMetadata);
+    attachmentRefs = lib::Buffer<Ref<Image>>{
+      std::move(collorAttachmentHandle), std::move(depthAttachmentHandle),
+      _fragmentShadingOptimizationImageRef};
+  } else {
+    attachmentRefs = lib::Buffer<Ref<Image>>{
+      std::move(collorAttachmentHandle), std::move(depthAttachmentHandle)};
   }
 
   RenderpassBuilder renderpassBuilder(_attachmentLayout);

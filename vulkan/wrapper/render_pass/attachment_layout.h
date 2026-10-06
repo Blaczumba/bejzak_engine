@@ -60,6 +60,8 @@ public:
 
   AttachmentLayout& addFragmentDensityMapAttachment();
 
+  AttachmentLayout& addFragmentDensityMapOffsetAttachment();
+
 private:
   VkSampleCountFlagBits _numMsaaSamples;
   std::vector<VkClearValue> _clearValues;
