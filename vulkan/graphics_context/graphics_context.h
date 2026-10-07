@@ -169,6 +169,10 @@ private:
   Pipeline* _graphicsTesselationPipeline;
   PipelineHandle _graphicsTesselationPipelineHandle;
 
+  // Passthrough subpass.
+  Pipeline* _passthroughPipeline;
+  UniformTextureHandle _passthroughImageHandle;
+
   // Blinn Phong Tesselation.
   PipelineHandle _blinnPhongTesselationPipelineHandle;
 

@@ -35,6 +35,12 @@ DescriptorSetWriter& DescriptorSetWriter::storeImageStorage(
   return *this;
 }
 
+DescriptorSetWriter& DescriptorSetWriter::storeInputAttachment(
+    VkImageView imageView, VkImageLayout layout) {
+  storeImage(imageView, layout, nullptr, VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT);
+  return *this;
+}
+
 DescriptorSetWriter& DescriptorSetWriter::storeBuffer(
     const Buffer& buffer, VkBufferUsageFlags usage, VkDeviceSize range, VkDeviceSize offset) {
   _bufferInfos.push_back(VkDescriptorBufferInfo{

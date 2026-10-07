@@ -109,8 +109,9 @@ void CommandBuffer::endRenderPass() const {
 }
 
 void CommandBuffer::endRenderPass(const VkSubpassEndInfo& subpassEndInfo) const {
-  PFN_vkCmdEndRenderPass2KHR pfnEndRenderPass2 = reinterpret_cast<PFN_vkCmdEndRenderPass2KHR>(
-      vkGetDeviceProcAddr(_commandPool->getLogicalDevice().getVkDevice(), "vkCmdEndRenderPass2KHR"));
+  PFN_vkCmdEndRenderPass2KHR pfnEndRenderPass2 =
+      reinterpret_cast<PFN_vkCmdEndRenderPass2KHR>(vkGetDeviceProcAddr(
+          _commandPool->getLogicalDevice().getVkDevice(), "vkCmdEndRenderPass2KHR"));
   pfnEndRenderPass2(_commandBuffer, &subpassEndInfo);
   // vkCmdEndRenderPass2(_commandBuffer, &subpassEndInfo);
 }

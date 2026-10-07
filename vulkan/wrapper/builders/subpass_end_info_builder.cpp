@@ -10,11 +10,12 @@ void chain(void** pNext, Feature& feature) {
   *pNext = &feature;
 }
 
-}
+}  // namespace
 
-SubpassEndInfoBuilder& SubpassEndInfoBuilder::withFragmentDensityMapOffsetEndInfo(std::initializer_list<VkOffset2D> fragmentDensityOffsets) noexcept {
+SubpassEndInfoBuilder& SubpassEndInfoBuilder::withFragmentDensityMapOffsetEndInfo(
+    std::initializer_list<VkOffset2D> fragmentDensityOffsets) noexcept {
   bool isChained = _fragmentDensityMapInfo.has_value();
-  _fragmentDensityMapInfo = VkSubpassFragmentDensityMapOffsetEndInfoQCOM {
+  _fragmentDensityMapInfo = VkSubpassFragmentDensityMapOffsetEndInfoQCOM{
     .sType = VK_STRUCTURE_TYPE_SUBPASS_FRAGMENT_DENSITY_MAP_OFFSET_END_INFO_QCOM,
     .fragmentDensityOffsetCount = static_cast<uint32_t>(fragmentDensityOffsets.size()),
     .pFragmentDensityOffsets = fragmentDensityOffsets.begin()};
@@ -25,7 +26,5 @@ SubpassEndInfoBuilder& SubpassEndInfoBuilder::withFragmentDensityMapOffsetEndInf
 }
 
 VkSubpassEndInfo SubpassEndInfoBuilder::build() const noexcept {
-  return VkSubpassEndInfo {
-    .sType = VK_STRUCTURE_TYPE_SUBPASS_END_INFO,
-    .pNext = _pNext};
+  return VkSubpassEndInfo{.sType = VK_STRUCTURE_TYPE_SUBPASS_END_INFO, .pNext = _pNext};
 }

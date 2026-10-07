@@ -96,6 +96,8 @@ public:
 
   GraphicsPipelineBuilder& withPushConstantShaderStages(VkShaderStageFlags shaderStageFlags);
 
+  GraphicsPipelineBuilder& withSubpass(uint32_t subpassIndex);
+
   GraphicsPipelineBuilder& withFragmentShadingRateStateCreateInfo(
       VkExtent2D fragmentSize, VkFragmentShadingRateCombinerOpKHR combinerOp1,
       VkFragmentShadingRateCombinerOpKHR combinerOp2);
@@ -107,30 +109,41 @@ private:
 
   lib::Buffer<VkVertexInputBindingDescription> _vertexBindingDescriptions;
   lib::Buffer<VkVertexInputAttributeDescription> _vertexAttributeDescriptions;
-  VkPipelineVertexInputStateCreateInfo _vertexInputState = {};
+  VkPipelineVertexInputStateCreateInfo _vertexInputState = {
+    VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO};
 
-  VkPipelineInputAssemblyStateCreateInfo _inputAssemblyState = {};
+  VkPipelineInputAssemblyStateCreateInfo _inputAssemblyState = {
+    VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO};
 
-  VkPipelineTessellationStateCreateInfo _tessellationState = {};
+  VkPipelineTessellationStateCreateInfo _tessellationState = {
+    VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO};
 
   lib::Buffer<VkViewport> _viewports;
   lib::Buffer<VkRect2D> _scissors;
-  VkPipelineViewportStateCreateInfo _viewportState = {};
+  VkPipelineViewportStateCreateInfo _viewportState = {
+    VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO};
 
-  VkPipelineRasterizationStateCreateInfo _rasterizationState = {};
+  VkPipelineRasterizationStateCreateInfo _rasterizationState = {
+    VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO};
 
   lib::Buffer<VkSampleMask> _sampleMasks;
-  VkPipelineMultisampleStateCreateInfo _multisampleState = {};
+  VkPipelineMultisampleStateCreateInfo _multisampleState = {
+    VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO};
 
   lib::Buffer<VkPipelineColorBlendAttachmentState> _colorBlendAttachments;
-  VkPipelineColorBlendStateCreateInfo _colorBlendState = {};
+  VkPipelineColorBlendStateCreateInfo _colorBlendState = {
+    VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO};
 
-  VkPipelineDepthStencilStateCreateInfo _depthStencilState = {};
+  VkPipelineDepthStencilStateCreateInfo _depthStencilState = {
+    VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO};
 
   lib::Buffer<VkDynamicState> _dynamicStates;
-  VkPipelineDynamicStateCreateInfo _dynamicState = {};
+  VkPipelineDynamicStateCreateInfo _dynamicState = {
+    VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO};
 
-  VkPipelineFragmentShadingRateStateCreateInfoKHR _fragmentShadingRateState = {};
+  std::optional<VkPipelineFragmentShadingRateStateCreateInfoKHR> _fragmentShadingRateState;
+
+  uint32_t _subpassIndex = 0;
 
   void* _pNext = nullptr;
 };

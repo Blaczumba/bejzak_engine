@@ -27,7 +27,7 @@ public:
       const DescriptorSet& descriptorSet) noexcept;
 
   UniformTextureHandle writeTexture(
-      Ref<Image>& image, Ref<Sampler>& sampler, VkImageView view, VkImageLayout layout);
+      Ref<Image> image, Ref<Sampler> sampler, VkImageView view, VkImageLayout layout);
 
   void overwriteTexture(
       UniformTextureHandle handle, VkImageView view, VkImageLayout layout, VkSampler sampler);

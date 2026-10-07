@@ -582,3 +582,44 @@ PipelineHandle PipelineManager::createFragmentDensityMapProgram(
                        pipelineLayoutIndex});
   return pipelineIndex;
 }
+
+PipelineHandle PipelineManager::createPassthroughProgram(
+    const Renderpass& renderpass, const AttachmentLayout& attachmentLayout) {
+  const LogicalDevice& logicalDevice = renderpass.getLogicalDevice();
+  const Shader& vertex =
+      addShader(logicalDevice, "passthrough.vert.spv", VK_SHADER_STAGE_VERTEX_BIT);
+  const Shader& fragment =
+      addShader(logicalDevice, "passthrough.frag.spv", VK_SHADER_STAGE_FRAGMENT_BIT);
+
+  VkShaderStageFlags shaderStageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+  const auto [pipelineLayout, pipelineLayoutIndex] = getOrCreatePipelineLayout(
+      PipelineLayoutKey{
+        {getOrCreateBindlessLayout(logicalDevice).first},
+        {getPushConstantRange<PushConstantsModelDescriptorHandles32Bit>(shaderStageFlags)}},
+      logicalDevice);
+
+  lib::Buffer<VkPipelineColorBlendAttachmentState> colorBlendAttachments(
+      attachmentLayout.getColorAttachmentsCount(),
+      VkPipelineColorBlendAttachmentState{
+        .colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT
+                          | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT});
+
+  const VkPipelineShaderStageCreateInfo shaderStages[] = {
+    vertex.getVkPipelineStageCreateInfo(), fragment.getVkPipelineStageCreateInfo()};
+
+  const PipelineHandle pipelineIndex = getNextHandle(_pipelines.size(), _freePipelineIndices);
+  _pipelines.insertUnsafe(
+      *pipelineIndex,
+      PipelineResource{
+        GraphicsPipelineBuilder({VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR})
+            .withInputAssemblyStateCreateInfo(VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST)
+            .withShaderStageCreateInfo(shaderStages)
+            .withPushConstantShaderStages(shaderStageFlags)
+            .withViewportStateCreateInfo()
+            .withRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, VK_CULL_MODE_BACK_BIT)
+            .withMultisampleStateCreateInfo(attachmentLayout.getNumMsaaSamples())
+            .withColorBlendStateCreateInfo(std::move(colorBlendAttachments))
+            .createPipeline(renderpass, *pipelineLayout),
+        pipelineLayoutIndex});
+  return pipelineIndex;
+}

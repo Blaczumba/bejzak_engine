@@ -21,6 +21,8 @@ public:
 
   DescriptorSetWriter& storeImageStorage(VkImageView imageView, VkImageLayout layout);
 
+  DescriptorSetWriter& storeInputAttachment(VkImageView imageView, VkImageLayout layout);
+
   DescriptorSetWriter& storeBuffer(
       const Buffer& buffer, VkBufferUsageFlags usage, VkDeviceSize range, VkDeviceSize offset = 0);
 

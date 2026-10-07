@@ -27,11 +27,12 @@ std::unique_ptr<BindlessDescriptorSetWriter> BindlessDescriptorSetWriter::create
 }
 
 UniformTextureHandle BindlessDescriptorSetWriter::writeTexture(
-    Ref<Image>& image, Ref<Sampler>& sampler, VkImageView view, VkImageLayout layout) {
+    Ref<Image> image, Ref<Sampler> sampler, VkImageView view, VkImageLayout layout) {
+  VkSampler resource = sampler.getUnderlyingResource();
   const UniformTextureHandle handle =
       getNextHandleFromReclaimed(_nextTextureHandle, _reclaimedTextureHandles);
-  _textureDependencies.emplace(*handle, TextureResources{image, sampler});
-  overwriteTexture(handle, view, layout, sampler.getUnderlyingResource());
+  _textureDependencies.emplace(*handle, TextureResources{std::move(image), std::move(sampler)});
+  overwriteTexture(handle, view, layout, resource);
   return handle;
 }
 

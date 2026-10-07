@@ -16,7 +16,8 @@
 enum class DescriptorSetType : uint8_t {
   BINDLESS,
   CAMERA,
-  COMPUTE
+  COMPUTE,
+  PASSTHROUGH_SUBPASS,
 };
 
 class PipelineManager {
@@ -81,6 +82,9 @@ public:
   PipelineHandle createFragmentShadingRateProgram(const LogicalDevice& logicalDevice);
 
   PipelineHandle createFragmentDensityMapProgram(const LogicalDevice& logicalDevice);
+
+  PipelineHandle createPassthroughProgram(
+      const Renderpass& renderpass, const AttachmentLayout& attachmentLayout);
 
 private:
   PipelineLayoutMap _pipelineLayouts;

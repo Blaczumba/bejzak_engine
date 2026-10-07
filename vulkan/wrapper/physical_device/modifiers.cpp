@@ -211,11 +211,16 @@ AttachmentBasedFragmentShadingRateModifier::createFragmentShadingOptimizationIma
         // TODO: This should be written from config;
         lib::Buffer<std::byte> copyBuffer(
             metadata.imageExtent.width * metadata.imageExtent.height * 2, std::byte{255});
-        for (uint32_t i = 0, w = 0, h = 0; i < copyBuffer.size(); i+=2, w++, h++) {
-          if (w == metadata.imageExtent.width) w = 0;
-          if (h == metadata.imageExtent.height) h = 0;
-          if (i < copyBuffer.size() / 2)
+        for (uint32_t i = 0, w = 0, h = 0; i < copyBuffer.size(); i += 2, w++, h++) {
+          if (w == metadata.imageExtent.width) {
+            w = 0;
+          }
+          if (h == metadata.imageExtent.height) {
+            h = 0;
+          }
+          if (i < copyBuffer.size() / 2) {
             copyBuffer[i] = copyBuffer[i + 1] = std::byte{8};
+          }
         }
         auto [buffer, bufferMetadata] =
             BufferBuilder()

@@ -34,6 +34,7 @@
 #include "vulkan/wrapper/builders/dependency_info_builder.h"
 #include "vulkan/wrapper/builders/image_memory_barrier_builder.h"
 #include "vulkan/wrapper/builders/submit_info_builder.h"
+#include "vulkan/wrapper/builders/subpass_end_info_builder.h"
 #include "vulkan/wrapper/command_buffer/command_buffer.h"
 #include "vulkan/wrapper/command_buffer/single_time_command_buffer.h"
 #include "vulkan/wrapper/debug_messenger/debug_messenger.h"
@@ -50,7 +51,6 @@
 #include "vulkan/wrapper/render_pass/render_pass.h"
 #include "vulkan/wrapper/synchronization/fence.h"
 #include "vulkan/wrapper/util/index_buffer_util.h"
-#include "vulkan/wrapper/builders/subpass_end_info_builder.h"
 
 #define GCONTEXT_TEMPLATE template <bool SYNCED_OUTSIDE, bool MULTIVIEW_PRESENTATION>
 #define GCONTEXT_CLASS    GraphicsContext<SYNCED_OUTSIDE, MULTIVIEW_PRESENTATION>::
@@ -114,7 +114,8 @@ std::tuple<Image, ImageMetadata> createTexture2D(
 
 std::tuple<Image, ImageMetadata> createAttachment(
     const LogicalDevice& logicalDevice, VkFormat format, VkSampleCountFlagBits samples,
-    VkExtent2D extent, uint32_t numLayers, VkImageAspectFlags aspect, VkImageUsageFlags usage, VkImageCreateFlags flags = {});
+    VkExtent2D extent, uint32_t numLayers, VkImageAspectFlags aspect, VkImageUsageFlags usage,
+    VkImageCreateFlags flags = {});
 
 }  // namespace
 
@@ -403,6 +404,8 @@ void GCONTEXT_CLASS createGraphicsPipelines() {
           _renderPass, _attachmentLayout, MULTIVIEW_PRESENTATION));
   _shadowPipeline = _pipelineManager->getPipeline(
       _pipelineManager->createShadowProgram(_shadowRenderPass, _shadowAttachmentLayout));
+  _passthroughPipeline = _pipelineManager->getPipeline(
+      _pipelineManager->createPassthroughProgram(_renderPass, _attachmentLayout));
   //_envMappingPipeline =
   //_pipelineManager->getPipeline(_pipelineManager->createPbrEnvMappingProgram(
   //    _envMappingRenderPass, _envMappingAttachmentLayout));
@@ -896,10 +899,14 @@ void GCONTEXT_CLASS recordCommandBuffer(
     _secondaryCommandBuffers[1][_currentFrame].getVkCommandBuffer()};
   primaryCommandBuffer.executeSecondaryCommandBuffers(secondaryCommandBuffers);
 
-
   if (_fragmentShadingOptimizationPipeline == nullptr) {
-    VkSubpassEndInfo endInfo = SubpassEndInfoBuilder().withFragmentDensityMapOffsetEndInfo(
-        {VkOffset2D{0, -200}, VkOffset2D{0, 100}}).build();
+    VkSubpassEndInfo endInfo =
+        SubpassEndInfoBuilder()
+            .withFragmentDensityMapOffsetEndInfo({
+              VkOffset2D{0, -200},
+              VkOffset2D{0, 100 }
+    })
+            .build();
     primaryCommandBuffer.endRenderPass(endInfo);
   } else {
     primaryCommandBuffer.endRenderPass();
@@ -952,7 +959,7 @@ GCONTEXT_CLASS GraphicsContext(
               {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 2},
               {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          1}
     })
-            .build(*_logicalDevice, 2);
+            .build(*_logicalDevice, 3);
     const auto [layout, metadata] =
         _pipelineManager->getOrCreateCameraLayout(*_logicalDevice, MULTIVIEW_PRESENTATION);
     _dynamicDescriptorSet =
@@ -1064,6 +1071,14 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
   attachmentViews.push_back(colorAttachment.getVkImageView());
   Ref<Image> collorAttachmentHandle =
       _imageManager.storeImage(std::move(colorAttachment), colorAttachmentMetadata);
+  //_passthroughImageHandle = _bindlessWriter->writeTexture(
+  //    collorAttachmentHandle,
+  //    _samplerManager->getOrCreateSampler(
+  //        *_logicalDevice, SamplerBuilder()
+  //                             .withMaxAnisotropy(_physicalDevice->getMaxSamplerAnisotropy())
+  //                             .withFlags(VK_SAMPLER_CREATE_SUBSAMPLED_BIT_EXT)
+  //                             .buildMetadata()), VK_NULL_HANDLE,
+  //                             VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL);
 
   auto [depthAtachment, depthAtachmentMetadata] = createAttachment(
       *_logicalDevice, VK_FORMAT_D24_UNORM_S8_UINT, msaaSamples, extent, presentResources.numLayers,
@@ -1124,6 +1139,8 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
   auto imageViews = std::span(reinterpret_cast<const VkImageView*>(presentResources.imageViews),
                               presentResources.imageViewsCount);
   for (VkImageView imageView : imageViews) {
+    // FDM Offset
+    // TODO: there should be imageViews.size() descriptorSets!!!
     FramebufferBuilder framebufferBuilder;
     framebufferBuilder.addAttachment(imageView);
     for (VkImageView view : attachmentViews) {
@@ -1242,7 +1259,8 @@ std::tuple<Image, ImageMetadata> createTexture2D(
 
 std::tuple<Image, ImageMetadata> createAttachment(
     const LogicalDevice& logicalDevice, VkFormat format, VkSampleCountFlagBits samples,
-    VkExtent2D extent, uint32_t numLayers, VkImageAspectFlags aspect, VkImageUsageFlags usage, VkImageCreateFlags flags) {
+    VkExtent2D extent, uint32_t numLayers, VkImageAspectFlags aspect, VkImageUsageFlags usage,
+    VkImageCreateFlags flags) {
   auto [image, imageMetadata] =
       ImageBuilder()
           .withFormat(format)

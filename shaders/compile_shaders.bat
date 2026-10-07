@@ -30,3 +30,6 @@ glslc.exe -I "%SCRIPT_DIR%\bindless.glsl" -I "%SCRIPT_DIR%\32bit_push_constants.
 
 glslc.exe -fshader-stage=compute "%SCRIPT_DIR%\fov_fragment_shading_rate.comp.glsl" -O -o "%SCRIPT_DIR%\fov_fragment_shading_rate.comp.spv"
 glslc.exe -fshader-stage=compute "%SCRIPT_DIR%\fov_fragment_density_map.comp.glsl" -O -o "%SCRIPT_DIR%\fov_fragment_density_map.comp.spv"
+
+glslc.exe -fshader-stage=vertex "%SCRIPT_DIR%\passthrough.vert.glsl" -O -o "%SCRIPT_DIR%\passthrough.vert.spv"
+glslc.exe -I "%SCRIPT_DIR%\bindless.glsl" -I "%SCRIPT_DIR%\32bit_push_constants.glsl" -fshader-stage=fragment "%SCRIPT_DIR%\passthrough.frag.glsl" -O -o "%SCRIPT_DIR%\passthrough.frag.spv"

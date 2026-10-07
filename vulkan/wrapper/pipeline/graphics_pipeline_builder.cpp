@@ -67,7 +67,8 @@ Pipeline GraphicsPipelineBuilder::createPipeline(
     .pColorBlendState = &_colorBlendState,
     .pDynamicState = &_dynamicState,
     .layout = pipelineLayout.getVkPipelineLayout(),
-    .renderPass = renderpass.getVkRenderPass()};
+    .renderPass = renderpass.getVkRenderPass(),
+    .subpass = _subpassIndex};
   return Pipeline::createGraphicsPipeline(
       renderpass.getLogicalDevice(), createInfo, _shaderStageFlags);
 }
@@ -152,9 +153,11 @@ GraphicsPipelineBuilder& GraphicsPipelineBuilder::withVertexInputStateCreateInfo
   _vertexInputState = {
     .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
     .vertexBindingDescriptionCount = static_cast<uint32_t>(_vertexBindingDescriptions.size()),
-    .pVertexBindingDescriptions = _vertexBindingDescriptions.data(),
+    .pVertexBindingDescriptions =
+        !_vertexBindingDescriptions.empty() ? _vertexBindingDescriptions.data() : nullptr,
     .vertexAttributeDescriptionCount = static_cast<uint32_t>(_vertexAttributeDescriptions.size()),
-    .pVertexAttributeDescriptions = _vertexAttributeDescriptions.data(),
+    .pVertexAttributeDescriptions =
+        !_vertexAttributeDescriptions.empty() ? _vertexAttributeDescriptions.data() : nullptr,
   };
 
   return *this;
@@ -296,14 +299,22 @@ GraphicsPipelineBuilder& GraphicsPipelineBuilder::withPushConstantShaderStages(
   return *this;
 }
 
+GraphicsPipelineBuilder& GraphicsPipelineBuilder::withSubpass(uint32_t subpassIndex) {
+  _subpassIndex = subpassIndex;
+  return *this;
+}
+
 GraphicsPipelineBuilder& GraphicsPipelineBuilder::withFragmentShadingRateStateCreateInfo(
     VkExtent2D fragmentSize, VkFragmentShadingRateCombinerOpKHR combinerOp1,
     VkFragmentShadingRateCombinerOpKHR combinerOp2) {
+  bool isChained = _fragmentShadingRateState.has_value();
   _fragmentShadingRateState = VkPipelineFragmentShadingRateStateCreateInfoKHR{
     .sType = VK_STRUCTURE_TYPE_PIPELINE_FRAGMENT_SHADING_RATE_STATE_CREATE_INFO_KHR,
     .fragmentSize = fragmentSize,
     .combinerOps = {combinerOp1, combinerOp2}
   };
-  chainExtendedField(&_pNext, _fragmentShadingRateState);
+  if (!isChained) {
+    chainExtendedField(&_pNext, *_fragmentShadingRateState);
+  }
   return *this;
 }
