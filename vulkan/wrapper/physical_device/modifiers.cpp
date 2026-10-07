@@ -167,7 +167,7 @@ AttachmentBasedFragmentShadingRateModifier::createFragmentShadingOptimizationIma
     case SupportedFeature::FRAGMENT_DENSITY_MAP_OFFSET:
       {
         format = VK_FORMAT_R8G8_UNORM;
-        flags = VK_IMAGE_CREATE_FRAGMENT_DENSITY_MAP_OFFSET_BIT_QCOM;
+        // flags = VK_IMAGE_CREATE_FRAGMENT_DENSITY_MAP_OFFSET_BIT_QCOM;
         usage = VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         const VkPhysicalDeviceFragmentDensityMapPropertiesEXT& fdmProperties =
             _physicalDevice->getFragmentDensityMapProperties();
@@ -211,6 +211,12 @@ AttachmentBasedFragmentShadingRateModifier::createFragmentShadingOptimizationIma
         // TODO: This should be written from config;
         lib::Buffer<std::byte> copyBuffer(
             metadata.imageExtent.width * metadata.imageExtent.height * 2, std::byte{255});
+        for (uint32_t i = 0, w = 0, h = 0; i < copyBuffer.size(); i+=2, w++, h++) {
+          if (w == metadata.imageExtent.width) w = 0;
+          if (h == metadata.imageExtent.height) h = 0;
+          if (i < copyBuffer.size() / 2)
+            copyBuffer[i] = copyBuffer[i + 1] = std::byte{8};
+        }
         auto [buffer, bufferMetadata] =
             BufferBuilder()
                 .withSize(copyBuffer.size())
@@ -233,13 +239,13 @@ AttachmentBasedFragmentShadingRateModifier::createFragmentShadingOptimizationIma
             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 0, 1, 0, numLayers);
         handle.copyBufferToImage(buffer.getVkBuffer(), image.getVkImage(), imageCopy);
         inLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        outLayout = VK_IMAGE_LAYOUT_GENERAL;
+        outLayout = VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT;
         break;
       }
     case SupportedFeature::FRAGMENT_DENSITY_MAP:
       {
         inLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        outLayout = VK_IMAGE_LAYOUT_FRAGMENT_DENSITY_MAP_OPTIMAL_EXT;
+        outLayout = VK_IMAGE_LAYOUT_GENERAL;
       }
     case SupportedFeature::FRAGMENT_SHADING_RATE:
       {

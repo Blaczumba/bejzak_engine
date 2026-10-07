@@ -178,7 +178,7 @@ private:
   UniformBufferHandle _lightHandle;
 
   // Fragment rate shading.
-  Pipeline* _fragmentShadingOptimizationPipeline;
+  Pipeline* _fragmentShadingOptimizationPipeline = nullptr;
   Ref<Image> _fragmentShadingOptimizationImageRef;
 
   void setup();

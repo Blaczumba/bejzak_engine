@@ -50,6 +50,7 @@
 #include "vulkan/wrapper/render_pass/render_pass.h"
 #include "vulkan/wrapper/synchronization/fence.h"
 #include "vulkan/wrapper/util/index_buffer_util.h"
+#include "vulkan/wrapper/builders/subpass_end_info_builder.h"
 
 #define GCONTEXT_TEMPLATE template <bool SYNCED_OUTSIDE, bool MULTIVIEW_PRESENTATION>
 #define GCONTEXT_CLASS    GraphicsContext<SYNCED_OUTSIDE, MULTIVIEW_PRESENTATION>::
@@ -113,7 +114,7 @@ std::tuple<Image, ImageMetadata> createTexture2D(
 
 std::tuple<Image, ImageMetadata> createAttachment(
     const LogicalDevice& logicalDevice, VkFormat format, VkSampleCountFlagBits samples,
-    VkExtent2D extent, uint32_t numLayers, VkImageAspectFlags aspect, VkImageUsageFlags usage);
+    VkExtent2D extent, uint32_t numLayers, VkImageAspectFlags aspect, VkImageUsageFlags usage, VkImageCreateFlags flags = {});
 
 }  // namespace
 
@@ -895,7 +896,14 @@ void GCONTEXT_CLASS recordCommandBuffer(
     _secondaryCommandBuffers[1][_currentFrame].getVkCommandBuffer()};
   primaryCommandBuffer.executeSecondaryCommandBuffers(secondaryCommandBuffers);
 
-  primaryCommandBuffer.endRenderPass();
+
+  if (_fragmentShadingOptimizationPipeline == nullptr) {
+    VkSubpassEndInfo endInfo = SubpassEndInfoBuilder().withFragmentDensityMapOffsetEndInfo(
+        {VkOffset2D{0, -200}, VkOffset2D{0, 100}}).build();
+    primaryCommandBuffer.endRenderPass(endInfo);
+  } else {
+    primaryCommandBuffer.endRenderPass();
+  }
 
   if (primaryCommandBuffer.end() != VK_SUCCESS) {
     throw std::runtime_error("failed to record command buffer!");
@@ -1234,7 +1242,7 @@ std::tuple<Image, ImageMetadata> createTexture2D(
 
 std::tuple<Image, ImageMetadata> createAttachment(
     const LogicalDevice& logicalDevice, VkFormat format, VkSampleCountFlagBits samples,
-    VkExtent2D extent, uint32_t numLayers, VkImageAspectFlags aspect, VkImageUsageFlags usage) {
+    VkExtent2D extent, uint32_t numLayers, VkImageAspectFlags aspect, VkImageUsageFlags usage, VkImageCreateFlags flags) {
   auto [image, imageMetadata] =
       ImageBuilder()
           .withFormat(format)
@@ -1243,6 +1251,7 @@ std::tuple<Image, ImageMetadata> createAttachment(
           .withLayerCount(numLayers)
           .withAspect(aspect)
           .withUsage(usage)
+          .withFlags(flags)
           .buildImageWithMetadata(logicalDevice);
   ImageViewBuilder().buildAndAddToImage(image, imageMetadata, 0, 1, 0, numLayers);
   return std::make_tuple(std::move(image), imageMetadata);

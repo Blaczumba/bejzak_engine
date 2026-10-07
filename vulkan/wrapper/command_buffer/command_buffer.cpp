@@ -108,6 +108,13 @@ void CommandBuffer::endRenderPass() const {
   vkCmdEndRenderPass(_commandBuffer);
 }
 
+void CommandBuffer::endRenderPass(const VkSubpassEndInfo& subpassEndInfo) const {
+  PFN_vkCmdEndRenderPass2KHR pfnEndRenderPass2 = reinterpret_cast<PFN_vkCmdEndRenderPass2KHR>(
+      vkGetDeviceProcAddr(_commandPool->getLogicalDevice().getVkDevice(), "vkCmdEndRenderPass2KHR"));
+  pfnEndRenderPass2(_commandBuffer, &subpassEndInfo);
+  // vkCmdEndRenderPass2(_commandBuffer, &subpassEndInfo);
+}
+
 void CommandBuffer::setVieport(
     std::span<const VkViewport> viewports, uint32_t firstVieport) const noexcept {
   vkCmdSetViewport(

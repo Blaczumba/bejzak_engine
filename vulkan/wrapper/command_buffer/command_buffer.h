@@ -44,6 +44,8 @@ public:
 
   void endRenderPass() const;
 
+  void endRenderPass(const VkSubpassEndInfo& subpassEndInfo) const;
+
   void setVieport(std::span<const VkViewport> viewports, uint32_t firstVieport = 0) const noexcept;
 
   void setVieport(
