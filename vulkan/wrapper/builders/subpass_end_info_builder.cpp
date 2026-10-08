@@ -15,11 +15,12 @@ void chain(void** pNext, Feature& feature) {
 SubpassEndInfoBuilder& SubpassEndInfoBuilder::withFragmentDensityMapOffsetEndInfo(
     std::initializer_list<VkOffset2D> fragmentDensityOffsets) noexcept {
   bool isChained = _fragmentDensityMapInfo.has_value();
+  _fragmentDensityOffsets = lib::Buffer<VkOffset2D>(fragmentDensityOffsets);
   _fragmentDensityMapInfo = VkSubpassFragmentDensityMapOffsetEndInfoQCOM{
     .sType = VK_STRUCTURE_TYPE_SUBPASS_FRAGMENT_DENSITY_MAP_OFFSET_END_INFO_QCOM,
-    .fragmentDensityOffsetCount = static_cast<uint32_t>(fragmentDensityOffsets.size()),
-    .pFragmentDensityOffsets = fragmentDensityOffsets.begin()};
-  if (isChained) {
+    .fragmentDensityOffsetCount = static_cast<uint32_t>(_fragmentDensityOffsets.size()),
+    .pFragmentDensityOffsets = _fragmentDensityOffsets.data()};
+  if (!isChained) {
     chain(&_pNext, *_fragmentDensityMapInfo);
   }
   return *this;

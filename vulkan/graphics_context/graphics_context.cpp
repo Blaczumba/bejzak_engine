@@ -1030,11 +1030,11 @@ void GCONTEXT_CLASS recordCommandBufferFdmOffset(
       _secondaryCommandBuffers[1][_currentFrame].getVkCommandBuffer()};
   primaryCommandBuffer.executeSecondaryCommandBuffers(secondaryCommandBuffers);
 
-    VkSubpassEndInfo endInfo =
+    const VkSubpassEndInfo endInfo =
         SubpassEndInfoBuilder()
             .withFragmentDensityMapOffsetEndInfo({
-                                                     VkOffset2D{0, 500},
-                                                     VkOffset2D{0, -200 }
+                                                     VkOffset2D{128, 0},
+                                                     VkOffset2D{-128, 0}
                                                  })
             .build();
     primaryCommandBuffer.endRenderPass(endInfo);

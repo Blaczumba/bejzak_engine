@@ -3,6 +3,7 @@
 #include <initializer_list>
 #include <optional>
 #include <vulkan/vulkan.h>
+#include "lib/buffer/buffer.h"
 
 class SubpassEndInfoBuilder {
 public:
@@ -16,6 +17,7 @@ public:
   VkSubpassEndInfo build() const noexcept;
 
 private:
+  lib::Buffer<VkOffset2D> _fragmentDensityOffsets;
   std::optional<VkSubpassFragmentDensityMapOffsetEndInfoQCOM> _fragmentDensityMapInfo;
   void* _pNext = nullptr;
 };

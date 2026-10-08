@@ -3,7 +3,6 @@
 #include <cstdint>
 #include <initializer_list>
 #include <span>
-#include <vector>
 #include <vulkan/vulkan.h>
 
 #include "common/util/engine_exception.h"

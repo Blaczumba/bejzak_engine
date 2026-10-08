@@ -171,9 +171,9 @@ AttachmentBasedFragmentShadingRateModifier::createFragmentShadingOptimizationIma
         usage = VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         const VkPhysicalDeviceFragmentDensityMapPropertiesEXT& fdmProperties =
             _physicalDevice->getFragmentDensityMapProperties();
-        optimizationExtent =
-            clampExtent(extent, preferredTexelSize, fdmProperties.minFragmentDensityTexelSize,
-                        fdmProperties.maxFragmentDensityTexelSize);
+        optimizationExtent = VkExtent2D(3 * extent.width/fdmProperties.minFragmentDensityTexelSize.width / 2, 3 * extent.height/fdmProperties.minFragmentDensityTexelSize.height / 2);
+//            clampExtent(extent, {2, 2}, fdmProperties.minFragmentDensityTexelSize,
+//                        fdmProperties.maxFragmentDensityTexelSize);
         break;
       }
     case SupportedFeature::FRAGMENT_SHADING_RATE:
@@ -211,15 +211,16 @@ AttachmentBasedFragmentShadingRateModifier::createFragmentShadingOptimizationIma
         // TODO: This should be written from config;
         lib::Buffer<std::byte> copyBuffer(
             metadata.imageExtent.width * metadata.imageExtent.height * 2, std::byte{255});
-        for (uint32_t i = 0, w = 0, h = 0; i < copyBuffer.size(); i += 2, w++, h++) {
+        for (uint32_t i = 0, w = 0, h = 0; i < copyBuffer.size(); i += 2, w++) {
           if (w == metadata.imageExtent.width) {
             w = 0;
+            h++;
+            if (h == metadata.imageExtent.height) {
+              h = 0;
+            }
           }
-          if (h == metadata.imageExtent.height) {
-            h = 0;
-          }
-          if (i < copyBuffer.size() / 2) {
-            copyBuffer[i] = copyBuffer[i + 1] = std::byte{8};
+          if (i < copyBuffer.size() / 3) {
+            copyBuffer[i] = copyBuffer[i + 1] = std::byte{0};
           }
         }
         auto [buffer, bufferMetadata] =
