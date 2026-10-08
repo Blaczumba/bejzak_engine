@@ -1033,8 +1033,8 @@ void GCONTEXT_CLASS recordCommandBufferFdmOffset(
     VkSubpassEndInfo endInfo =
         SubpassEndInfoBuilder()
             .withFragmentDensityMapOffsetEndInfo({
-                                                     VkOffset2D{0, -200},
-                                                     VkOffset2D{0, 100 }
+                                                     VkOffset2D{0, 500},
+                                                     VkOffset2D{0, -200 }
                                                  })
             .build();
     primaryCommandBuffer.endRenderPass(endInfo);

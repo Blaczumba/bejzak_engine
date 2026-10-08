@@ -616,7 +616,7 @@ PipelineHandle PipelineManager::createPassthroughProgram(
             .withShaderStageCreateInfo(shaderStages)
             .withPushConstantShaderStages(shaderStageFlags)
             .withViewportStateCreateInfo()
-            .withRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, VK_CULL_MODE_BACK_BIT)
+            .withRasterizationStateCreateInfo(VK_POLYGON_MODE_FILL, VK_CULL_MODE_FRONT_BIT)
             .withMultisampleStateCreateInfo(attachmentLayout.getNumMsaaSamples())
             .withColorBlendStateCreateInfo(std::move(colorBlendAttachments))
             .createPipeline(renderpass, *pipelineLayout),
