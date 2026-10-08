@@ -172,6 +172,9 @@ private:
   // Passthrough subpass.
   Pipeline* _passthroughPipeline;
   UniformTextureHandle _passthroughImageHandle;
+  Ref<Framebuffer> _offscreenFramebuffer;
+  Renderpass _passthroughRenderpass;
+  AttachmentLayout _passthroughLayout;
 
   // Blinn Phong Tesselation.
   PipelineHandle _blinnPhongTesselationPipelineHandle;

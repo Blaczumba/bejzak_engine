@@ -27,6 +27,8 @@
 layout(set = BindlessDescriptorSet, binding = BindlessSamplerBinding) \
     uniform sampler2D uGlobalTextures2D[];
 layout(set = BindlessDescriptorSet, binding = BindlessSamplerBinding) \
+    uniform sampler2DArray uGlobalTextureArrays2D[];
+layout(set = BindlessDescriptorSet, binding = BindlessSamplerBinding) \
     uniform samplerCube uGlobalTexturesCube[];
 layout(set = BindlessDescriptorSet, binding = BindlessSamplerBinding) \
     uniform sampler2DShadow uGlobalTexturesShadow[];

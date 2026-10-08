@@ -1055,8 +1055,14 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
   const VkFormat swapchainImageFormat = static_cast<VkFormat>(presentResources.imageFormat);
   const VkExtent2D extent = VkExtent2D{presentResources.width, presentResources.height};
   _attachmentLayout = AttachmentLayout(msaaSamples);
+  if (_fragmentShadingOptimizationPipeline != nullptr) {
+    _attachmentLayout
+        .addColorResolvePresentAttachment(swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE);
+  } else {
+    _attachmentLayout
+        .addColorResolveAttachment(swapchainImageFormat);
+  }
   _attachmentLayout
-      .addColorResolvePresentAttachment(swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE)
       .addColorAttachment(
           swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE)
       .addDepthAttachment(VK_FORMAT_D24_UNORM_S8_UINT, VK_ATTACHMENT_STORE_OP_DONT_CARE);
@@ -1064,26 +1070,53 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
 
   lib::Buffer<Ref<Image>> attachmentRefs;
   std::vector<VkImageView> attachmentViews;
+  VkImageCreateFlags additionalFlags = {};
+
+  if (_fragmentShadingOptimizationPipeline == nullptr) {
+    additionalFlags = VK_IMAGE_CREATE_FRAGMENT_DENSITY_MAP_OFFSET_BIT_QCOM
+        | VK_IMAGE_CREATE_SUBSAMPLED_BIT_EXT;
+    auto [resolveAttachment, resolveAttachmentMetadata] = createAttachment(*_logicalDevice,
+                                                                           swapchainImageFormat,
+                                                                           VK_SAMPLE_COUNT_1_BIT,
+                                                                           extent,
+                                                                           presentResources.numLayers,
+                                                                           VK_IMAGE_ASPECT_COLOR_BIT,
+                                                                           VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT
+                                                                               | VK_IMAGE_USAGE_SAMPLED_BIT,
+                                                                           additionalFlags);
+    VkImageView resolveView = resolveAttachment.getVkImageView();
+    _passthroughImageHandle = _bindlessWriter->writeTexture(
+        _imageManager.storeImage(std::move(resolveAttachment), resolveAttachmentMetadata),
+        _samplerManager->getOrCreateSampler(
+            *_logicalDevice, SamplerBuilder()
+                .withFlags(VK_SAMPLER_CREATE_SUBSAMPLED_BIT_EXT)
+                .buildMetadata()), resolveView,
+        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+    attachmentViews.push_back(resolveView);
+  }
+
   auto [colorAttachment, colorAttachmentMetadata] = createAttachment(
-      *_logicalDevice, swapchainImageFormat, msaaSamples, extent, presentResources.numLayers,
+      *_logicalDevice,
+      swapchainImageFormat,
+      msaaSamples,
+      extent,
+      presentResources.numLayers,
       VK_IMAGE_ASPECT_COLOR_BIT,
-      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT);
+      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
+      additionalFlags);
   attachmentViews.push_back(colorAttachment.getVkImageView());
   Ref<Image> collorAttachmentHandle =
       _imageManager.storeImage(std::move(colorAttachment), colorAttachmentMetadata);
-  //_passthroughImageHandle = _bindlessWriter->writeTexture(
-  //    collorAttachmentHandle,
-  //    _samplerManager->getOrCreateSampler(
-  //        *_logicalDevice, SamplerBuilder()
-  //                             .withMaxAnisotropy(_physicalDevice->getMaxSamplerAnisotropy())
-  //                             .withFlags(VK_SAMPLER_CREATE_SUBSAMPLED_BIT_EXT)
-  //                             .buildMetadata()), VK_NULL_HANDLE,
-  //                             VK_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL);
 
   auto [depthAtachment, depthAtachmentMetadata] = createAttachment(
-      *_logicalDevice, VK_FORMAT_D24_UNORM_S8_UINT, msaaSamples, extent, presentResources.numLayers,
+      *_logicalDevice,
+      VK_FORMAT_D24_UNORM_S8_UINT,
+      msaaSamples,
+      extent,
+      presentResources.numLayers,
       VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
-      VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT);
+      VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
+      additionalFlags);
   attachmentViews.push_back(depthAtachment.getVkImageView());
   Ref<Image> depthAttachmentHandle =
       _imageManager.storeImage(std::move(depthAtachment), depthAtachmentMetadata);
@@ -1104,11 +1137,11 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
     _fragmentShadingOptimizationImageRef =
         _imageManager.storeImage(std::move(optimizationImage), optimizationImageMetadata);
     attachmentRefs = lib::Buffer<Ref<Image>>{
-      std::move(collorAttachmentHandle), std::move(depthAttachmentHandle),
-      _fragmentShadingOptimizationImageRef};
+        std::move(collorAttachmentHandle), std::move(depthAttachmentHandle),
+        _fragmentShadingOptimizationImageRef};
   } else {
     attachmentRefs = lib::Buffer<Ref<Image>>{
-      std::move(collorAttachmentHandle), std::move(depthAttachmentHandle)};
+        std::move(collorAttachmentHandle), std::move(depthAttachmentHandle)};
   }
 
   RenderpassBuilder renderpassBuilder(_attachmentLayout);
@@ -1117,38 +1150,62 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
     renderpassBuilder.withMultiView({mask}, {mask});
   }
 
-  RenderpassBuilder::Subpass& subpass =
+  RenderpassBuilder::Subpass &subpass =
       renderpassBuilder.createSubpass()
           .addOutputAttachment(0)
           .addOutputAttachment(1)
           .addOutputAttachment(2);
   _extendedFeatures.fragmentShadingRateModifier.modify(subpass);
 
-  _renderPass =
-      renderpassBuilder
-          .addDependency(
-              VK_SUBPASS_EXTERNAL, 0,
-              VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
-                  | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-              VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-              VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
-                  | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-              VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
-          .build(*_logicalDevice);
+  if (_fragmentShadingOptimizationPipeline != nullptr) {
+    _renderPass =
+        renderpassBuilder
+            .addDependency(
+                VK_SUBPASS_EXTERNAL, 0,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+                    | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+                    | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
+            .build(*_logicalDevice);
+  }
 
-  auto imageViews = std::span(reinterpret_cast<const VkImageView*>(presentResources.imageViews),
+  auto imageViews = std::span(reinterpret_cast<const VkImageView *>(presentResources.imageViews),
                               presentResources.imageViewsCount);
-  for (VkImageView imageView : imageViews) {
-    // FDM Offset
-    // TODO: there should be imageViews.size() descriptorSets!!!
-    FramebufferBuilder framebufferBuilder;
-    framebufferBuilder.addAttachment(imageView);
-    for (VkImageView view : attachmentViews) {
-      framebufferBuilder.addAttachment(view);
+  if (_fragmentShadingOptimizationPipeline != nullptr) {
+    for (VkImageView imageView: imageViews) {
+      // FDM Offset
+      // TODO: there should be imageViews.size() descriptorSets!!!
+      FramebufferBuilder framebufferBuilder;
+      framebufferBuilder.addAttachment(imageView);
+      for (VkImageView view: attachmentViews) {
+        framebufferBuilder.addAttachment(view);
+      }
+      Framebuffer framebuffer = framebufferBuilder.build(_renderPass, extent, 1);
+      _framebuffers.push_back(_framebufferManager.storeFramebuffer(
+          std::move(framebuffer), framebufferBuilder.getMetadata(), attachmentRefs, imageView));
     }
-    Framebuffer framebuffer = framebufferBuilder.build(_renderPass, extent, 1);
-    _framebuffers.push_back(_framebufferManager.storeFramebuffer(
-        std::move(framebuffer), framebufferBuilder.getMetadata(), attachmentRefs, imageView));
+  } else {
+    _passthroughLayout.addPassthroughPresentAttachment(swapchainImageFormat);
+    RenderpassBuilder passthroughRenderpassBuilder(_passthroughLayout);
+    if constexpr (MULTIVIEW_PRESENTATION) {
+      auto mask = lib::setNLeastSignificantBits<uint32_t>(presentResources.numLayers);
+      passthroughRenderpassBuilder.withMultiView({mask}, {mask});
+    }
+    passthroughRenderpassBuilder.addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_ACCESS_SHADER_READ_BIT).createSubpass()
+        .addOutputAttachment(0);
+    _passthroughRenderpass = passthroughRenderpassBuilder.build(*_logicalDevice);
+
+    for (VkImageView imageView: imageViews) {
+      // FDM Offset
+      // TODO: there should be imageViews.size() descriptorSets!!!
+      FramebufferBuilder framebufferBuilder;
+      framebufferBuilder.addAttachment(imageView);
+      Framebuffer framebuffer = framebufferBuilder.build(_passthroughRenderpass, extent, 1);
+      _framebuffers.push_back(_framebufferManager.storeFramebuffer(
+          std::move(framebuffer), framebufferBuilder.getMetadata(), {}, imageView));
+    }
   }
 }
 

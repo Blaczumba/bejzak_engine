@@ -52,7 +52,7 @@ public:
   AttachmentLayout& addShadowAttachment(VkFormat format, VkImageLayout finalLayout);
 
   AttachmentLayout& addColorResolveAttachment(
-      VkFormat format, VkAttachmentLoadOp loadOp, VkAttachmentStoreOp storeOp);
+      VkFormat format);
 
   AttachmentLayout& addColorResolvePresentAttachment(VkFormat format, VkAttachmentLoadOp loadOp);
 
@@ -61,6 +61,8 @@ public:
   AttachmentLayout& addFragmentDensityMapAttachment();
 
   AttachmentLayout& addFragmentDensityMapOffsetAttachment();
+
+  AttachmentLayout& addPassthroughPresentAttachment(VkFormat format);
 
 private:
   VkSampleCountFlagBits _numMsaaSamples;

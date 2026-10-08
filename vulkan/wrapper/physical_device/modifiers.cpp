@@ -167,7 +167,7 @@ AttachmentBasedFragmentShadingRateModifier::createFragmentShadingOptimizationIma
     case SupportedFeature::FRAGMENT_DENSITY_MAP_OFFSET:
       {
         format = VK_FORMAT_R8G8_UNORM;
-        // flags = VK_IMAGE_CREATE_FRAGMENT_DENSITY_MAP_OFFSET_BIT_QCOM;
+        flags = VK_IMAGE_CREATE_FRAGMENT_DENSITY_MAP_OFFSET_BIT_QCOM;
         usage = VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         const VkPhysicalDeviceFragmentDensityMapPropertiesEXT& fdmProperties =
             _physicalDevice->getFragmentDensityMapProperties();
