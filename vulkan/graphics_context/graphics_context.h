@@ -227,6 +227,9 @@ private:
 
   void recordCommandBuffer(const glm::mat4& cameraProj, const glm::mat4& cameraView,
                            uint32_t imageIndex, std::pair<uint32_t, uint32_t> screenPos);
+
+  void recordCommandBufferFdmOffset(const glm::mat4& cameraProj, const glm::mat4& cameraView,
+                                    uint32_t imageIndex, std::pair<uint32_t, uint32_t> screenPos);
 };
 
 // The two specializations are explicitly instantiated in graphics_context.cpp.

@@ -405,7 +405,7 @@ void GCONTEXT_CLASS createGraphicsPipelines() {
   _shadowPipeline = _pipelineManager->getPipeline(
       _pipelineManager->createShadowProgram(_shadowRenderPass, _shadowAttachmentLayout));
   _passthroughPipeline = _pipelineManager->getPipeline(
-      _pipelineManager->createPassthroughProgram(_renderPass, _attachmentLayout));
+      _pipelineManager->createPassthroughProgram(_passthroughRenderpass, _passthroughLayout));
   //_envMappingPipeline =
   //_pipelineManager->getPipeline(_pipelineManager->createPbrEnvMappingProgram(
   //    _envMappingRenderPass, _envMappingAttachmentLayout));
@@ -762,7 +762,6 @@ void GCONTEXT_CLASS recordCommandBuffer(
   CommandBuffer::BeginInfoBuilder().beginCommandBuffer(
       primaryCommandBuffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
-  if (_fragmentShadingOptimizationPipeline != nullptr) {
     primaryCommandBuffer.bindPipeline(
         _fragmentShadingOptimizationPipeline->getVkPipelineBindPoint(),
         _fragmentShadingOptimizationPipeline->getVkPipeline());
@@ -778,7 +777,6 @@ void GCONTEXT_CLASS recordCommandBuffer(
         _fragmentShadingOptimizationPipeline->getVkPipelineLayout(), screenPos,
         dependencyInfoBuilder);
     primaryCommandBuffer.pipelineBarrier(dependencyInfoBuilder.build());
-  }
 
   const auto [framebuffer, framebufferMetadata] =
       _framebuffers[imageIndex].getUnderlyingResourceWithMetadata();
@@ -898,19 +896,175 @@ void GCONTEXT_CLASS recordCommandBuffer(
     _secondaryCommandBuffers[0][_currentFrame].getVkCommandBuffer(),
     _secondaryCommandBuffers[1][_currentFrame].getVkCommandBuffer()};
   primaryCommandBuffer.executeSecondaryCommandBuffers(secondaryCommandBuffers);
+  primaryCommandBuffer.endRenderPass();
 
-  if (_fragmentShadingOptimizationPipeline == nullptr) {
+  if (primaryCommandBuffer.end() != VK_SUCCESS) {
+    throw std::runtime_error("failed to record command buffer!");
+  }
+}
+
+GCONTEXT_TEMPLATE
+void GCONTEXT_CLASS recordCommandBufferFdmOffset(
+    const glm::mat4& cameraProj, const glm::mat4& cameraView, uint32_t imageIndex,
+    std::pair<uint32_t, uint32_t> screenPos) {
+  const CommandBuffer& primaryCommandBuffer = _primaryCommandBuffer[_currentFrame];
+  CommandBuffer::BeginInfoBuilder().beginCommandBuffer(
+      primaryCommandBuffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+
+  const auto [framebuffer, framebufferMetadata] =
+      _offscreenFramebuffer.getUnderlyingResourceWithMetadata();
+  //    _framebuffers[imageIndex].getUnderlyingResourceWithMetadata();
+  const VkViewport viewports[] = {
+      VkViewport{.width = static_cast<float>(framebufferMetadata.extent.width),
+          .height = static_cast<float>(framebufferMetadata.extent.height),
+          .minDepth = 0.0f,
+          .maxDepth = 1.0f}
+  };
+  const VkRect2D scissors[] = {VkRect2D{.extent = framebufferMetadata.extent}};
+  primaryCommandBuffer.setVieport(viewports);
+  primaryCommandBuffer.setScissor(scissors);
+  primaryCommandBuffer.beginRenderPass(
+      VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS, framebuffer, framebufferMetadata.extent,
+      _renderPass.getVkRenderPass(), _attachmentLayout.getVkClearValues());
+
+  auto beginInfoBuilder = CommandBuffer::BeginInfoBuilder().withInheritenceInfo(
+      _renderPass.getVkRenderPass(), framebuffer, 0);
+  static const bool viewportScissorInheritance =
+      _physicalDevice->hasAvailableExtension(VK_NV_INHERITED_VIEWPORT_SCISSOR_EXTENSION_NAME);
+  if (viewportScissorInheritance) [[likely]] {
+    beginInfoBuilder.withViewportScissorInheritenceInfo(viewports);
+  }
+
+  std::future<void> futures[MAX_THREADS_IN_POOL];
+
+  futures[0] = std::async(std::launch::async, [&]() -> void {
+    const CommandBuffer& secondaryCommandBuffer = _secondaryCommandBuffers[0][_currentFrame];
+
+    beginInfoBuilder.beginCommandBuffer(
+        secondaryCommandBuffer, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT
+            | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    if (!viewportScissorInheritance) [[unlikely]] {
+      secondaryCommandBuffer.setVieport(viewports);
+      secondaryCommandBuffer.setScissor(scissors);
+    }
+
+    const OctreeNode* root = _octree->getRoot();
+    const auto& planes = extractFrustumPlanes(cameraProj * cameraView);
+
+    VkDescriptorSet descriptorSets[] = {
+        _bindlessDescriptorSet.getVkDescriptorSet(), _dynamicDescriptorSet.getVkDescriptorSet()};
+
+    if constexpr (MULTIVIEW_PRESENTATION) {
+      uint32_t dynamicUniformBufferOffsets[2];
+      const uint32_t baseOffset = 2u * _currentFrame;
+      _dynamicDescriptorSetWriter.getDynamicBufferSizesWithOffsets(
+          dynamicUniformBufferOffsets, {baseOffset, baseOffset});
+      recordOctreeSecondaryCommandBuffer(
+          secondaryCommandBuffer, root, planes, descriptorSets, dynamicUniformBufferOffsets);
+    } else {
+      uint32_t dynamicUniformBufferOffset[1];
+      _dynamicDescriptorSetWriter.getDynamicBufferSizesWithOffsets(
+          dynamicUniformBufferOffset, {_currentFrame});
+      recordOctreeSecondaryCommandBuffer(
+          secondaryCommandBuffer, root, planes, descriptorSets, dynamicUniformBufferOffset);
+    }
+
+    CHECK_VKCMD(secondaryCommandBuffer.end(), "Failed to vkEndCommandBuffer.");
+  });
+
+  futures[1] = std::async(std::launch::async, [&]() -> void {
+    // Skybox
+    const CommandBuffer& secondaryCommandBuffer = _secondaryCommandBuffers[1][_currentFrame];
+
+    beginInfoBuilder.beginCommandBuffer(
+        secondaryCommandBuffer, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT
+            | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    if (!viewportScissorInheritance) [[unlikely]] {
+      secondaryCommandBuffer.setVieport(viewports);
+      secondaryCommandBuffer.setScissor(scissors);
+    }
+
+    secondaryCommandBuffer.bindPipeline(
+        _skyboxPipeline->getVkPipelineBindPoint(), _skyboxPipeline->getVkPipeline());
+
+    const MeshComponent& cubeMeshComponent = _registry.getComponent<MeshComponent>(_skyboxEntity);
+    const MaterialComponent& cubeMaterialComponent =
+        _registry.getComponent<MaterialComponent>(_skyboxEntity);
+    const VkBuffer vertexBuffers[] = {
+        WeakRef<Buffer>(cubeMeshComponent.vertexBufferPrimitiveHandle).getUnderlyingResource()};
+    static constexpr VkDeviceSize offsets[] = {0};
+    secondaryCommandBuffer.bindVertexBuffers(vertexBuffers, offsets);
+    secondaryCommandBuffer.bindIndexBuffer(
+        WeakRef<Buffer>(cubeMeshComponent.indexBufferHandle).getUnderlyingResource(),
+        cubeMeshComponent.indexType);
+
+    const PushConstantsSkybox pc = {
+        .proj = cameraProj,
+        .view = cameraView,
+        .skyboxHandle = static_cast<uint32_t>(*cubeMaterialComponent.diffuse)};
+    secondaryCommandBuffer.pushConstants(
+        _skyboxPipeline->getVkPipelineLayout(),
+        _skyboxPipeline->getPushConstantVkShaderStageFlags(),
+        std::span(reinterpret_cast<const std::byte*>(&pc), sizeof(pc)));
+
+    secondaryCommandBuffer.bindDescriptorSets(
+        _skyboxPipeline->getVkPipelineBindPoint(), _skyboxPipeline->getVkPipelineLayout(),
+        {_bindlessDescriptorSet.getVkDescriptorSet()});
+
+    const auto& a = WeakRef<Buffer>(cubeMeshComponent.indexBufferHandle).getMetadata();
+
+    secondaryCommandBuffer.drawIndexed(
+        WeakRef<Buffer>(cubeMeshComponent.indexBufferHandle).getMetadata().size
+            / getIndexSize(cubeMeshComponent.indexType),
+        1);
+
+    CHECK_VKCMD(secondaryCommandBuffer.end(), "Failed to vkEndCommandBuffer.");
+  });
+
+  std::for_each(std::begin(futures), std::end(futures), [](const std::future<void>& future) {
+    future.wait();
+  });
+
+  const VkCommandBuffer secondaryCommandBuffers[] = {
+      _secondaryCommandBuffers[0][_currentFrame].getVkCommandBuffer(),
+      _secondaryCommandBuffers[1][_currentFrame].getVkCommandBuffer()};
+  primaryCommandBuffer.executeSecondaryCommandBuffers(secondaryCommandBuffers);
+
     VkSubpassEndInfo endInfo =
         SubpassEndInfoBuilder()
             .withFragmentDensityMapOffsetEndInfo({
-              VkOffset2D{0, -200},
-              VkOffset2D{0, 100 }
-    })
+                                                     VkOffset2D{0, -200},
+                                                     VkOffset2D{0, 100 }
+                                                 })
             .build();
     primaryCommandBuffer.endRenderPass(endInfo);
-  } else {
-    primaryCommandBuffer.endRenderPass();
-  }
+
+    // Passthrough Renderpass.
+  const auto [passthroughFramebuffer, passthroughFramebufferMetadata] =
+      _framebuffers[imageIndex].getUnderlyingResourceWithMetadata();
+  const VkViewport passthroughViewports[] = {
+      VkViewport{.width = static_cast<float>(passthroughFramebufferMetadata.extent.width),
+          .height = static_cast<float>(passthroughFramebufferMetadata.extent.height),
+          .minDepth = 0.0f,
+          .maxDepth = 1.0f}
+  };
+  const VkRect2D passthroughScissors[] = {VkRect2D{.extent = passthroughFramebufferMetadata.extent}};
+  primaryCommandBuffer.setVieport(passthroughViewports);
+  primaryCommandBuffer.setScissor(passthroughScissors);
+  primaryCommandBuffer.beginRenderPass(
+      VK_SUBPASS_CONTENTS_INLINE, passthroughFramebuffer, passthroughFramebufferMetadata.extent,
+      _passthroughRenderpass.getVkRenderPass(), _passthroughLayout.getVkClearValues());
+
+  primaryCommandBuffer.bindPipeline(_passthroughPipeline->getVkPipelineBindPoint(), _passthroughPipeline->getVkPipeline());
+  primaryCommandBuffer.bindDescriptorSets(_passthroughPipeline->getVkPipelineBindPoint(), _passthroughPipeline->getVkPipelineLayout(), {_bindlessDescriptorSet.getVkDescriptorSet()});
+  const PushConstantsModelDescriptorHandles32Bit passthroughPc = {
+      .descriptorHandles = {static_cast<uint32_t>(*_passthroughImageHandle)}};
+  primaryCommandBuffer.pushConstants(
+      _passthroughPipeline->getVkPipelineLayout(),
+      _passthroughPipeline->getPushConstantVkShaderStageFlags(),
+      std::span(reinterpret_cast<const std::byte*>(&passthroughPc), sizeof(passthroughPc)));
+  primaryCommandBuffer.draw(3, 1);
+  primaryCommandBuffer.endRenderPass();
 
   if (primaryCommandBuffer.end() != VK_SUCCESS) {
     throw std::runtime_error("failed to record command buffer!");
@@ -1016,8 +1170,13 @@ void GCONTEXT_CLASS draw() {
 
   const common::CameraContext& cameraContext = _communicationLayer->getCameraContexts()[0];
   const auto [screenx, screeny] = _communicationLayer->getScreenPos();
-  recordCommandBuffer(cameraContext.proj, cameraContext.view,
-                      _communicationLayer->getCurrentSwapchainImageIndex(), {screenx, screeny});
+  if (_fragmentShadingOptimizationPipeline != nullptr) {
+    recordCommandBuffer(cameraContext.proj, cameraContext.view,
+                        _communicationLayer->getCurrentSwapchainImageIndex(), {screenx, screeny});
+  } else {
+    recordCommandBufferFdmOffset(cameraContext.proj, cameraContext.view,
+                                 _communicationLayer->getCurrentSwapchainImageIndex(), {screenx, screeny});
+  }
 
   static SubmitInfoBuilder submitInfoBuilder;
   if constexpr (!SYNCED_OUTSIDE) {
@@ -1051,14 +1210,14 @@ void GCONTEXT_CLASS waitCompleteExecution() const {
 
 GCONTEXT_TEMPLATE
 void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& presentResources) {
-  const bool vrMode =
+  const bool nonCompute =
       _extendedFeatures.fragmentShadingRateModifier.getSelectedFeature()
       == AttachmentBasedFragmentShadingRateModifier::SupportedFeature::FRAGMENT_DENSITY_MAP_OFFSET;
   static constexpr VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_2_BIT;
   const VkFormat swapchainImageFormat = static_cast<VkFormat>(presentResources.imageFormat);
   const VkExtent2D extent = VkExtent2D{presentResources.width, presentResources.height};
   _attachmentLayout = AttachmentLayout(msaaSamples);
-  if (!vrMode) {
+  if (!nonCompute) {
     _attachmentLayout.addColorResolvePresentAttachment(
         swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE);
   } else {
@@ -1074,7 +1233,7 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
   std::vector<VkImageView> attachmentViews;
   VkImageCreateFlags additionalFlags = {};
 
-  if (vrMode) {
+  if (nonCompute) {
     additionalFlags =
         VK_IMAGE_CREATE_FRAGMENT_DENSITY_MAP_OFFSET_BIT_QCOM | VK_IMAGE_CREATE_SUBSAMPLED_BIT_EXT;
     auto [resolveAttachment, resolveAttachmentMetadata] = createAttachment(
@@ -1086,7 +1245,7 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
         _imageManager.storeImage(std::move(resolveAttachment), resolveAttachmentMetadata),
         _samplerManager->getOrCreateSampler(
             *_logicalDevice,
-            SamplerBuilder().withFlags(VK_SAMPLER_CREATE_SUBSAMPLED_BIT_EXT).buildMetadata()),
+            SamplerBuilder().withLodRange(0.0f, 0.0f).withMipmapMode(VK_SAMPLER_MIPMAP_MODE_NEAREST).withAddressMode(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE).withFlags(VK_SAMPLER_CREATE_SUBSAMPLED_BIT_EXT).buildMetadata()),
         resolveView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
     attachmentViews.push_back(resolveView);
   }
@@ -1119,9 +1278,11 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
         optimizationImage, optimizationImageMetadata, 0, optimizationImageMetadata.mipLevels, 0,
         optimizationImageMetadata.arrayLayers);
     attachmentViews.push_back(imageView);
-    _computeDescriptorSetWriter.storeImageStorage(imageView, VK_IMAGE_LAYOUT_GENERAL);
-    _computeDescriptorSetWriter.writeDescriptorSet(
-        _logicalDevice->getVkDevice(), _computeDescriptorSet.getVkDescriptorSet());
+    if (!nonCompute) {
+      _computeDescriptorSetWriter.storeImageStorage(imageView, VK_IMAGE_LAYOUT_GENERAL);
+      _computeDescriptorSetWriter.writeDescriptorSet(
+          _logicalDevice->getVkDevice(), _computeDescriptorSet.getVkDescriptorSet());
+    }
     _fragmentShadingOptimizationImageRef =
         _imageManager.storeImage(std::move(optimizationImage), optimizationImageMetadata);
     attachmentRefs = lib::Buffer<Ref<Image>>{
@@ -1145,7 +1306,7 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
           .addOutputAttachment(2);
   _extendedFeatures.fragmentShadingRateModifier.modify(subpass);
 
-  if (!vrMode) {
+  if (!nonCompute) {
     _renderPass =
         renderpassBuilder
             .addDependency(
@@ -1157,11 +1318,17 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
                     | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
                 VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
             .build(*_logicalDevice);
+  } else {
+    _renderPass = renderpassBuilder.build(*_logicalDevice);
+    FramebufferBuilder offscreenFramebufferBuilder;
+    offscreenFramebufferBuilder.withAttachments(attachmentViews);
+    Framebuffer offscreenFramebuffer = offscreenFramebufferBuilder.build(_renderPass, extent, 1);
+    _offscreenFramebuffer = _framebufferManager.storeFramebuffer(std::move(offscreenFramebuffer), offscreenFramebufferBuilder.getMetadata(), attachmentRefs);
   }
 
   auto imageViews = std::span(reinterpret_cast<const VkImageView*>(presentResources.imageViews),
                               presentResources.imageViewsCount);
-  if (!vrMode) {
+  if (!nonCompute) {
     for (VkImageView imageView : imageViews) {
       // FDM Offset
       // TODO: there should be imageViews.size() descriptorSets!!!
