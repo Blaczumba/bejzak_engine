@@ -51,8 +51,7 @@ public:
 
   AttachmentLayout& addShadowAttachment(VkFormat format, VkImageLayout finalLayout);
 
-  AttachmentLayout& addColorResolveAttachment(
-      VkFormat format);
+  AttachmentLayout& addColorResolveAttachment(VkFormat format);
 
   AttachmentLayout& addColorResolvePresentAttachment(VkFormat format, VkAttachmentLoadOp loadOp);
 

@@ -145,14 +145,13 @@ AttachmentLayout& AttachmentLayout::addShadowAttachment(
   return *this;
 }
 
-AttachmentLayout& AttachmentLayout::addColorResolveAttachment(
-    VkFormat format) {
+AttachmentLayout& AttachmentLayout::addColorResolveAttachment(VkFormat format) {
   _clearValues.push_back(VkClearValue{
     .color = {0.0f, 0.0f, 0.0f, 1.0f}
   });
-  _attachmentDescriptions.push_back(
-      createDescription(format, VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE, VK_IMAGE_LAYOUT_UNDEFINED,
-                        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
+  _attachmentDescriptions.push_back(createDescription(
+      format, VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE,
+      VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
   _attachmentImageLayouts.push_back(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
   _attachmentTypes.push_back(AttachmentType::COLOR_RESOLVE);
   _aspectFlags.push_back(VK_IMAGE_ASPECT_COLOR_BIT);
@@ -210,8 +209,9 @@ AttachmentLayout& AttachmentLayout::addFragmentDensityMapOffsetAttachment() {
 }
 
 AttachmentLayout& AttachmentLayout::addPassthroughPresentAttachment(VkFormat format) {
-  _attachmentDescriptions.push_back(createDescription(format, VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE,
-                                                      VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR));
+  _attachmentDescriptions.push_back(createDescription(
+      format, VK_SAMPLE_COUNT_1_BIT, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_STORE,
+      VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR));
   _attachmentImageLayouts.push_back(VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
   _attachmentTypes.push_back(AttachmentType::COLOR);
   _aspectFlags.push_back(VK_IMAGE_ASPECT_COLOR_BIT);
