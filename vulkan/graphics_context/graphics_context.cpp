@@ -404,8 +404,6 @@ void GCONTEXT_CLASS createGraphicsPipelines() {
           _renderPass, _attachmentLayout, MULTIVIEW_PRESENTATION));
   _shadowPipeline = _pipelineManager->getPipeline(
       _pipelineManager->createShadowProgram(_shadowRenderPass, _shadowAttachmentLayout));
-  _passthroughPipeline = _pipelineManager->getPipeline(
-      _pipelineManager->createPassthroughProgram(_passthroughRenderpass, _passthroughLayout));
   //_envMappingPipeline =
   //_pipelineManager->getPipeline(_pipelineManager->createPbrEnvMappingProgram(
   //    _envMappingRenderPass, _envMappingAttachmentLayout));
@@ -419,6 +417,11 @@ void GCONTEXT_CLASS createGraphicsPipelines() {
       == AttachmentBasedFragmentShadingRateModifier::SupportedFeature::FRAGMENT_DENSITY_MAP) {
     _fragmentShadingOptimizationPipeline = _pipelineManager->getPipeline(
         _pipelineManager->createFragmentDensityMapProgram(*_logicalDevice));
+  } else if (_extendedFeatures.fragmentShadingRateModifier.getSelectedFeature()
+             == AttachmentBasedFragmentShadingRateModifier::SupportedFeature::
+                 FRAGMENT_DENSITY_MAP_OFFSET) {
+    _passthroughPipeline = _pipelineManager->getPipeline(
+        _pipelineManager->createPassthroughProgram(_passthroughRenderpass, _passthroughLayout));
   }
   // TODO: We should not expose the actually used features.
 }
@@ -762,6 +765,7 @@ void GCONTEXT_CLASS recordCommandBuffer(
   CommandBuffer::BeginInfoBuilder().beginCommandBuffer(
       primaryCommandBuffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
+  if (_fragmentShadingOptimizationPipeline != nullptr) {
     primaryCommandBuffer.bindPipeline(
         _fragmentShadingOptimizationPipeline->getVkPipelineBindPoint(),
         _fragmentShadingOptimizationPipeline->getVkPipeline());
@@ -777,6 +781,7 @@ void GCONTEXT_CLASS recordCommandBuffer(
         _fragmentShadingOptimizationPipeline->getVkPipelineLayout(), screenPos,
         dependencyInfoBuilder);
     primaryCommandBuffer.pipelineBarrier(dependencyInfoBuilder.build());
+  }
 
   const auto [framebuffer, framebufferMetadata] =
       _framebuffers[imageIndex].getUnderlyingResourceWithMetadata();
@@ -915,10 +920,10 @@ void GCONTEXT_CLASS recordCommandBufferFdmOffset(
       _offscreenFramebuffer.getUnderlyingResourceWithMetadata();
   //    _framebuffers[imageIndex].getUnderlyingResourceWithMetadata();
   const VkViewport viewports[] = {
-      VkViewport{.width = static_cast<float>(framebufferMetadata.extent.width),
-          .height = static_cast<float>(framebufferMetadata.extent.height),
-          .minDepth = 0.0f,
-          .maxDepth = 1.0f}
+    VkViewport{.width = static_cast<float>(framebufferMetadata.extent.width),
+               .height = static_cast<float>(framebufferMetadata.extent.height),
+               .minDepth = 0.0f,
+               .maxDepth = 1.0f}
   };
   const VkRect2D scissors[] = {VkRect2D{.extent = framebufferMetadata.extent}};
   primaryCommandBuffer.setVieport(viewports);
@@ -942,7 +947,7 @@ void GCONTEXT_CLASS recordCommandBufferFdmOffset(
 
     beginInfoBuilder.beginCommandBuffer(
         secondaryCommandBuffer, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT
-            | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+                                    | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     if (!viewportScissorInheritance) [[unlikely]] {
       secondaryCommandBuffer.setVieport(viewports);
       secondaryCommandBuffer.setScissor(scissors);
@@ -952,7 +957,7 @@ void GCONTEXT_CLASS recordCommandBufferFdmOffset(
     const auto& planes = extractFrustumPlanes(cameraProj * cameraView);
 
     VkDescriptorSet descriptorSets[] = {
-        _bindlessDescriptorSet.getVkDescriptorSet(), _dynamicDescriptorSet.getVkDescriptorSet()};
+      _bindlessDescriptorSet.getVkDescriptorSet(), _dynamicDescriptorSet.getVkDescriptorSet()};
 
     if constexpr (MULTIVIEW_PRESENTATION) {
       uint32_t dynamicUniformBufferOffsets[2];
@@ -978,7 +983,7 @@ void GCONTEXT_CLASS recordCommandBufferFdmOffset(
 
     beginInfoBuilder.beginCommandBuffer(
         secondaryCommandBuffer, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT
-            | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+                                    | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
     if (!viewportScissorInheritance) [[unlikely]] {
       secondaryCommandBuffer.setVieport(viewports);
       secondaryCommandBuffer.setScissor(scissors);
@@ -991,7 +996,7 @@ void GCONTEXT_CLASS recordCommandBufferFdmOffset(
     const MaterialComponent& cubeMaterialComponent =
         _registry.getComponent<MaterialComponent>(_skyboxEntity);
     const VkBuffer vertexBuffers[] = {
-        WeakRef<Buffer>(cubeMeshComponent.vertexBufferPrimitiveHandle).getUnderlyingResource()};
+      WeakRef<Buffer>(cubeMeshComponent.vertexBufferPrimitiveHandle).getUnderlyingResource()};
     static constexpr VkDeviceSize offsets[] = {0};
     secondaryCommandBuffer.bindVertexBuffers(vertexBuffers, offsets);
     secondaryCommandBuffer.bindIndexBuffer(
@@ -999,9 +1004,9 @@ void GCONTEXT_CLASS recordCommandBufferFdmOffset(
         cubeMeshComponent.indexType);
 
     const PushConstantsSkybox pc = {
-        .proj = cameraProj,
-        .view = cameraView,
-        .skyboxHandle = static_cast<uint32_t>(*cubeMaterialComponent.diffuse)};
+      .proj = cameraProj,
+      .view = cameraView,
+      .skyboxHandle = static_cast<uint32_t>(*cubeMaterialComponent.diffuse)};
     secondaryCommandBuffer.pushConstants(
         _skyboxPipeline->getVkPipelineLayout(),
         _skyboxPipeline->getPushConstantVkShaderStageFlags(),
@@ -1026,40 +1031,44 @@ void GCONTEXT_CLASS recordCommandBufferFdmOffset(
   });
 
   const VkCommandBuffer secondaryCommandBuffers[] = {
-      _secondaryCommandBuffers[0][_currentFrame].getVkCommandBuffer(),
-      _secondaryCommandBuffers[1][_currentFrame].getVkCommandBuffer()};
+    _secondaryCommandBuffers[0][_currentFrame].getVkCommandBuffer(),
+    _secondaryCommandBuffers[1][_currentFrame].getVkCommandBuffer()};
   primaryCommandBuffer.executeSecondaryCommandBuffers(secondaryCommandBuffers);
 
   SubpassEndInfoBuilder subpassEndBuilder;
-    const VkSubpassEndInfo endInfo =
-        subpassEndBuilder
-            .withFragmentDensityMapOffsetEndInfo({
-                                                     VkOffset2D{0, 128},
-                                                     VkOffset2D{0, -256}
-                                                 })
-            .build();
-    primaryCommandBuffer.endRenderPass(endInfo);
+  const VkSubpassEndInfo endInfo =
+      subpassEndBuilder
+          .withFragmentDensityMapOffsetEndInfo({
+            VkOffset2D{0, 128 },
+            VkOffset2D{0, -256}
+  })
+          .build();
+  primaryCommandBuffer.endRenderPass(endInfo);
 
-    // Passthrough Renderpass.
+  // Passthrough Renderpass.
   const auto [passthroughFramebuffer, passthroughFramebufferMetadata] =
       _framebuffers[imageIndex].getUnderlyingResourceWithMetadata();
   const VkViewport passthroughViewports[] = {
-      VkViewport{.width = static_cast<float>(passthroughFramebufferMetadata.extent.width),
-          .height = static_cast<float>(passthroughFramebufferMetadata.extent.height),
-          .minDepth = 0.0f,
-          .maxDepth = 1.0f}
+    VkViewport{.width = static_cast<float>(passthroughFramebufferMetadata.extent.width),
+               .height = static_cast<float>(passthroughFramebufferMetadata.extent.height),
+               .minDepth = 0.0f,
+               .maxDepth = 1.0f}
   };
-  const VkRect2D passthroughScissors[] = {VkRect2D{.extent = passthroughFramebufferMetadata.extent}};
+  const VkRect2D passthroughScissors[] = {
+    VkRect2D{.extent = passthroughFramebufferMetadata.extent}};
   primaryCommandBuffer.setVieport(passthroughViewports);
   primaryCommandBuffer.setScissor(passthroughScissors);
   primaryCommandBuffer.beginRenderPass(
       VK_SUBPASS_CONTENTS_INLINE, passthroughFramebuffer, passthroughFramebufferMetadata.extent,
       _passthroughRenderpass.getVkRenderPass(), _passthroughLayout.getVkClearValues());
 
-  primaryCommandBuffer.bindPipeline(_passthroughPipeline->getVkPipelineBindPoint(), _passthroughPipeline->getVkPipeline());
-  primaryCommandBuffer.bindDescriptorSets(_passthroughPipeline->getVkPipelineBindPoint(), _passthroughPipeline->getVkPipelineLayout(), {_bindlessDescriptorSet.getVkDescriptorSet()});
+  primaryCommandBuffer.bindPipeline(
+      _passthroughPipeline->getVkPipelineBindPoint(), _passthroughPipeline->getVkPipeline());
+  primaryCommandBuffer.bindDescriptorSets(
+      _passthroughPipeline->getVkPipelineBindPoint(), _passthroughPipeline->getVkPipelineLayout(),
+      {_bindlessDescriptorSet.getVkDescriptorSet()});
   const PushConstantsModelDescriptorHandles32Bit passthroughPc = {
-      .descriptorHandles = {static_cast<uint32_t>(*_passthroughImageHandle)}};
+    .descriptorHandles = {static_cast<uint32_t>(*_passthroughImageHandle)}};
   primaryCommandBuffer.pushConstants(
       _passthroughPipeline->getVkPipelineLayout(),
       _passthroughPipeline->getPushConstantVkShaderStageFlags(),
@@ -1171,12 +1180,15 @@ void GCONTEXT_CLASS draw() {
 
   const common::CameraContext& cameraContext = _communicationLayer->getCameraContexts()[0];
   const auto [screenx, screeny] = _communicationLayer->getScreenPos();
-  if (_fragmentShadingOptimizationPipeline != nullptr) {
+  if (_extendedFeatures.fragmentShadingRateModifier.getSelectedFeature()
+      == AttachmentBasedFragmentShadingRateModifier::SupportedFeature::
+          FRAGMENT_DENSITY_MAP_OFFSET) {
+    recordCommandBufferFdmOffset(
+        cameraContext.proj, cameraContext.view,
+        _communicationLayer->getCurrentSwapchainImageIndex(), {screenx, screeny});
+  } else {
     recordCommandBuffer(cameraContext.proj, cameraContext.view,
                         _communicationLayer->getCurrentSwapchainImageIndex(), {screenx, screeny});
-  } else {
-    recordCommandBufferFdmOffset(cameraContext.proj, cameraContext.view,
-                                 _communicationLayer->getCurrentSwapchainImageIndex(), {screenx, screeny});
   }
 
   static SubmitInfoBuilder submitInfoBuilder;
@@ -1210,21 +1222,13 @@ void GCONTEXT_CLASS waitCompleteExecution() const {
 }
 
 GCONTEXT_TEMPLATE
-void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& presentResources) {
-  const bool nonCompute =
-      _extendedFeatures.fragmentShadingRateModifier.getSelectedFeature()
-      == AttachmentBasedFragmentShadingRateModifier::SupportedFeature::FRAGMENT_DENSITY_MAP_OFFSET;
+void GCONTEXT_CLASS createPresentingResourcesForFdmOffset(
+    const common::PresentResources& presentResources) {
   static constexpr VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_2_BIT;
   const VkFormat swapchainImageFormat = static_cast<VkFormat>(presentResources.imageFormat);
   const VkExtent2D extent = VkExtent2D{presentResources.width, presentResources.height};
   _attachmentLayout = AttachmentLayout(msaaSamples);
-  if (!nonCompute) {
-    _attachmentLayout.addColorResolvePresentAttachment(
-        swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE);
-  } else {
-    _attachmentLayout.addColorResolveAttachment(swapchainImageFormat);
-  }
-  _attachmentLayout
+  _attachmentLayout.addColorResolveAttachment(swapchainImageFormat)
       .addColorAttachment(
           swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE)
       .addDepthAttachment(VK_FORMAT_D24_UNORM_S8_UINT, VK_ATTACHMENT_STORE_OP_DONT_CARE);
@@ -1232,24 +1236,28 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
 
   lib::Buffer<Ref<Image>> attachmentRefs;
   std::vector<VkImageView> attachmentViews;
-  VkImageCreateFlags additionalFlags = {};
+  VkImageCreateFlags additionalFlags =
+      VK_IMAGE_CREATE_FRAGMENT_DENSITY_MAP_OFFSET_BIT_QCOM | VK_IMAGE_CREATE_SUBSAMPLED_BIT_EXT;
 
-  if (nonCompute) {
-    additionalFlags =
-        VK_IMAGE_CREATE_FRAGMENT_DENSITY_MAP_OFFSET_BIT_QCOM | VK_IMAGE_CREATE_SUBSAMPLED_BIT_EXT;
-    auto [resolveAttachment, resolveAttachmentMetadata] = createAttachment(
-        *_logicalDevice, swapchainImageFormat, VK_SAMPLE_COUNT_1_BIT, extent,
-        presentResources.numLayers, VK_IMAGE_ASPECT_COLOR_BIT,
-        VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, additionalFlags);
-    VkImageView resolveView = resolveAttachment.getVkImageView();
-    _passthroughImageHandle = _bindlessWriter->writeTexture(
-        _imageManager.storeImage(std::move(resolveAttachment), resolveAttachmentMetadata),
-        _samplerManager->getOrCreateSampler(
-            *_logicalDevice,
-            SamplerBuilder().withLodRange(0.0f, 0.0f).withMipmapMode(VK_SAMPLER_MIPMAP_MODE_NEAREST).withAddressMode(VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE).withFlags(VK_SAMPLER_CREATE_SUBSAMPLED_BIT_EXT).buildMetadata()),
-        resolveView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-    attachmentViews.push_back(resolveView);
-  }
+  auto [resolveAttachment, resolveAttachmentMetadata] = createAttachment(
+      *_logicalDevice, swapchainImageFormat, VK_SAMPLE_COUNT_1_BIT, extent,
+      presentResources.numLayers, VK_IMAGE_ASPECT_COLOR_BIT,
+      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, additionalFlags);
+  VkImageView resolveView = resolveAttachment.getVkImageView();
+  _passthroughImageHandle = _bindlessWriter->writeTexture(
+      _imageManager.storeImage(std::move(resolveAttachment), resolveAttachmentMetadata),
+      _samplerManager->getOrCreateSampler(
+          *_logicalDevice,
+          SamplerBuilder()
+              .withLodRange(0.0f, 0.0f)
+              .withMipmapMode(VK_SAMPLER_MIPMAP_MODE_NEAREST)
+              .withAddressMode(
+                  VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE, VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE,
+                  VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE)
+              .withFlags(VK_SAMPLER_CREATE_SUBSAMPLED_BIT_EXT)
+              .buildMetadata()),
+      resolveView, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+  attachmentViews.push_back(resolveView);
 
   auto [colorAttachment, colorAttachmentMetadata] = createAttachment(
       *_logicalDevice, swapchainImageFormat, msaaSamples, extent, presentResources.numLayers,
@@ -1279,11 +1287,110 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
         optimizationImage, optimizationImageMetadata, 0, optimizationImageMetadata.mipLevels, 0,
         optimizationImageMetadata.arrayLayers);
     attachmentViews.push_back(imageView);
-    if (!nonCompute) {
-      _computeDescriptorSetWriter.storeImageStorage(imageView, VK_IMAGE_LAYOUT_GENERAL);
-      _computeDescriptorSetWriter.writeDescriptorSet(
-          _logicalDevice->getVkDevice(), _computeDescriptorSet.getVkDescriptorSet());
-    }
+    _fragmentShadingOptimizationImageRef =
+        _imageManager.storeImage(std::move(optimizationImage), optimizationImageMetadata);
+    attachmentRefs = lib::Buffer<Ref<Image>>{
+      std::move(collorAttachmentHandle), std::move(depthAttachmentHandle),
+      _fragmentShadingOptimizationImageRef};
+  }
+
+  RenderpassBuilder renderpassBuilder(_attachmentLayout);
+  if constexpr (MULTIVIEW_PRESENTATION) {
+    auto mask = lib::setNLeastSignificantBits<uint32_t>(presentResources.numLayers);
+    renderpassBuilder.withMultiView({mask}, {mask});
+  }
+
+  RenderpassBuilder::Subpass& subpass =
+      renderpassBuilder.createSubpass()
+          .addOutputAttachment(0)
+          .addOutputAttachment(1)
+          .addOutputAttachment(2);
+  _extendedFeatures.fragmentShadingRateModifier.modify(subpass);
+
+  _renderPass = renderpassBuilder.build(*_logicalDevice);
+  FramebufferBuilder offscreenFramebufferBuilder;
+  offscreenFramebufferBuilder.withAttachments(attachmentViews);
+  Framebuffer offscreenFramebuffer = offscreenFramebufferBuilder.build(_renderPass, extent, 1);
+  _offscreenFramebuffer = _framebufferManager.storeFramebuffer(
+      std::move(offscreenFramebuffer), offscreenFramebufferBuilder.getMetadata(), attachmentRefs);
+
+  auto imageViews = std::span(reinterpret_cast<const VkImageView*>(presentResources.imageViews),
+                              presentResources.imageViewsCount);
+  _passthroughLayout.addPassthroughPresentAttachment(swapchainImageFormat);
+  RenderpassBuilder passthroughRenderpassBuilder(_passthroughLayout);
+  if constexpr (MULTIVIEW_PRESENTATION) {
+    auto mask = lib::setNLeastSignificantBits<uint32_t>(presentResources.numLayers);
+    passthroughRenderpassBuilder.withMultiView({mask}, {mask});
+  }
+  passthroughRenderpassBuilder
+      .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                     VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                     VK_ACCESS_SHADER_READ_BIT)
+      .createSubpass()
+      .addOutputAttachment(0);
+  _passthroughRenderpass = passthroughRenderpassBuilder.build(*_logicalDevice);
+
+  for (VkImageView imageView : imageViews) {
+    FramebufferBuilder framebufferBuilder;
+    framebufferBuilder.addAttachment(imageView);
+    Framebuffer framebuffer = framebufferBuilder.build(_passthroughRenderpass, extent, 1);
+    _framebuffers.push_back(_framebufferManager.storeFramebuffer(
+        std::move(framebuffer), framebufferBuilder.getMetadata(), {}, imageView));
+  }
+}
+
+GCONTEXT_TEMPLATE
+void GCONTEXT_CLASS createPresentingResourcesForComputeFsrFdm(
+    const common::PresentResources& presentResources) {
+  const bool nonCompute =
+      _extendedFeatures.fragmentShadingRateModifier.getSelectedFeature()
+      == AttachmentBasedFragmentShadingRateModifier::SupportedFeature::FRAGMENT_DENSITY_MAP_OFFSET;
+  static constexpr VkSampleCountFlagBits msaaSamples = VK_SAMPLE_COUNT_2_BIT;
+  const VkFormat swapchainImageFormat = static_cast<VkFormat>(presentResources.imageFormat);
+  const VkExtent2D extent = VkExtent2D{presentResources.width, presentResources.height};
+  _attachmentLayout = AttachmentLayout(msaaSamples);
+  _attachmentLayout
+      .addColorResolvePresentAttachment(swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE)
+      .addColorAttachment(
+          swapchainImageFormat, VK_ATTACHMENT_LOAD_OP_DONT_CARE, VK_ATTACHMENT_STORE_OP_DONT_CARE)
+      .addDepthAttachment(VK_FORMAT_D24_UNORM_S8_UINT, VK_ATTACHMENT_STORE_OP_DONT_CARE);
+  _extendedFeatures.fragmentShadingRateModifier.modify(_attachmentLayout);
+
+  lib::Buffer<Ref<Image>> attachmentRefs;
+  std::vector<VkImageView> attachmentViews;
+  VkImageCreateFlags additionalFlags = {};
+
+  auto [colorAttachment, colorAttachmentMetadata] = createAttachment(
+      *_logicalDevice, swapchainImageFormat, msaaSamples, extent, presentResources.numLayers,
+      VK_IMAGE_ASPECT_COLOR_BIT,
+      VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
+      additionalFlags);
+  attachmentViews.push_back(colorAttachment.getVkImageView());
+  Ref<Image> collorAttachmentHandle =
+      _imageManager.storeImage(std::move(colorAttachment), colorAttachmentMetadata);
+
+  auto [depthAtachment, depthAtachmentMetadata] = createAttachment(
+      *_logicalDevice, VK_FORMAT_D24_UNORM_S8_UINT, msaaSamples, extent, presentResources.numLayers,
+      VK_IMAGE_ASPECT_DEPTH_BIT | VK_IMAGE_ASPECT_STENCIL_BIT,
+      VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT,
+      additionalFlags);
+  attachmentViews.push_back(depthAtachment.getVkImageView());
+  Ref<Image> depthAttachmentHandle =
+      _imageManager.storeImage(std::move(depthAtachment), depthAtachmentMetadata);
+
+  std::optional<std::tuple<Image, ImageMetadata>> optionalFragmentShadingOptimizationImage =
+      _extendedFeatures.fragmentShadingRateModifier.createFragmentShadingOptimizationImage(
+          *_logicalDevice, *_singleTimeCommandPool, extent, {16, 16}, presentResources.numLayers);
+  if (optionalFragmentShadingOptimizationImage.has_value()) {
+    auto [optimizationImage, optimizationImageMetadata] =
+        std::move(*optionalFragmentShadingOptimizationImage);
+    VkImageView imageView = ImageViewBuilder().buildAndAddToImage(
+        optimizationImage, optimizationImageMetadata, 0, optimizationImageMetadata.mipLevels, 0,
+        optimizationImageMetadata.arrayLayers);
+    attachmentViews.push_back(imageView);
+    _computeDescriptorSetWriter.storeImageStorage(imageView, VK_IMAGE_LAYOUT_GENERAL);
+    _computeDescriptorSetWriter.writeDescriptorSet(
+        _logicalDevice->getVkDevice(), _computeDescriptorSet.getVkDescriptorSet());
     _fragmentShadingOptimizationImageRef =
         _imageManager.storeImage(std::move(optimizationImage), optimizationImageMetadata);
     attachmentRefs = lib::Buffer<Ref<Image>>{
@@ -1307,65 +1414,40 @@ void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& pr
           .addOutputAttachment(2);
   _extendedFeatures.fragmentShadingRateModifier.modify(subpass);
 
-  if (!nonCompute) {
-    _renderPass =
-        renderpassBuilder
-            .addDependency(
-                VK_SUBPASS_EXTERNAL, 0,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
-                    | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
-                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
-                    | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
-            .build(*_logicalDevice);
-  } else {
-    _renderPass = renderpassBuilder.build(*_logicalDevice);
-    FramebufferBuilder offscreenFramebufferBuilder;
-    offscreenFramebufferBuilder.withAttachments(attachmentViews);
-    Framebuffer offscreenFramebuffer = offscreenFramebufferBuilder.build(_renderPass, extent, 1);
-    _offscreenFramebuffer = _framebufferManager.storeFramebuffer(std::move(offscreenFramebuffer), offscreenFramebufferBuilder.getMetadata(), attachmentRefs);
-  }
+  _renderPass =
+      renderpassBuilder
+          .addDependency(
+              VK_SUBPASS_EXTERNAL, 0,
+              VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+                  | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+              VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+              VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+                  | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+              VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT)
+          .build(*_logicalDevice);
 
   auto imageViews = std::span(reinterpret_cast<const VkImageView*>(presentResources.imageViews),
                               presentResources.imageViewsCount);
-  if (!nonCompute) {
-    for (VkImageView imageView : imageViews) {
-      // FDM Offset
-      // TODO: there should be imageViews.size() descriptorSets!!!
-      FramebufferBuilder framebufferBuilder;
-      framebufferBuilder.addAttachment(imageView);
-      for (VkImageView view : attachmentViews) {
-        framebufferBuilder.addAttachment(view);
-      }
-      Framebuffer framebuffer = framebufferBuilder.build(_renderPass, extent, 1);
-      _framebuffers.push_back(_framebufferManager.storeFramebuffer(
-          std::move(framebuffer), framebufferBuilder.getMetadata(), attachmentRefs, imageView));
+  for (VkImageView imageView : imageViews) {
+    FramebufferBuilder framebufferBuilder;
+    framebufferBuilder.addAttachment(imageView);
+    for (VkImageView view : attachmentViews) {
+      framebufferBuilder.addAttachment(view);
     }
-  } else {
-    _passthroughLayout.addPassthroughPresentAttachment(swapchainImageFormat);
-    RenderpassBuilder passthroughRenderpassBuilder(_passthroughLayout);
-    if constexpr (MULTIVIEW_PRESENTATION) {
-      auto mask = lib::setNLeastSignificantBits<uint32_t>(presentResources.numLayers);
-      passthroughRenderpassBuilder.withMultiView({mask}, {mask});
-    }
-    passthroughRenderpassBuilder
-        .addDependency(VK_SUBPASS_EXTERNAL, 0, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                       VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                       VK_ACCESS_SHADER_READ_BIT)
-        .createSubpass()
-        .addOutputAttachment(0);
-    _passthroughRenderpass = passthroughRenderpassBuilder.build(*_logicalDevice);
+    Framebuffer framebuffer = framebufferBuilder.build(_renderPass, extent, 1);
+    _framebuffers.push_back(_framebufferManager.storeFramebuffer(
+        std::move(framebuffer), framebufferBuilder.getMetadata(), attachmentRefs, imageView));
+  }
+}
 
-    for (VkImageView imageView : imageViews) {
-      // FDM Offset
-      // TODO: there should be imageViews.size() descriptorSets!!!
-      FramebufferBuilder framebufferBuilder;
-      framebufferBuilder.addAttachment(imageView);
-      Framebuffer framebuffer = framebufferBuilder.build(_passthroughRenderpass, extent, 1);
-      _framebuffers.push_back(_framebufferManager.storeFramebuffer(
-          std::move(framebuffer), framebufferBuilder.getMetadata(), {}, imageView));
-    }
+GCONTEXT_TEMPLATE
+void GCONTEXT_CLASS createPresentingResources(const common::PresentResources& presentResources) {
+  if (_extendedFeatures.fragmentShadingRateModifier.getSelectedFeature()
+      == AttachmentBasedFragmentShadingRateModifier::SupportedFeature::
+          FRAGMENT_DENSITY_MAP_OFFSET) {
+    createPresentingResourcesForFdmOffset(presentResources);
+  } else {
+    createPresentingResourcesForComputeFsrFdm(presentResources);
   }
 }
 

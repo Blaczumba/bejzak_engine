@@ -198,7 +198,8 @@ void CommandBuffer::pushConstants(VkPipelineLayout layout, VkShaderStageFlags st
       _commandBuffer, layout, stageFlags, offset, static_cast<uint32_t>(data.size()), data.data());
 }
 
-void CommandBuffer::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex, uint32_t firstInstance) const noexcept {
+void CommandBuffer::draw(uint32_t vertexCount, uint32_t instanceCount, uint32_t firstVertex,
+                         uint32_t firstInstance) const noexcept {
   vkCmdDraw(_commandBuffer, vertexCount, instanceCount, firstVertex, firstInstance);
 }
 

@@ -230,6 +230,10 @@ private:
 
   void recordCommandBufferFdmOffset(const glm::mat4& cameraProj, const glm::mat4& cameraView,
                                     uint32_t imageIndex, std::pair<uint32_t, uint32_t> screenPos);
+
+  void createPresentingResourcesForFdmOffset(const common::PresentResources& presentResources);
+
+  void createPresentingResourcesForComputeFsrFdm(const common::PresentResources& presentResources);
 };
 
 // The two specializations are explicitly instantiated in graphics_context.cpp.

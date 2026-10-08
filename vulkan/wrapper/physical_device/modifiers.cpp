@@ -45,6 +45,9 @@ std::tuple<AttachmentBasedFragmentShadingRateModifier, const char*>
 AttachmentBasedFragmentShadingRateModifier::create(
     const PhysicalDevice& physicalDevice, ExtensionsConnector& extensionsConnector,
     SupportedFeature preferredFeature) noexcept {
+  if (preferredFeature == SupportedFeature::NONE) {
+    return {AttachmentBasedFragmentShadingRateModifier(physicalDevice, preferredFeature), ""};
+  }
   VkPhysicalDeviceFragmentDensityMapFeaturesEXT fdmFeatures{
     VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_FEATURES_EXT};
   VkPhysicalDeviceFragmentDensityMapOffsetFeaturesQCOM fdmOffsetQcomFeatures{
@@ -171,9 +174,11 @@ AttachmentBasedFragmentShadingRateModifier::createFragmentShadingOptimizationIma
         usage = VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
         const VkPhysicalDeviceFragmentDensityMapPropertiesEXT& fdmProperties =
             _physicalDevice->getFragmentDensityMapProperties();
-        optimizationExtent = VkExtent2D(3 * extent.width/fdmProperties.minFragmentDensityTexelSize.width / 2, 3 * extent.height/fdmProperties.minFragmentDensityTexelSize.height / 2);
-//            clampExtent(extent, {2, 2}, fdmProperties.minFragmentDensityTexelSize,
-//                        fdmProperties.maxFragmentDensityTexelSize);
+        optimizationExtent =
+            VkExtent2D(3 * extent.width / fdmProperties.minFragmentDensityTexelSize.width / 2,
+                       3 * extent.height / fdmProperties.minFragmentDensityTexelSize.height / 2);
+        //            clampExtent(extent, {2, 2}, fdmProperties.minFragmentDensityTexelSize,
+        //                        fdmProperties.maxFragmentDensityTexelSize);
         break;
       }
     case SupportedFeature::FRAGMENT_SHADING_RATE:

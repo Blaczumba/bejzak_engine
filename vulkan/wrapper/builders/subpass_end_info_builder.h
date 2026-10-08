@@ -3,6 +3,7 @@
 #include <initializer_list>
 #include <optional>
 #include <vulkan/vulkan.h>
+
 #include "lib/buffer/buffer.h"
 
 class SubpassEndInfoBuilder {
