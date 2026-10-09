@@ -1,5 +1,6 @@
 #include "command_buffer.h"
 
+#include <cassert>
 #include <cstdint>
 #include <initializer_list>
 #include <iterator>
@@ -9,16 +10,20 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-#include "common/util/engine_exception.h"
 #include "lib/buffer/buffer.h"
 #include "vulkan/wrapper/command_buffer/command_pool.h"
-#include "vulkan/wrapper/framebuffer/framebuffer.h"
 #include "vulkan/wrapper/logical_device/logical_device.h"
 #include "vulkan/wrapper/logical_device/resource_destroyer.h"
 #include "vulkan/wrapper/util/check.h"
 #include "vulkan/wrapper/util/pipeline_stage_helper.h"
 
 namespace {
+
+template <typename T>
+void chainExtendedField(const void** next, T& feature) {
+  feature.pNext = *next;
+  *next = (void*)&feature;
+}
 
 template <typename T>
 void chainExtendedField(void** next, T& feature) {
@@ -85,14 +90,16 @@ std::vector<CommandBuffer> CommandBuffer::create(
   return commandBuffers;
 }
 
+VkResult CommandBuffer::begin(const VkCommandBufferBeginInfo& beginInfo) const noexcept {
+  assert(_level == VK_COMMAND_BUFFER_LEVEL_SECONDARY && beginInfo.pInheritanceInfo != nullptr
+         || _level == VK_COMMAND_BUFFER_LEVEL_PRIMARY && beginInfo.pInheritanceInfo == nullptr);
+  return vkBeginCommandBuffer(_commandBuffer, &beginInfo);
+}
+
 void CommandBuffer::beginRenderPass(
     VkSubpassContents subpassContents, VkFramebuffer framebuffer, VkExtent2D framebufferExtent,
     VkRenderPass renderpass, std::span<const VkClearValue> clearValues) const {
-  if (_level != VK_COMMAND_BUFFER_LEVEL_PRIMARY) [[unlikely]] {
-    throw EngineException(
-        "Cannot begin renderpass without VK_COMMAND_BUFFER_LEVEL_PRIMARY specified.");
-  }
-
+  assert(_level == VK_COMMAND_BUFFER_LEVEL_PRIMARY);
   const VkRenderPassBeginInfo renderPassInfo = {
     .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
     .renderPass = renderpass,
@@ -211,11 +218,7 @@ void CommandBuffer::drawIndexed(uint32_t indexCount, uint32_t instanceCount, uin
 
 void CommandBuffer::executeSecondaryCommandBuffers(
     std::span<const VkCommandBuffer> commandBuffers) const {
-  if (_level != VK_COMMAND_BUFFER_LEVEL_PRIMARY) [[unlikely]] {
-    throw EngineException(
-        "Secondary command buffers can only be executed from the primary command buffer.");
-  }
-
+  assert(_level == VK_COMMAND_BUFFER_LEVEL_PRIMARY);
   vkCmdExecuteCommands(
       _commandBuffer, static_cast<uint32_t>(commandBuffers.size()), commandBuffers.data());
 }
@@ -356,68 +359,20 @@ void CommandBuffer::copyBufferToImage(
                          static_cast<uint32_t>(copyRegions.size()), copyRegions.begin());
 }
 
-CommandBuffer::BeginInfoBuilder& CommandBuffer::BeginInfoBuilder::
-    withViewportScissorInheritenceInfo(std::span<const VkViewport> viewports) {
-  if (_viewportScissorInheritanceInfo.has_value()) [[unlikely]] {
-    return *this;
-  }
-
-  _viewportScissorInheritanceInfo = VkCommandBufferInheritanceViewportScissorInfoNV{
-    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_VIEWPORT_SCISSOR_INFO_NV,
-    .viewportScissor2D = VK_TRUE,
-    .viewportDepthCount = static_cast<uint32_t>(viewports.size()),
-    .pViewportDepths = viewports.data()};
-
-  chainExtendedField(&_inheritenceInfoPNext, *_viewportScissorInheritanceInfo);
-  return *this;
-}
-
-CommandBuffer::BeginInfoBuilder& CommandBuffer::BeginInfoBuilder::withInheritenceInfo(
-    VkRenderPass renderpass, VkFramebuffer framebuffer, uint32_t subpass,
-    std::optional<VkQueryControlFlags> queryControlFlags,
-    VkQueryPipelineStatisticFlags pipelineStatistics) {
-  if (_inheritanceInfo.has_value()) [[unlikely]] {
-    return *this;
-  }
-
-  _inheritanceInfo = VkCommandBufferInheritanceInfo{
-    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO,
-    .renderPass = renderpass,
-    .subpass = subpass,
-    .framebuffer = framebuffer,
-    .occlusionQueryEnable = queryControlFlags.has_value() ? VK_TRUE : VK_FALSE,
-    .queryFlags = queryControlFlags.value_or(0),
-    .pipelineStatistics = pipelineStatistics};
-  return *this;
-}
-
-VkResult CommandBuffer::BeginInfoBuilder::beginCommandBuffer(
-    const CommandBuffer& commandBuffer, VkCommandBufferUsageFlags usageFlags) {
-  if (commandBuffer._level == VK_COMMAND_BUFFER_LEVEL_SECONDARY) {
-    if (!_inheritanceInfo.has_value()) {
-      throw EngineException("Inheritance info must be specified for secondary command buffers!");
-    }
-    _inheritanceInfo->pNext = _inheritenceInfoPNext;
-  }
-
-  const VkCommandBufferBeginInfo beginInfo = {
-    .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-    .pNext = _pNext,
-    .flags = usageFlags,
-    .pInheritanceInfo = _inheritanceInfo.has_value() ? &_inheritanceInfo.value() : nullptr};
-  return vkBeginCommandBuffer(commandBuffer.getVkCommandBuffer(), &beginInfo);
-}
-
-VkResult CommandBuffer::end() const {
+VkResult CommandBuffer::end() const noexcept {
   return vkEndCommandBuffer(_commandBuffer);
 }
 
-VkResult CommandBuffer::resetCommandBuffer(VkCommandBufferResetFlags flags) const {
+VkResult CommandBuffer::resetCommandBuffer(VkCommandBufferResetFlags flags) const noexcept {
   return vkResetCommandBuffer(_commandBuffer, flags);
 }
 
 VkCommandBuffer CommandBuffer::getVkCommandBuffer() const noexcept {
   return _commandBuffer;
+}
+
+VkCommandBufferLevel CommandBuffer::getVkCommandBufferLevel() const noexcept {
+  return _level;
 }
 
 void CommandBuffer::destroy() {

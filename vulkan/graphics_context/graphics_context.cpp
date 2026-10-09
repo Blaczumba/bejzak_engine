@@ -31,6 +31,7 @@
 #include "vulkan/resource_manager/framebuffer_manager.h"
 #include "vulkan/resource_manager/pipeline_manager.h"
 #include "vulkan/resource_manager/sampler_manager.h"
+#include "vulkan/wrapper/builders/command_buffer_begin_info_builder.h"
 #include "vulkan/wrapper/builders/dependency_info_builder.h"
 #include "vulkan/wrapper/builders/image_memory_barrier_builder.h"
 #include "vulkan/wrapper/builders/submit_info_builder.h"
@@ -762,8 +763,9 @@ void GCONTEXT_CLASS recordCommandBuffer(
     const glm::mat4& cameraProj, const glm::mat4& cameraView, uint32_t imageIndex,
     std::pair<uint32_t, uint32_t> screenPos) {
   const CommandBuffer& primaryCommandBuffer = _primaryCommandBuffer[_currentFrame];
-  CommandBuffer::BeginInfoBuilder().beginCommandBuffer(
-      primaryCommandBuffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+  primaryCommandBuffer.begin(CommandBufferBeginInfoNonOwningBuilder()
+                                 .withFlags(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)
+                                 .build());
 
   if (_fragmentShadingOptimizationPipeline != nullptr) {
     primaryCommandBuffer.bindPipeline(
@@ -799,8 +801,8 @@ void GCONTEXT_CLASS recordCommandBuffer(
       VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS, framebuffer, framebufferMetadata.extent,
       _renderPass.getVkRenderPass(), _attachmentLayout.getVkClearValues());
 
-  auto beginInfoBuilder = CommandBuffer::BeginInfoBuilder().withInheritenceInfo(
-      _renderPass.getVkRenderPass(), framebuffer, 0);
+  CommandBufferBeginInfoNonOwningBuilder beginInfoBuilder;
+  beginInfoBuilder.withInheritenceInfo(_renderPass.getVkRenderPass(), framebuffer, 0);
   static const bool viewportScissorInheritance =
       _physicalDevice->hasAvailableExtension(VK_NV_INHERITED_VIEWPORT_SCISSOR_EXTENSION_NAME);
   if (viewportScissorInheritance) [[likely]] {
@@ -811,10 +813,11 @@ void GCONTEXT_CLASS recordCommandBuffer(
 
   futures[0] = std::async(std::launch::async, [&]() -> void {
     const CommandBuffer& secondaryCommandBuffer = _secondaryCommandBuffers[0][_currentFrame];
-
-    beginInfoBuilder.beginCommandBuffer(
-        secondaryCommandBuffer, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT
-                                    | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    secondaryCommandBuffer.begin(
+        beginInfoBuilder
+            .withFlags(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT
+                       | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)
+            .build());
     if (!viewportScissorInheritance) [[unlikely]] {
       secondaryCommandBuffer.setVieport(viewports);
       secondaryCommandBuffer.setScissor(scissors);
@@ -847,10 +850,11 @@ void GCONTEXT_CLASS recordCommandBuffer(
   futures[1] = std::async(std::launch::async, [&]() -> void {
     // Skybox
     const CommandBuffer& secondaryCommandBuffer = _secondaryCommandBuffers[1][_currentFrame];
-
-    beginInfoBuilder.beginCommandBuffer(
-        secondaryCommandBuffer, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT
-                                    | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    secondaryCommandBuffer.begin(
+        beginInfoBuilder
+            .withFlags(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT
+                       | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)
+            .build());
     if (!viewportScissorInheritance) [[unlikely]] {
       secondaryCommandBuffer.setVieport(viewports);
       secondaryCommandBuffer.setScissor(scissors);
@@ -913,12 +917,12 @@ void GCONTEXT_CLASS recordCommandBufferFdmOffset(
     const glm::mat4& cameraProj, const glm::mat4& cameraView, uint32_t imageIndex,
     std::pair<uint32_t, uint32_t> screenPos) {
   const CommandBuffer& primaryCommandBuffer = _primaryCommandBuffer[_currentFrame];
-  CommandBuffer::BeginInfoBuilder().beginCommandBuffer(
-      primaryCommandBuffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+  primaryCommandBuffer.begin(CommandBufferBeginInfoNonOwningBuilder()
+                                 .withFlags(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)
+                                 .build());
 
   const auto [framebuffer, framebufferMetadata] =
       _offscreenFramebuffer.getUnderlyingResourceWithMetadata();
-  //    _framebuffers[imageIndex].getUnderlyingResourceWithMetadata();
   const VkViewport viewports[] = {
     VkViewport{.width = static_cast<float>(framebufferMetadata.extent.width),
                .height = static_cast<float>(framebufferMetadata.extent.height),
@@ -932,8 +936,10 @@ void GCONTEXT_CLASS recordCommandBufferFdmOffset(
       VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS, framebuffer, framebufferMetadata.extent,
       _renderPass.getVkRenderPass(), _attachmentLayout.getVkClearValues());
 
-  auto beginInfoBuilder = CommandBuffer::BeginInfoBuilder().withInheritenceInfo(
-      _renderPass.getVkRenderPass(), framebuffer, 0);
+  CommandBufferBeginInfoNonOwningBuilder beginInfoBuilder;
+  beginInfoBuilder.withInheritenceInfo(_renderPass.getVkRenderPass(), framebuffer, 0)
+      .withFlags(VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT
+                 | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
   static const bool viewportScissorInheritance =
       _physicalDevice->hasAvailableExtension(VK_NV_INHERITED_VIEWPORT_SCISSOR_EXTENSION_NAME);
   if (viewportScissorInheritance) [[likely]] {
@@ -944,10 +950,7 @@ void GCONTEXT_CLASS recordCommandBufferFdmOffset(
 
   futures[0] = std::async(std::launch::async, [&]() -> void {
     const CommandBuffer& secondaryCommandBuffer = _secondaryCommandBuffers[0][_currentFrame];
-
-    beginInfoBuilder.beginCommandBuffer(
-        secondaryCommandBuffer, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT
-                                    | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    secondaryCommandBuffer.begin(beginInfoBuilder.build());
     if (!viewportScissorInheritance) [[unlikely]] {
       secondaryCommandBuffer.setVieport(viewports);
       secondaryCommandBuffer.setScissor(scissors);
@@ -980,10 +983,7 @@ void GCONTEXT_CLASS recordCommandBufferFdmOffset(
   futures[1] = std::async(std::launch::async, [&]() -> void {
     // Skybox
     const CommandBuffer& secondaryCommandBuffer = _secondaryCommandBuffers[1][_currentFrame];
-
-    beginInfoBuilder.beginCommandBuffer(
-        secondaryCommandBuffer, VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT
-                                    | VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    secondaryCommandBuffer.begin(beginInfoBuilder.build());
     if (!viewportScissorInheritance) [[unlikely]] {
       secondaryCommandBuffer.setVieport(viewports);
       secondaryCommandBuffer.setScissor(scissors);

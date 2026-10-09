@@ -19,16 +19,17 @@ public:
 
   ~CommandPool();
 
-  CommandBuffer createCommandBuffer(VkCommandBufferLevel level) const;
+  CommandBuffer createCommandBuffer(VkCommandBufferLevel level) const noexcept;
 
-  std::vector<CommandBuffer> createCommandBuffers(VkCommandBufferLevel level, uint32_t count) const;
+  std::vector<CommandBuffer> createCommandBuffers(
+      VkCommandBufferLevel level, uint32_t count) const noexcept;
 
   // The definition of this template lives in command_buffer.h (it needs the
   // full CommandBuffer type). Include command_buffer.h in any translation unit that calls it.
   template <size_t COUNT>
-  std::array<CommandBuffer, COUNT> createCommandBuffers(VkCommandBufferLevel level) const;
+  std::array<CommandBuffer, COUNT> createCommandBuffers(VkCommandBufferLevel level) const noexcept;
 
-  void reset() const;
+  VkResult reset() const noexcept;
 
   VkCommandPool getVkCommandPool() const noexcept;
 

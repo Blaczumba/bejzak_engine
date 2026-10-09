@@ -1,5 +1,6 @@
 #include "vulkan/wrapper/builders/subpass_end_info_builder.h"
 
+#include <cassert>
 #include <initializer_list>
 
 namespace {
@@ -14,23 +15,25 @@ void chain(const void** pNext, Feature& feature) {
 
 SubpassEndInfoOwningBuilder& SubpassEndInfoOwningBuilder::withFragmentDensityMapOffsetEndInfo(
     std::initializer_list<VkOffset2D> fragmentDensityOffsets) noexcept {
+  assert(!_fragmentDensityMapInfo.has_value());
   _fragmentDensityOffsets = lib::Buffer<VkOffset2D>(fragmentDensityOffsets);
   _fragmentDensityMapInfo = VkSubpassFragmentDensityMapOffsetEndInfoQCOM{
     .sType = VK_STRUCTURE_TYPE_SUBPASS_FRAGMENT_DENSITY_MAP_OFFSET_END_INFO_QCOM,
     .fragmentDensityOffsetCount = static_cast<uint32_t>(_fragmentDensityOffsets.size()),
     .pFragmentDensityOffsets = _fragmentDensityOffsets.data()};
-  chain(&_subpassEndInfo.pNext, _fragmentDensityMapInfo);
+  chain(&_subpassEndInfo.pNext, *_fragmentDensityMapInfo);
   return *this;
 }
 
 SubpassEndInfoOwningBuilder& SubpassEndInfoOwningBuilder::withFragmentDensityMapOffsetEndInfo(
     std::span<const VkOffset2D> fragmentDensityOffsets) noexcept {
+  assert(!_fragmentDensityMapInfo.has_value());
   _fragmentDensityOffsets = lib::Buffer<VkOffset2D>(fragmentDensityOffsets);
   _fragmentDensityMapInfo = VkSubpassFragmentDensityMapOffsetEndInfoQCOM{
     .sType = VK_STRUCTURE_TYPE_SUBPASS_FRAGMENT_DENSITY_MAP_OFFSET_END_INFO_QCOM,
     .fragmentDensityOffsetCount = static_cast<uint32_t>(_fragmentDensityOffsets.size()),
     .pFragmentDensityOffsets = _fragmentDensityOffsets.data()};
-  chain(&_subpassEndInfo.pNext, _fragmentDensityMapInfo);
+  chain(&_subpassEndInfo.pNext, *_fragmentDensityMapInfo);
   return *this;
 }
 
@@ -40,11 +43,12 @@ const VkSubpassEndInfo& SubpassEndInfoOwningBuilder::build() const noexcept {
 
 SubpassEndInfoNonOwningBuilder& SubpassEndInfoNonOwningBuilder::withFragmentDensityMapOffsetEndInfo(
     std::span<const VkOffset2D> fragmentDensityOffsets) noexcept {
+  assert(!_fragmentDensityMapInfo.has_value());
   _fragmentDensityMapInfo = VkSubpassFragmentDensityMapOffsetEndInfoQCOM{
     .sType = VK_STRUCTURE_TYPE_SUBPASS_FRAGMENT_DENSITY_MAP_OFFSET_END_INFO_QCOM,
     .fragmentDensityOffsetCount = static_cast<uint32_t>(fragmentDensityOffsets.size()),
     .pFragmentDensityOffsets = fragmentDensityOffsets.data()};
-  chain(&_subpassEndInfo.pNext, _fragmentDensityMapInfo);
+  chain(&_subpassEndInfo.pNext, *_fragmentDensityMapInfo);
   return *this;
 }
 

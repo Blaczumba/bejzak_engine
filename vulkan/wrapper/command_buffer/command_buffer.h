@@ -38,6 +38,8 @@ public:
 
   ~CommandBuffer();
 
+  VkResult begin(const VkCommandBufferBeginInfo& beginInfo) const noexcept;
+
   void beginRenderPass(
       VkSubpassContents subpassContents, VkFramebuffer framebuffer, VkExtent2D framebufferExtent,
       VkRenderPass renderpass, std::span<const VkClearValue> clearValues) const;
@@ -113,35 +115,13 @@ public:
   void copyBufferToImage(VkBuffer buffer, VkImage image, VkImageLayout layout,
                          std::initializer_list<VkBufferImageCopy> copyRegions) const noexcept;
 
-  class BeginInfoBuilder {
-  public:
-    BeginInfoBuilder() noexcept = default;
+  VkResult end() const noexcept;
 
-    ~BeginInfoBuilder() = default;
-
-    BeginInfoBuilder& withViewportScissorInheritenceInfo(std::span<const VkViewport> viewports);
-
-    BeginInfoBuilder& withInheritenceInfo(
-        VkRenderPass renderpass, VkFramebuffer framebuffer, uint32_t subpass,
-        std::optional<VkQueryControlFlags> queryControlFlags = std::nullopt,
-        VkQueryPipelineStatisticFlags pipelineStatistics = 0);
-
-    VkResult beginCommandBuffer(
-        const CommandBuffer& commandBuffer, VkCommandBufferUsageFlags usageFlags = 0);
-
-  private:
-    void* _inheritenceInfoPNext = nullptr;
-    std::optional<VkCommandBufferInheritanceViewportScissorInfoNV> _viewportScissorInheritanceInfo;
-    std::optional<VkCommandBufferInheritanceInfo> _inheritanceInfo;
-
-    void* _pNext = nullptr;
-  };
-
-  VkResult end() const;
-
-  VkResult resetCommandBuffer(VkCommandBufferResetFlags flags = 0) const;
+  VkResult resetCommandBuffer(VkCommandBufferResetFlags flags = 0) const noexcept;
 
   VkCommandBuffer getVkCommandBuffer() const noexcept;
+
+  VkCommandBufferLevel getVkCommandBufferLevel() const noexcept;
 
 protected:
   VkCommandBuffer _commandBuffer = VK_NULL_HANDLE;
@@ -189,6 +169,6 @@ std::array<CommandBuffer, COUNT> CommandBuffer::create(
 // after CommandBuffer is a complete type.
 template <size_t COUNT>
 std::array<CommandBuffer, COUNT> CommandPool::createCommandBuffers(
-    VkCommandBufferLevel level) const {
+    VkCommandBufferLevel level) const noexcept {
   return CommandBuffer::create<COUNT>(shared_from_this(), level);
 }

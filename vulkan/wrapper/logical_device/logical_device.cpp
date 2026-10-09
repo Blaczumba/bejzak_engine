@@ -1,6 +1,7 @@
 #include "logical_device.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cstdint>
 #include <memory>
 #include <utility>
@@ -135,9 +136,7 @@ std::unique_ptr<LogicalDevice> LogicalDevice::createPtr(
 
 LogicalDevice LogicalDevice::wrap(VkDevice logicalDevice, const PhysicalDevice& physicalDevice,
                                   std::unique_ptr<ResourceDestroyer> resourceDestroyer) {
-  if (logicalDevice == VK_NULL_HANDLE) {
-    throw EngineException("Cannot wrap VK_NULL_HANDLE around LogicalDevice.");
-  }
+  assert(logicalDevice != VK_NULL_HANDLE);
   auto [universalQueue, dedicatedPresentQueue, dedicatedTransferQueue, dedicatedComputeQueue] =
       getVkQueues(logicalDevice, physicalDevice.getQueueFamilyIndices());
   return LogicalDevice(logicalDevice, physicalDevice, universalQueue, dedicatedPresentQueue,
@@ -147,9 +146,7 @@ LogicalDevice LogicalDevice::wrap(VkDevice logicalDevice, const PhysicalDevice& 
 std::unique_ptr<LogicalDevice> LogicalDevice::wrapPtr(
     VkDevice logicalDevice, const PhysicalDevice& physicalDevice,
     std::unique_ptr<ResourceDestroyer> resourceDestroyer) {
-  if (logicalDevice == VK_NULL_HANDLE) {
-    throw EngineException("Cannot wrap VK_NULL_HANDLE around LogicalDevice.");
-  }
+  assert(logicalDevice != VK_NULL_HANDLE);
   auto [universalQueue, dedicatedPresentQueue, dedicatedTransferQueue, dedicatedComputeQueue] =
       getVkQueues(logicalDevice, physicalDevice.getQueueFamilyIndices());
   return std::unique_ptr<LogicalDevice>(new LogicalDevice(

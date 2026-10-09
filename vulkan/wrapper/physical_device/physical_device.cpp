@@ -11,7 +11,6 @@
 
 #include "common/util/engine_exception.h"
 #include "lib/buffer/buffer.h"
-#include "vulkan/wrapper/physical_device/optional_extended_features.h"
 
 namespace {
 

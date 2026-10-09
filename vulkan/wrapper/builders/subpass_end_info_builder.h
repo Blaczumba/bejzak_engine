@@ -1,6 +1,7 @@
 #pragma once
 
 #include <initializer_list>
+#include <optional>
 #include <span>
 #include <vulkan/vulkan.h>
 
@@ -22,7 +23,7 @@ public:
 
 private:
   lib::Buffer<VkOffset2D> _fragmentDensityOffsets;
-  VkSubpassFragmentDensityMapOffsetEndInfoQCOM _fragmentDensityMapInfo;
+  std::optional<VkSubpassFragmentDensityMapOffsetEndInfoQCOM> _fragmentDensityMapInfo;
   VkSubpassEndInfo _subpassEndInfo{VK_STRUCTURE_TYPE_SUBPASS_END_INFO};
 };
 
@@ -38,6 +39,6 @@ public:
   const VkSubpassEndInfo& build() const noexcept;
 
 private:
-  VkSubpassFragmentDensityMapOffsetEndInfoQCOM _fragmentDensityMapInfo;
+  std::optional<VkSubpassFragmentDensityMapOffsetEndInfoQCOM> _fragmentDensityMapInfo;
   VkSubpassEndInfo _subpassEndInfo{VK_STRUCTURE_TYPE_SUBPASS_END_INFO};
 };

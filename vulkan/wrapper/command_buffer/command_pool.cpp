@@ -27,17 +27,17 @@ CommandPool::~CommandPool() {
   });
 }
 
-CommandBuffer CommandPool::createCommandBuffer(VkCommandBufferLevel level) const {
+CommandBuffer CommandPool::createCommandBuffer(VkCommandBufferLevel level) const noexcept {
   return CommandBuffer::create(shared_from_this(), level);
 }
 
 std::vector<CommandBuffer> CommandPool::createCommandBuffers(
-    VkCommandBufferLevel level, uint32_t count) const {
+    VkCommandBufferLevel level, uint32_t count) const noexcept {
   return CommandBuffer::create(shared_from_this(), level, count);
 }
 
-void CommandPool::reset() const {
-  vkResetCommandPool(_logicalDevice.getVkDevice(), _commandPool, 0);
+VkResult CommandPool::reset() const noexcept {
+  return vkResetCommandPool(_logicalDevice.getVkDevice(), _commandPool, 0);
 }
 
 VkCommandPool CommandPool::getVkCommandPool() const noexcept {

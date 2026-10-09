@@ -5,7 +5,6 @@
 
 #include "descriptor_pool.h"
 #include "lib/buffer/buffer.h"
-#include "vulkan/wrapper/descriptor_set/descriptor_pool.h"
 #include "vulkan/wrapper/descriptor_set/lib.h"
 
 DescriptorSet::DescriptorSet(VkDescriptorSet descriptorSet,

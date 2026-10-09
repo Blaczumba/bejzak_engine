@@ -11,8 +11,6 @@
 #include "lib/buffer/buffer.h"
 #include "vulkan/wrapper/instance/instance.h"
 
-struct PhysicalDeviceOptionalExtendedFeatures;
-
 struct QueueFamilyIndices {
   uint32_t universalFamily;  // Graphics + Compute + Transfer + Present
   std::optional<uint32_t> dedicatedPresentFamily;
