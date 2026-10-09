@@ -33,11 +33,6 @@ std::unordered_set<std::string> checkDeviceExtensionSupport(VkPhysicalDevice dev
   return availableExtensionNames;
 }
 
-bool areQueueFamilyIndicesComplete(const QueueFamilyIndices& indices) {
-  return indices.graphicsFamily.has_value() && indices.presentFamily.has_value()
-         && indices.computeFamily.has_value() && indices.transferFamily.has_value();
-}
-
 lib::Buffer<VkQueueFamilyProperties> getQueueFamilyProperties(VkPhysicalDevice device) {
   uint32_t queueFamilyCount = 0;
   vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, nullptr);
@@ -49,61 +44,98 @@ lib::Buffer<VkQueueFamilyProperties> getQueueFamilyProperties(VkPhysicalDevice d
 
 QueueFamilyIndices findQueueFamilyIndices(VkPhysicalDevice device, VkSurfaceKHR surface) {
   lib::Buffer<VkQueueFamilyProperties> queueFamilies = getQueueFamilyProperties(device);
-  QueueFamilyIndices indices;
+  std::optional<uint32_t> universalFamily;
+  std::optional<uint32_t> dedicatedPresentFamily;
+  std::optional<uint32_t> dedicatedTransferFamily;
+  std::optional<uint32_t> dedicatedComputeFamily;
 
-  // Use a standard index-based loop for maximum compatibility
   for (uint32_t i = 0; i < static_cast<uint32_t>(queueFamilies.size()); ++i) {
-    const auto& queueFamily = queueFamilies[i];
+    const VkQueueFamilyProperties& queueFamily = queueFamilies[i];
+    const VkQueueFlags flags = queueFamily.queueFlags;
 
-    if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-      indices.graphicsFamily = i;
+    if (!universalFamily.has_value()) {
+      if ((flags & VK_QUEUE_GRAPHICS_BIT) && (flags & VK_QUEUE_COMPUTE_BIT)) {
+        universalFamily = i;
+      }
     }
 
-    if (queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT) {
-      indices.computeFamily = i;
+    if (!dedicatedComputeFamily.has_value()) {
+      if ((flags & VK_QUEUE_COMPUTE_BIT) && !(flags & VK_QUEUE_GRAPHICS_BIT)) {
+        dedicatedComputeFamily = i;
+      }
     }
 
-    if (queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT) {
-      indices.transferFamily = i;
-    }
-
-    VkBool32 presentSupport = VK_FALSE;
-    vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
-    if (presentSupport) {
-      indices.presentFamily = i;
-    }
-
-    if (areQueueFamilyIndicesComplete(indices)) {
-      return indices;
+    if (!dedicatedTransferFamily.has_value()) {
+      if ((flags & VK_QUEUE_TRANSFER_BIT) && !(flags & VK_QUEUE_GRAPHICS_BIT)
+          && !(flags & VK_QUEUE_COMPUTE_BIT)) {
+        dedicatedTransferFamily = i;
+      }
     }
   }
 
-  throw EngineException("Failed to find complete set of queue family indices.");
+  if (!universalFamily.has_value()) {
+    throw EngineException("Failed to find required queue family index for Universal Queue.");
+  }
+
+  VkBool32 presentSupport = VK_FALSE;
+  vkGetPhysicalDeviceSurfaceSupportKHR(device, *universalFamily, surface, &presentSupport);
+  if (!presentSupport) {
+    for (uint32_t i = 0; i < static_cast<uint32_t>(queueFamilies.size()); i++) {
+      vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
+      if (presentSupport) {
+        dedicatedPresentFamily = i;
+        break;
+      }
+    }
+    if (!dedicatedPresentFamily.has_value()) {
+      throw EngineException("Failed to find required queue family index for Present Queue");
+    }
+  }
+
+  return QueueFamilyIndices{
+    .universalFamily = *universalFamily,
+    .dedicatedPresentFamily = dedicatedPresentFamily,
+    .dedicatedTransferFamily = dedicatedTransferFamily,
+    .dedicatedComputeFamily = dedicatedComputeFamily};
 }
 
 QueueFamilyIndices findQueueFamilyIndices(VkPhysicalDevice device) {
   lib::Buffer<VkQueueFamilyProperties> queueFamilies = getQueueFamilyProperties(device);
-  QueueFamilyIndices indices;
+  std::optional<uint32_t> universalFamily;
+  std::optional<uint32_t> dedicatedTransferFamily;
+  std::optional<uint32_t> dedicatedComputeFamily;
 
-  for (uint32_t i = 0; i < static_cast<uint32_t>(queueFamilies.size()); ++i) {
-    const auto& queueFamily = queueFamilies[i];
+  for (uint32_t i = 0; i < static_cast<uint32_t>(queueFamilies.size()); i++) {
+    const VkQueueFamilyProperties& queueFamily = queueFamilies[i];
+    const VkQueueFlags flags = queueFamily.queueFlags;
 
-    if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-      indices.graphicsFamily = i;
-      // Note: In your snippet, you assigned presentFamily here as well.
-      indices.presentFamily = i;
+    if (!universalFamily.has_value()) {
+      if ((flags & VK_QUEUE_GRAPHICS_BIT) && (flags & VK_QUEUE_COMPUTE_BIT)) {
+        universalFamily = i;
+      }
     }
 
-    if (queueFamily.queueFlags & VK_QUEUE_COMPUTE_BIT) {
-      indices.computeFamily = i;
+    if (!dedicatedComputeFamily.has_value()) {
+      if ((flags & VK_QUEUE_COMPUTE_BIT) && !(flags & VK_QUEUE_GRAPHICS_BIT)) {
+        dedicatedComputeFamily = i;
+      }
     }
 
-    if (queueFamily.queueFlags & VK_QUEUE_TRANSFER_BIT) {
-      indices.transferFamily = i;
+    if (!dedicatedTransferFamily.has_value()) {
+      if ((flags & VK_QUEUE_TRANSFER_BIT) && !(flags & VK_QUEUE_GRAPHICS_BIT)
+          && !(flags & VK_QUEUE_COMPUTE_BIT)) {
+        dedicatedTransferFamily = i;
+      }
     }
   }
 
-  return indices;
+  if (!universalFamily.has_value()) {
+    throw EngineException("Failed to find required queue family indices (Universal and Present).");
+  }
+
+  return QueueFamilyIndices{.universalFamily = *universalFamily,
+                            .dedicatedTransferFamily = dedicatedTransferFamily,
+                            .dedicatedComputeFamily = dedicatedComputeFamily};
 }
 
 SwapChainSupportDetails querySwapchainSupportDetails(

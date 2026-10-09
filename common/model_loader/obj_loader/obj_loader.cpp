@@ -2,6 +2,7 @@
 
 #include <format>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <tinyobjloader/tiny_obj_loader.h>
 #include <unordered_map>
@@ -9,7 +10,6 @@
 #include "common/abstractions/asset_manager.h"
 #include "common/buffer/index_buffer_lib.h"
 #include "common/model_loader/model_loader.h"
-#include "common/util/engine_exception.h"
 
 namespace common {
 namespace {
@@ -54,7 +54,7 @@ AssetData loadObj(
 
   std::istringstream dataStream(stringData);
   if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warning, &error, &dataStream)) {
-    throw EngineException(std::format("Failed to load {}.", name));
+    throw std::runtime_error(std::format("Failed to load {}.", name));
   }
 
   std::unordered_map<Indices, int, Indices::Hash> mp;

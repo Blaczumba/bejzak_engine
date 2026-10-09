@@ -432,7 +432,7 @@ void GCONTEXT_CLASS createCommandBuffers() {
     _commandPools[i] =
         CommandPoolBuilder()
             .withFlags(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT)
-            .withQueueFamilyIndex(*_physicalDevice->getQueueFamilyIndices().graphicsFamily)
+            .withQueueFamilyIndex(_physicalDevice->getQueueFamilyIndices().universalFamily)
             .build(*_logicalDevice);
   }
   _primaryCommandBuffer =
@@ -1035,15 +1035,12 @@ void GCONTEXT_CLASS recordCommandBufferFdmOffset(
     _secondaryCommandBuffers[1][_currentFrame].getVkCommandBuffer()};
   primaryCommandBuffer.executeSecondaryCommandBuffers(secondaryCommandBuffers);
 
-  SubpassEndInfoBuilder subpassEndBuilder;
-  const VkSubpassEndInfo endInfo =
-      subpassEndBuilder
-          .withFragmentDensityMapOffsetEndInfo({
-            VkOffset2D{0, 128 },
-            VkOffset2D{0, -256}
-  })
-          .build();
-  primaryCommandBuffer.endRenderPass(endInfo);
+  const VkOffset2D offsets[2] = {
+    VkOffset2D{0, 128 },
+    VkOffset2D{0, -256}
+  };
+  primaryCommandBuffer.endRenderPass(
+      SubpassEndInfoNonOwningBuilder().withFragmentDensityMapOffsetEndInfo(offsets).build());
 
   // Passthrough Renderpass.
   const auto [passthroughFramebuffer, passthroughFramebufferMetadata] =
@@ -1096,7 +1093,7 @@ GCONTEXT_CLASS GraphicsContext(
   _singleTimeCommandPool =
       CommandPoolBuilder()
           .withFlags(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT)
-          .withQueueFamilyIndex(*_physicalDevice->getQueueFamilyIndices().graphicsFamily)
+          .withQueueFamilyIndex(_physicalDevice->getQueueFamilyIndices().universalFamily)
           .build(*_logicalDevice);
   _assetManager = AssetManager::create(*_logicalDevice, _bufferManager);
   _samplerManager = SamplerManager::create();
@@ -1191,14 +1188,14 @@ void GCONTEXT_CLASS draw() {
                         _communicationLayer->getCurrentSwapchainImageIndex(), {screenx, screeny});
   }
 
-  static SubmitInfoBuilder submitInfoBuilder;
+  static SubmitInfoOwningBuilder submitInfoBuilder;
   if constexpr (!SYNCED_OUTSIDE) {
     _presentationContext->synchronizeSubmit(&submitInfoBuilder);
   }
 
   CHECK_VKCMD(submitInfoBuilder
                   .withCommandBuffers({_primaryCommandBuffer[_currentFrame].getVkCommandBuffer()})
-                  .submitQueue(_logicalDevice->getGraphicsVkQueue(),
+                  .submitQueue(_logicalDevice->getUniversalVkQueue(),
                                _frameFences[_currentFrame].getVkFence()),
               "Failed to submit draw command buffer.");
 

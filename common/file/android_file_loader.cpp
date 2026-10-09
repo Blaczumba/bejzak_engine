@@ -1,9 +1,9 @@
 #include "android_file_loader.h"
 
 #include <android/asset_manager.h>
+#include <exception>
 #include <format>
 
-#include "common/util/engine_exception.h"
 #include "lib/buffer/buffer.h"
 
 AndroidFileLoader::AndroidFileLoader(AAssetManager* assetManager) : _assetManager(assetManager) {}
@@ -11,7 +11,7 @@ AndroidFileLoader::AndroidFileLoader(AAssetManager* assetManager) : _assetManage
 lib::Buffer<std::byte> AndroidFileLoader::loadFileToBuffer(std::string_view filePath) const {
   AAsset* asset = AAssetManager_open(_assetManager, filePath.data(), AASSET_MODE_BUFFER);
   if (!asset) {
-    throw EngineException(std::format("Failed to load {}", filePath));
+    throw std::runtime_error(std::format("Failed to load {}", filePath));
   }
 
   const off_t assetSize = AAsset_getLength(asset);
@@ -22,7 +22,7 @@ lib::Buffer<std::byte> AndroidFileLoader::loadFileToBuffer(std::string_view file
   AAsset_close(asset);
 
   if (bytesRead != assetSize) {
-    throw EngineException(std::format("Failed to load {}", filePath));
+    throw std::runtime_error(std::format("Failed to load {}", filePath));
   }
 
   return buffer;
@@ -31,7 +31,7 @@ lib::Buffer<std::byte> AndroidFileLoader::loadFileToBuffer(std::string_view file
 std::string AndroidFileLoader::loadFileToString(std::string_view filePath) const {
   AAsset* asset = AAssetManager_open(_assetManager, filePath.data(), AASSET_MODE_BUFFER);
   if (!asset) {
-    throw EngineException(std::format("Failed to load {}", filePath));
+    throw std::runtime_error(std::format("Failed to load {}", filePath));
   }
 
   const off_t assetSize = AAsset_getLength(asset);
@@ -43,7 +43,7 @@ std::string AndroidFileLoader::loadFileToString(std::string_view filePath) const
   AAsset_close(asset);
 
   if (bytesRead != assetSize) {
-    throw EngineException(std::format("Failed to load {}", filePath));
+    throw std::runtime_error(std::format("Failed to load {}", filePath));
   }
 
   return buffer;

@@ -3,14 +3,12 @@
 #include <algorithm>
 #include <cstdint>
 #include <memory>
-#include <set>
 #include <utility>
 #include <vulkan/vulkan.h>
 
 #include "common/util/engine_exception.h"
 #include "lib/buffer/buffer.h"
-#include "vulkan/wrapper/instance/extensions.h"
-#include "vulkan/wrapper/instance/validation_layers.h"
+#include "vulkan/wrapper/logical_device/lib.h"
 #include "vulkan/wrapper/logical_device/resource_destroyer.h"
 #include "vulkan/wrapper/memory_allocator/allocation.h"
 #include "vulkan/wrapper/memory_allocator/memory_allocator.h"
@@ -20,37 +18,25 @@
 namespace {
 
 struct VkQeueus {
-  VkQueue graphicsQueue;
-  VkQueue presentQueue;
-  VkQueue computeQueue;
-  VkQueue transferQueue;
+  VkQueue universalQueue = VK_NULL_HANDLE;
+  VkQueue presentQueue = VK_NULL_HANDLE;
+  VkQueue transferQueue = VK_NULL_HANDLE;
+  VkQueue computeQueue = VK_NULL_HANDLE;
 };
 
 VkQeueus getVkQueues(VkDevice device, const QueueFamilyIndices& indices) {
-  VkQueue graphicsQueue, presentQueue, computeQueue, transferQueue;
-  vkGetDeviceQueue(device, *indices.graphicsFamily, 0, &graphicsQueue);
-  vkGetDeviceQueue(device, *indices.presentFamily, 0, &presentQueue);
-  vkGetDeviceQueue(device, *indices.computeFamily, 0, &computeQueue);
-  vkGetDeviceQueue(device, *indices.transferFamily, 0, &transferQueue);
-  return {graphicsQueue, presentQueue, computeQueue, transferQueue};
-}
-
-lib::Buffer<VkDeviceQueueCreateInfo> getDeviceQueueCreateInfos(
-    const QueueFamilyIndices& indices, float* queuePriority) {
-  const std::set<uint32_t> uniqueQueueFamilies = {*indices.graphicsFamily, *indices.presentFamily,
-                                                  *indices.computeFamily, *indices.transferFamily};
-  lib::Buffer<VkDeviceQueueCreateInfo> queueCreateInfos(uniqueQueueFamilies.size());
-  std::transform(uniqueQueueFamilies.cbegin(), uniqueQueueFamilies.cend(), queueCreateInfos.begin(),
-                 [queuePriority](uint32_t queueFamilyIndex) {
-                   return VkDeviceQueueCreateInfo{
-                     .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-                     .pNext = nullptr,
-                     .flags = 0,
-                     .queueFamilyIndex = queueFamilyIndex,
-                     .queueCount = 1,
-                     .pQueuePriorities = queuePriority};
-                 });
-  return queueCreateInfos;
+  VkQeueus queues;
+  vkGetDeviceQueue(device, indices.universalFamily, 0, &queues.universalQueue);
+  if (indices.dedicatedPresentFamily.has_value()) {
+    vkGetDeviceQueue(device, *indices.dedicatedPresentFamily, 0, &queues.presentQueue);
+  }
+  if (indices.dedicatedTransferFamily.has_value()) {
+    vkGetDeviceQueue(device, *indices.dedicatedTransferFamily, 0, &queues.transferQueue);
+  }
+  if (indices.dedicatedComputeFamily.has_value()) {
+    vkGetDeviceQueue(device, *indices.dedicatedComputeFamily, 0, &queues.computeQueue);
+  }
+  return queues;
 }
 
 std::unique_ptr<ResourceDestroyer> createResourceDestroyer(ResourceDestroyerType type) {
@@ -67,11 +53,12 @@ std::unique_ptr<ResourceDestroyer> createResourceDestroyer(ResourceDestroyerType
 }  // namespace
 
 LogicalDevice::LogicalDevice(
-    VkDevice logicalDevice, const PhysicalDevice& physicalDevice, VkQueue graphicsQueue,
-    VkQueue presentQueue, VkQueue computeQueue, VkQueue transferQueue,
+    VkDevice logicalDevice, const PhysicalDevice& physicalDevice, VkQueue universalQueue,
+    VkQueue dedicatedPresentQueue, VkQueue dedicatedTransferQueue, VkQueue dedicatedComputeQueue,
     std::unique_ptr<ResourceDestroyer> resourceDestroyer) noexcept
-  : _device(logicalDevice), _physicalDevice(&physicalDevice), _graphicsQueue(graphicsQueue),
-    _presentQueue(presentQueue), _computeQueue(computeQueue), _transferQueue(transferQueue),
+  : _device(logicalDevice), _physicalDevice(&physicalDevice), _universalQueue(universalQueue),
+    _dedicatedPresentQueue(dedicatedPresentQueue), _dedicatedTransferQueue(dedicatedTransferQueue),
+    _dedicatedComputeQueue(dedicatedComputeQueue),
     _memoryAllocator(std::make_unique<MemoryAllocator>(
         std::in_place_type<VmaWrapper>, logicalDevice, physicalDevice.getVkPhysicalDevice(),
         physicalDevice.getInstance().getVkInstance())),
@@ -85,10 +72,10 @@ LogicalDevice::LogicalDevice(LogicalDevice&& logicalDevice) noexcept
     _physicalDevice(std::exchange(logicalDevice._physicalDevice, nullptr)),
     _memoryAllocator(std::move(logicalDevice._memoryAllocator)),
     _resourceDestroyer(std::move(logicalDevice._resourceDestroyer)),
-    _graphicsQueue(std::exchange(logicalDevice._graphicsQueue, VK_NULL_HANDLE)),
-    _presentQueue(std::exchange(logicalDevice._presentQueue, VK_NULL_HANDLE)),
-    _computeQueue(std::exchange(logicalDevice._computeQueue, VK_NULL_HANDLE)),
-    _transferQueue(std::exchange(logicalDevice._transferQueue, VK_NULL_HANDLE)) {}
+    _universalQueue(std::exchange(logicalDevice._universalQueue, VK_NULL_HANDLE)),
+    _dedicatedPresentQueue(std::exchange(logicalDevice._dedicatedPresentQueue, VK_NULL_HANDLE)),
+    _dedicatedTransferQueue(std::exchange(logicalDevice._dedicatedTransferQueue, VK_NULL_HANDLE)),
+    _dedicatedComputeQueue(std::exchange(logicalDevice._dedicatedComputeQueue, VK_NULL_HANDLE)) {}
 
 LogicalDevice& LogicalDevice::operator=(LogicalDevice&& logicalDevice) noexcept {
   if (this == &logicalDevice) {
@@ -99,10 +86,10 @@ LogicalDevice& LogicalDevice::operator=(LogicalDevice&& logicalDevice) noexcept 
   _physicalDevice = std::exchange(logicalDevice._physicalDevice, nullptr);
   _memoryAllocator = std::move(logicalDevice._memoryAllocator);
   _resourceDestroyer = std::move(logicalDevice._resourceDestroyer);
-  _graphicsQueue = std::exchange(logicalDevice._graphicsQueue, VK_NULL_HANDLE);
-  _presentQueue = std::exchange(logicalDevice._presentQueue, VK_NULL_HANDLE);
-  _computeQueue = std::exchange(logicalDevice._computeQueue, VK_NULL_HANDLE);
-  _transferQueue = std::exchange(logicalDevice._transferQueue, VK_NULL_HANDLE);
+  _universalQueue = std::exchange(logicalDevice._universalQueue, VK_NULL_HANDLE);
+  _dedicatedPresentQueue = std::exchange(logicalDevice._dedicatedPresentQueue, VK_NULL_HANDLE);
+  _dedicatedTransferQueue = std::exchange(logicalDevice._dedicatedTransferQueue, VK_NULL_HANDLE);
+  _dedicatedComputeQueue = std::exchange(logicalDevice._dedicatedComputeQueue, VK_NULL_HANDLE);
   return *this;
 }
 
@@ -126,10 +113,10 @@ LogicalDevice LogicalDevice::create(
   CHECK_VKCMD(vkCreateDevice(
                   physicalDevice.getVkPhysicalDevice(), &deviceCreateInfo, nullptr, &logicalDevice),
               "Failed to create LogicalDevice!");
-  auto [graphicsQueue, presentQueue, computeQueue, transferQueue] =
+  auto [universalQueue, dedicatedPresentQueue, dedicatedTransferQueue, dedicatedComputeQueue] =
       getVkQueues(logicalDevice, physicalDevice.getQueueFamilyIndices());
-  return LogicalDevice(logicalDevice, physicalDevice, graphicsQueue, presentQueue, computeQueue,
-                       transferQueue, std::move(resourceDestroyer));
+  return LogicalDevice(logicalDevice, physicalDevice, universalQueue, dedicatedPresentQueue,
+                       dedicatedTransferQueue, dedicatedComputeQueue, std::move(resourceDestroyer));
 }
 
 std::unique_ptr<LogicalDevice> LogicalDevice::createPtr(
@@ -139,11 +126,11 @@ std::unique_ptr<LogicalDevice> LogicalDevice::createPtr(
   CHECK_VKCMD(vkCreateDevice(
                   physicalDevice.getVkPhysicalDevice(), &deviceCreateInfo, nullptr, &logicalDevice),
               "Failed to create LogicalDevice!");
-  auto [graphicsQueue, presentQueue, computeQueue, transferQueue] =
+  auto [universalQueue, dedicatedPresentQueue, dedicatedTransferQueue, dedicatedComputeQueue] =
       getVkQueues(logicalDevice, physicalDevice.getQueueFamilyIndices());
-  return std::unique_ptr<LogicalDevice>(
-      new LogicalDevice(logicalDevice, physicalDevice, graphicsQueue, presentQueue, computeQueue,
-                        transferQueue, std::move(resourceDestroyer)));
+  return std::unique_ptr<LogicalDevice>(new LogicalDevice(
+      logicalDevice, physicalDevice, universalQueue, dedicatedPresentQueue, dedicatedTransferQueue,
+      dedicatedComputeQueue, std::move(resourceDestroyer)));
 }
 
 LogicalDevice LogicalDevice::wrap(VkDevice logicalDevice, const PhysicalDevice& physicalDevice,
@@ -151,10 +138,10 @@ LogicalDevice LogicalDevice::wrap(VkDevice logicalDevice, const PhysicalDevice& 
   if (logicalDevice == VK_NULL_HANDLE) {
     throw EngineException("Cannot wrap VK_NULL_HANDLE around LogicalDevice.");
   }
-  auto [graphicsQueue, presentQueue, computeQueue, transferQueue] =
+  auto [universalQueue, dedicatedPresentQueue, dedicatedTransferQueue, dedicatedComputeQueue] =
       getVkQueues(logicalDevice, physicalDevice.getQueueFamilyIndices());
-  return LogicalDevice(logicalDevice, physicalDevice, graphicsQueue, presentQueue, computeQueue,
-                       transferQueue, std::move(resourceDestroyer));
+  return LogicalDevice(logicalDevice, physicalDevice, universalQueue, dedicatedPresentQueue,
+                       dedicatedTransferQueue, dedicatedComputeQueue, std::move(resourceDestroyer));
 }
 
 std::unique_ptr<LogicalDevice> LogicalDevice::wrapPtr(
@@ -163,11 +150,11 @@ std::unique_ptr<LogicalDevice> LogicalDevice::wrapPtr(
   if (logicalDevice == VK_NULL_HANDLE) {
     throw EngineException("Cannot wrap VK_NULL_HANDLE around LogicalDevice.");
   }
-  auto [graphicsQueue, presentQueue, computeQueue, transferQueue] =
+  auto [universalQueue, dedicatedPresentQueue, dedicatedTransferQueue, dedicatedComputeQueue] =
       getVkQueues(logicalDevice, physicalDevice.getQueueFamilyIndices());
-  return std::unique_ptr<LogicalDevice>(
-      new LogicalDevice(logicalDevice, physicalDevice, graphicsQueue, presentQueue, computeQueue,
-                        transferQueue, std::move(resourceDestroyer)));
+  return std::unique_ptr<LogicalDevice>(new LogicalDevice(
+      logicalDevice, physicalDevice, universalQueue, dedicatedPresentQueue, dedicatedTransferQueue,
+      dedicatedComputeQueue, std::move(resourceDestroyer)));
 }
 
 VkImageView LogicalDevice::createImageView(const VkImageViewCreateInfo& imageViewCreateInfo) const {
@@ -191,33 +178,33 @@ MemoryAllocator& LogicalDevice::getMemoryAllocator() const {
 
 VkQueue LogicalDevice::getVkQueue(QueueType queueType) const noexcept {
   switch (queueType) {
-    case QueueType::GRAPHICS:
-      return _graphicsQueue;
-    case QueueType::PRESENT:
-      return _presentQueue;
-    case QueueType::COMPUTE:
-      return _computeQueue;
-    case QueueType::TRANSFER:
-      return _transferQueue;
+    case QueueType::UNIVERSAL:
+      return _universalQueue;
+    case QueueType::DEDICATED_PRESENT:
+      return _dedicatedPresentQueue;
+    case QueueType::DEDICATED_TRANSFER:
+      return _dedicatedTransferQueue;
+    case QueueType::DEDICATED_COMPUTE:
+      return _dedicatedComputeQueue;
     default:
       return VK_NULL_HANDLE;
   }
 }
 
-VkQueue LogicalDevice::getGraphicsVkQueue() const noexcept {
-  return _graphicsQueue;
+VkQueue LogicalDevice::getUniversalVkQueue() const noexcept {
+  return _universalQueue;
 }
 
-VkQueue LogicalDevice::getPresentVkQueue() const noexcept {
-  return _presentQueue;
+VkQueue LogicalDevice::getDedicatedPresentQueue() const noexcept {
+  return _dedicatedPresentQueue;
 }
 
-VkQueue LogicalDevice::getComputeVkQueue() const noexcept {
-  return _computeQueue;
+VkQueue LogicalDevice::getDedicatedTransferVkQueue() const noexcept {
+  return _dedicatedTransferQueue;
 }
 
-VkQueue LogicalDevice::getTransferVkQueue() const noexcept {
-  return _transferQueue;
+VkQueue LogicalDevice::getDedicatedComputeVkQueue() const noexcept {
+  return _dedicatedComputeQueue;
 }
 
 LogicalDeviceBuilder& LogicalDeviceBuilder::withPhysicalDeviceFeatures2(
@@ -269,9 +256,8 @@ LogicalDeviceBuilder& LogicalDeviceBuilder::withResourceDestroyerType(
 }
 
 LogicalDevice LogicalDeviceBuilder::build(const PhysicalDevice& physicalDevice) {
-  float queuePriority = 1.0f;
-  lib::Buffer<VkDeviceQueueCreateInfo> queueCreateInfos =
-      getDeviceQueueCreateInfos(physicalDevice.getQueueFamilyIndices(), &queuePriority);
+  const std::vector<VkDeviceQueueCreateInfo> queueCreateInfos =
+      getDeviceQueueCreateInfos(physicalDevice.getQueueFamilyIndices());
   _deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
   _deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
   return LogicalDevice::create(
@@ -280,9 +266,8 @@ LogicalDevice LogicalDeviceBuilder::build(const PhysicalDevice& physicalDevice) 
 
 std::unique_ptr<LogicalDevice> LogicalDeviceBuilder::buildPtr(
     const PhysicalDevice& physicalDevice) {
-  float queuePriority = 1.0f;
-  lib::Buffer<VkDeviceQueueCreateInfo> queueCreateInfos =
-      getDeviceQueueCreateInfos(physicalDevice.getQueueFamilyIndices(), &queuePriority);
+  const std::vector<VkDeviceQueueCreateInfo> queueCreateInfos =
+      getDeviceQueueCreateInfos(physicalDevice.getQueueFamilyIndices());
   _deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
   _deviceCreateInfo.pQueueCreateInfos = queueCreateInfos.data();
   return LogicalDevice::createPtr(

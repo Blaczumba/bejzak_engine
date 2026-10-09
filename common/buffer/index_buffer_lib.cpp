@@ -1,13 +1,13 @@
 #include "common/buffer/index_buffer_lib.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <format>
 #include <span>
-
-#include "common/util/engine_exception.h"
+#include <stdexcept>
 
 namespace common {
 namespace {
@@ -78,12 +78,7 @@ IndexType getCapableIndexType(size_t maxIndex) noexcept {
 void shrinkIndexData(std::span<std::byte> dst, std::span<const std::byte> src,
                      IndexType dstIndexSize, IndexType srcIndexSize) {
   const size_t indexCount = src.size() / static_cast<size_t>(srcIndexSize);
-  if (const size_t dstIndexCount = dst.size() / static_cast<size_t>(dstIndexSize);
-      dstIndexCount != indexCount) [[unlikely]] {
-    throw EngineException(
-        std::format("Incompatible buffers in terms of number of elements. dst: {}, src: {}.",
-                    dstIndexCount, indexCount));
-  }
+  assert(dst.size() / static_cast<size_t>(dstIndexSize) == indexCount);
 
   if (dstIndexSize == srcIndexSize) {
     std::memcpy(dst.data(), src.data(), src.size());
@@ -94,7 +89,7 @@ void shrinkIndexData(std::span<std::byte> dst, std::span<const std::byte> src,
   } else if (dstIndexSize == IndexType::UINT16 && srcIndexSize == IndexType::UINT32) {
     shrinkIndexDataImpl<IndexType::UINT16, IndexType::UINT32>(dst.data(), src.data(), indexCount);
   } else {
-    throw EngineException(
+    throw std::runtime_error(
         std::format("Unsupported index size conversion. dst: {}, src: {}.",
                     static_cast<size_t>(dstIndexSize), static_cast<size_t>(srcIndexSize)));
   }

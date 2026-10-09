@@ -15,8 +15,8 @@ SingleTimeCommandBuffer::SingleTimeCommandBuffer(
 
 SingleTimeCommandBuffer::~SingleTimeCommandBuffer() {
   CHECK_VKCMD(end(), "Failed to end single time command buffer.");
-  CHECK_VKCMD(SubmitInfoBuilder()
-                  .withCommandBuffers({_commandBuffer})
+  CHECK_VKCMD(SubmitInfoNonOwningBuilder()
+                  .withCommandBuffers({&_commandBuffer, 1})
                   .submitQueue(
                       _commandPool->getLogicalDevice().getVkQueue(_queueType), _fence.getVkFence()),
               "Failed to submit single time command buffer.");

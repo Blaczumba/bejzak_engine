@@ -8,21 +8,22 @@
 #include <utility>
 #include <vulkan/vulkan.h>
 
-#include "lib/buffer/buffer.h"
 #include "vulkan/wrapper/logical_device/logical_device.h"
 #include "vulkan/wrapper/logical_device/resource_destroyer.h"
 #include "vulkan/wrapper/physical_device/physical_device.h"
 #include "vulkan/wrapper/util/check.h"
 
-Swapchain::Swapchain(
-    const VkSwapchainKHR swapchain, const LogicalDevice& logicalDevice, VkFormat surfaceFormat,
-    VkExtent2D extent, std::vector<VkImage>&& images, std::vector<VkImageView>&& views) noexcept
-  : _swapchain(swapchain), _logicalDevice(&logicalDevice), _surfaceFormat(surfaceFormat),
-    _extent(extent), _images(std::move(images)), _views(std::move(views)) {}
+Swapchain::Swapchain(const VkSwapchainKHR swapchain, const LogicalDevice& logicalDevice,
+                     VkQueue presentQueue, VkFormat surfaceFormat, VkExtent2D extent,
+                     std::vector<VkImage>&& images, std::vector<VkImageView>&& views) noexcept
+  : _swapchain(swapchain), _logicalDevice(&logicalDevice), _presentQueue(presentQueue),
+    _surfaceFormat(surfaceFormat), _extent(extent), _images(std::move(images)),
+    _views(std::move(views)) {}
 
 Swapchain::Swapchain(Swapchain&& swapchain) noexcept
   : _swapchain(std::exchange(swapchain._swapchain, VK_NULL_HANDLE)),
     _logicalDevice(std::exchange(swapchain._logicalDevice, nullptr)),
+    _presentQueue(std::exchange(swapchain._presentQueue, VK_NULL_HANDLE)),
     _surfaceFormat(swapchain._surfaceFormat), _extent(swapchain._extent),
     _images(std::move(swapchain._images)), _views(std::move(swapchain._views)) {}
 
@@ -105,8 +106,7 @@ VkResult Swapchain::present(uint32_t imageIndex, VkSemaphore waitSemaphore) cons
     .pSwapchains = &_swapchain,
     .pImageIndices = &imageIndex,
   };
-
-  return vkQueuePresentKHR(_logicalDevice->getPresentVkQueue(), &presentInfo);
+  return vkQueuePresentKHR(_presentQueue, &presentInfo);
 }
 
 const LogicalDevice& Swapchain::getLogicalDevice() const noexcept {
@@ -206,6 +206,8 @@ Swapchain SwapchainBuilder::build(
     .imageExtent = actualExtent,
     .imageArrayLayers = imageArrayLayers,
     .imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+    .imageSharingMode = VK_SHARING_MODE_EXCLUSIVE,  // We assume that universal queue is capable of
+                                                    // presenting.
     .preTransform = swapChainSupport.capabilities.currentTransform,
     .compositeAlpha = _compositeAlpha,
     .presentMode = chooseSwapPresentMode(swapChainSupport.presentModes, _preferredPresentMode),
@@ -214,10 +216,10 @@ Swapchain SwapchainBuilder::build(
 
   const QueueFamilyIndices indices = logicalDevice.getPhysicalDevice().getQueueFamilyIndices();
 
-  if (indices.graphicsFamily != indices.presentFamily) {
-    const uint32_t queueFamilyIndices[] = {
-      indices.graphicsFamily.value(), indices.presentFamily.value()};
-
+  uint32_t queueFamilyIndices[2];
+  if (indices.dedicatedPresentFamily.has_value()) {
+    queueFamilyIndices[0] = indices.universalFamily;
+    queueFamilyIndices[1] = indices.dedicatedPresentFamily.value();
     createInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
     createInfo.queueFamilyIndexCount = static_cast<uint32_t>(std::size(queueFamilyIndices));
     createInfo.pQueueFamilyIndices = queueFamilyIndices;
@@ -251,7 +253,9 @@ Swapchain SwapchainBuilder::build(
 
         return logicalDevice->createImageView(imageViewCreateInfo);
       });
-
-  return Swapchain(swapchain, logicalDevice, surfaceFormat.format, actualExtent, std::move(images),
-                   std::move(views));
+  const VkQueue presentQueue = logicalDevice.getDedicatedPresentQueue();
+  return Swapchain(
+      swapchain, logicalDevice,
+      presentQueue != VK_NULL_HANDLE ? presentQueue : logicalDevice.getUniversalVkQueue(),
+      surfaceFormat.format, actualExtent, std::move(images), std::move(views));
 }

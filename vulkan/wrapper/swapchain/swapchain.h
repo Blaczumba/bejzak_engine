@@ -8,8 +8,8 @@
 #include "vulkan/wrapper/logical_device/logical_device.h"
 
 class Swapchain {
-  Swapchain(VkSwapchainKHR swapchain, const LogicalDevice& logicalDevice, VkFormat format,
-            VkExtent2D extent, std::vector<VkImage>&& images,
+  Swapchain(VkSwapchainKHR swapchain, const LogicalDevice& logicalDevice, VkQueue presentQueue,
+            VkFormat format, VkExtent2D extent, std::vector<VkImage>&& images,
             std::vector<VkImageView>&& views) noexcept;
 
 public:
@@ -44,6 +44,7 @@ private:
 
   VkSwapchainKHR _swapchain = VK_NULL_HANDLE;
   const LogicalDevice* _logicalDevice = nullptr;
+  VkQueue _presentQueue = VK_NULL_HANDLE;
 
   VkFormat _surfaceFormat;
   VkExtent2D _extent;

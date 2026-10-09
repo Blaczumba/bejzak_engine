@@ -19,19 +19,8 @@ public:
   ImageMemoryBarrierBuilder& withImage(
       VkImage image, const VkImageSubresourceRange& subresourceRange) noexcept;
 
-  VkImageMemoryBarrier2 build() const noexcept;
+  const VkImageMemoryBarrier2& build() const noexcept;
 
 private:
-  VkPipelineStageFlags2 _srcStageMask = {};
-  VkAccessFlags2 _srcAccessMask = {};
-  VkPipelineStageFlags2 _dstStageMask = {};
-  VkAccessFlags2 _dstAccessMask = {};
-  VkImageLayout _oldLayout = {};
-  VkImageLayout _newLayout = {};
-  uint32_t _srcQueueFamilyIndex = {};
-  uint32_t _dstQueueFamilyIndex = {};
-  VkImage _image = VK_NULL_HANDLE;
-  VkImageSubresourceRange _subresourceRange = {};
-
-  void* _pNext = nullptr;
+  VkImageMemoryBarrier2 _imageMemoryBarrier{VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2};
 };

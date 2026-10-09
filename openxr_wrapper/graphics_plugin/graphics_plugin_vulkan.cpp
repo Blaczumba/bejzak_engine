@@ -22,6 +22,7 @@
 #include "vulkan/wrapper/physical_device/extensions_connector.h"
 #include "vulkan/wrapper/physical_device/optional_extended_features.h"
 #include "vulkan/wrapper/util/check.h"
+#include "vulkan/wrapper/logical_device/lib.h"
 
 namespace xrw {
 
@@ -245,21 +246,8 @@ std::unique_ptr<PhysicalDevice> createPhysicalDevice(
 std::unique_ptr<LogicalDevice> createLogicalDevice(
     XrInstance xrInstance, XrSystemId systemId, const PhysicalDevice& physicalDevice,
     const VkPhysicalDeviceFeatures2& physicalDeviceFeatures, std::span<const char*> extensions) {
-  const QueueFamilyIndices& indices = physicalDevice.getQueueFamilyIndices();
-  const std::set<uint32_t> uniqueQueueFamilies = {*indices.graphicsFamily, *indices.presentFamily,
-                                                  *indices.computeFamily, *indices.transferFamily};
-
-  float queuePriority = 1.0f;
-  lib::Buffer<VkDeviceQueueCreateInfo> queueCreateInfos(uniqueQueueFamilies.size());
-  std::transform(uniqueQueueFamilies.cbegin(), uniqueQueueFamilies.cend(), queueCreateInfos.begin(),
-                 [&queuePriority](uint32_t queueFamilyIndex) {
-                   return VkDeviceQueueCreateInfo{
-                     .sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
-                     .queueFamilyIndex = queueFamilyIndex,
-                     .queueCount = 1,
-                     .pQueuePriorities = &queuePriority};
-                 });
-
+  const std::vector<VkDeviceQueueCreateInfo> queueCreateInfos =
+      getDeviceQueueCreateInfos(physicalDevice.getQueueFamilyIndices());
   const VkDeviceCreateInfo deviceCreateInfo = {
     .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
     .pNext = &physicalDeviceFeatures,
@@ -348,7 +336,7 @@ std::unique_ptr<common::GraphicsContext> GraphicsPluginVulkan::createGraphicsCon
     .instance = instance->getVkInstance(),
     .physicalDevice = physicalDevice->getVkPhysicalDevice(),
     .device = logicalDevice->getVkDevice(),
-    .queueFamilyIndex = *physicalDevice->getQueueFamilyIndices().graphicsFamily};
+    .queueFamilyIndex = physicalDevice->getQueueFamilyIndices().universalFamily};
 
   return vlkn::GraphicsContext<true, true>::create(
       instance, std::move(debugMessenger), std::move(physicalDevice), std::move(logicalDevice),

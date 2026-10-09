@@ -11,10 +11,10 @@
 #include "vulkan/wrapper/physical_device/physical_device.h"
 
 enum class QueueType : uint8_t {
-  GRAPHICS = 0,
-  PRESENT,
-  COMPUTE,
-  TRANSFER
+  UNIVERSAL = 0,  // GRAPHICS, TRANSFER, COMPUTE
+  DEDICATED_PRESENT,
+  DEDICATED_TRANSFER,
+  DEDICATED_COMPUTE
 };
 
 class LogicalDevice {
@@ -56,18 +56,19 @@ public:
 
   VkQueue getVkQueue(QueueType queueType) const noexcept;
 
-  VkQueue getGraphicsVkQueue() const noexcept;
+  VkQueue getUniversalVkQueue() const noexcept;
 
-  VkQueue getPresentVkQueue() const noexcept;
+  VkQueue getDedicatedPresentQueue() const noexcept;
 
-  VkQueue getComputeVkQueue() const noexcept;
+  VkQueue getDedicatedTransferVkQueue() const noexcept;
 
-  VkQueue getTransferVkQueue() const noexcept;
+  VkQueue getDedicatedComputeVkQueue() const noexcept;
 
 private:
-  LogicalDevice(VkDevice logicalDevice, const PhysicalDevice& physicalDevice, VkQueue graphicsQueue,
-                VkQueue presentQueue, VkQueue computeQueue, VkQueue transferQueue,
-                std::unique_ptr<ResourceDestroyer> resourceDestroyer) noexcept;
+  LogicalDevice(
+      VkDevice logicalDevice, const PhysicalDevice& physicalDevice, VkQueue universalQueue,
+      VkQueue dedicatedPresentQueue, VkQueue dedicatedTransferQueue, VkQueue dedicatedComputeQueue,
+      std::unique_ptr<ResourceDestroyer> resourceDestroyer) noexcept;
 
   VkDevice _device = VK_NULL_HANDLE;
 
@@ -75,10 +76,10 @@ private:
   MemoryAllocatorPtr _memoryAllocator;
   ResourceDestroyerPtr _resourceDestroyer;
 
-  VkQueue _graphicsQueue = VK_NULL_HANDLE;
-  VkQueue _presentQueue = VK_NULL_HANDLE;
-  VkQueue _computeQueue = VK_NULL_HANDLE;
-  VkQueue _transferQueue = VK_NULL_HANDLE;
+  VkQueue _universalQueue = VK_NULL_HANDLE;
+  VkQueue _dedicatedPresentQueue = VK_NULL_HANDLE;
+  VkQueue _dedicatedTransferQueue = VK_NULL_HANDLE;
+  VkQueue _dedicatedComputeQueue = VK_NULL_HANDLE;
 };
 
 enum class ResourceDestroyerType : uint8_t {

@@ -7,7 +7,7 @@
 class SingleTimeCommandBuffer final : public CommandBuffer {
 public:
   explicit SingleTimeCommandBuffer(
-      const CommandPool& commandPool, QueueType queueType = QueueType::GRAPHICS);
+      const CommandPool& commandPool, QueueType queueType = QueueType::UNIVERSAL);
 
   ~SingleTimeCommandBuffer();
 

@@ -1,22 +1,20 @@
 #include "common/buffer/vertex_buffer_lib.h"
 
 #include <algorithm>
+#include <cassert>
 #include <cstdint>
 #include <format>
 #include <ranges>
 #include <span>
+#include <stdexcept>
 #include <string>
 #include <vector>
-
-#include "common/util/engine_exception.h"
 
 namespace common {
 
 size_t copyInterleavingDataAndGetStride(
     std::span<std::byte> dst, std::span<const AttributeDescription> attributes) {
-  if (attributes.empty()) {
-    throw EngineException("AttributeDescriptions cannot be empty.");
-  }
+  assert(!attributes.empty());
 
   const size_t count = attributes[0].count;
 
@@ -24,7 +22,7 @@ size_t copyInterleavingDataAndGetStride(
                   [count](const AttributeDescription& attribute) {
                     return attribute.count != count;
                   })) {
-    throw EngineException(
+    throw std::runtime_error(
         "Buffers must have equal number of elements when copying buffers in an interleaving "
         "manner.");
   }
@@ -61,12 +59,7 @@ std::vector<BufferDescription> analyzeConfig(
 
     size_t totalSize = 0;
     for (const char digit : config) {
-      if (!std::isdigit(digit)) [[unlikely]] {
-        throw EngineException(std::format(
-            "The format of config string in analyzeConfig must contain digits only. Got: {}.",
-            digit));
-      }
-
+      assert(std::isdigit(digit));
       const common::AttributeDescription& description =
           orderedDescs.emplace_back(descs[static_cast<size_t>(digit - '0')]);
       totalSize += description.size * description.count;

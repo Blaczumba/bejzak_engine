@@ -32,7 +32,7 @@ public:
 
   common::PresentResources getPresentResources() const;
 
-  void synchronizeSubmit(SubmitInfoBuilder* submitInfoBuilder) const;
+  void synchronizeSubmit(SubmitInfoOwningBuilder* submitInfoBuilder) const;
 
   void setCurrentFrame(uint8_t frame);
 

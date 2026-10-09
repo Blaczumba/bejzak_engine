@@ -1,4 +1,4 @@
-add_library(LogicalDevice logical_device.h logical_device.cpp resource_destroyer.h resource_destroyer.cpp)
+add_library(LogicalDevice logical_device.h logical_device.cpp resource_destroyer.h resource_destroyer.cpp lib.h lib.cpp)
 
 target_link_libraries(LogicalDevice PUBLIC PhysicalDevice MemoryAllocator)
 

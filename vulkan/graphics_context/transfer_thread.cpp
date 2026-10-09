@@ -40,8 +40,10 @@ TransferThread::TransferThread(
     const LogicalDevice& logicalDevice, BufferManager& bufferManager, ImageManager& imageManager)
   : _logicalDevice(logicalDevice), _bufferManager(bufferManager), _imageManager(imageManager),
     _commandPool(CommandPoolBuilder()
-                     .withQueueFamilyIndex(
-                         *logicalDevice.getPhysicalDevice().getQueueFamilyIndices().transferFamily)
+                     .withQueueFamilyIndex(*logicalDevice.getPhysicalDevice()
+                                                .getQueueFamilyIndices()
+                                                .dedicatedTransferFamily)  // TODO: Need to check
+                                                                           // for support first.
                      .withFlags(VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT)
                      .build(logicalDevice)),
     _commandBuffer(_commandPool->createCommandBuffer(VK_COMMAND_BUFFER_LEVEL_PRIMARY)),

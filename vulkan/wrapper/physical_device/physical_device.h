@@ -14,10 +14,10 @@
 struct PhysicalDeviceOptionalExtendedFeatures;
 
 struct QueueFamilyIndices {
-  std::optional<uint32_t> graphicsFamily;
-  std::optional<uint32_t> presentFamily;
-  std::optional<uint32_t> computeFamily;
-  std::optional<uint32_t> transferFamily;
+  uint32_t universalFamily;  // Graphics + Compute + Transfer + Present
+  std::optional<uint32_t> dedicatedPresentFamily;
+  std::optional<uint32_t> dedicatedTransferFamily;
+  std::optional<uint32_t> dedicatedComputeFamily;
 };
 
 struct SwapChainSupportDetails {

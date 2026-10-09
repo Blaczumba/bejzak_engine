@@ -5,27 +5,49 @@
 namespace {
 
 template <typename Feature>
-void chain(void** pNext, Feature& feature) {
+void chain(const void** pNext, Feature& feature) {
   feature.pNext = *pNext;
   *pNext = &feature;
 }
 
 }  // namespace
 
-SubpassEndInfoBuilder& SubpassEndInfoBuilder::withFragmentDensityMapOffsetEndInfo(
+SubpassEndInfoOwningBuilder& SubpassEndInfoOwningBuilder::withFragmentDensityMapOffsetEndInfo(
     std::initializer_list<VkOffset2D> fragmentDensityOffsets) noexcept {
-  bool isChained = _fragmentDensityMapInfo.has_value();
   _fragmentDensityOffsets = lib::Buffer<VkOffset2D>(fragmentDensityOffsets);
   _fragmentDensityMapInfo = VkSubpassFragmentDensityMapOffsetEndInfoQCOM{
     .sType = VK_STRUCTURE_TYPE_SUBPASS_FRAGMENT_DENSITY_MAP_OFFSET_END_INFO_QCOM,
     .fragmentDensityOffsetCount = static_cast<uint32_t>(_fragmentDensityOffsets.size()),
     .pFragmentDensityOffsets = _fragmentDensityOffsets.data()};
-  if (!isChained) {
-    chain(&_pNext, *_fragmentDensityMapInfo);
-  }
+  chain(&_subpassEndInfo.pNext, _fragmentDensityMapInfo);
   return *this;
 }
 
-VkSubpassEndInfo SubpassEndInfoBuilder::build() const noexcept {
-  return VkSubpassEndInfo{.sType = VK_STRUCTURE_TYPE_SUBPASS_END_INFO, .pNext = _pNext};
+SubpassEndInfoOwningBuilder& SubpassEndInfoOwningBuilder::withFragmentDensityMapOffsetEndInfo(
+    std::span<const VkOffset2D> fragmentDensityOffsets) noexcept {
+  _fragmentDensityOffsets = lib::Buffer<VkOffset2D>(fragmentDensityOffsets);
+  _fragmentDensityMapInfo = VkSubpassFragmentDensityMapOffsetEndInfoQCOM{
+    .sType = VK_STRUCTURE_TYPE_SUBPASS_FRAGMENT_DENSITY_MAP_OFFSET_END_INFO_QCOM,
+    .fragmentDensityOffsetCount = static_cast<uint32_t>(_fragmentDensityOffsets.size()),
+    .pFragmentDensityOffsets = _fragmentDensityOffsets.data()};
+  chain(&_subpassEndInfo.pNext, _fragmentDensityMapInfo);
+  return *this;
+}
+
+const VkSubpassEndInfo& SubpassEndInfoOwningBuilder::build() const noexcept {
+  return _subpassEndInfo;
+}
+
+SubpassEndInfoNonOwningBuilder& SubpassEndInfoNonOwningBuilder::withFragmentDensityMapOffsetEndInfo(
+    std::span<const VkOffset2D> fragmentDensityOffsets) noexcept {
+  _fragmentDensityMapInfo = VkSubpassFragmentDensityMapOffsetEndInfoQCOM{
+    .sType = VK_STRUCTURE_TYPE_SUBPASS_FRAGMENT_DENSITY_MAP_OFFSET_END_INFO_QCOM,
+    .fragmentDensityOffsetCount = static_cast<uint32_t>(fragmentDensityOffsets.size()),
+    .pFragmentDensityOffsets = fragmentDensityOffsets.data()};
+  chain(&_subpassEndInfo.pNext, _fragmentDensityMapInfo);
+  return *this;
+}
+
+const VkSubpassEndInfo& SubpassEndInfoNonOwningBuilder::build() const noexcept {
+  return _subpassEndInfo;
 }

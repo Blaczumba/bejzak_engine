@@ -58,7 +58,7 @@ common::PresentResources PresentationContext::getPresentResources() const {
   };
 }
 
-void PresentationContext::synchronizeSubmit(SubmitInfoBuilder* submitInfoBuilder) const {
+void PresentationContext::synchronizeSubmit(SubmitInfoOwningBuilder* submitInfoBuilder) const {
   submitInfoBuilder
       ->withWaitSemaphores({_imageAvailableSemaphores[_currentFrame]},
                            {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT})

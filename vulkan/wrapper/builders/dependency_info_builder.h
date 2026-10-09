@@ -25,3 +25,9 @@ private:
 
   void* _pNext = nullptr;
 };
+
+class DependencyInfoInlineBuilder {
+public:
+
+private:
+};

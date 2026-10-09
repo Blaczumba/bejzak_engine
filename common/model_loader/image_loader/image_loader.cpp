@@ -5,8 +5,7 @@
 #include <format>
 #include <span>
 #include <stb_image/stb_image.h>
-
-#include "common/util/engine_exception.h"
+#include <stdexcept>
 
 std::tuple<ImageResource, OwnedImageData> loadImageStbi(std::span<const std::byte> imageData) {
   int width, height, channels;
@@ -14,7 +13,7 @@ std::tuple<ImageResource, OwnedImageData> loadImageStbi(std::span<const std::byt
       reinterpret_cast<const stbi_uc*>(imageData.data()), static_cast<int>(imageData.size()),
       &width, &height, &channels, STBI_rgb_alpha);
   if (!pixels) [[unlikely]] {
-    throw EngineException("Failed to load image file (stbi).");
+    throw std::runtime_error("Failed to load image file (stbi).");
   }
 
   return std::make_tuple(
@@ -40,7 +39,7 @@ std::tuple<ImageResource, OwnedImageData> loadImageKtx(std::span<const std::byte
           reinterpret_cast<const ktx_uint8_t*>(imageData.data()), imageData.size(),
           KTX_TEXTURE_CREATE_LOAD_IMAGE_DATA_BIT, &ktxTexture);
       result != KTX_SUCCESS) [[unlikely]] {
-    throw EngineException("Failed to load image file (ktx).");
+    throw std::runtime_error("Failed to load image file (ktx).");
   }
 
   ImageResource image{
@@ -58,7 +57,7 @@ std::tuple<ImageResource, OwnedImageData> loadImageKtx(std::span<const std::byte
       if (ktxResult result = ktxTexture_GetImageOffset(ktxTexture, level, 0, face, &offset);
           result != KTX_SUCCESS) [[unlikely]] {
         ktxTexture_Destroy(ktxTexture);
-        throw EngineException(
+        throw std::runtime_error(
             std::format("Failed to get image offset for level: {}, face: {} (ktx).", level, face));
       }
 

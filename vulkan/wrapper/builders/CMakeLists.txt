@@ -1,5 +1,4 @@
 add_library(VulkanWrapperBuilders submit_info_builder.h submit_info_builder.cpp
-submit_info_view_builder.h submit_info_view_builder.cpp
 image_memory_barrier_builder.h image_memory_barrier_builder.cpp
 dependency_info_builder.h dependency_info_builder.cpp
 subpass_end_info_builder.h subpass_end_info_builder.cpp)
