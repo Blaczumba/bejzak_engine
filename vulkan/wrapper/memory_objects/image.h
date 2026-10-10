@@ -93,34 +93,25 @@ public:
 
   ImageBuilder&& withFlags(VkImageCreateFlags flags) && noexcept;
 
-  ImageMetadata buildMetadata() const noexcept;
+  ImageMetadata buildMetadata() const&& noexcept;
 
-  Image buildImage(const LogicalDevice& logicalDevice) const;
+  Image buildImage(const LogicalDevice& logicalDevice) const&&;
 
-  std::tuple<Image, ImageMetadata> buildImageWithMetadata(const LogicalDevice& logicalDevice) const;
+  std::tuple<Image, ImageMetadata> buildImageWithMetadata(
+      const LogicalDevice& logicalDevice) const&&;
 
 private:
+  ImageMetadata buildMetadataImpl() const noexcept;
+
   VkImageCreateInfo _createInfo{
     .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
-    .pNext = nullptr,
-    .flags = 0,
     .imageType = VK_IMAGE_TYPE_2D,
-    .format = VK_FORMAT_UNDEFINED,
     .extent = {1, 1, 1},
     .mipLevels = 1,
     .arrayLayers = 1,
-    .samples = VK_SAMPLE_COUNT_1_BIT,
-    .tiling = VK_IMAGE_TILING_OPTIMAL,
-    .usage = 0,
-    .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-    .queueFamilyIndexCount = 0,
-    .pQueueFamilyIndices = nullptr,
-    .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
+    .samples = VK_SAMPLE_COUNT_1_BIT
   };
-
   VkImageAspectFlags _imageAspect = VK_IMAGE_ASPECT_COLOR_BIT;
-
-  void* _pNext = nullptr;
 };
 
 class ImageViewBuilder {

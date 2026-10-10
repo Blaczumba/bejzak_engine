@@ -220,7 +220,7 @@ ImageBuilder&& ImageBuilder::withFlags(VkImageCreateFlags flags) && noexcept {
   return std::move(*this);
 }
 
-ImageMetadata ImageBuilder::buildMetadata() const noexcept {
+ImageMetadata ImageBuilder::buildMetadataImpl() const noexcept {
   return ImageMetadata{
     .imageCreateFlags = _createInfo.flags,
     .imageType = _createInfo.imageType,
@@ -236,13 +236,17 @@ ImageMetadata ImageBuilder::buildMetadata() const noexcept {
   };
 }
 
-Image ImageBuilder::buildImage(const LogicalDevice& logicalDevice) const {
+ImageMetadata ImageBuilder::buildMetadata() const&& noexcept {
+  return buildMetadataImpl();
+}
+
+Image ImageBuilder::buildImage(const LogicalDevice& logicalDevice) const&& {
   return Image::create(logicalDevice, _createInfo);
 }
 
 std::tuple<Image, ImageMetadata> ImageBuilder::buildImageWithMetadata(
-    const LogicalDevice& logicalDevice) const {
-  return std::make_tuple(buildImage(logicalDevice), buildMetadata());
+    const LogicalDevice& logicalDevice) const&& {
+  return std::make_tuple(Image::create(logicalDevice, _createInfo), buildMetadataImpl());
 }
 
 ImageViewBuilder& ImageViewBuilder::withFlags(VkImageViewCreateFlags flags) noexcept {

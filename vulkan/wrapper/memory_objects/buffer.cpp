@@ -157,7 +157,7 @@ BufferBuilder&& BufferBuilder::withFlags(VkBufferCreateFlags flags) && noexcept 
   return std::move(*this);
 }
 
-BufferMetadata BufferBuilder::buildMetadata() const noexcept {
+BufferMetadata BufferBuilder::buildMetadataImpl() const noexcept {
   return BufferMetadata{
     .usage = _createInfo.usage,
     .size = _createInfo.size,
@@ -168,21 +168,25 @@ BufferMetadata BufferBuilder::buildMetadata() const noexcept {
   };
 }
 
-Buffer BufferBuilder::buildVertexInputBuffer(const LogicalDevice& logicalDevice) {
+BufferMetadata BufferBuilder::buildMetadata() const&& noexcept {
+  return buildMetadataImpl();
+}
+
+Buffer BufferBuilder::buildVertexInputBuffer(const LogicalDevice& logicalDevice) && {
   const BufferResources bufferResources =
       createBuffer<VertexInputBufferAllocator>(logicalDevice, _createInfo);
   _mappedMemory = reinterpret_cast<std::byte*>(bufferResources.mappedMemory);
   return Buffer(logicalDevice, bufferResources.buffer, bufferResources.allocation);
 }
 
-Buffer BufferBuilder::buildStagingBuffer(const LogicalDevice& logicalDevice) {
+Buffer BufferBuilder::buildStagingBuffer(const LogicalDevice& logicalDevice) && {
   const BufferResources bufferResources =
       createBuffer<StagingBufferAllocator>(logicalDevice, _createInfo);
   _mappedMemory = reinterpret_cast<std::byte*>(bufferResources.mappedMemory);
   return Buffer(logicalDevice, bufferResources.buffer, bufferResources.allocation);
 }
 
-Buffer BufferBuilder::buildUniformBuffer(const LogicalDevice& logicalDevice) {
+Buffer BufferBuilder::buildUniformBuffer(const LogicalDevice& logicalDevice) && {
   const BufferResources bufferResources =
       createBuffer<UniformBufferAllocator>(logicalDevice, _createInfo);
   _mappedMemory = reinterpret_cast<std::byte*>(bufferResources.mappedMemory);
@@ -190,22 +194,31 @@ Buffer BufferBuilder::buildUniformBuffer(const LogicalDevice& logicalDevice) {
 }
 
 std::tuple<Buffer, BufferMetadata> BufferBuilder::buildVertexInputBufferWithMetadata(
-    const LogicalDevice& logicalDevice) {
-  // Do not inline to guarantee the order of execution.
-  Buffer buffer = buildVertexInputBuffer(logicalDevice);
-  return std::make_tuple(std::move(buffer), buildMetadata());
+    const LogicalDevice& logicalDevice) && {
+  const BufferResources bufferResources =
+      createBuffer<VertexInputBufferAllocator>(logicalDevice, _createInfo);
+  _mappedMemory = reinterpret_cast<std::byte*>(bufferResources.mappedMemory);
+  // Needs to be calculated before buildMetadataImpl().
+  Buffer buffer(logicalDevice, bufferResources.buffer, bufferResources.allocation);
+  return std::make_tuple(std::move(buffer), buildMetadataImpl());
 }
 
 std::tuple<Buffer, BufferMetadata> BufferBuilder::buildStagingBufferWithMetadata(
-    const LogicalDevice& logicalDevice) {
-  // Do not inline to guarantee the order of execution.
-  Buffer buffer = buildStagingBuffer(logicalDevice);
-  return std::make_tuple(std::move(buffer), buildMetadata());
+    const LogicalDevice& logicalDevice) && {
+  const BufferResources bufferResources =
+      createBuffer<StagingBufferAllocator>(logicalDevice, _createInfo);
+  _mappedMemory = reinterpret_cast<std::byte*>(bufferResources.mappedMemory);
+  // Needs to be calculated before buildMetadataImpl().
+  Buffer buffer(logicalDevice, bufferResources.buffer, bufferResources.allocation);
+  return std::make_tuple(std::move(buffer), buildMetadataImpl());
 }
 
 std::tuple<Buffer, BufferMetadata> BufferBuilder::buildUniformBufferWithMetadata(
-    const LogicalDevice& logicalDevice) {
-  // Do not inline to guarantee the order of execution.
-  Buffer buffer = buildUniformBuffer(logicalDevice);
-  return std::make_tuple(std::move(buffer), buildMetadata());
+    const LogicalDevice& logicalDevice) && {
+  const BufferResources bufferResources =
+      createBuffer<UniformBufferAllocator>(logicalDevice, _createInfo);
+  _mappedMemory = reinterpret_cast<std::byte*>(bufferResources.mappedMemory);
+  // Needs to be calculated before buildMetadataImpl().
+  Buffer buffer(logicalDevice, bufferResources.buffer, bufferResources.allocation);
+  return std::make_tuple(std::move(buffer), buildMetadataImpl());
 }

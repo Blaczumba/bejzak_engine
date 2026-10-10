@@ -58,37 +58,27 @@ public:
 
   BufferBuilder&& withFlags(VkBufferCreateFlags flags) && noexcept;
 
-  BufferMetadata buildMetadata() const noexcept;
+  BufferMetadata buildMetadata() const&& noexcept;
 
-  Buffer buildVertexInputBuffer(const LogicalDevice& logicalDevice);
+  Buffer buildVertexInputBuffer(const LogicalDevice& logicalDevice) &&;
 
-  Buffer buildStagingBuffer(const LogicalDevice& logicalDevice);
+  Buffer buildStagingBuffer(const LogicalDevice& logicalDevice) &&;
 
-  Buffer buildUniformBuffer(const LogicalDevice& logicalDevice);
+  Buffer buildUniformBuffer(const LogicalDevice& logicalDevice) &&;
 
   std::tuple<Buffer, BufferMetadata> buildVertexInputBufferWithMetadata(
-      const LogicalDevice& logicalDevice);
+      const LogicalDevice& logicalDevice) &&;
 
   std::tuple<Buffer, BufferMetadata> buildStagingBufferWithMetadata(
-      const LogicalDevice& logicalDevice);
+      const LogicalDevice& logicalDevice) &&;
 
   std::tuple<Buffer, BufferMetadata> buildUniformBufferWithMetadata(
-      const LogicalDevice& logicalDevice);
+      const LogicalDevice& logicalDevice) &&;
 
 private:
-  VkBufferCreateInfo _createInfo{
-    .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-    .pNext = nullptr,
-    .flags = 0,
-    .size = 0,
-    .usage = 0,
-    .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-    .queueFamilyIndexCount = 0,
-    .pQueueFamilyIndices = nullptr,
-  };
+  BufferMetadata buildMetadataImpl() const noexcept;
 
+  VkBufferCreateInfo _createInfo{VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO};
   std::byte* _mappedMemory = nullptr;
   std::vector<uint32_t> _queueFamilyIndices;
-
-  void* _pNext = nullptr;
 };
