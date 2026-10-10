@@ -297,6 +297,7 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
     const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) {
   spdlog::warn("[Vulkan Validation] Severity: {}, Type: {}, Message: {}.",
                (uint32_t)messageSeverity, (uint32_t)messageType, pCallbackData->pMessage);
+
   return VK_FALSE;
 }
 

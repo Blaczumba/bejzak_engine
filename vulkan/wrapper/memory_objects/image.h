@@ -58,7 +58,6 @@ struct ImageMetadata {
   VkImageTiling tiling;
   VkImageUsageFlags usage;
   VkSharingMode sharingMode;
-  VkImageAspectFlags imageAspect;
 
   bool operator==(const ImageMetadata&) const = default;
 };
@@ -78,8 +77,6 @@ public:
   ImageBuilder&& withExtent(uint32_t width, uint32_t height, uint32_t depth) && noexcept;
 
   ImageBuilder&& withExtent(VkExtent3D extent) && noexcept;
-
-  ImageBuilder&& withAspect(VkImageAspectFlags aspect) && noexcept;
 
   ImageBuilder&& withMipLevels(uint32_t mipLevels) && noexcept;
 
@@ -111,22 +108,41 @@ private:
     .arrayLayers = 1,
     .samples = VK_SAMPLE_COUNT_1_BIT
   };
-  VkImageAspectFlags _imageAspect = VK_IMAGE_ASPECT_COLOR_BIT;
+};
+
+struct ImageViewMetadata {
+  VkImageViewCreateFlags flags;
+  VkImage image;
+  VkImageViewType viewType;
+  VkFormat format;
+  VkComponentMapping components;
+  VkImageSubresourceRange subresourceRange;
 };
 
 class ImageViewBuilder {
 public:
-  ImageViewBuilder& withFlags(VkImageViewCreateFlags flags) noexcept;
+  ImageViewBuilder() noexcept = default;
 
-  ImageViewBuilder& withComponentMapping(VkComponentMapping components) noexcept;
+  ImageViewBuilder&& withViewType(VkImageViewType viewType) && noexcept;
 
-  VkImageView buildAndAddToImage(Image& image, const ImageMetadata& metadata, uint32_t baseMipLevel,
-                                 uint32_t levelCount, uint32_t baseArrayLayer, uint32_t layerCount);
+  ImageViewBuilder&& withFlags(VkImageViewCreateFlags flags) && noexcept;
+
+  ImageViewBuilder&& withFormat(VkFormat format) && noexcept;
+
+  ImageViewBuilder&& withComponentMapping(VkComponentMapping components) && noexcept;
+
+  ImageViewBuilder&& withSubresourceRange(
+      VkImageAspectFlags aspectMask, uint32_t baseMipLevel, uint32_t levelCount,
+      uint32_t baseArrayLayer, uint32_t layerCount) && noexcept;
+
+  ImageViewMetadata buildMetadata() const&& noexcept;
+
+  VkImageView buildImageView(Image& image) &&;
+
+  std::tuple<VkImageView, ImageViewMetadata> buildImageViewWithMetadata(Image& image) &&;
 
 private:
-  VkImageViewCreateFlags _flags = {};
-  VkComponentMapping _components = {};
-  VkImageSubresourceRange _subresourceRange = {};
+  ImageViewMetadata buildMetadataImpl() const noexcept;
 
-  void* _pNext = nullptr;
+  VkImageViewCreateInfo _createInfo{VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO};
 };

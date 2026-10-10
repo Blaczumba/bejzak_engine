@@ -203,7 +203,6 @@ AttachmentBasedFragmentShadingRateModifier::createFragmentShadingOptimizationIma
           .withNumSamples(VK_SAMPLE_COUNT_1_BIT)
           .withExtent(optimizationExtent)
           .withLayerCount(numLayers)
-          .withAspect(VK_IMAGE_ASPECT_COLOR_BIT)
           .withUsage(usage)
           .withFlags(flags)
           .buildImageWithMetadata(logicalDevice);
