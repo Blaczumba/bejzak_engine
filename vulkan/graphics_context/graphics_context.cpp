@@ -98,8 +98,8 @@ std::tuple<Image, ImageMetadata> createAttachment(
 
 GCONTEXT_TEMPLATE
 void GCONTEXT_CLASS setup() {
-  std::vector<common::AssetData> sponzaData = common::LoadGltfFromFile(
-      *_assetManager, _fileLoader, MODELS_PATH "sponza-gltf-pbr/sponza.glb");
+  std::vector<common::AssetData> sponzaData =
+      common::LoadGltfFromFile(*_assetManager, _fileLoader, MODELS_PATH "sponza/scene.gltf");
 
   createDescriptorSets();
   createEnvMappingResources();
@@ -237,7 +237,7 @@ void GCONTEXT_CLASS createDescriptorSets() {
         _bufferManager.storeBuffer(std::move(buffer), metadata), metadata.usage, metadata.size);
 
     //    _ubLight.pos = glm::vec3(15.1891f, 2.66408f, -0.841221f);
-    _ubLight.pos = glm::vec3(-6.35149f, 5.81116f, 0.970902f);
+    _ubLight.pos = glm::vec3(-6.35149f, 1.81116f, 0.0902f);
     _ubLight.projView = glm::perspective(glm::radians(120.0f), 1.0f, 0.1f, 40.0f);
     _ubLight.projView[1][1] = -_ubLight.projView[1][1];
     _ubLight.projView =

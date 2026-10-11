@@ -40,21 +40,24 @@ const mat4 BiasMat = mat4(
 );
 
 void main() {
-    mat3 normalMatrix = transpose(inverse(mat3(modelMat)));
+    mat3 model3 = mat3(modelMat);
+    mat3 normalMatrix = transpose(inverse(model3));
+
     vec3 normal = normalize(normalMatrix * inNormal);
-    // vec3 tangent = normalize(normalMatrix * inTangent);
-    // vec3 bitangent = normalize(normalMatrix * inBitangent);
-    vec3 tangent = normalize(inTangent - dot(inTangent, normal) * normal);
+    vec3 tangent = model3 * inTangent;
+    tangent = normalize(tangent - dot(tangent, normal) * normal); // Gram-Schmidt in world space
     vec3 bitangent = cross(normal, tangent);
+    // Orthonormal basis -> transpose == inverse, so this maps world space -> tangent space.
     mat3 TBNMat = transpose(mat3(tangent, bitangent, normal));
 
-    gl_Position = modelMat * vec4(inPosition, 1.0);
-    TBNfragPosition = TBNMat * gl_Position.xyz;
-    TBNViewPos = TBNMat * camera.viewPos;
-    TBNLightPos = TBNMat * GetResource(Light, lightBufferHandle).pos;
-    lightFragPosition = BiasMat * GetResource(Light, lightBufferHandle).projView * gl_Position;
+    vec4 worldPos = modelMat * vec4(inPosition, 1.0);
 
-    gl_Position = camera.proj * camera.view * gl_Position;
-    
+    TBNfragPosition = TBNMat * worldPos.xyz;
+    TBNViewPos      = TBNMat * camera.viewPos;
+    TBNLightPos     = TBNMat * GetResource(Light, lightBufferHandle).pos;
+    lightFragPosition = BiasMat * GetResource(Light, lightBufferHandle).projView * worldPos;
+
+    gl_Position = camera.proj * camera.view * worldPos;
+
     fragTexCoord = inTexCoord;
 }
