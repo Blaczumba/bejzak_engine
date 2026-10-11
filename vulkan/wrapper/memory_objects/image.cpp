@@ -1,5 +1,6 @@
 #include "vulkan/wrapper/memory_objects/image.h"
 
+#include <cassert>
 #include <cstdint>
 #include <span>
 #include <tuple>
@@ -214,11 +215,6 @@ std::tuple<Image, ImageMetadata> ImageBuilder::buildImageWithMetadata(
   return std::make_tuple(Image::create(logicalDevice, _createInfo), buildMetadataImpl());
 }
 
-ImageViewBuilder&& ImageViewBuilder::withViewType(VkImageViewType viewType) && noexcept {
-  _createInfo.viewType = viewType;
-  return std::move(*this);
-}
-
 ImageViewBuilder&& ImageViewBuilder::withFlags(VkImageViewCreateFlags flags) && noexcept {
   _createInfo.flags = flags;
   return std::move(*this);
@@ -261,9 +257,48 @@ ImageViewMetadata ImageViewBuilder::buildMetadata() const&& noexcept {
   return buildMetadataImpl();
 }
 
-VkImageView ImageViewBuilder::buildImageView(Image& image) && {
-  VkImageView imageView;
+namespace {
+
+VkImageViewType getImageViewType(VkImageType type, uint32_t layerCount, VkImageCreateFlags flags) {
+  switch (type) {
+    case VK_IMAGE_TYPE_1D:
+      return layerCount > 1 ? VK_IMAGE_VIEW_TYPE_1D_ARRAY : VK_IMAGE_VIEW_TYPE_1D;
+
+    case VK_IMAGE_TYPE_2D:
+      if (flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) {
+        if (layerCount == 6) {
+          return VK_IMAGE_VIEW_TYPE_CUBE;
+        }
+
+        if (layerCount > 6 && layerCount % 6 == 0) {
+          return VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
+        }
+      }
+
+      return layerCount > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D;
+
+    case VK_IMAGE_TYPE_3D:
+      return VK_IMAGE_VIEW_TYPE_3D;
+
+    default:
+      assert(false && "Invalid VkImageType");
+  }
+}
+
+}  // namespace
+
+VkImageView ImageViewBuilder::buildImageView(Image& image, const ImageMetadata& metadata) && {
   _createInfo.image = image.getVkImage();
+  _createInfo.viewType = getImageViewType(
+      metadata.imageType,
+      _createInfo.subresourceRange.layerCount != VK_REMAINING_ARRAY_LAYERS ?
+          _createInfo.subresourceRange.layerCount :
+          metadata.arrayLayers - _createInfo.subresourceRange.baseArrayLayer,
+      metadata.imageCreateFlags);
+  if (_createInfo.format == VK_FORMAT_UNDEFINED) {
+    _createInfo.format = metadata.imageFormat;
+  }
+  VkImageView imageView;
   CHECK_VKCMD(
       vkCreateImageView(image.getLogicalDevice()->getVkDevice(), &_createInfo, nullptr, &imageView),
       "Failed to create VkImageView.");
@@ -272,9 +307,18 @@ VkImageView ImageViewBuilder::buildImageView(Image& image) && {
 }
 
 std::tuple<VkImageView, ImageViewMetadata> ImageViewBuilder::buildImageViewWithMetadata(
-    Image& image) && {
-  VkImageView imageView;
+    Image& image, const ImageMetadata& metadata) && {
   _createInfo.image = image.getVkImage();
+  _createInfo.viewType = getImageViewType(
+      metadata.imageType,
+      _createInfo.subresourceRange.layerCount != VK_REMAINING_ARRAY_LAYERS ?
+          _createInfo.subresourceRange.layerCount :
+          metadata.arrayLayers - _createInfo.subresourceRange.baseArrayLayer,
+      metadata.imageCreateFlags);
+  if (_createInfo.format == VK_FORMAT_UNDEFINED) {
+    _createInfo.format = metadata.imageFormat;
+  }
+  VkImageView imageView;
   CHECK_VKCMD(
       vkCreateImageView(image.getLogicalDevice()->getVkDevice(), &_createInfo, nullptr, &imageView),
       "Failed to create VkImageView.");

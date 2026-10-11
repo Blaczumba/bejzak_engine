@@ -80,34 +80,21 @@ public:
 
   SamplerBuilder&& withFlags(VkSamplerCreateFlags flags) && noexcept;
 
+  SamplerMetadata buildMetadata() const&& noexcept;
+
+  Sampler buildSampler(const LogicalDevice& logicalDevice) const&&;
+
   std::tuple<Sampler, SamplerMetadata> buildSamplerWithMetadata(
-      const LogicalDevice& logicalDevice) const;
-
-  SamplerMetadata buildMetadata() const noexcept;
-
-  Sampler buildSampler(const LogicalDevice& logicalDevice) const;
+      const LogicalDevice& logicalDevice) const&&;
 
 private:
+  SamplerMetadata buildMetadataImpl() const noexcept;
+
   VkSamplerCreateInfo _createInfo{
     .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-    .pNext = nullptr,
-    .flags = 0,
     .magFilter = VK_FILTER_LINEAR,
     .minFilter = VK_FILTER_LINEAR,
     .mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR,
-    .addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-    .addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-    .addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT,
-    .mipLodBias = 0.0f,
-    .anisotropyEnable = VK_FALSE,
-    .maxAnisotropy = 0.0f,
-    .compareEnable = VK_FALSE,
-    .compareOp = VK_COMPARE_OP_NEVER,
-    .minLod = 0.0f,
     .maxLod = VK_LOD_CLAMP_NONE,
-    .borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK,
-    .unnormalizedCoordinates = VK_FALSE,
   };
-
-  void* _pNext = nullptr;
 };

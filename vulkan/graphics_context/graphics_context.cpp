@@ -1282,12 +1282,9 @@ void GCONTEXT_CLASS createPresentingResourcesForFdmOffset(
         std::move(*optionalFragmentShadingOptimizationImage);
     VkImageView imageView =
         ImageViewBuilder()
-            .withViewType(optimizationImageMetadata.arrayLayers > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY :
-                                                                      VK_IMAGE_VIEW_TYPE_2D)
-            .withFormat(optimizationImageMetadata.imageFormat)
             .withSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT, 0, optimizationImageMetadata.mipLevels,
                                   0, optimizationImageMetadata.arrayLayers)
-            .buildImageView(optimizationImage);
+            .buildImageView(optimizationImage, optimizationImageMetadata);
     attachmentViews.push_back(imageView);
     _fragmentShadingOptimizationImageRef =
         _imageManager.storeImage(std::move(optimizationImage), optimizationImageMetadata);
@@ -1388,12 +1385,9 @@ void GCONTEXT_CLASS createPresentingResourcesForComputeFsrFdm(
         std::move(*optionalFragmentShadingOptimizationImage);
     VkImageView imageView =
         ImageViewBuilder()
-            .withViewType(optimizationImageMetadata.arrayLayers > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY :
-                                                                      VK_IMAGE_VIEW_TYPE_2D)
-            .withFormat(optimizationImageMetadata.imageFormat)
             .withSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT, 0, optimizationImageMetadata.mipLevels,
                                   0, optimizationImageMetadata.arrayLayers)
-            .buildImageView(optimizationImage);
+            .buildImageView(optimizationImage, optimizationImageMetadata);
     attachmentViews.push_back(imageView);
     _computeDescriptorSetWriter.storeImageStorage(imageView, VK_IMAGE_LAYOUT_GENERAL);
     _computeDescriptorSetWriter.writeDescriptorSet(
@@ -1492,10 +1486,8 @@ std::tuple<Image, ImageMetadata> createSkybox(
       VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0, imageMetadata.mipLevels, 0,
       imageMetadata.arrayLayers);
   ImageViewBuilder()
-      .withViewType(VK_IMAGE_VIEW_TYPE_CUBE)
-      .withFormat(imageMetadata.imageFormat)
       .withSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT, 0, imageData.mipLevels, 0, 6)
-      .buildImageView(image);
+      .buildImageView(image, imageMetadata);
   return std::make_tuple(std::move(image), imageMetadata);
 }
 
@@ -1514,11 +1506,7 @@ std::tuple<Image, ImageMetadata> createCubemap(
       image.getVkImage(), aspect, VK_IMAGE_LAYOUT_UNDEFINED,
       VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0, imageMetadata.mipLevels, 0,
       imageMetadata.arrayLayers);
-  ImageViewBuilder()
-      .withViewType(VK_IMAGE_VIEW_TYPE_CUBE)
-      .withFormat(imageMetadata.imageFormat)
-      .withSubresourceRange(aspect, 0, 1, 0, 6)
-      .buildImageView(image);
+  ImageViewBuilder().withSubresourceRange(aspect, 0, 1, 0, 6).buildImageView(image, imageMetadata);
   return std::make_tuple(std::move(image), imageMetadata);
 }
 
@@ -1536,10 +1524,8 @@ std::tuple<Image, ImageMetadata> createShadowmap(
       VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0, imageMetadata.mipLevels, 0,
       imageMetadata.arrayLayers);
   ImageViewBuilder()
-      .withViewType(VK_IMAGE_VIEW_TYPE_2D)
-      .withFormat(imageMetadata.imageFormat)
       .withSubresourceRange(VK_IMAGE_ASPECT_DEPTH_BIT, 0, 1, 0, 1)
-      .buildImageView(image);
+      .buildImageView(image, imageMetadata);
   return std::make_tuple(std::move(image), imageMetadata);
 }
 
@@ -1568,10 +1554,8 @@ std::tuple<Image, ImageMetadata> createTexture2D(
       imageMetadata.imageExtent.width, imageMetadata.imageExtent.height, imageMetadata.mipLevels,
       imageMetadata.arrayLayers);
   ImageViewBuilder()
-      .withViewType(VK_IMAGE_VIEW_TYPE_2D)
-      .withFormat(imageMetadata.imageFormat)
       .withSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT, 0, imageData.mipLevels, 0, 1)
-      .buildImageView(image);
+      .buildImageView(image, imageMetadata);
   return std::make_tuple(std::move(image), imageMetadata);
 }
 
@@ -1589,10 +1573,8 @@ std::tuple<Image, ImageMetadata> createAttachment(
           .withFlags(flags)
           .buildImageWithMetadata(logicalDevice);
   ImageViewBuilder()
-      .withViewType(numLayers > 1 ? VK_IMAGE_VIEW_TYPE_2D_ARRAY : VK_IMAGE_VIEW_TYPE_2D)
-      .withFormat(imageMetadata.imageFormat)
       .withSubresourceRange(aspect, 0, 1, 0, numLayers)
-      .buildImageView(image);
+      .buildImageView(image, imageMetadata);
   return std::make_tuple(std::move(image), imageMetadata);
 }
 

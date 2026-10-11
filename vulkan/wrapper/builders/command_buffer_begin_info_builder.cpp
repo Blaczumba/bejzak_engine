@@ -11,7 +11,7 @@ namespace {
 template <typename T>
 void chainExtendedField(const void** next, T& feature) {
   feature.pNext = *next;
-  *next = (void*)&feature;
+  *next = reinterpret_cast<void*>(&feature);
 }
 
 }  // namespace

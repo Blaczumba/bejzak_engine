@@ -9,6 +9,16 @@
 #include "vulkan/wrapper/logical_device/resource_destroyer.h"
 #include "vulkan/wrapper/util/check.h"
 
+namespace {
+
+template <typename T>
+void chainExtendedField(const void** next, T& feature) {
+  feature.pNext = *next;
+  *next = reinterpret_cast<void*>(&feature);
+}
+
+}  // namespace
+
 Sampler::Sampler(const LogicalDevice& logicalDevice, VkSampler sampler) noexcept
   : _sampler(sampler), _logicalDevice(&logicalDevice) {}
 
@@ -143,12 +153,7 @@ SamplerBuilder&& SamplerBuilder::withFlags(VkSamplerCreateFlags flags) && noexce
   return std::move(*this);
 }
 
-std::tuple<Sampler, SamplerMetadata> SamplerBuilder::buildSamplerWithMetadata(
-    const LogicalDevice& logicalDevice) const {
-  return std::make_tuple(buildSampler(logicalDevice), buildMetadata());
-}
-
-SamplerMetadata SamplerBuilder::buildMetadata() const noexcept {
+SamplerMetadata SamplerBuilder::buildMetadataImpl() const noexcept {
   return SamplerMetadata{
     .flags = _createInfo.flags,
     .magFilter = _createInfo.magFilter,
@@ -168,6 +173,15 @@ SamplerMetadata SamplerBuilder::buildMetadata() const noexcept {
   };
 }
 
-Sampler SamplerBuilder::buildSampler(const LogicalDevice& logicalDevice) const {
+SamplerMetadata SamplerBuilder::buildMetadata() const&& noexcept {
+  return buildMetadataImpl();
+}
+
+Sampler SamplerBuilder::buildSampler(const LogicalDevice& logicalDevice) const&& {
   return Sampler::create(logicalDevice, _createInfo);
+}
+
+std::tuple<Sampler, SamplerMetadata> SamplerBuilder::buildSamplerWithMetadata(
+    const LogicalDevice& logicalDevice) const&& {
+  return {Sampler::create(logicalDevice, _createInfo), buildMetadataImpl()};
 }

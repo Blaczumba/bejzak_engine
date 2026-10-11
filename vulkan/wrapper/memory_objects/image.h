@@ -123,8 +123,6 @@ class ImageViewBuilder {
 public:
   ImageViewBuilder() noexcept = default;
 
-  ImageViewBuilder&& withViewType(VkImageViewType viewType) && noexcept;
-
   ImageViewBuilder&& withFlags(VkImageViewCreateFlags flags) && noexcept;
 
   ImageViewBuilder&& withFormat(VkFormat format) && noexcept;
@@ -137,9 +135,10 @@ public:
 
   ImageViewMetadata buildMetadata() const&& noexcept;
 
-  VkImageView buildImageView(Image& image) &&;
+  VkImageView buildImageView(Image& image, const ImageMetadata& metadata) &&;
 
-  std::tuple<VkImageView, ImageViewMetadata> buildImageViewWithMetadata(Image& image) &&;
+  std::tuple<VkImageView, ImageViewMetadata> buildImageViewWithMetadata(
+      Image& image, const ImageMetadata& metadata) &&;
 
 private:
   ImageViewMetadata buildMetadataImpl() const noexcept;
