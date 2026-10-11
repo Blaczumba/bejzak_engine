@@ -253,10 +253,6 @@ ImageViewMetadata ImageViewBuilder::buildMetadataImpl() const noexcept {
     .subresourceRange = _createInfo.subresourceRange};
 }
 
-ImageViewMetadata ImageViewBuilder::buildMetadata() const&& noexcept {
-  return buildMetadataImpl();
-}
-
 namespace {
 
 VkImageViewType getImageViewType(VkImageType type, uint32_t layerCount, VkImageCreateFlags flags) {

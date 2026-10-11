@@ -73,30 +73,6 @@ Ref<Buffer> copyStagingToGpuBuffer(const LogicalDevice& logicalDevice, BufferMan
   return bufferManager->storeBuffer(std::move(buffer), metadata);
 }
 
-std::tuple<Framebuffer, FramebufferMetadata> createFramebufferFromTextures(
-    const Renderpass& renderpass,
-    std::span<const std::tuple<VkImageView, ImageMetadata>> imageViews) {
-  FramebufferBuilder builder;
-  std::optional<VkExtent2D> extent;
-  for (const auto& [imageView, metadata] : imageViews) {
-    builder.addAttachment(imageView);
-    if (!extent.has_value()) {
-      extent = VkExtent2D{metadata.imageExtent.width, metadata.imageExtent.height};
-    } else if (
-        VkExtent2D tmpExtent = VkExtent2D{metadata.imageExtent.width, metadata.imageExtent.height};
-        extent->width != tmpExtent.width || extent->height != tmpExtent.height) {
-      throw EngineException("All images must have the same size to create a Framebuffer.");
-    }
-  }
-
-  if (!extent.has_value()) {
-    throw EngineException("Framebuffer must have an attachment.");
-  }
-
-  Framebuffer framebuffer = builder.build(renderpass, *extent, 1);
-  return std::make_pair(std::move(framebuffer), builder.getMetadata());
-}
-
 std::tuple<Image, ImageMetadata> createSkybox(
     const LogicalDevice& logicalDevice, const CommandBuffer& commandBuffer,
     const AssetManager::ImageData& imageData, VkFormat format);
@@ -380,9 +356,12 @@ void GCONTEXT_CLASS createShadowResources() {
   RenderpassBuilder builder(_shadowAttachmentLayout);
   builder.createSubpass().addOutputAttachment(0);
   _shadowRenderPass = builder.build(*_logicalDevice);
-  const std::tuple<VkImageView, ImageMetadata> shadowMapData = {view, _shadowMapRef.getMetadata()};
+  const VkExtent3D& shadowMapExtent = _shadowMapRef.getMetadata().imageExtent;
   auto [framebuffer, framebufferMetadata] =
-      createFramebufferFromTextures(_shadowRenderPass, std::span(&shadowMapData, 1));
+      FramebufferBuilder()
+          .addAttachment(view)
+          .withExtent(shadowMapExtent.width, shadowMapExtent.height)
+          .buildFramebufferWithMetadata(_shadowRenderPass);
   _shadowFramebuffer = _framebufferManager.storeFramebuffer(
       std::move(framebuffer), framebufferMetadata, {&_shadowMapRef, 1});  // TODO pass proper
                                                                           // attachments
@@ -1307,11 +1286,13 @@ void GCONTEXT_CLASS createPresentingResourcesForFdmOffset(
   _extendedFeatures.fragmentShadingRateModifier.modify(subpass);
 
   _renderPass = renderpassBuilder.build(*_logicalDevice);
-  FramebufferBuilder offscreenFramebufferBuilder;
-  offscreenFramebufferBuilder.withAttachments(attachmentViews);
-  Framebuffer offscreenFramebuffer = offscreenFramebufferBuilder.build(_renderPass, extent, 1);
+  auto [offscreenFramebuffer, ofscreenFramebufferMetadata] =
+      FramebufferBuilder()
+          .withAttachments(attachmentViews)
+          .withExtent(extent)
+          .buildFramebufferWithMetadata(_renderPass);
   _offscreenFramebuffer = _framebufferManager.storeFramebuffer(
-      std::move(offscreenFramebuffer), offscreenFramebufferBuilder.getMetadata(), attachmentRefs);
+      std::move(offscreenFramebuffer), ofscreenFramebufferMetadata, attachmentRefs);
 
   auto imageViews = std::span(reinterpret_cast<const VkImageView*>(presentResources.imageViews),
                               presentResources.imageViewsCount);
@@ -1330,11 +1311,13 @@ void GCONTEXT_CLASS createPresentingResourcesForFdmOffset(
   _passthroughRenderpass = passthroughRenderpassBuilder.build(*_logicalDevice);
 
   for (VkImageView imageView : imageViews) {
-    FramebufferBuilder framebufferBuilder;
-    framebufferBuilder.addAttachment(imageView);
-    Framebuffer framebuffer = framebufferBuilder.build(_passthroughRenderpass, extent, 1);
+    auto [framebuffer, framebufferMetadata] =
+        FramebufferBuilder()
+            .addAttachment(imageView)
+            .withExtent(extent)
+            .buildFramebufferWithMetadata(_passthroughRenderpass);
     _framebuffers.push_back(_framebufferManager.storeFramebuffer(
-        std::move(framebuffer), framebufferBuilder.getMetadata(), {}, imageView));
+        std::move(framebuffer), framebufferMetadata, {}, imageView));
   }
 }
 
@@ -1430,14 +1413,14 @@ void GCONTEXT_CLASS createPresentingResourcesForComputeFsrFdm(
   auto imageViews = std::span(reinterpret_cast<const VkImageView*>(presentResources.imageViews),
                               presentResources.imageViewsCount);
   for (VkImageView imageView : imageViews) {
-    FramebufferBuilder framebufferBuilder;
-    framebufferBuilder.addAttachment(imageView);
-    for (VkImageView view : attachmentViews) {
-      framebufferBuilder.addAttachment(view);
-    }
-    Framebuffer framebuffer = framebufferBuilder.build(_renderPass, extent, 1);
+    auto [framebuffer, framebufferMetadata] =
+        FramebufferBuilder()
+            .addAttachment(imageView)
+            .addAttachments(attachmentViews)
+            .withExtent(extent)
+            .buildFramebufferWithMetadata(_renderPass);
     _framebuffers.push_back(_framebufferManager.storeFramebuffer(
-        std::move(framebuffer), framebufferBuilder.getMetadata(), attachmentRefs, imageView));
+        std::move(framebuffer), framebufferMetadata, attachmentRefs, imageView));
   }
 }
 

@@ -133,8 +133,6 @@ public:
       VkImageAspectFlags aspectMask, uint32_t baseMipLevel, uint32_t levelCount,
       uint32_t baseArrayLayer, uint32_t layerCount) && noexcept;
 
-  ImageViewMetadata buildMetadata() const&& noexcept;
-
   VkImageView buildImageView(Image& image, const ImageMetadata& metadata) &&;
 
   std::tuple<VkImageView, ImageViewMetadata> buildImageViewWithMetadata(

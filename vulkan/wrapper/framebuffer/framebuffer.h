@@ -1,6 +1,8 @@
 #pragma once
 
 #include <cstdint>
+#include <initializer_list>
+#include <span>
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -37,32 +39,43 @@ private:
 };
 
 struct FramebufferMetadata {
+  VkFramebufferCreateFlags flags;
+  VkRenderPass renderpass;
+  lib::Buffer<VkImageView> attachments;
   VkExtent2D extent;
   uint32_t layers;
-  VkFramebufferCreateFlags flags;
   // Other std::optional fields representing pNext metadata.
 };
 
 class FramebufferBuilder {
 public:
-  FramebufferBuilder& addAttachment(VkImageView attachment);
+  FramebufferBuilder&& addAttachment(VkImageView attachment) &&;
 
-  FramebufferBuilder& withAttachments(std::span<const VkImageView> attachments);
+  FramebufferBuilder&& addAttachments(std::initializer_list<VkImageView> attachments) &&;
 
-  FramebufferBuilder& withAttachments(std::initializer_list<VkImageView> attachments);
+  FramebufferBuilder&& addAttachments(std::span<VkImageView> attachments) &&;
 
-  FramebufferBuilder& withAttachments(std::vector<VkImageView>&& attachments) noexcept;
+  FramebufferBuilder&& withAttachments(std::initializer_list<VkImageView> attachments) &&;
 
-  FramebufferMetadata getMetadata() const noexcept;
+  FramebufferBuilder&& withAttachments(std::span<const VkImageView> attachments) &&;
 
-  Framebuffer build(const Renderpass& renderpass, VkExtent2D extent, uint32_t layers,
-                    VkFramebufferCreateFlags flags = 0);
+  FramebufferBuilder&& withExtent(VkExtent2D extent) && noexcept;
+
+  FramebufferBuilder&& withExtent(uint32_t width, uint32_t height) && noexcept;
+
+  FramebufferBuilder&& withLayers(uint32_t layers) && noexcept;
+
+  FramebufferBuilder&& withFlags(VkFramebufferCreateFlags flags) && noexcept;
+
+  Framebuffer buildFramebuffer(const Renderpass& renderpass) &&;
+
+  std::tuple<Framebuffer, FramebufferMetadata> buildFramebufferWithMetadata(
+      const Renderpass& renderpass) &&;
 
 private:
-  std::vector<VkImageView> _attachments;
-  VkExtent2D _extent;
-  uint32_t _layers;
-  VkFramebufferCreateFlags _flags;
+  FramebufferMetadata buildMetadataImpl() const noexcept;
 
-  void* _pNext = nullptr;
+  std::vector<VkImageView> _attachments;
+  VkFramebufferCreateInfo _createInfo{
+    .sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO, .layers = 1};
 };
