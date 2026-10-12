@@ -108,8 +108,7 @@ void main() {
     vec3 kD = (1.0 - kS) * (1.0 - metallic);
     vec3 Lo = (kD * albedo / PI + specular) * radiance * NdotL;
 
-    // Simple constant ambient (no IBL). Metals have no diffuse, so scale it out.
-    vec3 ambient = vec3(0.1) * albedo * (1.0 - metallic) * ao;
+    vec3 ambient = vec3(0.1) * albedo * ao;
 
     vec3 color = ambient + calculateShadowPcf() * Lo;
     outColor = vec4(color, 1.0);
