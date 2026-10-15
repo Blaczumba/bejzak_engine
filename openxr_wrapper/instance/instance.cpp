@@ -28,12 +28,15 @@ std::unique_ptr<Instance> Instance::create(
     std::string_view engineName, const Platform& platform, const GraphicsPlugin& graphicsPlugin) {
   lib::Buffer<const char*> mergedExtensions = mergeExtensions(
       platform.getInstanceExtensions(), graphicsPlugin.getOpenXrInstanceExtensions());
+  std::array openxrExtensions = {XR_EXT_EYE_GAZE_INTERACTION_EXTENSION_NAME};
+  lib::Buffer<const char*> allExtensions = mergeExtensions(
+      mergedExtensions, openxrExtensions);
   XrInstanceCreateInfo create_info = {
     .type = XR_TYPE_INSTANCE_CREATE_INFO,
     .next = platform.getInstanceCreateExtension(),
     .applicationInfo = {.apiVersion = XR_CURRENT_API_VERSION},
-    .enabledExtensionCount = static_cast<uint32_t>(mergedExtensions.size()),
-    .enabledExtensionNames = mergedExtensions.data()};
+    .enabledExtensionCount = static_cast<uint32_t>(allExtensions.size()),
+    .enabledExtensionNames = allExtensions.data()};
   std::strcpy(create_info.applicationInfo.applicationName, engineName.data());
 
   XrInstance instance;

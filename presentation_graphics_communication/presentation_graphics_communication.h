@@ -12,7 +12,8 @@
 
 namespace engine {
 
-// It is responsible for communication between main presentation and graphics context layers.
+// This class is responsible for communication between presentation and graphics layers.
+// We assume that presentation layer and graphics layers run synchronously.
 class PresentationGraphicsCommunication : private lib::Noncopyable {
   PresentationGraphicsCommunication() noexcept = default;
 

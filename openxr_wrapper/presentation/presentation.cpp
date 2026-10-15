@@ -8,9 +8,11 @@
 #include "common/camera/camera.h"
 #include "common/file/file_loader.h"
 #include "common/util/engine_exception.h"
-#include "openxr_wrapper/graphics_plugin/graphics_plugin_vulkan.h"  // Needs to be included before platform.
+#include "openxr_wrapper/graphics_plugin/graphics_plugin_vulkan.h"
 #include "openxr_wrapper/util/check.h"
 #include "presentation_graphics_communication/presentation_graphics_communication.h"
+#include "openxr_wrapper/action/action_set.h"
+#include "openxr_wrapper/action/action.h"
 
 namespace xrw {
 
@@ -97,6 +99,31 @@ void Presentation::run() {
   }
   _graphicsContext->initializeResources();
   _space = Space::create(_session->getXrSession(), XR_REFERENCE_SPACE_TYPE_LOCAL);
+  // Eye tracker input handlers.
+  _actionSet = ActionSet::create(_instance->getXrInstance(), "eye-gaze", "EyeGaze", 1000);
+  _eyeGazeAction = Action::create(_actionSet.getActionSet(), XR_ACTION_TYPE_POSE_INPUT, "eye-gaze-pose", "EyeGazePose");
+
+  XrPath interactionProfilePath, gazePath;
+  CHECK_XRCMD(xrStringToPath(_instance->getXrInstance(), "/interaction_profiles/ext/eye_gaze_interaction", &interactionProfilePath), "Failed to xrStringToPath.");
+  CHECK_XRCMD(xrStringToPath(_instance->getXrInstance(), "/user/eyes_ext/input/gaze_ext/pose", &gazePath), "Failed to xrStringToPath.");
+  XrActionSuggestedBinding binding{.action = _eyeGazeAction.getAction(), .binding = gazePath};
+  XrInteractionProfileSuggestedBinding suggestedBinding {
+      .type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING,
+      .interactionProfile = interactionProfilePath,
+      .countSuggestedBindings = 1,
+      .suggestedBindings = &binding,
+  };
+  CHECK_XRCMD(xrSuggestInteractionProfileBindings(_instance->getXrInstance(), &suggestedBinding), "Failed to xrSuggestInteractionProfileBindings.");
+  XrActionSet actionSetHandle = _actionSet.getActionSet();
+  XrSessionActionSetsAttachInfo attachInfo{
+      .type = XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO,
+      .countActionSets = 1,
+      .actionSets = &actionSetHandle
+  };
+  CHECK_XRCMD(xrAttachSessionActionSets(_session->getXrSession(), &attachInfo), "Failed to attach action sets.");
+
+  _actionSpace = Space::create(_session->getXrSession(), _eyeGazeAction.getAction(), XrPosef{{0.f, 0.f, 0.f, 1.f}, {}});
+
   while (!_platform->shouldClose()) {
     _platform->pollPlatformEvents(_sessionRunning);
     pollEvents();
@@ -154,6 +181,11 @@ void Presentation::handleSessionStateChangedEvent(
         xrEndSession(_session->getXrSession());
         break;
       }
+    case XR_SESSION_STATE_FOCUSED:
+    {
+      _sessionFocused = true;
+      break;
+    }
     default:
       break;
   }
@@ -247,6 +279,13 @@ bool Presentation::renderLayer(
     cameraContexts[i] = common::CameraContext{
       glm::vec3(x, y, z), createViewMatrix(projectionLayerView.pose),
       createProjectionMatrix(projectionLayerView.fov, 0.01f, 50.0f)};
+
+    // Eye tracking.
+    auto [width, height] = viewSwapchain.getXrExtent2Di();
+    XrSpaceLocation spaceLocation{XR_TYPE_SPACE_LOCATION};
+    XrResult result = xrLocateSpace(_actionSpace->getXrSpace(), _space->getXrSpace(), predictedDisplayTime, &spaceLocation);
+    const XrQuaternionf& xrGazeOrientation = spaceLocation.pose.orientation;
+    glm::quat gazeOrientation(xrGazeOrientation.w, xrGazeOrientation.x, xrGazeOrientation.y, xrGazeOrientation.z);
   }
   _communicationLayer->setCameraContexts(cameraContexts);
 
@@ -296,6 +335,25 @@ void Presentation::draw() {
     .type = XR_TYPE_FRAME_BEGIN_INFO,
   };
   CHECK_XRCMD(xrBeginFrame(_session->getXrSession(), &frameBeginInfo), "Failed to xrBeginFrame.");
+
+  // Sync actions for the current frame
+  XrActiveActionSet activeActionSet{
+      .actionSet = _actionSet.getActionSet(),
+      .subactionPath = XR_NULL_PATH
+  };
+  XrActionsSyncInfo syncInfo{
+      .type = XR_TYPE_ACTIONS_SYNC_INFO,
+      .countActiveActionSets = 1,
+      .activeActionSets = &activeActionSet
+  };
+
+  if (_sessionFocused) {
+    CHECK_XRCMD(xrSyncActions(_session->getXrSession(), &syncInfo), "Failed to sync actions.");
+
+//    XrSpaceLocation spaceLocation{XR_TYPE_SPACE_LOCATION};
+//    XrResult result = xrLocateSpace(_actionSpace->getXrSpace(), _space->getXrSpace(), frameState.predictedDisplayTime, &spaceLocation);
+//    XrPosef a = spaceLocation.pose;
+  }
 
   XrCompositionLayerBaseHeader* layerHeader = nullptr;
   XrCompositionLayerProjection layer{

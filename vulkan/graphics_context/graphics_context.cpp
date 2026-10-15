@@ -99,7 +99,7 @@ std::tuple<Image, ImageMetadata> createAttachment(
 GCONTEXT_TEMPLATE
 void GCONTEXT_CLASS setup() {
   std::vector<common::AssetData> sponzaData =
-      common::LoadGltfFromFile(*_assetManager, _fileLoader, MODELS_PATH "sponza/scene.gltf");
+      common::LoadGltfFromFile(*_assetManager, _fileLoader, MODELS_PATH "sponza-gltf-pbr/sponza.glb");
 
   createDescriptorSets();
   createEnvMappingResources();

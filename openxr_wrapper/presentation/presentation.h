@@ -11,6 +11,8 @@
 #include "openxr_wrapper/space/space.h"
 #include "openxr_wrapper/swapchain/swapchain.h"
 #include "presentation_graphics_communication/presentation_graphics_communication.h"
+#include "openxr_wrapper/action/action_set.h"
+#include "openxr_wrapper/action/action.h"
 
 namespace xrw {
 
@@ -60,6 +62,12 @@ private:
   std::unique_ptr<Session> _session;
   std::vector<Swapchain> _swapchains;
   std::unique_ptr<Space> _space;
+
+  // Eye tracking
+  ActionSet _actionSet;
+  Action _eyeGazeAction;
+  std::unique_ptr<Space> _actionSpace;
+  bool _sessionFocused = false;
 
   bool _sessionRunning = false;
   XrEventDataBuffer _eventDataBuffer;

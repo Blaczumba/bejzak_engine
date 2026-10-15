@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <span>
+#include <cstring>
 
 namespace common {
 

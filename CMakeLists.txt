@@ -155,6 +155,6 @@ add_subdirectory(openxr_wrapper)
 target_link_libraries(${ENGINE_NAME} INTERFACE
         OpenxrGraphicsPlugin OpenxrPlatform OpenxrInstance
         OpenxrSystem OpenxrSession OpenxrSwapchain
-        OpenxrSpace OpenxrPresentation
+        OpenxrSpace OpenxrPresentation OpenxrAction
         OpenXR::headers
 )
