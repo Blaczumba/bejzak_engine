@@ -32,14 +32,16 @@ public:
 
   std::span<const common::CameraContext> getCameraContexts() const noexcept;
 
-  void setScreenPos(uint32_t x, uint32_t y) noexcept;
+  void setScreenPoses(std::initializer_list<std::pair<uint32_t, uint32_t>> screenPoses);
 
-  std::pair<uint32_t, uint32_t> getScreenPos() const noexcept;
+  void setScreenPoses(std::span<const std::pair<uint32_t, uint32_t>> screenPoses);
+
+  std::span<const std::pair<uint32_t, uint32_t>> getScreenPoses() const noexcept;
 
 private:
   uint32_t _swapchainImageIndex = 0;
   std::vector<common::CameraContext> _cameraContexts;
-  std::pair<uint32_t, uint32_t> _screenPos = {};
+  std::vector<std::pair<uint32_t, uint32_t>> _screenPoses;
 };
 
 } // engine

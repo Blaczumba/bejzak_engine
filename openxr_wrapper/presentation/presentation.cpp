@@ -57,6 +57,28 @@ glm::mat4 createViewMatrix(const XrPosef& pose) {
   return glm::translate(glm::mat4_cast(glm::conjugate(orientation)), -position);
 }
 
+std::pair<uint32_t, uint32_t> calculateScreenPos(const XrPosef& pose, uint32_t screenWidth,
+                                                 uint32_t screenHeight, const glm::mat4& view,
+                                                 const glm::mat4& proj) {
+  const XrQuaternionf& xrGazeOrientation = pose.orientation;
+  glm::quat gazeOrientation = {xrGazeOrientation.w, xrGazeOrientation.x, xrGazeOrientation.y, xrGazeOrientation.z};
+  const XrVector3f& xrGazePosition = pose.position;
+  glm::vec3 gazePosition = {xrGazePosition.x, xrGazePosition.y, xrGazePosition.z};
+  glm::vec3 gazeDir = gazeOrientation * glm::vec3(0.0f, 0.0f, -1.0f);
+
+  glm::vec3 eyeOrigin = glm::vec3(view * glm::vec4(gazePosition, 1.0f));
+  glm::vec3 eyeDir = glm::mat3(view) * gazeDir;
+
+  const float gazeDistance = 1.0f;
+  glm::vec3 targetEyeSpace = eyeOrigin + glm::normalize(eyeDir) * gazeDistance;
+
+  glm::vec4 clipSpace = proj * glm::vec4(targetEyeSpace, 1.0f);
+  float ndcX = clipSpace.x / clipSpace.w;
+  float ndcY = clipSpace.y / clipSpace.w;
+
+  return {(ndcX * 0.5f + 0.5f) * static_cast<float>(screenWidth), (ndcY * 0.5f + 0.5f) * static_cast<float>(screenHeight)};
+}
+
 }  // namespace
 
 Presentation::Presentation(
@@ -265,6 +287,11 @@ bool Presentation::renderLayer(
 
   const xrw::Swapchain& viewSwapchain = _swapchains[0];
   std::array<common::CameraContext, IMAGES_IN_LAYER> cameraContexts;
+  std::array<std::pair<uint32_t, uint32_t>, IMAGES_IN_LAYER> screenPoses {};
+
+  // Eye tracker spaceAction.
+  XrSpaceLocation spaceLocation{XR_TYPE_SPACE_LOCATION};
+  XrResult result = xrLocateSpace(_actionSpace->getXrSpace(), _space->getXrSpace(), predictedDisplayTime, &spaceLocation);
   for (uint32_t i = 0; i < IMAGES_IN_LAYER; i++) {
     const XrCompositionLayerProjectionView& projectionLayerView = projectionLayerViews[i] =
         XrCompositionLayerProjectionView{
@@ -282,12 +309,10 @@ bool Presentation::renderLayer(
 
     // Eye tracking.
     auto [width, height] = viewSwapchain.getXrExtent2Di();
-    XrSpaceLocation spaceLocation{XR_TYPE_SPACE_LOCATION};
-    XrResult result = xrLocateSpace(_actionSpace->getXrSpace(), _space->getXrSpace(), predictedDisplayTime, &spaceLocation);
-    const XrQuaternionf& xrGazeOrientation = spaceLocation.pose.orientation;
-    glm::quat gazeOrientation(xrGazeOrientation.w, xrGazeOrientation.x, xrGazeOrientation.y, xrGazeOrientation.z);
+    screenPoses[i] = calculateScreenPos(spaceLocation.pose, width, height, cameraContexts[i].view, cameraContexts[i].proj);
   }
   _communicationLayer->setCameraContexts(cameraContexts);
+  _communicationLayer->setScreenPoses(screenPoses);
 
   const XrSwapchainImageAcquireInfo acquireInfo = {.type = XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
 

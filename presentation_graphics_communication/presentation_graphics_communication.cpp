@@ -29,19 +29,23 @@ void PresentationGraphicsCommunication::setCameraContexts(
 
 void PresentationGraphicsCommunication::setCameraContexts(
     std::initializer_list<common::CameraContext> cameraContexts) noexcept {
-  _cameraContexts.assign_range(cameraContexts);
+  _cameraContexts.assign(cameraContexts);
 }
 
 std::span<const common::CameraContext> PresentationGraphicsCommunication::getCameraContexts() const noexcept {
   return _cameraContexts;
 }
 
-void PresentationGraphicsCommunication::setScreenPos(uint32_t x, uint32_t y) noexcept {
-  _screenPos = std::make_pair(x, y);
+void PresentationGraphicsCommunication::setScreenPoses(std::initializer_list<std::pair<uint32_t, uint32_t>> screenPoses) {
+  _screenPoses.assign(screenPoses);
 }
 
-std::pair<uint32_t, uint32_t> PresentationGraphicsCommunication::getScreenPos() const noexcept {
-  return _screenPos;
+void PresentationGraphicsCommunication::setScreenPoses(std::span<const std::pair<uint32_t, uint32_t>> screenPoses) {
+  _screenPoses.assign_range(screenPoses);
+}
+
+std::span<const std::pair<uint32_t, uint32_t>> PresentationGraphicsCommunication::getScreenPoses() const noexcept {
+  return _screenPoses;
 }
 
 }  // namespace engine

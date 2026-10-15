@@ -213,20 +213,41 @@ AttachmentBasedFragmentShadingRateModifier::createFragmentShadingOptimizationIma
     case SupportedFeature::FRAGMENT_DENSITY_MAP_OFFSET:
       {
         // TODO: This should be written from config;
-        lib::Buffer<std::byte> copyBuffer(
-            metadata.imageExtent.width * metadata.imageExtent.height * 2, std::byte{255});
-        for (uint32_t i = 0, w = 0, h = 0; i < copyBuffer.size(); i += 2, w++) {
-          if (w == metadata.imageExtent.width) {
-            w = 0;
-            h++;
-            if (h == metadata.imageExtent.height) {
-              h = 0;
-            }
-          }
-          if (i < copyBuffer.size() / 3) {
-            copyBuffer[i] = copyBuffer[i + 1] = std::byte{0};
+        const uint32_t width = metadata.imageExtent.width;
+        const uint32_t height = metadata.imageExtent.height;
+
+        lib::Buffer<std::byte> copyBuffer(width * height * 2, std::byte{0});
+
+// Center of the image (or you can substitute these with your eye-gaze pixelX / pixelY)
+      const float centerX = static_cast<float>(width) * 0.5f;
+      const float centerY = static_cast<float>(height) * 0.5f;
+      const float maxRadius = std::sqrt(centerX * centerX + centerY * centerY);
+
+      for (uint32_t h = 0; h < height; ++h) {
+        for (uint32_t w = 0; w < width; ++w) {
+          // Calculate distance from the center point
+          float dx = static_cast<float>(w) - centerX;
+          float dy = static_cast<float>(h) - centerY;
+          float distance = std::sqrt(dx * dx + dy * dy);
+
+          // Normalize distance to a [0, 1] range based on max possible distance
+          float t = std::clamp(distance / maxRadius, 0.0f, 1.0f);
+
+          // Map to density value: 255 at the center, dropping off toward the edges
+          // (Adjust the 0.85 multiplier to control how fast the periphery drops in quality)
+          uint8_t density = static_cast<uint8_t>(255.0f * (1.0f - t * 0.99f));
+          density = std::max(density, static_cast<uint8_t>(1)); // Ensure minimum quality > 0
+
+          size_t index = (h * width + w) * 2;
+          copyBuffer[index]     = static_cast<std::byte>(4);
+          copyBuffer[index + 1] = static_cast<std::byte>(4);
+
+          if (distance < 10) {
+            copyBuffer[index]     = static_cast<std::byte>(255);
+            copyBuffer[index + 1] = static_cast<std::byte>(255);
           }
         }
+      }
         auto [buffer, bufferMetadata] =
             BufferBuilder()
                 .withSize(copyBuffer.size())

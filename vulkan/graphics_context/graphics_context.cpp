@@ -894,7 +894,7 @@ void GCONTEXT_CLASS recordCommandBuffer(
 GCONTEXT_TEMPLATE
 void GCONTEXT_CLASS recordCommandBufferFdmOffset(
     const glm::mat4& cameraProj, const glm::mat4& cameraView, uint32_t imageIndex,
-    std::pair<uint32_t, uint32_t> screenPos) {
+    std::span<const std::pair<uint32_t, uint32_t>> screenPoses) {
   const CommandBuffer& primaryCommandBuffer = _primaryCommandBuffer[_currentFrame];
   primaryCommandBuffer.begin(CommandBufferBeginInfoNonOwningBuilder()
                                  .withFlags(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)
@@ -1014,9 +1014,15 @@ void GCONTEXT_CLASS recordCommandBufferFdmOffset(
     _secondaryCommandBuffers[1][_currentFrame].getVkCommandBuffer()};
   primaryCommandBuffer.executeSecondaryCommandBuffers(secondaryCommandBuffers);
 
+  auto alignOffset = [](int value, uint32_t granularity) {
+    if (granularity <= 1) return value;
+    return (value + static_cast<int>(granularity) / 2) / static_cast<int>(granularity) * static_cast<int>(granularity);
+  };
+
+  // screen.pos - fdm.size / 2.
   const VkOffset2D offsets[2] = {
-    VkOffset2D{0, 128 },
-    VkOffset2D{0, -256}
+    VkOffset2D{alignOffset((int)screenPoses[0].first - 3 * (int)framebufferMetadata.extent.width / 4, 8), alignOffset((int)screenPoses[0].second - 3 * (int)framebufferMetadata.extent.height / 4, 8)},
+    VkOffset2D{alignOffset((int)screenPoses[1].first - 3 * (int)framebufferMetadata.extent.width / 4, 8), alignOffset((int)screenPoses[1].second - 3 * (int)framebufferMetadata.extent.height / 4, 8)}
   };
   primaryCommandBuffer.endRenderPass(
       SubpassEndInfoNonOwningBuilder().withFragmentDensityMapOffsetEndInfo(offsets).build());
@@ -1155,13 +1161,13 @@ void GCONTEXT_CLASS draw() {
   CHECK_VKCMD(_frameFences[_currentFrame].reset(), "Failed to wait for fence.");
 
   const common::CameraContext& cameraContext = _communicationLayer->getCameraContexts()[0];
-  const auto [screenx, screeny] = _communicationLayer->getScreenPos();
+  const auto [screenx, screeny] = _communicationLayer->getScreenPoses()[0];
   if (_extendedFeatures.fragmentShadingRateModifier.getSelectedFeature()
       == AttachmentBasedFragmentShadingRateModifier::SupportedFeature::
           FRAGMENT_DENSITY_MAP_OFFSET) {
     recordCommandBufferFdmOffset(
         cameraContext.proj, cameraContext.view,
-        _communicationLayer->getCurrentSwapchainImageIndex(), {screenx, screeny});
+        _communicationLayer->getCurrentSwapchainImageIndex(), _communicationLayer->getScreenPoses());
   } else {
     recordCommandBuffer(cameraContext.proj, cameraContext.view,
                         _communicationLayer->getCurrentSwapchainImageIndex(), {screenx, screeny});
