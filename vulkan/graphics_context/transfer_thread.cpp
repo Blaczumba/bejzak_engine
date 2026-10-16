@@ -4,6 +4,7 @@
 #include <map>
 #include <mutex>
 #include <tuple>
+#include <ranges>
 
 #include "lib/types/memory.h"
 
@@ -11,10 +12,8 @@ namespace vlkn {
 namespace {
 
 constexpr size_t VERTEX_BUFFER_BLOCK_SIZE = 32 * lib::MiB;
-constexpr size_t INDEX_BUFFER_BLOCK_SIZE_UINT8 = 4 * lib::MiB;
-constexpr size_t INDEX_BUFFER_BLOCK_SIZE_UINT16 = 32 * lib::MiB;
-constexpr size_t INDEX_BUFFER_BLOCK_SIZE_UINT32 = 8 * lib::MiB;
-constexpr size_t THREAD_LOCAL_PROCESSING_SIZE = 32;
+constexpr size_t INDEX_BUFFER_BLOCK_SIZE = 16 * lib::MiB;
+constexpr size_t THREAD_LOCAL_PROCESSING_SIZE = 16;
 constexpr size_t BUDGET = 40 * lib::MiB;
 
 constexpr size_t allocatorIndexFromIndexType(common::IndexType indexType) {
@@ -27,6 +26,14 @@ constexpr size_t allocatorIndexFromIndexType(common::IndexType indexType) {
       return 2;
   }
 }
+
+template <class... Ts>
+struct Overloaded : Ts... {
+  using Ts::operator()...;
+};
+
+template <class... Ts>
+Overloaded(Ts...) -> Overloaded<Ts...>;
 
 }  // namespace
 
@@ -105,9 +112,9 @@ std::tuple<Ref<Buffer>, Ref<VirtualAllocation>, VirtualAllocationMetadata> Trans
     }
     expectedVirtualAllocation =
         bufferAllocator.bufferBlocks.back().virtualBlock.createVirtualAllocation(size, 1);
-    if (!expectedVirtualAllocation.has_value()) [[unlikely]] {
-      throw EngineException("Failed to create virtual allocation.");
-    }
+    //if (!expectedVirtualAllocation.has_value()) [[unlikely]] {
+    //  throw EngineException("Failed to create virtual allocation.");
+    //}
   }
   auto& [virtualAllocation, virtualAllocationMetadata] = expectedVirtualAllocation.value();
   return std::make_tuple(bufferAllocator.bufferBlocks.back().buffer,
@@ -117,36 +124,72 @@ std::tuple<Ref<Buffer>, Ref<VirtualAllocation>, VirtualAllocationMetadata> Trans
 }
 
 void TransferThread::doWork() {
-  // struct BudgetCalculator {
-  //   size_t operator()(const ImageProcessingState& imageProcessingState) {
-  //     return imageProces
-  //   }
+  while (!_stop) {
+    {
+      std::unique_lock lck(_mutex);
+      _conditionVariable.wait(lck, [this]() {
+        return !_processingQueue.empty() || _stop;
+      });
 
-  //  size_t operator()(const VertexProcessingState& vertexProcessingState) {
+      if (_stop) [[unlikely]] {
+        break;
+      }
 
-  //  }
-  //};
-  // std::array<VkBufferCopy,
-  // while (!_stop) {
-  //  {
-  //    std::unique_lock lck(_mutex);
-  //    _conditionVariable.wait(lck, [this]() {
-  //      return !_processingQueue.empty() || _stop;
-  //    });
+      size_t budget = 0;
+      for (auto it = _processingQueue.cbegin(); it != _processingQueue.cend() && budget < BUDGET;
+           it++) {
+        CommandBuffer commandBuffer;
+        //budget += std::visit(
+        //    Overloaded{
+        //      [this, &commandBuffer](const VertexProcessingState& vertexProcessingState) -> size_t {
+        //        VkBuffer indexBuffer =
+        //            WeakRef<Buffer>(std::get<0>(vertexProcessingState.vertexData->indexBuffer))
+        //                .getUnderlyingResource();
+        //        const VirtualAllocationMetadata& indexBufferVirtualAllocationMetadata =
+        //            WeakRef<VirtualAllocation>(
+        //                std::get<1>(vertexProcessingState.vertexData->indexBuffer))
+        //                .getMetadata();
+        //        auto [gpuIndexBuffer, gpuIndexBufferVirtualAllocation,
+        //              gpuIndexBufferVirtualAllocationMetadata] =
+        //            allocate(_indexBufferAllocators[allocatorIndexFromIndexType(
+        //                         vertexProcessingState.vertexData->indexType)],
+        //                     INDEX_BUFFER_BLOCK_SIZE, indexBufferVirtualAllocationMetadata.size,
+        //                     VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+        //        commandBuffer.copyBufferToBuffer(
+        //            indexBuffer, gpuIndexBuffer.getUnderlyingResource(),
+        //            {
+        //              VkBufferCopy{.srcOffset = indexBufferVirtualAllocationMetadata.offset,
+        //                           .dstOffset = gpuIndexBufferVirtualAllocationMetadata.offset,
+        //                           .size = indexBufferVirtualAllocationMetadata.size}
+        //        });
 
-  //    if (_stop) [[unlikely]] {
-  //      break;
-  //    }
+        //        for (const auto& [vertexBuffer, virtualAllocation, stride] : std::views::values(vertexProcessingState.vertexData->buffers)) {
+        //          VkBuffer vertexBufferResource =
+        //              WeakRef<Buffer>(vertexBuffer).getUnderlyingResource();
+        //          const VirtualAllocationMetadata& vertexBufferVirtualAllocationMetadata =
+        //              WeakRef<VirtualAllocation>(virtualAllocation).getMetadata();
+        //          auto [gpuVertexBuffer, gpuVertexBufferVirtualAllocation,
+        //                gpuVertexBufferVirtualAllocationMetadata] =
+        //              allocate(_indexBufferAllocators[allocatorIndexFromIndexType(
+        //                           vertexProcessingState.vertexData->indexType)],
+        //                       INDEX_BUFFER_BLOCK_SIZE, indexBufferVirtualAllocationMetadata.size,
+        //                       VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+        //          commandBuffer.copyBufferToBuffer(
+        //              indexBuffer, gpuIndexBuffer.getUnderlyingResource(),
+        //              {
+        //                VkBufferCopy{.srcOffset = indexBufferVirtualAllocationMetadata.offset,
+        //                             .dstOffset = gpuIndexBufferVirtualAllocationMetadata.offset,
+        //                             .size = indexBufferVirtualAllocationMetadata.size}
+        //          });
+        //        }
+        //        return 10;
+        //      }},
+        //    *it);
+      }
+    }
 
-  //    size_t budget = 0;
-  //    for (auto it = _processingQueue.cbegin(); it != _processingQueue.cend() && budget < BUDGET;
-  //         it++) {
-  //      budget += std::visit()
-  //    }
-  //  }
-
-  //  // Here use
-  //}
+    // Here use
+  }
 }
 
 }  // namespace vlkn

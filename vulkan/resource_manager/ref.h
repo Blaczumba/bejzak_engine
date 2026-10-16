@@ -1,9 +1,9 @@
 #pragma once
 
+#include <cassert>
 #include <utility>
 
 #include "common/ref/ref.h"
-#include "common/util/engine_exception.h"
 #include "vulkan/resource_manager/handle.h"
 #include "vulkan/resource_manager/reference_counter.h"
 
@@ -124,25 +124,19 @@ public:
     return _counter;
   }
 
-  UnderlyingResourceFor<Resource> getUnderlyingResource() const {
-    if (_counter == nullptr) {
-      throw EngineException("Attempt to get Vulkan resource from null reference counter");
-    }
+  UnderlyingResourceFor<Resource> getUnderlyingResource() const noexcept {
+    assert(_counter != nullptr && "Attempt to get Vulkan resource from null reference counter.");
     return _counter->getUnderlyingResource(_handle);
   }
 
-  const MetadataFor<Resource>& getMetadata() const {
-    if (_counter == nullptr) {
-      throw EngineException("Attempt to get metadata from null reference counter");
-    }
+  const MetadataFor<Resource>& getMetadata() const noexcept {
+    assert(_counter != nullptr && "Attempt to get metadata from null reference counter.");
     return _counter->getMetadata(_handle);
   }
 
   std::tuple<UnderlyingResourceFor<Resource>, const MetadataFor<Resource>&>
-  getUnderlyingResourceWithMetadata() const {
-    if (_counter == nullptr) {
-      throw EngineException("Attempt to get data from null reference counter");
-    }
+  getUnderlyingResourceWithMetadata() const noexcept {
+    assert(_counter != nullptr && "Attempt to get data from null reference counter.");
     return _counter->getUnderlyingResourceWithMetadata(_handle);
   }
 
@@ -177,18 +171,20 @@ public:
     return _counter;
   }
 
-  UnderlyingResourceFor<Resource> getUnderlyingResource() const {
-    if (_counter == nullptr) {
-      throw EngineException("Attempt to get Vulkan resource from null reference counter");
-    }
+  UnderlyingResourceFor<Resource> getUnderlyingResource() const noexcept {
+    assert(_counter != nullptr && "Attempt to get Vulkan resource from null reference counter.");
     return _counter->getUnderlyingResource(_handle);
   }
 
-  const MetadataFor<Resource>& getMetadata() const {
-    if (_counter == nullptr) {
-      throw EngineException("Attempt to get metadata from null reference counter");
-    }
+  const MetadataFor<Resource>& getMetadata() const noexcept {
+    assert(_counter != nullptr && "Attempt to get metadata from null reference counter.");
     return _counter->getMetadata(_handle);
+  }
+
+  std::tuple<UnderlyingResourceFor<Resource>, const MetadataFor<Resource>&>
+  getUnderlyingResourceWithMetadata() const noexcept {
+    assert(_counter != nullptr && "Attempt to get data from null reference counter.");
+    return _counter->getUnderlyingResourceWithMetadata(_handle);
   }
 
 private:

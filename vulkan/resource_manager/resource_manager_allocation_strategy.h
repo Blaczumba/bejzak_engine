@@ -5,6 +5,7 @@
 #include <utility>
 
 #include "vulkan/resource_manager/reference_counter_with_metadata.h"
+#include "common/util/engine_exception.h"
 
 enum class AllocationPolicy : uint8_t {
   POOL_BASED

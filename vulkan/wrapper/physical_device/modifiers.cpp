@@ -218,36 +218,36 @@ AttachmentBasedFragmentShadingRateModifier::createFragmentShadingOptimizationIma
 
         lib::Buffer<std::byte> copyBuffer(width * height * 2, std::byte{0});
 
-// Center of the image (or you can substitute these with your eye-gaze pixelX / pixelY)
-      const float centerX = static_cast<float>(width) * 0.5f;
-      const float centerY = static_cast<float>(height) * 0.5f;
-      const float maxRadius = std::sqrt(centerX * centerX + centerY * centerY);
+        // Center of the image (or you can substitute these with your eye-gaze pixelX / pixelY)
+        const float centerX = static_cast<float>(width) * 0.5f;
+        const float centerY = static_cast<float>(height) * 0.5f;
+        const float maxRadius = std::sqrt(centerX * centerX + centerY * centerY);
 
-      for (uint32_t h = 0; h < height; ++h) {
-        for (uint32_t w = 0; w < width; ++w) {
-          // Calculate distance from the center point
-          float dx = static_cast<float>(w) - centerX;
-          float dy = static_cast<float>(h) - centerY;
-          float distance = std::sqrt(dx * dx + dy * dy);
+        for (uint32_t h = 0; h < height; ++h) {
+          for (uint32_t w = 0; w < width; ++w) {
+            // Calculate distance from the center point
+            float dx = static_cast<float>(w) - centerX;
+            float dy = static_cast<float>(h) - centerY;
+            float distance = std::sqrt(dx * dx + dy * dy);
 
-          // Normalize distance to a [0, 1] range based on max possible distance
-          float t = std::clamp(distance / maxRadius, 0.0f, 1.0f);
+            // Normalize distance to a [0, 1] range based on max possible distance
+            float t = std::clamp(distance / maxRadius, 0.0f, 1.0f);
 
-          // Map to density value: 255 at the center, dropping off toward the edges
-          // (Adjust the 0.85 multiplier to control how fast the periphery drops in quality)
-          uint8_t density = static_cast<uint8_t>(255.0f * (1.0f - t * 0.99f));
-          density = std::max(density, static_cast<uint8_t>(1)); // Ensure minimum quality > 0
+            // Map to density value: 255 at the center, dropping off toward the edges
+            // (Adjust the 0.85 multiplier to control how fast the periphery drops in quality)
+            uint8_t density = static_cast<uint8_t>(255.0f * (1.0f - t * 0.99f));
+            density = std::max(density, static_cast<uint8_t>(1));  // Ensure minimum quality > 0
 
-          size_t index = (h * width + w) * 2;
-          copyBuffer[index]     = static_cast<std::byte>(4);
-          copyBuffer[index + 1] = static_cast<std::byte>(4);
+            size_t index = (h * width + w) * 2;
+            copyBuffer[index] = static_cast<std::byte>(4);
+            copyBuffer[index + 1] = static_cast<std::byte>(4);
 
-          if (distance < 10) {
-            copyBuffer[index]     = static_cast<std::byte>(255);
-            copyBuffer[index + 1] = static_cast<std::byte>(255);
+            if (distance < 10) {
+              copyBuffer[index] = static_cast<std::byte>(255);
+              copyBuffer[index + 1] = static_cast<std::byte>(255);
+            }
           }
         }
-      }
         auto [buffer, bufferMetadata] =
             BufferBuilder()
                 .withSize(copyBuffer.size())

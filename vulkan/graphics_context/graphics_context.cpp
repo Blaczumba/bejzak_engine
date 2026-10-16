@@ -98,8 +98,8 @@ std::tuple<Image, ImageMetadata> createAttachment(
 
 GCONTEXT_TEMPLATE
 void GCONTEXT_CLASS setup() {
-  std::vector<common::AssetData> sponzaData =
-      common::LoadGltfFromFile(*_assetManager, _fileLoader, MODELS_PATH "sponza-gltf-pbr/sponza.glb");
+  std::vector<common::AssetData> sponzaData = common::LoadGltfFromFile(
+      *_assetManager, _fileLoader, MODELS_PATH "sponza-gltf-pbr/sponza.glb");
 
   createDescriptorSets();
   createEnvMappingResources();
@@ -1015,14 +1015,21 @@ void GCONTEXT_CLASS recordCommandBufferFdmOffset(
   primaryCommandBuffer.executeSecondaryCommandBuffers(secondaryCommandBuffers);
 
   auto alignOffset = [](int value, uint32_t granularity) {
-    if (granularity <= 1) return value;
-    return (value + static_cast<int>(granularity) / 2) / static_cast<int>(granularity) * static_cast<int>(granularity);
+    if (granularity <= 1) {
+      return value;
+    }
+    return (value + static_cast<int>(granularity) / 2) / static_cast<int>(granularity)
+           * static_cast<int>(granularity);
   };
 
   // screen.pos - fdm.size / 2.
   const VkOffset2D offsets[2] = {
-    VkOffset2D{alignOffset((int)screenPoses[0].first - 3 * (int)framebufferMetadata.extent.width / 4, 8), alignOffset((int)screenPoses[0].second - 3 * (int)framebufferMetadata.extent.height / 4, 8)},
-    VkOffset2D{alignOffset((int)screenPoses[1].first - 3 * (int)framebufferMetadata.extent.width / 4, 8), alignOffset((int)screenPoses[1].second - 3 * (int)framebufferMetadata.extent.height / 4, 8)}
+    VkOffset2D{
+               alignOffset((int)screenPoses[0].first - 3 * (int)framebufferMetadata.extent.width / 4, 8),
+               alignOffset((int)screenPoses[0].second - 3 * (int)framebufferMetadata.extent.height / 4, 8)},
+    VkOffset2D{
+               alignOffset((int)screenPoses[1].first - 3 * (int)framebufferMetadata.extent.width / 4, 8),
+               alignOffset((int)screenPoses[1].second - 3 * (int)framebufferMetadata.extent.height / 4, 8)}
   };
   primaryCommandBuffer.endRenderPass(
       SubpassEndInfoNonOwningBuilder().withFragmentDensityMapOffsetEndInfo(offsets).build());
@@ -1165,9 +1172,9 @@ void GCONTEXT_CLASS draw() {
   if (_extendedFeatures.fragmentShadingRateModifier.getSelectedFeature()
       == AttachmentBasedFragmentShadingRateModifier::SupportedFeature::
           FRAGMENT_DENSITY_MAP_OFFSET) {
-    recordCommandBufferFdmOffset(
-        cameraContext.proj, cameraContext.view,
-        _communicationLayer->getCurrentSwapchainImageIndex(), _communicationLayer->getScreenPoses());
+    recordCommandBufferFdmOffset(cameraContext.proj, cameraContext.view,
+                                 _communicationLayer->getCurrentSwapchainImageIndex(),
+                                 _communicationLayer->getScreenPoses());
   } else {
     recordCommandBuffer(cameraContext.proj, cameraContext.view,
                         _communicationLayer->getCurrentSwapchainImageIndex(), {screenx, screeny});

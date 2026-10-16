@@ -1,5 +1,7 @@
 #include "instance.h"
 
+#include <array>
+
 #include "lib/buffer/buffer.h"
 #include "openxr_wrapper/platform/platform.h"
 #include "openxr_wrapper/util/check.h"

@@ -142,7 +142,9 @@ void Presentation::run() {
                             _mouseKeyboardManager->isPressed(Keyboard::Key::R) ? tempViewMat = camera.getViewMatrix() :
                                                              tempViewMat, camera.getProjectionMatrix(), viewDir}
     });
-    _communicationLayer->setScreenPoses({{mousePos.x, mousePos.y}});
+    _communicationLayer->setScreenPoses({
+      {mousePos.x, mousePos.y}
+    });
     _graphicsContext->draw();
     _presentationContext->present();
   }
