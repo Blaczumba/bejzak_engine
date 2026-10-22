@@ -1482,7 +1482,7 @@ std::tuple<Image, ImageMetadata> createSkybox(
       VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, 0, imageMetadata.mipLevels, 0,
       imageMetadata.arrayLayers);
   ImageViewBuilder()
-      .withSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT, 0, imageData.mipLevels, 0, 6)
+      .withSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT, 0, imageMetadata.mipLevels, 0, 6)
       .buildImageView(image, imageMetadata);
   return std::make_tuple(std::move(image), imageMetadata);
 }
@@ -1532,7 +1532,11 @@ std::tuple<Image, ImageMetadata> createTexture2D(
       ImageBuilder()
           .withExtent(imageData.width, imageData.height)
           .withFormat(format)
-          .withMipLevels(imageData.mipLevels)
+          .withMipLevels(imageData.mipLevels == 1 ?
+                             static_cast<uint32_t>(
+                                 std::floor(std::log2(std::max(imageData.width, imageData.height))))
+                                 + 1 :
+                             imageData.mipLevels)
           .withUsage(VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT
                      | VK_IMAGE_USAGE_SAMPLED_BIT)
           .buildImageWithMetadata(logicalDevice);
@@ -1550,7 +1554,7 @@ std::tuple<Image, ImageMetadata> createTexture2D(
       imageMetadata.imageExtent.width, imageMetadata.imageExtent.height, imageMetadata.mipLevels,
       imageMetadata.arrayLayers);
   ImageViewBuilder()
-      .withSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT, 0, imageData.mipLevels, 0, 1)
+      .withSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT, 0, imageMetadata.mipLevels, 0, 1)
       .buildImageView(image, imageMetadata);
   return std::make_tuple(std::move(image), imageMetadata);
 }

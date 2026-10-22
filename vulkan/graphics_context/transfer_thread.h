@@ -1,5 +1,6 @@
 #pragma once
 
+#include <array>
 #include <list>
 #include <memory>
 #include <mutex>
@@ -10,6 +11,7 @@
 #include <variant>
 
 #include "common/abstractions/asset_manager.h"
+#include "lib/buffer/buffer.h"
 #include "lib/types/strong_int.h"
 #include "vulkan/resource_manager/buffer_manager.h"
 #include "vulkan/resource_manager/image_manager.h"
@@ -24,12 +26,11 @@ namespace vlkn {
 DEFINE_STRONG_INT(CountingSemaphoreTransferIndex, size_t);
 
 class TransferThread {
-  TransferThread(
-      const LogicalDevice& logicalDevice, BufferManager& bufferManager, ImageManager& imagemanager);
+  TransferThread(const LogicalDevice& logicalDevice, VkQueue transferingQueue,
+                 uint32_t transferQueueFamilyIndex, uint32_t universalQueueFamilyIndex);
 
 public:
-  static std::unique_ptr<TransferThread> create(
-      const LogicalDevice& logicalDevice, BufferManager& bufferManager, ImageManager& imageManager);
+  static std::unique_ptr<TransferThread> create(const LogicalDevice& logicalDevice);
 
   ~TransferThread();
 
@@ -46,17 +47,22 @@ public:
   VkSemaphore getTimelineSemaphore() const noexcept;
 
 private:
+  static constexpr size_t TRANSFERS_IN_FLIGHT = 2;
+
   struct ImageProcessingState {
     CountingSemaphoreTransferIndex index;
     Ref<Image> imageRef;
+    VkImageAspectFlags aspect;
+    VkImageLayout dstLayout;
     std::shared_ptr<common::AssetManager::ImageData> imageData;
     std::optional<uint32_t> processedMipLevel;
   };
 
   struct VertexProcessingState {
     CountingSemaphoreTransferIndex index;
-    Ref<Buffer> bufferRef;
-    Ref<VirtualAllocation> virtualAllocationRef;
+    lib::Buffer<std::pair<Ref<Buffer>, Ref<VirtualAllocation>>> vertexBuffers;
+    Ref<Buffer> indexBufferRef;
+    Ref<VirtualAllocation> indexBufferVirtualAllocationRef;
     std::shared_ptr<common::AssetManager::VertexData> vertexData;
   };
 
@@ -73,33 +79,24 @@ private:
 
   void doWork();
 
-  std::tuple<Ref<Buffer>, Ref<VirtualAllocation>, VirtualAllocationMetadata> allocate(
-      BufferAllocator& bufferAllocator, size_t bufferBlockSize, size_t size,
-      VkBufferUsageFlags usage);
-
   const LogicalDevice& _logicalDevice;
-  BufferManager& _bufferManager;
-  ImageManager& _imageManager;
+  VkQueue _transferQueue;
+  uint32_t _transferQueueFamilyIndex, _universalQueueFamilyIndex;
   std::shared_ptr<CommandPool> _commandPool;
-  CommandBuffer _commandBuffer;
+  std::array<std::tuple<CommandBuffer, Fence>, TRANSFERS_IN_FLIGHT> _inFlightObjects;
   Semaphore _timelineSemaphore;
-  Fence _fence;
-  CountingSemaphoreTransferIndex _lastProcessedIndex;
-  std::atomic<size_t> _nextIndex = 0;
+  CountingSemaphoreTransferIndex _nextIndex = CountingSemaphoreTransferIndex(0);
+  CountingSemaphoreTransferIndex _processedIndex = CountingSemaphoreTransferIndex(0);
 
-  // Map whose keys are buffer strides.
-  std::unordered_map<size_t, BufferAllocator> _vertexBufferAllocators;
-  // There are 3 types of indexBuffer VK_INDEX_TYPE_UINT32, VK_INDEX_TYPE_UINT16 and
-  // VK_INDEX_TYPE_UINT8_EXT
-  std::array<BufferAllocator, 3> _indexBufferAllocators;
-  AllocationStrategy<VirtualAllocation, AllocationPolicy::POOL_BASED> _virtualAllocationStrategy;
-
+  bool _stop = false;
   std::thread _thread;
-  std::list<ProcessingState> _processingQueue;
+  std::deque<ProcessingState> _processingQueue;
+  uint8_t _currentTransfer = 0;
 
+  std::atomic<bool> _jobsNotEmpty = false;
   std::mutex _mutex;
   std::condition_variable _conditionVariable;
-  bool _stop = false;
+  std::deque<ProcessingState> _pushedJobs;
 };
 
 }  // namespace vlkn

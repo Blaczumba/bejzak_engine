@@ -20,7 +20,7 @@ std::tuple<ImageResource, OwnedImageData> loadImageStbi(std::span<const std::byt
       ImageResource{
         .width = static_cast<uint32_t>(width),
         .height = static_cast<uint32_t>(height),
-        .mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1,
+        .mipLevels = 1,
         .layerCount = 1,
         .subresources = {ImageSubresource{
           .layerCount = 1,

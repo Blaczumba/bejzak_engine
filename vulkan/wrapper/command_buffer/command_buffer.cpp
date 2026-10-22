@@ -231,7 +231,7 @@ void CommandBuffer::dispatchCompute(
 void CommandBuffer::transitionImageLayout(
     VkImage image, VkImageAspectFlags aspectFlags, VkImageLayout oldLayout, VkImageLayout newLayout,
     uint32_t baseMipLevel, uint32_t levelCount, uint32_t baseArraylayer,
-    uint32_t layerCount) const noexcept {
+    uint32_t layerCount, uint32_t srcQueueFamilyIndex, uint32_t dstQueueFamilyIndex) const noexcept {
   const PipelineStageInfo srcStageInfo = sourceStageAndAccessMask(oldLayout);
   const PipelineStageInfo dstStageInfo = sourceStageAndAccessMask(newLayout);
 

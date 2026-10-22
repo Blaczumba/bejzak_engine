@@ -95,9 +95,11 @@ public:
   void dispatchCompute(
       uint32_t groupCountX, uint32_t groupCountY, uint32_t groupCountZ = 1) const noexcept;
 
-  void transitionImageLayout(VkImage image, VkImageAspectFlags aspectFlags, VkImageLayout oldLayout,
-                             VkImageLayout newLayout, uint32_t baseMipLevel, uint32_t levelCount,
-                             uint32_t baseArraylayer, uint32_t layerCount) const noexcept;
+  void transitionImageLayout(
+      VkImage image, VkImageAspectFlags aspectFlags, VkImageLayout oldLayout,
+      VkImageLayout newLayout, uint32_t baseMipLevel, uint32_t levelCount, uint32_t baseArraylayer,
+      uint32_t layerCount, uint32_t srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+      uint32_t dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED) const noexcept;
 
   void generateMipmaps(
       VkImage image, VkFormat imageFormat, VkImageLayout finalLayout, int32_t texWidth,

@@ -134,6 +134,18 @@ private:
   AttachmentLayout _attachmentLayout;
   std::vector<Ref<Framebuffer>> _framebuffers;
 
+  struct FdmProgram {
+    Renderpass _renderPass;
+    AttachmentLayout _attachmentLayout;
+    std::vector<Ref<Framebuffer>> _framebuffers;
+  };
+
+  struct DefaultPipeline {
+    Renderpass _renderPass;
+    AttachmentLayout _attachmentLayout;
+    std::vector<Ref<Framebuffer>> _framebuffers;
+  };
+
   // Shadowmap
   Renderpass _shadowRenderPass;
   AttachmentLayout _shadowAttachmentLayout;
