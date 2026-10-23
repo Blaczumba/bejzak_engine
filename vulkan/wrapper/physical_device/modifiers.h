@@ -16,19 +16,6 @@
 #include "vulkan/wrapper/render_pass/attachment_layout.h"
 #include "vulkan/wrapper/render_pass/render_pass.h"
 
-class Modifier {
-public:
-  virtual ~Modifier() = default;
-
-  virtual void modify(RenderpassBuilder& builder) const {};
-
-  virtual void modify(RenderpassBuilder::Subpass& subpass) const {};
-
-  virtual void modify(GraphicsPipelineBuilder& builder) const {};
-
-  virtual void modify(AttachmentLayout& layout) const {};
-};
-
 class AttachmentBasedFragmentShadingRateModifier {
 public:
   enum class SupportedFeature : uint8_t {
@@ -46,22 +33,7 @@ public:
       const PhysicalDevice& physicalDevice, ExtensionsConnector& extensionsConnector,
       SupportedFeature preferredFeature = SupportedFeature::NONE) noexcept;
 
-  void modify(RenderpassBuilder::Subpass& subpass) const;
-
-  void modify(GraphicsPipelineBuilder& builder) const;
-
-  void modify(AttachmentLayout& layout) const;
-
   SupportedFeature getSelectedFeature() const noexcept;
-
-  std::optional<std::tuple<Image, ImageMetadata>> createFragmentShadingOptimizationImage(
-      const LogicalDevice& logicalDevice, const CommandPool& commandPool, VkExtent2D extent,
-      VkExtent2D preferredTexelSize, uint32_t numLayers) const;
-
-  void dispatchComputeFragmentShadingOptimizationImage(
-      const CommandBuffer& commandBuffer, VkImage image, uint32_t layers, VkPipelineLayout layout,
-      std::pair<uint32_t, uint32_t> foveationPoint,
-      DependencyInfoBuilder& dependencyInfoBuilder) const;
 
 private:
   static constexpr size_t FEATURES_NUMBER = static_cast<size_t>(SupportedFeature::NONE);

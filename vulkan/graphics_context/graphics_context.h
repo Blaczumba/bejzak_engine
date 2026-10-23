@@ -130,21 +130,39 @@ private:
   std::unique_ptr<Octree> _octree;
   Registry _registry;
 
-  Renderpass _renderPass;
-  AttachmentLayout _attachmentLayout;
-  std::vector<Ref<Framebuffer>> _framebuffers;
+  struct FdmOffsetProgram {
+    Renderpass renderPass;
+    AttachmentLayout attachmentLayout;
+    Ref<Image> fdmRef;
+    std::vector<Ref<Framebuffer>> framebuffers;
 
-  struct FdmProgram {
-    Renderpass _renderPass;
-    AttachmentLayout _attachmentLayout;
-    std::vector<Ref<Framebuffer>> _framebuffers;
-  };
+    Pipeline* passthroughPipeline;
+    UniformTextureHandle passthroughImageHandle;
+    Ref<Framebuffer> offscreenFramebuffer;
+    Renderpass passthroughRenderpass;
+    AttachmentLayout passthroughLayout;
 
-  struct DefaultPipeline {
-    Renderpass _renderPass;
-    AttachmentLayout _attachmentLayout;
-    std::vector<Ref<Framebuffer>> _framebuffers;
-  };
+    PipelineHandle graphicsPipelineHandle;
+    Pipeline* skyboxPipeline;
+  } _fdmOffsetProgram;
+
+  struct FsrProgram {
+    Renderpass renderPass;
+    AttachmentLayout attachmentLayout;
+    Ref<Image> fsrRef;
+    std::vector<Ref<Framebuffer>> framebuffers;
+
+    Pipeline* fsrMapFillPipeline;
+
+    PipelineHandle graphicsPipelineHandle;
+    Pipeline* skyboxPipeline;
+  } _fsrProgram;
+
+  struct DefaultProgram {
+    Renderpass renderPass;
+    AttachmentLayout attachmentLayout;
+    std::vector<Ref<Framebuffer>> framebuffers;
+  } _defaultProgram;
 
   // Shadowmap
   Renderpass _shadowRenderPass;
@@ -156,7 +174,6 @@ private:
 
   // Skybox.
   Entity _skyboxEntity;
-  Pipeline* _skyboxPipeline;
 
   // Raziel.
   Entity _razielEntity;
@@ -176,17 +193,9 @@ private:
 
   // PBR objects.
   std::vector<Object> objects;
-  Pipeline* _graphicsPipeline;
-  PipelineHandle _graphicsPipelineHandle;
+
   Pipeline* _graphicsTesselationPipeline;
   PipelineHandle _graphicsTesselationPipelineHandle;
-
-  // Passthrough subpass.
-  Pipeline* _passthroughPipeline;
-  UniformTextureHandle _passthroughImageHandle;
-  Ref<Framebuffer> _offscreenFramebuffer;
-  Renderpass _passthroughRenderpass;
-  AttachmentLayout _passthroughLayout;
 
   // Blinn Phong Tesselation.
   PipelineHandle _blinnPhongTesselationPipelineHandle;
@@ -195,10 +204,6 @@ private:
   Ref<Buffer> _dynamicUniformBuffersCamera;
   Buffer _lightBuffer;
   UniformBufferHandle _lightHandle;
-
-  // Fragment rate shading.
-  Pipeline* _fragmentShadingOptimizationPipeline = nullptr;
-  Ref<Image> _fragmentShadingOptimizationImageRef;
 
   void setup();
 
@@ -246,7 +251,7 @@ private:
 
   void createPresentingResourcesForFdmOffset(const common::PresentResources& presentResources);
 
-  void createPresentingResourcesForComputeFsrFdm(const common::PresentResources& presentResources);
+  void createPresentingResourcesForFsr(const common::PresentResources& presentResources);
 };
 
 // The two specializations are explicitly instantiated in graphics_context.cpp.
