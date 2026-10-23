@@ -137,7 +137,7 @@ lib::Buffer<VkBufferImageCopy> fillImageWithCsfDistribution(
                            .mipLevel = 0,
                            .baseArrayLayer = layer,
                            .layerCount = 1},
-      .imageExtent = {width, height},
+      .imageExtent = {width, height, 1},
     };
   }
   return imageCopy;
