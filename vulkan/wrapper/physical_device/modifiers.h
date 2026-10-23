@@ -1,20 +1,10 @@
 #pragma once
 
 #include <cstdint>
-#include <optional>
-#include <tuple>
-#include <utility>
 #include <vulkan/vulkan.h>
 
-#include "vulkan/wrapper/builders/dependency_info_builder.h"
-#include "vulkan/wrapper/command_buffer/command_buffer.h"
-#include "vulkan/wrapper/command_buffer/command_pool.h"
-#include "vulkan/wrapper/memory_objects/image.h"
 #include "vulkan/wrapper/physical_device/extensions_connector.h"
 #include "vulkan/wrapper/physical_device/physical_device.h"
-#include "vulkan/wrapper/pipeline/graphics_pipeline_builder.h"
-#include "vulkan/wrapper/render_pass/attachment_layout.h"
-#include "vulkan/wrapper/render_pass/render_pass.h"
 
 class AttachmentBasedFragmentShadingRateModifier {
 public:

@@ -53,8 +53,8 @@
 #include "vulkan/wrapper/synchronization/fence.h"
 #include "vulkan/wrapper/util/index_buffer_util.h"
 
-#define GCONTEXT_TEMPLATE template <bool SYNCED_OUTSIDE, bool MULTIVIEW_PRESENTATION>
-#define GCONTEXT_CLASS    GraphicsContext<SYNCED_OUTSIDE, MULTIVIEW_PRESENTATION>::
+#define GCONTEXT_TEMPLATE template <bool SYNCED_OUTSIDE>
+#define GCONTEXT_CLASS    GraphicsContext<SYNCED_OUTSIDE>::
 
 namespace vlkn {
 
@@ -142,6 +142,14 @@ lib::Buffer<VkBufferImageCopy> fillImageWithCsfDistribution(
   }
   return imageCopy;
 }
+
+int alignOffset(int value, uint32_t granularity) {
+  if (granularity <= 1) {
+    return value;
+  }
+  return (value + static_cast<int>(granularity) / 2) / static_cast<int>(granularity)
+         * static_cast<int>(granularity);
+};
 
 }  // namespace
 
@@ -272,14 +280,16 @@ void GCONTEXT_CLASS createDescriptorSets() {
     auto [buffer, metadata] =
         BufferBuilder()
             .withUsage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)
-            .withSize((MULTIVIEW_PRESENTATION ? 2 : 1) * MAX_FRAMES_IN_FLIGHT * size)
+            .withSize(
+                _presentationContext->getPresentResources().numLayers * MAX_FRAMES_IN_FLIGHT * size)
             .buildUniformBufferWithMetadata(*_logicalDevice);
     _dynamicUniformBuffersCamera = _bufferManager.storeBuffer(std::move(buffer), metadata);
   }
 
   _dynamicDescriptorSetWriter.storeDynamicBuffer(
       _dynamicUniformBuffersCamera.getUnderlyingResource(),
-      _dynamicUniformBuffersCamera.getMetadata().usage, size, MULTIVIEW_PRESENTATION ? 2 : 1);
+      _dynamicUniformBuffersCamera.getMetadata().usage, size,
+      _presentationContext->getPresentResources().numLayers);
   _dynamicDescriptorSetWriter.writeDescriptorSet(
       _logicalDevice->getVkDevice(), _dynamicDescriptorSet.getVkDescriptorSet());
 
@@ -419,8 +429,7 @@ void GCONTEXT_CLASS createShadowResources() {
           .withExtent(shadowMapExtent.width, shadowMapExtent.height)
           .buildFramebufferWithMetadata(_shadowRenderPass);
   _shadowFramebuffer = _framebufferManager.storeFramebuffer(
-      std::move(framebuffer), framebufferMetadata, {&_shadowMapRef, 1});  // TODO pass proper
-                                                                          // attachments
+      std::move(framebuffer), framebufferMetadata, {&_shadowMapRef, 1});
 }
 
 GCONTEXT_TEMPLATE
@@ -429,10 +438,8 @@ void GCONTEXT_CLASS createGraphicsPipelines() {
   //    _renderPass, _attachmentLayout, MULTIVIEW_PRESENTATION);
   //_blinnPhongTesselationPipelineHandle = _pipelineManager->createBlinnPhongTesselationProgram(
   //    _renderPass, _attachmentLayout, MULTIVIEW_PRESENTATION);
-  //_graphicsTesselationPipeline = _pipelineManager->getPipeline(_graphicsTesselationPipelineHandle);
-  //_skyboxPipeline = _pipelineManager->getPipeline(
-  //    _pipelineManager->createSkyboxProgram(_renderPass, _attachmentLayout));
-  //_phongEnvMappingPipeline =
+  //_graphicsTesselationPipeline =
+  //_pipelineManager->getPipeline(_graphicsTesselationPipelineHandle); _phongEnvMappingPipeline =
   //    _pipelineManager->getPipeline(_pipelineManager->createEnvMappingProgram(
   //        _renderPass, _attachmentLayout, MULTIVIEW_PRESENTATION));
   _shadowPipeline = _pipelineManager->getPipeline(
@@ -782,40 +789,40 @@ void GCONTEXT_CLASS recordCommandBuffer(
                                  .withFlags(VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT)
                                  .build());
 
-    primaryCommandBuffer.bindPipeline(_fsrProgram.fsrMapFillPipeline->getVkPipelineBindPoint(),
+  primaryCommandBuffer.bindPipeline(_fsrProgram.fsrMapFillPipeline->getVkPipelineBindPoint(),
                                     _fsrProgram.fsrMapFillPipeline->getVkPipeline());
   primaryCommandBuffer.bindDescriptorSets(
       _fsrProgram.fsrMapFillPipeline->getVkPipelineBindPoint(),
       _fsrProgram.fsrMapFillPipeline->getVkPipelineLayout(),
       {_computeDescriptorSet.getVkDescriptorSet()});
-    DependencyInfoBuilder dependencyInfoBuilder;
-    auto [fragmentShadingVkImage, fragmentShadingMetadata] =
-        _fsrProgram.fsrRef.getUnderlyingResourceWithMetadata();
+  DependencyInfoBuilder dependencyInfoBuilder;
+  auto [fragmentShadingVkImage, fragmentShadingMetadata] =
+      _fsrProgram.fsrRef.getUnderlyingResourceWithMetadata();
 
-    primaryCommandBuffer.pushConstants(
-        _fsrProgram.fsrMapFillPipeline->getVkPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT,
-        std::span{reinterpret_cast<const std::byte*>(&screenPos), sizeof(screenPos)});
-    primaryCommandBuffer.dispatchCompute(16, 16, fragmentShadingMetadata.arrayLayers);
-    ImageMemoryBarrierBuilder& memoryBarrierBuilder =
-        dependencyInfoBuilder.addImageMemoryBarrier()
-            .withSrcMasks(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_ACCESS_SHADER_WRITE_BIT)
-            .withDstMasks(VK_PIPELINE_STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR,
-                          VK_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR)
-            .withLayouts(VK_IMAGE_LAYOUT_GENERAL,
-                         VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR)
-            .withImage(fragmentShadingVkImage,
-                       VkImageSubresourceRange{
-                         .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
-                         .baseMipLevel = 0,
-                         .levelCount = 1,
-                         .baseArrayLayer = 0,
-                         .layerCount = fragmentShadingMetadata.arrayLayers,
-                       });
-    primaryCommandBuffer.pipelineBarrier(dependencyInfoBuilder.build());
+  primaryCommandBuffer.pushConstants(
+      _fsrProgram.fsrMapFillPipeline->getVkPipelineLayout(), VK_SHADER_STAGE_COMPUTE_BIT,
+      std::span{reinterpret_cast<const std::byte*>(&screenPos), sizeof(screenPos)});
+  primaryCommandBuffer.dispatchCompute(16, 16, fragmentShadingMetadata.arrayLayers);
+  ImageMemoryBarrierBuilder& memoryBarrierBuilder =
+      dependencyInfoBuilder.addImageMemoryBarrier()
+          .withSrcMasks(VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_ACCESS_SHADER_WRITE_BIT)
+          .withDstMasks(VK_PIPELINE_STAGE_FRAGMENT_SHADING_RATE_ATTACHMENT_BIT_KHR,
+                        VK_ACCESS_FRAGMENT_SHADING_RATE_ATTACHMENT_READ_BIT_KHR)
+          .withLayouts(
+              VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_FRAGMENT_SHADING_RATE_ATTACHMENT_OPTIMAL_KHR)
+          .withImage(fragmentShadingVkImage,
+                     VkImageSubresourceRange{
+                       .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
+                       .baseMipLevel = 0,
+                       .levelCount = 1,
+                       .baseArrayLayer = 0,
+                       .layerCount = fragmentShadingMetadata.arrayLayers,
+                     });
+  primaryCommandBuffer.pipelineBarrier(dependencyInfoBuilder.build());
 
   const auto [framebuffer, framebufferMetadata] =
-        _fsrProgram.framebuffers[imageIndex].getUnderlyingResourceWithMetadata();
-    const auto& FramebufferMetadata = _fsrProgram.framebuffers[imageIndex].getMetadata();
+      _fsrProgram.framebuffers[imageIndex].getUnderlyingResourceWithMetadata();
+  const auto& FramebufferMetadata = _fsrProgram.framebuffers[imageIndex].getMetadata();
   const VkViewport viewports[] = {
     VkViewport{.width = static_cast<float>(framebufferMetadata.extent.width),
                .height = static_cast<float>(framebufferMetadata.extent.height),
@@ -857,7 +864,7 @@ void GCONTEXT_CLASS recordCommandBuffer(
     VkDescriptorSet descriptorSets[] = {
       _bindlessDescriptorSet.getVkDescriptorSet(), _dynamicDescriptorSet.getVkDescriptorSet()};
 
-    if constexpr (MULTIVIEW_PRESENTATION) {
+    if (_presentationContext->getPresentResources().multiview) {
       uint32_t dynamicUniformBufferOffsets[2];
       const uint32_t baseOffset = 2u * _currentFrame;
       _dynamicDescriptorSetWriter.getDynamicBufferSizesWithOffsets(
@@ -993,7 +1000,7 @@ void GCONTEXT_CLASS recordCommandBufferFdmOffset(
     VkDescriptorSet descriptorSets[] = {
       _bindlessDescriptorSet.getVkDescriptorSet(), _dynamicDescriptorSet.getVkDescriptorSet()};
 
-    if constexpr (MULTIVIEW_PRESENTATION) {
+    if (_presentationContext->getPresentResources().multiview) {
       uint32_t dynamicUniformBufferOffsets[2];
       const uint32_t baseOffset = 2u * _currentFrame;
       _dynamicDescriptorSetWriter.getDynamicBufferSizesWithOffsets(
@@ -1067,22 +1074,21 @@ void GCONTEXT_CLASS recordCommandBufferFdmOffset(
     _secondaryCommandBuffers[1][_currentFrame].getVkCommandBuffer()};
   primaryCommandBuffer.executeSecondaryCommandBuffers(secondaryCommandBuffers);
 
-  auto alignOffset = [](int value, uint32_t granularity) {
-    if (granularity <= 1) {
-      return value;
-    }
-    return (value + static_cast<int>(granularity) / 2) / static_cast<int>(granularity)
-           * static_cast<int>(granularity);
-  };
-
-  // screen.pos - fdm.size / 2.
+  const ImageMetadata& fdmMetadata = _fdmOffsetProgram.fdmRef.getMetadata();
   const VkOffset2D offsets[2] = {
     VkOffset2D{
-               alignOffset((int)screenPoses[0].first - 3 * (int)framebufferMetadata.extent.width / 4, 8),
-               alignOffset((int)screenPoses[0].second - 3 * (int)framebufferMetadata.extent.height / 4, 8)},
+               alignOffset(static_cast<int32_t>(screenPoses[0].first - fdmMetadata.imageExtent.width / 2),
+               _fdmOffsetProgram.granularity.width),
+               alignOffset(
+          static_cast<int32_t>(screenPoses[0].second - (int)fdmMetadata.imageExtent.height / 2),
+               _fdmOffsetProgram.granularity.height)},
     VkOffset2D{
-               alignOffset((int)screenPoses[1].first - 3 * (int)framebufferMetadata.extent.width / 4, 8),
-               alignOffset((int)screenPoses[1].second - 3 * (int)framebufferMetadata.extent.height / 4, 8)}
+               alignOffset(
+          static_cast<int32_t>(screenPoses[1].first - (int)fdmMetadata.imageExtent.width / 2),
+               _fdmOffsetProgram.granularity.width),
+               alignOffset(
+          static_cast<int32_t>(screenPoses[1].second - (int)fdmMetadata.imageExtent.height / 2),
+               _fdmOffsetProgram.granularity.height)}
   };
   primaryCommandBuffer.endRenderPass(
       SubpassEndInfoNonOwningBuilder().withFragmentDensityMapOffsetEndInfo(offsets).build());
@@ -1168,8 +1174,8 @@ GCONTEXT_CLASS GraphicsContext(
               {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,          1}
     })
             .build(*_logicalDevice, 3);
-    const auto [layout, metadata] =
-        _pipelineManager->getOrCreateCameraLayout(*_logicalDevice, MULTIVIEW_PRESENTATION);
+    const auto [layout, metadata] = _pipelineManager->getOrCreateCameraLayout(
+        *_logicalDevice, _presentationContext->getPresentResources().multiview);
     _dynamicDescriptorSet =
         _descriptorPool
             ->createDesriptorSet(
@@ -1194,11 +1200,10 @@ std::unique_ptr<common::GraphicsContext> GCONTEXT_CLASS create(
     PhysicalDeviceOptionalExtendedFeatures extendedFeatures, const FileLoader& fileLoader,
     std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer,
     std::unique_ptr<PresentationContext> presentationContext) {
-  return std::unique_ptr<GraphicsContext<SYNCED_OUTSIDE, MULTIVIEW_PRESENTATION>>(
-      new GraphicsContext<SYNCED_OUTSIDE, MULTIVIEW_PRESENTATION>(
-          std::move(instance), std::move(debugMessenger), std::move(physicalDevice),
-          std::move(logicalDevice), std::move(extendedFeatures), std::move(fileLoader),
-          std::move(communicationLayer), std::move(presentationContext)));
+  return std::unique_ptr<GraphicsContext<SYNCED_OUTSIDE>>(new GraphicsContext<SYNCED_OUTSIDE>(
+      std::move(instance), std::move(debugMessenger), std::move(physicalDevice),
+      std::move(logicalDevice), std::move(extendedFeatures), std::move(fileLoader),
+      std::move(communicationLayer), std::move(presentationContext)));
 }
 
 GCONTEXT_TEMPLATE
@@ -1321,13 +1326,14 @@ void GCONTEXT_CLASS createPresentingResourcesForFdmOffset(
   Ref<Image> depthAttachmentHandle =
       _imageManager.storeImage(std::move(depthAtachment), depthAtachmentMetadata);
 
-  const VkPhysicalDeviceFragmentDensityMapPropertiesEXT& fdmProperties =
+  const VkPhysicalDeviceFragmentDensityMapPropertiesEXT fdmProperties =
       _physicalDevice->getFragmentDensityMapProperties();
   auto [fdmImage, fdmImageMetadata] =
       ImageBuilder()
           .withFormat(VK_FORMAT_R8G8_UNORM)
           .withNumSamples(VK_SAMPLE_COUNT_1_BIT)
-          .withExtent(VkExtent2D(3 * extent.width / fdmProperties.minFragmentDensityTexelSize.width / 2,
+          .withExtent(
+              VkExtent2D(3 * extent.width / fdmProperties.minFragmentDensityTexelSize.width / 2,
                          3 * extent.height / fdmProperties.minFragmentDensityTexelSize.height / 2))
           .withLayerCount(presentResources.numLayers)
           .withUsage(VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT | VK_IMAGE_USAGE_TRANSFER_DST_BIT)
@@ -1354,17 +1360,18 @@ void GCONTEXT_CLASS createPresentingResourcesForFdmOffset(
   }
   VkImageView imageView =
       ImageViewBuilder()
-          .withSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT, 0, fdmImageMetadata.mipLevels,
-                                0, fdmImageMetadata.arrayLayers)
+          .withSubresourceRange(VK_IMAGE_ASPECT_COLOR_BIT, 0, fdmImageMetadata.mipLevels, 0,
+                                fdmImageMetadata.arrayLayers)
           .buildImageView(fdmImage, fdmImageMetadata);
   attachmentViews.push_back(imageView);
-  _fdmOffsetProgram.fdmRef =
-      _imageManager.storeImage(std::move(fdmImage), fdmImageMetadata);
+  _fdmOffsetProgram.fdmRef = _imageManager.storeImage(std::move(fdmImage), fdmImageMetadata);
   attachmentRefs = lib::Buffer<Ref<Image>>{
     std::move(collorAttachmentHandle), std::move(depthAttachmentHandle), _fdmOffsetProgram.fdmRef};
+  _fdmOffsetProgram.granularity =
+      _physicalDevice->getFragmentDensityMapOffsetProperties().fragmentDensityOffsetGranularity;
 
   RenderpassBuilder renderpassBuilder(_fdmOffsetProgram.attachmentLayout);
-  if constexpr (MULTIVIEW_PRESENTATION) {
+  if (presentResources.multiview) {
     auto mask = lib::setNLeastSignificantBits<uint32_t>(presentResources.numLayers);
     renderpassBuilder.withMultiView({mask}, {mask});
   }
@@ -1388,7 +1395,7 @@ void GCONTEXT_CLASS createPresentingResourcesForFdmOffset(
                               presentResources.imageViewsCount);
   _fdmOffsetProgram.passthroughLayout.addPassthroughPresentAttachment(swapchainImageFormat);
   RenderpassBuilder passthroughRenderpassBuilder(_fdmOffsetProgram.passthroughLayout);
-  if constexpr (MULTIVIEW_PRESENTATION) {
+  if (presentResources.multiview) {
     auto mask = lib::setNLeastSignificantBits<uint32_t>(presentResources.numLayers);
     passthroughRenderpassBuilder.withMultiView({mask}, {mask});
   }
@@ -1411,7 +1418,7 @@ void GCONTEXT_CLASS createPresentingResourcesForFdmOffset(
   }
 
   _fdmOffsetProgram.graphicsPipelineHandle = _pipelineManager->createPBRProgram(
-      _fdmOffsetProgram.renderPass, _fdmOffsetProgram.attachmentLayout, MULTIVIEW_PRESENTATION);
+      _fdmOffsetProgram.renderPass, _fdmOffsetProgram.attachmentLayout, presentResources.multiview);
   _fdmOffsetProgram.passthroughPipeline =
       _pipelineManager->getPipeline(_pipelineManager->createPassthroughProgram(
           _fdmOffsetProgram.passthroughRenderpass, _fdmOffsetProgram.passthroughLayout));
@@ -1453,7 +1460,7 @@ void GCONTEXT_CLASS createPresentingResourcesForFsr(
   Ref<Image> depthAttachmentHandle =
       _imageManager.storeImage(std::move(depthAtachment), depthAtachmentMetadata);
 
-  const VkPhysicalDeviceFragmentShadingRatePropertiesKHR& fsrProperties =
+  const VkPhysicalDeviceFragmentShadingRatePropertiesKHR fsrProperties =
       _physicalDevice->getFragmentShadingRateProperties();
   auto [fsrImage, fsrImageMetadata] =
       ImageBuilder()
@@ -1486,11 +1493,10 @@ void GCONTEXT_CLASS createPresentingResourcesForFsr(
       _logicalDevice->getVkDevice(), _computeDescriptorSet.getVkDescriptorSet());
   _fsrProgram.fsrRef = _imageManager.storeImage(std::move(fsrImage), fsrImageMetadata);
   attachmentRefs = lib::Buffer<Ref<Image>>{
-    std::move(collorAttachmentHandle), std::move(depthAttachmentHandle),
-    _fsrProgram.fsrRef};
+    std::move(collorAttachmentHandle), std::move(depthAttachmentHandle), _fsrProgram.fsrRef};
 
   RenderpassBuilder renderpassBuilder(_fsrProgram.attachmentLayout);
-  if constexpr (MULTIVIEW_PRESENTATION) {
+  if (presentResources.multiview) {
     auto mask = lib::setNLeastSignificantBits<uint32_t>(presentResources.numLayers);
     renderpassBuilder.withMultiView({mask}, {mask});
   }
@@ -1500,8 +1506,9 @@ void GCONTEXT_CLASS createPresentingResourcesForFsr(
           .addOutputAttachment(0)
           .addOutputAttachment(1)
           .addOutputAttachment(2)
-          .withShadingRateAttachment(fsrProperties.maxFragmentShadingRateAttachmentTexelSize.width,
-                                     fsrProperties.maxFragmentShadingRateAttachmentTexelSize.height);
+          .withShadingRateAttachment(
+              fsrProperties.maxFragmentShadingRateAttachmentTexelSize.width,
+              fsrProperties.maxFragmentShadingRateAttachmentTexelSize.height);
 
   _fsrProgram.renderPass =
       renderpassBuilder
@@ -1532,7 +1539,7 @@ void GCONTEXT_CLASS createPresentingResourcesForFsr(
       _pipelineManager->createFragmentShadingRateProgram(*_logicalDevice));
 
   _fsrProgram.graphicsPipelineHandle = _pipelineManager->createPBRProgram(
-      _fsrProgram.renderPass, _fsrProgram.attachmentLayout, MULTIVIEW_PRESENTATION);
+      _fsrProgram.renderPass, _fsrProgram.attachmentLayout, presentResources.multiview);
   _fsrProgram.skyboxPipeline = _pipelineManager->getPipeline(
       _pipelineManager->createSkyboxProgram(_fsrProgram.renderPass, _fsrProgram.attachmentLayout));
 }
@@ -1682,9 +1689,9 @@ std::tuple<Image, ImageMetadata> createAttachment(
 
 // Explicit instantiation of the specializations that are actually used.
 // These must appear AFTER all member definitions above.
-template class GraphicsContext<false, false>;
+template class GraphicsContext<false>;
 
-template class GraphicsContext<true, true>;
+template class GraphicsContext<true>;
 
 }  // namespace vlkn
 

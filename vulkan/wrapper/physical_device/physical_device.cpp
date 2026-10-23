@@ -204,10 +204,6 @@ PhysicalDevice::PhysicalDevice(VkPhysicalDevice physicalDevice, const Instance& 
   : _device(physicalDevice), _instance(instance),
     _availableRequestedExtensions(checkDeviceExtensionSupport(physicalDevice)),
     _queueFamilyIndices(queueFamilyIndices) {
-  _properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
-  _properties.pNext = nullptr;
-  chainExtendedField(&_properties.pNext, _fsrProperties);
-  chainExtendedField(&_properties.pNext, _fdmProperties);
   vkGetPhysicalDeviceProperties2(physicalDevice, &_properties);
 }
 
@@ -252,14 +248,34 @@ VkPhysicalDeviceType PhysicalDevice::getPhysicalDeviceType() const noexcept {
   return _properties.properties.deviceType;
 }
 
-const VkPhysicalDeviceFragmentDensityMapPropertiesEXT&
+VkPhysicalDeviceFragmentDensityMapPropertiesEXT
 PhysicalDevice::getFragmentDensityMapProperties() const noexcept {
-  return _fdmProperties;
+  VkPhysicalDeviceFragmentDensityMapPropertiesEXT fdmProperties{
+    VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_PROPERTIES_EXT};
+  VkPhysicalDeviceProperties2 properties{
+    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &fdmProperties};
+  vkGetPhysicalDeviceProperties2(_device, &properties);
+  return fdmProperties;
 }
 
-const VkPhysicalDeviceFragmentShadingRatePropertiesKHR&
+VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM
+PhysicalDevice::getFragmentDensityMapOffsetProperties() const noexcept {
+  VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM fdmOffsetProperties{
+    VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_OFFSET_PROPERTIES_QCOM};
+  VkPhysicalDeviceProperties2 properties{
+    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &fdmOffsetProperties};
+  vkGetPhysicalDeviceProperties2(_device, &properties);
+  return fdmOffsetProperties;
+}
+
+VkPhysicalDeviceFragmentShadingRatePropertiesKHR
 PhysicalDevice::getFragmentShadingRateProperties() const noexcept {
-  return _fsrProperties;
+  VkPhysicalDeviceFragmentShadingRatePropertiesKHR fsrProperties{
+    VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_PROPERTIES_KHR};
+  VkPhysicalDeviceProperties2 properties{
+    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2, .pNext = &fsrProperties};
+  vkGetPhysicalDeviceProperties2(_device, &properties);
+  return fsrProperties;
 }
 
 lib::Buffer<VkPhysicalDeviceFragmentShadingRateKHR>

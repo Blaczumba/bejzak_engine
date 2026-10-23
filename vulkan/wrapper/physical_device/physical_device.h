@@ -46,10 +46,12 @@ public:
 
   VkPhysicalDeviceType getPhysicalDeviceType() const noexcept;
 
-  const VkPhysicalDeviceFragmentDensityMapPropertiesEXT&
-  getFragmentDensityMapProperties() const noexcept;
+  VkPhysicalDeviceFragmentDensityMapPropertiesEXT getFragmentDensityMapProperties() const noexcept;
 
-  const VkPhysicalDeviceFragmentShadingRatePropertiesKHR&
+  VkPhysicalDeviceFragmentDensityMapOffsetPropertiesQCOM
+  getFragmentDensityMapOffsetProperties() const noexcept;
+
+  VkPhysicalDeviceFragmentShadingRatePropertiesKHR
   getFragmentShadingRateProperties() const noexcept;
 
   lib::Buffer<VkPhysicalDeviceFragmentShadingRateKHR> getFragmentShadingRates() const noexcept;
@@ -67,11 +69,7 @@ private:
 
   const Instance& _instance;
 
-  VkPhysicalDeviceProperties2 _properties;
-  VkPhysicalDeviceFragmentDensityMapPropertiesEXT _fdmProperties{
-    VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_DENSITY_MAP_PROPERTIES_EXT};
-  VkPhysicalDeviceFragmentShadingRatePropertiesKHR _fsrProperties{
-    VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FRAGMENT_SHADING_RATE_PROPERTIES_KHR};
+  VkPhysicalDeviceProperties2 _properties{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2};
 
   QueueFamilyIndices _queueFamilyIndices;
 

@@ -20,7 +20,7 @@ namespace vlkn {
 Presentation::Presentation(
     std::shared_ptr<Window> window, std::shared_ptr<Instance> instance, Surface&& surface,
     PresentationContext* presentationContext,
-    std::unique_ptr<GraphicsContext<false, false>> graphicsContext,
+    std::unique_ptr<GraphicsContext<false>> graphicsContext,
     std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer,
     const FileLoader& fileLoader)
   : _window(std::move(window)), _instance(std::move(instance)), _surface(std::move(surface)),
@@ -85,7 +85,7 @@ std::unique_ptr<common::Presentation> Presentation::create(
   std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer =
       engine::PresentationGraphicsCommunication::create();
   auto graphicsContext =
-      lib::dynamicUniqueCast<GraphicsContext<false, false>>(GraphicsContext<false, false>::create(
+      lib::dynamicUniqueCast<GraphicsContext<false>>(GraphicsContext<false>::create(
           instance, std::move(debugMessenger), std::move(physicalDevice), std::move(logicalDevice),
           extendedFeatures, fileLoader, communicationLayer, std::move(presentationContext)));
   return std::unique_ptr<Presentation>(new Presentation(

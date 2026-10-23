@@ -15,7 +15,7 @@ namespace vlkn {
 class Presentation final : public common::Presentation {
   Presentation(std::shared_ptr<Window> window, std::shared_ptr<Instance> instance,
                Surface&& surface, PresentationContext* presentationContext,
-               std::unique_ptr<GraphicsContext<false, false>> graphicsContext,
+               std::unique_ptr<GraphicsContext<false>> graphicsContext,
                std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer,
                const FileLoader& fileLoader);
 
@@ -36,7 +36,7 @@ private:
 
   std::shared_ptr<Instance> _instance;
   Surface _surface;
-  std::unique_ptr<GraphicsContext<false, false>> _graphicsContext;
+  std::unique_ptr<GraphicsContext<false>> _graphicsContext;
   PresentationContext* _presentationContext;
 
   std::unique_ptr<const MouseKeyboardManager> _mouseKeyboardManager;

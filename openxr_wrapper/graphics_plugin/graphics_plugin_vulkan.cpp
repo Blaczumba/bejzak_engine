@@ -339,7 +339,7 @@ std::unique_ptr<common::GraphicsContext> GraphicsPluginVulkan::createGraphicsCon
     .device = logicalDevice->getVkDevice(),
     .queueFamilyIndex = physicalDevice->getQueueFamilyIndices().universalFamily};
 
-  return vlkn::GraphicsContext<true, true>::create(
+  return vlkn::GraphicsContext<true>::create(
       instance, std::move(debugMessenger), std::move(physicalDevice), std::move(logicalDevice),
       extendedFeatures, fileLoader, std::move(communicationLayer), nullptr);
 }

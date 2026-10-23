@@ -55,7 +55,7 @@ inline VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback1(
 
 namespace vlkn {
 
-template <bool SYNCED_OUTSIDE, bool MULTIVIEW_PRESENTATION>
+template <bool SYNCED_OUTSIDE>
 class GraphicsContext final : public common::GraphicsContext {
   GraphicsContext(
       std::shared_ptr<Instance> instance, DebugMessenger&& debugMessenger,
@@ -144,6 +144,8 @@ private:
 
     PipelineHandle graphicsPipelineHandle;
     Pipeline* skyboxPipeline;
+
+    VkExtent2D granularity;
   } _fdmOffsetProgram;
 
   struct FsrProgram {
@@ -257,8 +259,8 @@ private:
 // The two specializations are explicitly instantiated in graphics_context.cpp.
 // Declaring them extern here prevents other translation units from trying to
 // implicitly instantiate the member definitions.
-extern template class GraphicsContext<false, false>;
+extern template class GraphicsContext<false>;
 
-extern template class GraphicsContext<true, true>;
+extern template class GraphicsContext<true>;
 
 }  // namespace vlkn
