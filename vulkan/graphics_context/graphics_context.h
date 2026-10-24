@@ -146,6 +146,7 @@ private:
     Pipeline* skyboxPipeline;
 
     VkExtent2D granularity;
+    VkExtent2D texelSize;
   } _fdmOffsetProgram;
 
   struct FsrProgram {

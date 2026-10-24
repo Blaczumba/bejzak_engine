@@ -15,10 +15,10 @@ namespace engine {
 // This class is responsible for communication between presentation and graphics layers.
 // We assume that presentation layer and graphics layers run synchronously.
 class PresentationGraphicsCommunication : private lib::Noncopyable {
-  PresentationGraphicsCommunication() noexcept = default;
+  PresentationGraphicsCommunication(uint32_t numLayers) noexcept;
 
 public:
-  static std::unique_ptr<PresentationGraphicsCommunication> create();
+  static std::unique_ptr<PresentationGraphicsCommunication> create(uint32_t numLayers);
 
   ~PresentationGraphicsCommunication() = default;
 
@@ -38,7 +38,15 @@ public:
 
   std::span<const std::pair<uint32_t, uint32_t>> getScreenPoses() const noexcept;
 
+  void setMultiview(bool multiview) noexcept;
+
+  bool isMultiviewEnabled() const noexcept;
+
+  uint32_t getNumLayers() const noexcept;
+
 private:
+  bool _multiview = false;
+  uint32_t _numLayers = 0;
   uint32_t _swapchainImageIndex = 0;
   std::vector<common::CameraContext> _cameraContexts;
   std::vector<std::pair<uint32_t, uint32_t>> _screenPoses;

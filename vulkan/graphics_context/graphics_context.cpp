@@ -281,7 +281,7 @@ void GCONTEXT_CLASS createDescriptorSets() {
         BufferBuilder()
             .withUsage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)
             .withSize(
-                _presentationContext->getPresentResources().numLayers * MAX_FRAMES_IN_FLIGHT * size)
+                _communicationLayer->getNumLayers() * MAX_FRAMES_IN_FLIGHT * size)
             .buildUniformBufferWithMetadata(*_logicalDevice);
     _dynamicUniformBuffersCamera = _bufferManager.storeBuffer(std::move(buffer), metadata);
   }
@@ -289,7 +289,7 @@ void GCONTEXT_CLASS createDescriptorSets() {
   _dynamicDescriptorSetWriter.storeDynamicBuffer(
       _dynamicUniformBuffersCamera.getUnderlyingResource(),
       _dynamicUniformBuffersCamera.getMetadata().usage, size,
-      _presentationContext->getPresentResources().numLayers);
+      _communicationLayer->getNumLayers());
   _dynamicDescriptorSetWriter.writeDescriptorSet(
       _logicalDevice->getVkDevice(), _dynamicDescriptorSet.getVkDescriptorSet());
 
@@ -864,7 +864,7 @@ void GCONTEXT_CLASS recordCommandBuffer(
     VkDescriptorSet descriptorSets[] = {
       _bindlessDescriptorSet.getVkDescriptorSet(), _dynamicDescriptorSet.getVkDescriptorSet()};
 
-    if (_presentationContext->getPresentResources().multiview) {
+    if (_communicationLayer->isMultiviewEnabled()) {
       uint32_t dynamicUniformBufferOffsets[2];
       const uint32_t baseOffset = 2u * _currentFrame;
       _dynamicDescriptorSetWriter.getDynamicBufferSizesWithOffsets(
@@ -1000,7 +1000,7 @@ void GCONTEXT_CLASS recordCommandBufferFdmOffset(
     VkDescriptorSet descriptorSets[] = {
       _bindlessDescriptorSet.getVkDescriptorSet(), _dynamicDescriptorSet.getVkDescriptorSet()};
 
-    if (_presentationContext->getPresentResources().multiview) {
+    if (_communicationLayer->isMultiviewEnabled()) {
       uint32_t dynamicUniformBufferOffsets[2];
       const uint32_t baseOffset = 2u * _currentFrame;
       _dynamicDescriptorSetWriter.getDynamicBufferSizesWithOffsets(
@@ -1075,19 +1075,21 @@ void GCONTEXT_CLASS recordCommandBufferFdmOffset(
   primaryCommandBuffer.executeSecondaryCommandBuffers(secondaryCommandBuffers);
 
   const ImageMetadata& fdmMetadata = _fdmOffsetProgram.fdmRef.getMetadata();
+  const int32_t halfWidth = fdmMetadata.imageExtent.width * _fdmOffsetProgram.texelSize.width / 2;
+  const int32_t halfHeight = fdmMetadata.imageExtent.height * _fdmOffsetProgram.texelSize.height / 2;
   const VkOffset2D offsets[2] = {
     VkOffset2D{
-               alignOffset(static_cast<int32_t>(screenPoses[0].first - fdmMetadata.imageExtent.width / 2),
+               alignOffset(static_cast<int32_t>(screenPoses[0].first) - halfWidth,
                _fdmOffsetProgram.granularity.width),
                alignOffset(
-          static_cast<int32_t>(screenPoses[0].second - (int)fdmMetadata.imageExtent.height / 2),
+          static_cast<int32_t>(screenPoses[0].second) - halfHeight,
                _fdmOffsetProgram.granularity.height)},
     VkOffset2D{
                alignOffset(
-          static_cast<int32_t>(screenPoses[1].first - (int)fdmMetadata.imageExtent.width / 2),
+          static_cast<int32_t>(screenPoses[1].first) - halfWidth,
                _fdmOffsetProgram.granularity.width),
                alignOffset(
-          static_cast<int32_t>(screenPoses[1].second - (int)fdmMetadata.imageExtent.height / 2),
+          static_cast<int32_t>(screenPoses[1].second) - halfHeight,
                _fdmOffsetProgram.granularity.height)}
   };
   primaryCommandBuffer.endRenderPass(
@@ -1143,6 +1145,7 @@ GCONTEXT_CLASS GraphicsContext(
     _extendedFeatures(std::move(extendedFeatures)), _fileLoader(fileLoader),
     _communicationLayer(std::move(communicationLayer)),
     _presentationContext(std::move(presentationContext)) {
+  _communicationLayer->setMultiview(_physicalDevice->hasAvailableExtension(VK_KHR_MULTIVIEW_EXTENSION_NAME));
   _singleTimeCommandPool =
       CommandPoolBuilder()
           .withFlags(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT)
@@ -1175,7 +1178,7 @@ GCONTEXT_CLASS GraphicsContext(
     })
             .build(*_logicalDevice, 3);
     const auto [layout, metadata] = _pipelineManager->getOrCreateCameraLayout(
-        *_logicalDevice, _presentationContext->getPresentResources().multiview);
+        *_logicalDevice, _communicationLayer->isMultiviewEnabled());
     _dynamicDescriptorSet =
         _descriptorPool
             ->createDesriptorSet(
@@ -1339,6 +1342,7 @@ void GCONTEXT_CLASS createPresentingResourcesForFdmOffset(
           .withUsage(VK_IMAGE_USAGE_FRAGMENT_DENSITY_MAP_BIT_EXT | VK_IMAGE_USAGE_TRANSFER_DST_BIT)
           .withFlags(VK_IMAGE_CREATE_FRAGMENT_DENSITY_MAP_OFFSET_BIT_QCOM)
           .buildImageWithMetadata(*_logicalDevice);
+  _fdmOffsetProgram.texelSize = fdmProperties.minFragmentDensityTexelSize;
 
   {
     auto [stagingBuffer, stagingBufferMetadata] =
@@ -1371,7 +1375,7 @@ void GCONTEXT_CLASS createPresentingResourcesForFdmOffset(
       _physicalDevice->getFragmentDensityMapOffsetProperties().fragmentDensityOffsetGranularity;
 
   RenderpassBuilder renderpassBuilder(_fdmOffsetProgram.attachmentLayout);
-  if (presentResources.multiview) {
+  if (_communicationLayer->isMultiviewEnabled()) {
     auto mask = lib::setNLeastSignificantBits<uint32_t>(presentResources.numLayers);
     renderpassBuilder.withMultiView({mask}, {mask});
   }
@@ -1395,7 +1399,7 @@ void GCONTEXT_CLASS createPresentingResourcesForFdmOffset(
                               presentResources.imageViewsCount);
   _fdmOffsetProgram.passthroughLayout.addPassthroughPresentAttachment(swapchainImageFormat);
   RenderpassBuilder passthroughRenderpassBuilder(_fdmOffsetProgram.passthroughLayout);
-  if (presentResources.multiview) {
+  if (_communicationLayer->isMultiviewEnabled()) {
     auto mask = lib::setNLeastSignificantBits<uint32_t>(presentResources.numLayers);
     passthroughRenderpassBuilder.withMultiView({mask}, {mask});
   }
@@ -1418,7 +1422,7 @@ void GCONTEXT_CLASS createPresentingResourcesForFdmOffset(
   }
 
   _fdmOffsetProgram.graphicsPipelineHandle = _pipelineManager->createPBRProgram(
-      _fdmOffsetProgram.renderPass, _fdmOffsetProgram.attachmentLayout, presentResources.multiview);
+      _fdmOffsetProgram.renderPass, _fdmOffsetProgram.attachmentLayout, _communicationLayer->isMultiviewEnabled());
   _fdmOffsetProgram.passthroughPipeline =
       _pipelineManager->getPipeline(_pipelineManager->createPassthroughProgram(
           _fdmOffsetProgram.passthroughRenderpass, _fdmOffsetProgram.passthroughLayout));
@@ -1496,7 +1500,7 @@ void GCONTEXT_CLASS createPresentingResourcesForFsr(
     std::move(collorAttachmentHandle), std::move(depthAttachmentHandle), _fsrProgram.fsrRef};
 
   RenderpassBuilder renderpassBuilder(_fsrProgram.attachmentLayout);
-  if (presentResources.multiview) {
+  if (_communicationLayer->isMultiviewEnabled()) {
     auto mask = lib::setNLeastSignificantBits<uint32_t>(presentResources.numLayers);
     renderpassBuilder.withMultiView({mask}, {mask});
   }
@@ -1539,7 +1543,7 @@ void GCONTEXT_CLASS createPresentingResourcesForFsr(
       _pipelineManager->createFragmentShadingRateProgram(*_logicalDevice));
 
   _fsrProgram.graphicsPipelineHandle = _pipelineManager->createPBRProgram(
-      _fsrProgram.renderPass, _fsrProgram.attachmentLayout, presentResources.multiview);
+      _fsrProgram.renderPass, _fsrProgram.attachmentLayout, _communicationLayer->isMultiviewEnabled());
   _fsrProgram.skyboxPipeline = _pipelineManager->getPipeline(
       _pipelineManager->createSkyboxProgram(_fsrProgram.renderPass, _fsrProgram.attachmentLayout));
 }

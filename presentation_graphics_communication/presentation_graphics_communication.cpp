@@ -1,16 +1,17 @@
 #include "presentation_graphics_communication/presentation_graphics_communication.h"
 
 #include <cstdint>
-#include <vector>
 #include <span>
 #include <initializer_list>
 #include <memory>
 
 namespace engine {
 
-std::unique_ptr<PresentationGraphicsCommunication> PresentationGraphicsCommunication::create() {
+PresentationGraphicsCommunication::PresentationGraphicsCommunication(uint32_t numLayers) noexcept : _numLayers(numLayers) {}
+
+std::unique_ptr<PresentationGraphicsCommunication> PresentationGraphicsCommunication::create(uint32_t numLayers) {
   return std::unique_ptr<PresentationGraphicsCommunication>(
-      new PresentationGraphicsCommunication());
+      new PresentationGraphicsCommunication(numLayers));
 }
 
 void PresentationGraphicsCommunication::setCurrentSwapchainImageIndex(
@@ -46,6 +47,18 @@ void PresentationGraphicsCommunication::setScreenPoses(std::span<const std::pair
 
 std::span<const std::pair<uint32_t, uint32_t>> PresentationGraphicsCommunication::getScreenPoses() const noexcept {
   return _screenPoses;
+}
+
+void PresentationGraphicsCommunication::setMultiview(bool multiview) noexcept {
+  _multiview = multiview;
+}
+
+bool PresentationGraphicsCommunication::isMultiviewEnabled() const noexcept {
+  return _multiview;
+}
+
+uint32_t PresentationGraphicsCommunication::getNumLayers() const noexcept {
+  return _numLayers;
 }
 
 }  // namespace engine

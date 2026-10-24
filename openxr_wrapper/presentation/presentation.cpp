@@ -99,7 +99,7 @@ std::unique_ptr<common::Presentation> Presentation::create(
   std::unique_ptr<Instance> instance = Instance::create("BejzakEngine", *platform, *graphicsPlugin);
   std::unique_ptr<System> system = System::create(*instance);
   std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer =
-      engine::PresentationGraphicsCommunication::create();
+      engine::PresentationGraphicsCommunication::create(2);
   std::unique_ptr<common::GraphicsContext> graphicsContext = graphicsPlugin->createGraphicsContext(
       instance->getXrInstance(), system->getXrSystemId(), communicationLayer, fileLoader);
   std::unique_ptr<Session> session = Session::create(*system, *graphicsPlugin);

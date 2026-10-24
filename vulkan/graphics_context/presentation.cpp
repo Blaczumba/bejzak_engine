@@ -83,7 +83,7 @@ std::unique_ptr<common::Presentation> Presentation::create(
   PresentationContext* presentationContextPtr = presentationContext.get();
 
   std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer =
-      engine::PresentationGraphicsCommunication::create();
+      engine::PresentationGraphicsCommunication::create(1);
   auto graphicsContext =
       lib::dynamicUniqueCast<GraphicsContext<false>>(GraphicsContext<false>::create(
           instance, std::move(debugMessenger), std::move(physicalDevice), std::move(logicalDevice),
