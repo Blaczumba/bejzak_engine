@@ -79,6 +79,69 @@ std::pair<uint32_t, uint32_t> calculateScreenPos(const XrPosef& pose, uint32_t s
   return {(ndcX * 0.5f + 0.5f) * static_cast<float>(screenWidth), (ndcY * 0.5f + 0.5f) * static_cast<float>(screenHeight)};
 }
 
+class RenderViewAction final : public PresentationAction {
+ public:
+  RenderViewAction() {
+
+  }
+
+  void update(const Context& context) override {
+
+  }
+
+  const void* getData() const noexcept override {
+    return &_data;
+  }
+
+ private:
+  engine::PresentationInfo _data;
+};
+
+class EyeTrackingAction final : public PresentationAction {
+ public:
+  EyeTrackingAction(XrInstance instance, XrSession session) {
+    _actionSet = ActionSet::create(instance, "eye-gaze", "EyeGaze", 1000);
+    _eyeGazeAction = Action::create(_actionSet.getActionSet(), XR_ACTION_TYPE_POSE_INPUT, "eye-gaze-pose", "EyeGazePose");
+
+    XrPath interactionProfilePath, gazePath;
+    CHECK_XRCMD(xrStringToPath(instance, "/interaction_profiles/ext/eye_gaze_interaction", &interactionProfilePath), "Failed to xrStringToPath.");
+    CHECK_XRCMD(xrStringToPath(instance, "/user/eyes_ext/input/gaze_ext/pose", &gazePath), "Failed to xrStringToPath.");
+    XrActionSuggestedBinding binding{.action = _eyeGazeAction.getAction(), .binding = gazePath};
+    XrInteractionProfileSuggestedBinding suggestedBinding {
+        .type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING,
+        .interactionProfile = interactionProfilePath,
+        .countSuggestedBindings = 1,
+        .suggestedBindings = &binding,
+    };
+    CHECK_XRCMD(xrSuggestInteractionProfileBindings(instance, &suggestedBinding), "Failed to xrSuggestInteractionProfileBindings.");
+    XrActionSet actionSetHandle = _actionSet.getActionSet();
+    XrSessionActionSetsAttachInfo attachInfo{
+        .type = XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO,
+        .countActionSets = 1,
+        .actionSets = &actionSetHandle
+    };
+    CHECK_XRCMD(xrAttachSessionActionSets(session, &attachInfo), "Failed to attach action sets.");
+
+    _actionSpace = Space::create(session, _eyeGazeAction.getAction(), XrPosef{{0.f, 0.f, 0.f, 1.f}, {}});
+  }
+
+  void update(const Context& context) override {
+    XrSpaceLocation spaceLocation{XR_TYPE_SPACE_LOCATION};
+    XrResult result = xrLocateSpace(_actionSpace->getXrSpace(), context.space, context.predictedDisplayTime, &spaceLocation);
+  }
+
+  const void* getData() const noexcept override {
+    return &_data;
+  }
+
+ private:
+  engine::EyeTrackingInfo _data;
+
+  ActionSet _actionSet;
+  Action _eyeGazeAction;
+  std::unique_ptr<Space> _actionSpace;
+};
+
 }  // namespace
 
 Presentation::Presentation(
@@ -86,11 +149,13 @@ Presentation::Presentation(
     std::unique_ptr<common::GraphicsContext> graphicsContext,
     std::shared_ptr<engine::PresentationGraphicsCommunication>& communicationLayer,
     std::unique_ptr<Instance> instance, std::unique_ptr<System> system,
-    std::unique_ptr<Session> session, std::vector<Swapchain>&& swapchains) noexcept
+    std::unique_ptr<Session> session, std::vector<Swapchain>&& swapchains)
   : _platform(std::move(platform)), _graphicsPlugin(std::move(graphicsPlugin)),
     _graphicsContext(std::move(graphicsContext)), _communicationLayer(communicationLayer),
     _instance(std::move(instance)), _system(std::move(system)), _session(std::move(session)),
-    _swapchains(std::move(swapchains)) {}
+    _swapchains(std::move(swapchains)) {
+  addFactory<engine::EyeTrackingInfo>([this]{return std::make_unique<EyeTrackingAction>(_instance->getXrInstance(), _session->getXrSession());});
+}
 
 std::unique_ptr<common::Presentation> Presentation::create(
     std::unique_ptr<Platform> platform, common::GraphicsApi graphicsApi,
@@ -156,6 +221,11 @@ void Presentation::run() {
     pollActions();
     draw();
   }
+}
+
+const void* Presentation::registerActionImpl(std::type_index index) {
+  assert(_factories.contains(index) && "The feature is not supported by OpenXR Presentation Layer.");
+  return _presentationActions.emplace_back(_factories[index]())->getData();
 }
 
 common::GraphicsContext* Presentation::getGraphicsContext() {
@@ -281,11 +351,10 @@ bool Presentation::renderLayer(
               "Failed to xrLocateViews.");
   if ((viewState.viewStateFlags & XR_VIEW_STATE_POSITION_VALID_BIT) == 0
       || (viewState.viewStateFlags & XR_VIEW_STATE_ORIENTATION_VALID_BIT) == 0) {
-    return false;  // There is no valid tracking poses
-    // for the views.
+    return false;  // There is no valid tracking poses for the views.
   }
 
-  const xrw::Swapchain& viewSwapchain = _swapchains[0];
+  const Swapchain& viewSwapchain = _swapchains[0];
   std::array<common::CameraContext, IMAGES_IN_LAYER> cameraContexts;
   std::array<std::pair<uint32_t, uint32_t>, IMAGES_IN_LAYER> screenPoses {};
 
@@ -374,10 +443,6 @@ void Presentation::draw() {
 
   if (_sessionFocused) {
     CHECK_XRCMD(xrSyncActions(_session->getXrSession(), &syncInfo), "Failed to sync actions.");
-
-//    XrSpaceLocation spaceLocation{XR_TYPE_SPACE_LOCATION};
-//    XrResult result = xrLocateSpace(_actionSpace->getXrSpace(), _space->getXrSpace(), frameState.predictedDisplayTime, &spaceLocation);
-//    XrPosef a = spaceLocation.pose;
   }
 
   XrCompositionLayerBaseHeader* layerHeader = nullptr;

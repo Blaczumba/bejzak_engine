@@ -2,6 +2,7 @@
 
 #include "common/abstractions/contexts.h"
 #include "lib/types/noncopyable.h"
+#include "lib/buffer/buffer.h"
 
 #include <cstdint>
 #include <initializer_list>
@@ -9,8 +10,54 @@
 #include <span>
 #include <memory>
 #include <utility>
+#include <glm/glm.hpp>
+#include <glm/gtc/quaternion.hpp>
 
 namespace engine {
+
+struct Viewport {
+  uint32_t xOffset;
+  uint32_t yOffset;
+  uint32_t width;
+  uint32_t height;
+};
+
+struct FrustumAsymmetrical {
+  float leftAngle;
+  float rightAngle;
+  float upAngle;
+  float bottomAngle;
+
+  float nearZ;
+  float farZ;
+};
+
+struct FrustumSymmetrical {
+  float fovy;
+  float aspectRatio;
+
+  float nearZ;
+  float farZ;
+};
+
+using Frustum = std::variant<FrustumAsymmetrical, FrustumSymmetrical>;
+
+struct PresentationInfo {
+  struct RenderView {
+    glm::vec3 position;
+    glm::quat orientation;
+    Viewport viewport;
+    Frustum frustum;
+    uint32_t arrayLayer;
+  };
+
+  lib::Buffer<PresentationInfo> presentationInfos;
+};
+
+struct EyeTrackingInfo {
+  glm::vec3 position;
+  glm::quat orientation;
+};
 
 // This class is responsible for communication between presentation and graphics layers.
 // We assume that presentation layer and graphics layers run synchronously.

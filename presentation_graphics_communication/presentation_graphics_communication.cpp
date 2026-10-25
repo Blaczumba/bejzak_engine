@@ -54,7 +54,7 @@ void PresentationGraphicsCommunication::setMultiview(bool multiview) noexcept {
 }
 
 bool PresentationGraphicsCommunication::isMultiviewEnabled() const noexcept {
-  return _multiview;
+  return _multiview && _numLayers > 1;
 }
 
 uint32_t PresentationGraphicsCommunication::getNumLayers() const noexcept {

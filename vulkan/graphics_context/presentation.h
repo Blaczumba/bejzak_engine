@@ -30,6 +30,10 @@ public:
   void run() override;
 
 private:
+  const void* registerActionImpl(std::type_index index) override {
+    return nullptr;
+  }
+
   // TODO: Change to unique_ptr.
   std::shared_ptr<Window> _window;
   std::shared_ptr<engine::PresentationGraphicsCommunication> _communicationLayer;

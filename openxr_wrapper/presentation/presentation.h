@@ -16,12 +16,29 @@
 
 namespace xrw {
 
+class PresentationAction {
+ public:
+  struct Context {
+    XrTime predictedDisplayTime;
+    XrSpace space;
+
+    std::array<XrPosef, 2> poses;
+    std::array<XrFovf, 2> fovs;
+  };
+
+  virtual ~PresentationAction() = default;
+
+  virtual void update(const Context& context) = 0;
+
+  virtual const void* getData() const noexcept = 0;
+};
+
 class Presentation final : public common::Presentation {
   Presentation(std::unique_ptr<Platform> platform, std::unique_ptr<GraphicsPlugin> graphicsPlugin,
                std::unique_ptr<common::GraphicsContext> graphicsContext,
                std::shared_ptr<engine::PresentationGraphicsCommunication>& communicationLayer,
                std::unique_ptr<Instance> instance, std::unique_ptr<System> system,
-               std::unique_ptr<Session> session, std::vector<Swapchain>&& swapchains) noexcept;
+               std::unique_ptr<Session> session, std::vector<Swapchain>&& swapchains);
 
 public:
   static std::unique_ptr<common::Presentation> create(
@@ -35,6 +52,15 @@ public:
   void run() override;
 
 private:
+  const void* registerActionImpl(std::type_index index) override;
+
+  using PresentationActionFactory = std::function<std::unique_ptr<PresentationAction>()>;
+
+  template<typename T>
+  void addFactory(PresentationActionFactory factory) {
+    _factories.emplace(typeid(T), std::move(factory));
+  }
+
   const XrEventDataBaseHeader* tryReadNextEvent();
 
   void handleSessionStateChangedEvent(const XrEventDataSessionStateChanged& stateChangedEvent);
@@ -49,6 +75,9 @@ private:
       XrCompositionLayerProjection& layer);
 
   void draw();
+
+  std::vector<std::unique_ptr<PresentationAction>> _presentationActions;
+  std::unordered_map<std::type_index, PresentationActionFactory> _factories;
 
   static constexpr inline XrViewConfigurationType VIEW_CONFIG_TYPE =
       XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
