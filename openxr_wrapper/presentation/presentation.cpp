@@ -8,11 +8,12 @@
 #include "common/camera/camera.h"
 #include "common/file/file_loader.h"
 #include "common/util/engine_exception.h"
+#include "openxr_wrapper/action/action.h"
+#include "openxr_wrapper/action/action_set.h"
 #include "openxr_wrapper/graphics_plugin/graphics_plugin_vulkan.h"
 #include "openxr_wrapper/util/check.h"
+#include "presentation_graphics_communication/input_manager.h"
 #include "presentation_graphics_communication/presentation_graphics_communication.h"
-#include "openxr_wrapper/action/action_set.h"
-#include "openxr_wrapper/action/action.h"
 
 namespace xrw {
 
@@ -57,11 +58,12 @@ glm::mat4 createViewMatrix(const XrPosef& pose) {
   return glm::translate(glm::mat4_cast(glm::conjugate(orientation)), -position);
 }
 
-std::pair<uint32_t, uint32_t> calculateScreenPos(const XrPosef& pose, uint32_t screenWidth,
-                                                 uint32_t screenHeight, const glm::mat4& view,
-                                                 const glm::mat4& proj) {
+std::pair<uint32_t, uint32_t> calculateScreenPos(
+    const XrPosef& pose, uint32_t screenWidth, uint32_t screenHeight, const glm::mat4& view,
+    const glm::mat4& proj) {
   const XrQuaternionf& xrGazeOrientation = pose.orientation;
-  glm::quat gazeOrientation = {xrGazeOrientation.w, xrGazeOrientation.x, xrGazeOrientation.y, xrGazeOrientation.z};
+  glm::quat gazeOrientation = {
+    xrGazeOrientation.w, xrGazeOrientation.x, xrGazeOrientation.y, xrGazeOrientation.z};
   const XrVector3f& xrGazePosition = pose.position;
   glm::vec3 gazePosition = {xrGazePosition.x, xrGazePosition.y, xrGazePosition.z};
   glm::vec3 gazeDir = gazeOrientation * glm::vec3(0.0f, 0.0f, -1.0f);
@@ -76,65 +78,71 @@ std::pair<uint32_t, uint32_t> calculateScreenPos(const XrPosef& pose, uint32_t s
   float ndcX = clipSpace.x / clipSpace.w;
   float ndcY = clipSpace.y / clipSpace.w;
 
-  return {(ndcX * 0.5f + 0.5f) * static_cast<float>(screenWidth), (ndcY * 0.5f + 0.5f) * static_cast<float>(screenHeight)};
+  return {(ndcX * 0.5f + 0.5f) * static_cast<float>(screenWidth),
+          (ndcY * 0.5f + 0.5f) * static_cast<float>(screenHeight)};
 }
 
 class RenderViewAction final : public PresentationAction {
- public:
-  RenderViewAction() {
+public:
+  RenderViewAction() {}
 
-  }
-
-  void update(const Context& context) override {
-
-  }
+  void update(const Context& context) override {}
 
   const void* getData() const noexcept override {
     return &_data;
   }
 
- private:
+private:
   engine::PresentationInfo _data;
 };
 
 class EyeTrackingAction final : public PresentationAction {
- public:
+public:
   EyeTrackingAction(XrInstance instance, XrSession session) {
     _actionSet = ActionSet::create(instance, "eye-gaze", "EyeGaze", 1000);
-    _eyeGazeAction = Action::create(_actionSet.getActionSet(), XR_ACTION_TYPE_POSE_INPUT, "eye-gaze-pose", "EyeGazePose");
+    _eyeGazeAction = Action::create(
+        _actionSet.getActionSet(), XR_ACTION_TYPE_POSE_INPUT, "eye-gaze-pose", "EyeGazePose");
 
     XrPath interactionProfilePath, gazePath;
-    CHECK_XRCMD(xrStringToPath(instance, "/interaction_profiles/ext/eye_gaze_interaction", &interactionProfilePath), "Failed to xrStringToPath.");
-    CHECK_XRCMD(xrStringToPath(instance, "/user/eyes_ext/input/gaze_ext/pose", &gazePath), "Failed to xrStringToPath.");
+    CHECK_XRCMD(xrStringToPath(instance, "/interaction_profiles/ext/eye_gaze_interaction",
+                               &interactionProfilePath),
+                "Failed to xrStringToPath.");
+    CHECK_XRCMD(xrStringToPath(instance, "/user/eyes_ext/input/gaze_ext/pose", &gazePath),
+                "Failed to xrStringToPath.");
     XrActionSuggestedBinding binding{.action = _eyeGazeAction.getAction(), .binding = gazePath};
-    XrInteractionProfileSuggestedBinding suggestedBinding {
-        .type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING,
-        .interactionProfile = interactionProfilePath,
-        .countSuggestedBindings = 1,
-        .suggestedBindings = &binding,
+    XrInteractionProfileSuggestedBinding suggestedBinding{
+      .type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING,
+      .interactionProfile = interactionProfilePath,
+      .countSuggestedBindings = 1,
+      .suggestedBindings = &binding,
     };
-    CHECK_XRCMD(xrSuggestInteractionProfileBindings(instance, &suggestedBinding), "Failed to xrSuggestInteractionProfileBindings.");
+    CHECK_XRCMD(xrSuggestInteractionProfileBindings(instance, &suggestedBinding),
+                "Failed to xrSuggestInteractionProfileBindings.");
     XrActionSet actionSetHandle = _actionSet.getActionSet();
     XrSessionActionSetsAttachInfo attachInfo{
-        .type = XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO,
-        .countActionSets = 1,
-        .actionSets = &actionSetHandle
-    };
+      .type = XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO,
+      .countActionSets = 1,
+      .actionSets = &actionSetHandle};
     CHECK_XRCMD(xrAttachSessionActionSets(session, &attachInfo), "Failed to attach action sets.");
 
-    _actionSpace = Space::create(session, _eyeGazeAction.getAction(), XrPosef{{0.f, 0.f, 0.f, 1.f}, {}});
+    _actionSpace = Space::create(session, _eyeGazeAction.getAction(),
+                                 XrPosef{
+                                   {0.f, 0.f, 0.f, 1.f},
+                                   {}
+    });
   }
 
   void update(const Context& context) override {
     XrSpaceLocation spaceLocation{XR_TYPE_SPACE_LOCATION};
-    XrResult result = xrLocateSpace(_actionSpace->getXrSpace(), context.space, context.predictedDisplayTime, &spaceLocation);
+    XrResult result = xrLocateSpace(
+        _actionSpace->getXrSpace(), context.space, context.predictedDisplayTime, &spaceLocation);
   }
 
   const void* getData() const noexcept override {
     return &_data;
   }
 
- private:
+private:
   engine::EyeTrackingInfo _data;
 
   ActionSet _actionSet;
@@ -154,7 +162,12 @@ Presentation::Presentation(
     _graphicsContext(std::move(graphicsContext)), _communicationLayer(communicationLayer),
     _instance(std::move(instance)), _system(std::move(system)), _session(std::move(session)),
     _swapchains(std::move(swapchains)) {
-  addFactory<engine::EyeTrackingInfo>([this]{return std::make_unique<EyeTrackingAction>(_instance->getXrInstance(), _session->getXrSession());});
+  addFactory<engine::EyeTrackingInfo>(
+      [this] {
+        return std::make_unique<EyeTrackingAction>(
+            _instance->getXrInstance(), _session->getXrSession());
+      },
+      XR_EXT_EYE_GAZE_INTERACTION_EXTENSION_NAME);
 }
 
 std::unique_ptr<common::Presentation> Presentation::create(
@@ -188,28 +201,39 @@ void Presentation::run() {
   _space = Space::create(_session->getXrSession(), XR_REFERENCE_SPACE_TYPE_LOCAL);
   // Eye tracker input handlers.
   _actionSet = ActionSet::create(_instance->getXrInstance(), "eye-gaze", "EyeGaze", 1000);
-  _eyeGazeAction = Action::create(_actionSet.getActionSet(), XR_ACTION_TYPE_POSE_INPUT, "eye-gaze-pose", "EyeGazePose");
+  _eyeGazeAction = Action::create(
+      _actionSet.getActionSet(), XR_ACTION_TYPE_POSE_INPUT, "eye-gaze-pose", "EyeGazePose");
 
   XrPath interactionProfilePath, gazePath;
-  CHECK_XRCMD(xrStringToPath(_instance->getXrInstance(), "/interaction_profiles/ext/eye_gaze_interaction", &interactionProfilePath), "Failed to xrStringToPath.");
-  CHECK_XRCMD(xrStringToPath(_instance->getXrInstance(), "/user/eyes_ext/input/gaze_ext/pose", &gazePath), "Failed to xrStringToPath.");
+  CHECK_XRCMD(
+      xrStringToPath(_instance->getXrInstance(), "/interaction_profiles/ext/eye_gaze_interaction",
+                     &interactionProfilePath),
+      "Failed to xrStringToPath.");
+  CHECK_XRCMD(
+      xrStringToPath(_instance->getXrInstance(), "/user/eyes_ext/input/gaze_ext/pose", &gazePath),
+      "Failed to xrStringToPath.");
   XrActionSuggestedBinding binding{.action = _eyeGazeAction.getAction(), .binding = gazePath};
-  XrInteractionProfileSuggestedBinding suggestedBinding {
-      .type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING,
-      .interactionProfile = interactionProfilePath,
-      .countSuggestedBindings = 1,
-      .suggestedBindings = &binding,
+  XrInteractionProfileSuggestedBinding suggestedBinding{
+    .type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING,
+    .interactionProfile = interactionProfilePath,
+    .countSuggestedBindings = 1,
+    .suggestedBindings = &binding,
   };
-  CHECK_XRCMD(xrSuggestInteractionProfileBindings(_instance->getXrInstance(), &suggestedBinding), "Failed to xrSuggestInteractionProfileBindings.");
+  CHECK_XRCMD(xrSuggestInteractionProfileBindings(_instance->getXrInstance(), &suggestedBinding),
+              "Failed to xrSuggestInteractionProfileBindings.");
   XrActionSet actionSetHandle = _actionSet.getActionSet();
   XrSessionActionSetsAttachInfo attachInfo{
-      .type = XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO,
-      .countActionSets = 1,
-      .actionSets = &actionSetHandle
-  };
-  CHECK_XRCMD(xrAttachSessionActionSets(_session->getXrSession(), &attachInfo), "Failed to attach action sets.");
+    .type = XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO,
+    .countActionSets = 1,
+    .actionSets = &actionSetHandle};
+  CHECK_XRCMD(xrAttachSessionActionSets(_session->getXrSession(), &attachInfo),
+              "Failed to attach action sets.");
 
-  _actionSpace = Space::create(_session->getXrSession(), _eyeGazeAction.getAction(), XrPosef{{0.f, 0.f, 0.f, 1.f}, {}});
+  _actionSpace = Space::create(_session->getXrSession(), _eyeGazeAction.getAction(),
+                               XrPosef{
+                                 {0.f, 0.f, 0.f, 1.f},
+                                 {}
+  });
 
   while (!_platform->shouldClose()) {
     _platform->pollPlatformEvents(_sessionRunning);
@@ -217,15 +241,33 @@ void Presentation::run() {
     if (!_sessionRunning) {
       continue;
     }
-
     pollActions();
+
     draw();
   }
 }
 
+bool Presentation::shouldClose() {
+  !_platform->shouldClose();
+}
+
+void Presentation::pollActionsAndEvents() {
+  _platform->pollPlatformEvents(_sessionRunning);
+  pollEvents();
+  if (!_sessionRunning) {
+    return;
+  }
+  pollActions();
+}
+
+void Presentation::drawAndPresent() {
+  draw();
+}
+
 const void* Presentation::registerActionImpl(std::type_index index) {
-  assert(_factories.contains(index) && "The feature is not supported by OpenXR Presentation Layer.");
-  return _presentationActions.emplace_back(_factories[index]())->getData();
+  return _factories.contains(index) ?
+             _presentationActions.emplace_back(_factories[index]())->getData() :
+             nullptr;
 }
 
 common::GraphicsContext* Presentation::getGraphicsContext() {
@@ -274,10 +316,10 @@ void Presentation::handleSessionStateChangedEvent(
         break;
       }
     case XR_SESSION_STATE_FOCUSED:
-    {
-      _sessionFocused = true;
-      break;
-    }
+      {
+        _sessionFocused = true;
+        break;
+      }
     default:
       break;
   }
@@ -356,11 +398,12 @@ bool Presentation::renderLayer(
 
   const Swapchain& viewSwapchain = _swapchains[0];
   std::array<common::CameraContext, IMAGES_IN_LAYER> cameraContexts;
-  std::array<std::pair<uint32_t, uint32_t>, IMAGES_IN_LAYER> screenPoses {};
+  std::array<std::pair<uint32_t, uint32_t>, IMAGES_IN_LAYER> screenPoses{};
 
   // Eye tracker spaceAction.
   XrSpaceLocation spaceLocation{XR_TYPE_SPACE_LOCATION};
-  XrResult result = xrLocateSpace(_actionSpace->getXrSpace(), _space->getXrSpace(), predictedDisplayTime, &spaceLocation);
+  XrResult result = xrLocateSpace(
+      _actionSpace->getXrSpace(), _space->getXrSpace(), predictedDisplayTime, &spaceLocation);
   for (uint32_t i = 0; i < IMAGES_IN_LAYER; i++) {
     const XrCompositionLayerProjectionView& projectionLayerView = projectionLayerViews[i] =
         XrCompositionLayerProjectionView{
@@ -378,7 +421,8 @@ bool Presentation::renderLayer(
 
     // Eye tracking.
     auto [width, height] = viewSwapchain.getXrExtent2Di();
-    screenPoses[i] = calculateScreenPos(spaceLocation.pose, width, height, cameraContexts[i].view, cameraContexts[i].proj);
+    screenPoses[i] = calculateScreenPos(
+        spaceLocation.pose, width, height, cameraContexts[i].view, cameraContexts[i].proj);
   }
   _communicationLayer->setCameraContexts(cameraContexts);
   _communicationLayer->setScreenPoses(screenPoses);
@@ -432,14 +476,10 @@ void Presentation::draw() {
 
   // Sync actions for the current frame
   XrActiveActionSet activeActionSet{
-      .actionSet = _actionSet.getActionSet(),
-      .subactionPath = XR_NULL_PATH
-  };
-  XrActionsSyncInfo syncInfo{
-      .type = XR_TYPE_ACTIONS_SYNC_INFO,
-      .countActiveActionSets = 1,
-      .activeActionSets = &activeActionSet
-  };
+    .actionSet = _actionSet.getActionSet(), .subactionPath = XR_NULL_PATH};
+  XrActionsSyncInfo syncInfo{.type = XR_TYPE_ACTIONS_SYNC_INFO,
+                             .countActiveActionSets = 1,
+                             .activeActionSets = &activeActionSet};
 
   if (_sessionFocused) {
     CHECK_XRCMD(xrSyncActions(_session->getXrSession(), &syncInfo), "Failed to sync actions.");

@@ -11,7 +11,8 @@ class Space {
 public:
   static std::unique_ptr<Space> create(XrSession session, XrReferenceSpaceType type);
 
-  static std::unique_ptr<Space> create(XrSession session, XrAction action, XrPosef poseInActionSpace, XrPath subactionPath = 0);
+  static std::unique_ptr<Space> create(
+      XrSession session, XrAction action, XrPosef poseInActionSpace, XrPath subactionPath = 0);
 
   ~Space();
 

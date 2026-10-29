@@ -29,6 +29,15 @@ public:
 
   void run() override;
 
+  // LEGIT.
+  bool shouldClose() override;
+
+  // LEGIT.
+  void pollActionsAndEvents() override;
+
+  // LEGIT.
+  void drawAndPresent() override;
+
 private:
   const void* registerActionImpl(std::type_index index) override {
     return nullptr;

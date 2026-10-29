@@ -150,4 +150,19 @@ void Presentation::run() {
   }
 }
 
+bool Presentation::shouldClose() {
+  return _window->open();
+}
+
+void Presentation::pollActionsAndEvents() {
+  _window->pollEvents();
+}
+
+void Presentation::drawAndPresent() {
+  _graphicsContext->waitCompleteExecution();
+  _communicationLayer->setCurrentSwapchainImageIndex(_presentationContext->acquireNextImage());
+  _graphicsContext->draw();
+  _presentationContext->present();
+}
+
 }  // namespace vlkn

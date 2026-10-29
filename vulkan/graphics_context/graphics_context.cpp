@@ -280,16 +280,14 @@ void GCONTEXT_CLASS createDescriptorSets() {
     auto [buffer, metadata] =
         BufferBuilder()
             .withUsage(VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT)
-            .withSize(
-                _communicationLayer->getNumLayers() * MAX_FRAMES_IN_FLIGHT * size)
+            .withSize(_communicationLayer->getNumLayers() * MAX_FRAMES_IN_FLIGHT * size)
             .buildUniformBufferWithMetadata(*_logicalDevice);
     _dynamicUniformBuffersCamera = _bufferManager.storeBuffer(std::move(buffer), metadata);
   }
 
   _dynamicDescriptorSetWriter.storeDynamicBuffer(
       _dynamicUniformBuffersCamera.getUnderlyingResource(),
-      _dynamicUniformBuffersCamera.getMetadata().usage, size,
-      _communicationLayer->getNumLayers());
+      _dynamicUniformBuffersCamera.getMetadata().usage, size, _communicationLayer->getNumLayers());
   _dynamicDescriptorSetWriter.writeDescriptorSet(
       _logicalDevice->getVkDevice(), _dynamicDescriptorSet.getVkDescriptorSet());
 
@@ -1076,20 +1074,16 @@ void GCONTEXT_CLASS recordCommandBufferFdmOffset(
 
   const ImageMetadata& fdmMetadata = _fdmOffsetProgram.fdmRef.getMetadata();
   const int32_t halfWidth = fdmMetadata.imageExtent.width * _fdmOffsetProgram.texelSize.width / 2;
-  const int32_t halfHeight = fdmMetadata.imageExtent.height * _fdmOffsetProgram.texelSize.height / 2;
+  const int32_t halfHeight =
+      fdmMetadata.imageExtent.height * _fdmOffsetProgram.texelSize.height / 2;
   const VkOffset2D offsets[2] = {
-    VkOffset2D{
-               alignOffset(static_cast<int32_t>(screenPoses[0].first) - halfWidth,
+    VkOffset2D{alignOffset(static_cast<int32_t>(screenPoses[0].first) - halfWidth,
                _fdmOffsetProgram.granularity.width),
-               alignOffset(
-          static_cast<int32_t>(screenPoses[0].second) - halfHeight,
+               alignOffset(static_cast<int32_t>(screenPoses[0].second) - halfHeight,
                _fdmOffsetProgram.granularity.height)},
-    VkOffset2D{
-               alignOffset(
-          static_cast<int32_t>(screenPoses[1].first) - halfWidth,
+    VkOffset2D{alignOffset(static_cast<int32_t>(screenPoses[1].first) - halfWidth,
                _fdmOffsetProgram.granularity.width),
-               alignOffset(
-          static_cast<int32_t>(screenPoses[1].second) - halfHeight,
+               alignOffset(static_cast<int32_t>(screenPoses[1].second) - halfHeight,
                _fdmOffsetProgram.granularity.height)}
   };
   primaryCommandBuffer.endRenderPass(
@@ -1145,7 +1139,8 @@ GCONTEXT_CLASS GraphicsContext(
     _extendedFeatures(std::move(extendedFeatures)), _fileLoader(fileLoader),
     _communicationLayer(std::move(communicationLayer)),
     _presentationContext(std::move(presentationContext)) {
-  _communicationLayer->setMultiview(_physicalDevice->hasAvailableExtension(VK_KHR_MULTIVIEW_EXTENSION_NAME));
+  _communicationLayer->setMultiview(
+      _physicalDevice->hasAvailableExtension(VK_KHR_MULTIVIEW_EXTENSION_NAME));
   _singleTimeCommandPool =
       CommandPoolBuilder()
           .withFlags(VK_COMMAND_POOL_CREATE_TRANSIENT_BIT)
@@ -1266,6 +1261,11 @@ void GCONTEXT_CLASS draw() {
 GCONTEXT_TEMPLATE
 void GCONTEXT_CLASS initializeResources() {
   setup();
+}
+
+GCONTEXT_TEMPLATE
+AssetManager* GCONTEXT_CLASS getAssetManager() {
+  return _assetManager.get();
 }
 
 GCONTEXT_TEMPLATE
@@ -1422,7 +1422,8 @@ void GCONTEXT_CLASS createPresentingResourcesForFdmOffset(
   }
 
   _fdmOffsetProgram.graphicsPipelineHandle = _pipelineManager->createPBRProgram(
-      _fdmOffsetProgram.renderPass, _fdmOffsetProgram.attachmentLayout, _communicationLayer->isMultiviewEnabled());
+      _fdmOffsetProgram.renderPass, _fdmOffsetProgram.attachmentLayout,
+      _communicationLayer->isMultiviewEnabled());
   _fdmOffsetProgram.passthroughPipeline =
       _pipelineManager->getPipeline(_pipelineManager->createPassthroughProgram(
           _fdmOffsetProgram.passthroughRenderpass, _fdmOffsetProgram.passthroughLayout));
@@ -1543,7 +1544,8 @@ void GCONTEXT_CLASS createPresentingResourcesForFsr(
       _pipelineManager->createFragmentShadingRateProgram(*_logicalDevice));
 
   _fsrProgram.graphicsPipelineHandle = _pipelineManager->createPBRProgram(
-      _fsrProgram.renderPass, _fsrProgram.attachmentLayout, _communicationLayer->isMultiviewEnabled());
+      _fsrProgram.renderPass, _fsrProgram.attachmentLayout,
+      _communicationLayer->isMultiviewEnabled());
   _fsrProgram.skyboxPipeline = _pipelineManager->getPipeline(
       _pipelineManager->createSkyboxProgram(_fsrProgram.renderPass, _fsrProgram.attachmentLayout));
 }

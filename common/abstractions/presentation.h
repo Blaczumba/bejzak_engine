@@ -15,12 +15,21 @@ public:
 
   virtual void run() = 0;
 
-  template<typename T>
+  template <typename T>
   const T* registerAction() {
     return static_cast<const T*>(registerActionImpl(typeid(T)));
   }
 
- protected:
+  // LEGIT.
+  virtual bool shouldClose() = 0;
+
+  // LEGIT.
+  virtual void pollActionsAndEvents() = 0;
+
+  // LEGIT.
+  virtual void drawAndPresent() = 0;
+
+protected:
   virtual const void* registerActionImpl(std::type_index index) = 0;
 };
 

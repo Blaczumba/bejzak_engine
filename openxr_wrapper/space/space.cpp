@@ -23,18 +23,18 @@ std::unique_ptr<Space> Space::create(XrSession session, XrReferenceSpaceType typ
   return std::unique_ptr<Space>(new Space(space));
 }
 
-std::unique_ptr<Space> Space::create(XrSession session, XrAction action, XrPosef poseInActionSpace, XrPath subactionPath) {
+std::unique_ptr<Space> Space::create(
+    XrSession session, XrAction action, XrPosef poseInActionSpace, XrPath subactionPath) {
   if (session == XR_NULL_HANDLE) [[unlikely]] {
     throw EngineException("Cannot create XrSpace from XR_NULL_HANDLE XrSession.");
   }
-  const XrActionSpaceCreateInfo createInfo {
+  const XrActionSpaceCreateInfo createInfo{
     .type = XR_TYPE_ACTION_SPACE_CREATE_INFO,
     .action = action,
     .subactionPath = subactionPath,
     .poseInActionSpace = poseInActionSpace};
   XrSpace space;
-  CHECK_XRCMD(xrCreateActionSpace(session, &createInfo, &space),
-              "Failed to create XrSpace.");
+  CHECK_XRCMD(xrCreateActionSpace(session, &createInfo, &space), "Failed to create XrSpace.");
   return std::unique_ptr<Space>(new Space(space));
 }
 

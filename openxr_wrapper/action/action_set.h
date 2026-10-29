@@ -6,10 +6,11 @@
 namespace xrw {
 
 class ActionSet {
- public:
+public:
   ActionSet() noexcept = default;
 
-  static ActionSet create(XrInstance instance, std::string_view actionSetName, std::string_view localizedActionSetName, uint32_t priority);
+  static ActionSet create(XrInstance instance, std::string_view actionSetName,
+                          std::string_view localizedActionSetName, uint32_t priority);
 
   ActionSet(ActionSet&& other) noexcept;
 
@@ -19,7 +20,7 @@ class ActionSet {
 
   XrActionSet getActionSet() const noexcept;
 
- private:
+private:
   ActionSet(XrActionSet actionSet) noexcept;
 
   XrActionSet _actionSet = XR_NULL_HANDLE;

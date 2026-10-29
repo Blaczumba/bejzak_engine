@@ -3,16 +3,18 @@
 #include <cassert>
 #include <initializer_list>
 #include <openxr/openxr.h>
-#include <string_view>
 #include <span>
+#include <string_view>
 
 namespace xrw {
 
 class Action {
- public:
+public:
   Action() noexcept = default;
 
-  static Action create(XrActionSet actionSet, XrActionType actionType, std::string_view actionName, std::string_view localizedActionName, std::initializer_list<XrPath> subActionPaths = {});
+  static Action create(
+      XrActionSet actionSet, XrActionType actionType, std::string_view actionName,
+      std::string_view localizedActionName, std::initializer_list<XrPath> subActionPaths = {});
 
   Action(Action&& other) noexcept;
 
@@ -22,7 +24,7 @@ class Action {
 
   XrAction getAction() const noexcept;
 
- private:
+private:
   Action(XrAction action) noexcept;
 
   XrAction _action;

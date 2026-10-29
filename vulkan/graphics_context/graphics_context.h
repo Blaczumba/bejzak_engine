@@ -78,6 +78,8 @@ public:
 
   void initializeResources() override;
 
+  AssetManager* getAssetManager() override;
+
   void waitCompleteExecution() const override;
 
   void createPresentingResources(const common::PresentResources& presentResources) override;

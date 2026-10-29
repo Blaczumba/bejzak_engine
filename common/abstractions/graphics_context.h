@@ -2,6 +2,7 @@
 
 #include <cstdint>
 
+#include "common/abstractions/asset_manager.h"
 #include "common/abstractions/contexts.h"
 #include "common/camera/camera.h"
 
@@ -18,6 +19,8 @@ public:
   virtual void draw() = 0;
 
   virtual void initializeResources() = 0;
+
+  virtual AssetManager* getAssetManager() = 0;
 
   virtual void waitCompleteExecution() const = 0;
 

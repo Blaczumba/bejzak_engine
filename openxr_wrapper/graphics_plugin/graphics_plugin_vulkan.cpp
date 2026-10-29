@@ -19,10 +19,10 @@
 #include "vulkan/wrapper/debug_messenger/debug_messenger.h"
 #include "vulkan/wrapper/debug_messenger/debug_messenger_utils.h"
 #include "vulkan/wrapper/instance/validation_layers.h"
+#include "vulkan/wrapper/logical_device/lib.h"
 #include "vulkan/wrapper/physical_device/extensions_connector.h"
 #include "vulkan/wrapper/physical_device/optional_extended_features.h"
 #include "vulkan/wrapper/util/check.h"
-#include "vulkan/wrapper/logical_device/lib.h"
 
 namespace xrw {
 
@@ -323,9 +323,11 @@ std::unique_ptr<common::GraphicsContext> GraphicsPluginVulkan::createGraphicsCon
       .withSynchronization2();
   PhysicalDeviceOptionalExtendedFeatures extendedFeatures;
   const char* fragmentShadingRateAttachmentExtension;
-  std::tie(extendedFeatures.fragmentShadingRateModifier, fragmentShadingRateAttachmentExtension)
-      = AttachmentBasedFragmentShadingRateModifier::create(*physicalDevice, extensionsConnector,
-                                                           AttachmentBasedFragmentShadingRateModifier::SupportedFeature::FRAGMENT_DENSITY_MAP_OFFSET);
+  std::tie(extendedFeatures.fragmentShadingRateModifier, fragmentShadingRateAttachmentExtension) =
+      AttachmentBasedFragmentShadingRateModifier::create(
+          *physicalDevice, extensionsConnector,
+          AttachmentBasedFragmentShadingRateModifier::SupportedFeature::
+              FRAGMENT_DENSITY_MAP_OFFSET);
 
   std::unique_ptr<LogicalDevice> logicalDevice = createLogicalDevice(
       xrInstance, systemId, *physicalDevice, extensionsConnector.getVkPhysicalDeviceFeatures2(),

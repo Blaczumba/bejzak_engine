@@ -1,10 +1,10 @@
 #include "action.h"
 
+#include <cassert>
 #include <cstring>
 #include <initializer_list>
 #include <openxr/openxr.h>
 #include <utility>
-#include <cassert>
 
 #include "openxr_wrapper/util/check.h"
 
@@ -12,19 +12,20 @@ namespace xrw {
 
 Action::Action(XrAction action) noexcept : _action(action) {}
 
-Action Action::create(XrActionSet actionSet, XrActionType actionType, std::string_view actionName, std::string_view localizedActionName, std::initializer_list<XrPath> subActionPaths) {
+Action Action::create(
+    XrActionSet actionSet, XrActionType actionType, std::string_view actionName,
+    std::string_view localizedActionName, std::initializer_list<XrPath> subActionPaths) {
   assert(actionSet != XR_NULL_HANDLE);
-  assert(actionName.size() < XR_MAX_ACTION_NAME_SIZE - 1);
-  assert(localizedActionName.size() < XR_MAX_LOCALIZED_ACTION_NAME_SIZE - 1);
-  XrActionCreateInfo createInfo {
-      .type = XR_TYPE_ACTION_CREATE_INFO,
-      .actionType = actionType,
-      .countSubactionPaths = static_cast<uint32_t>(subActionPaths.size()),
-      .subactionPaths = !empty(subActionPaths) ? subActionPaths.begin() : nullptr};
+  assert(actionName.size() < XR_MAX_ACTION_NAME_SIZE);
+  assert(localizedActionName.size() < XR_MAX_LOCALIZED_ACTION_NAME_SIZE);
+  XrActionCreateInfo createInfo{
+    .type = XR_TYPE_ACTION_CREATE_INFO,
+    .actionType = actionType,
+    .countSubactionPaths = static_cast<uint32_t>(subActionPaths.size()),
+    .subactionPaths = !empty(subActionPaths) ? subActionPaths.begin() : nullptr};
   std::memcpy(createInfo.actionName, actionName.data(), actionName.size());
-  createInfo.actionName[actionName.size()] = '\0';
-  std::memcpy(createInfo.localizedActionName, localizedActionName.data(), localizedActionName.size());
-  createInfo.localizedActionName[localizedActionName.size()] = '\0';
+  std::memcpy(
+      createInfo.localizedActionName, localizedActionName.data(), localizedActionName.size());
   XrAction action;
   CHECK_XRCMD(xrCreateAction(actionSet, &createInfo, &action), "Failed to create XrAction.");
   return Action(action);

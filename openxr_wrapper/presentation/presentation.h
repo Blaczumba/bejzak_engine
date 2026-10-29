@@ -1,23 +1,24 @@
 #pragma once
 
+#include <array>
 #include <memory>
 #include <span>
 
 #include "common/abstractions/graphics_context.h"
 #include "common/abstractions/presentation.h"
+#include "openxr_wrapper/action/action.h"
+#include "openxr_wrapper/action/action_set.h"
 #include "openxr_wrapper/graphics_plugin/graphics_plugin.h"
 #include "openxr_wrapper/instance/instance.h"
 #include "openxr_wrapper/session/session.h"
 #include "openxr_wrapper/space/space.h"
 #include "openxr_wrapper/swapchain/swapchain.h"
 #include "presentation_graphics_communication/presentation_graphics_communication.h"
-#include "openxr_wrapper/action/action_set.h"
-#include "openxr_wrapper/action/action.h"
 
 namespace xrw {
 
 class PresentationAction {
- public:
+public:
   struct Context {
     XrTime predictedDisplayTime;
     XrSpace space;
@@ -51,12 +52,29 @@ public:
 
   void run() override;
 
+  // LEGIT.
+  bool shouldClose() override;
+
+  // LEGIT.
+  void pollActionsAndEvents() override;
+
+  // LEGIT.
+  void drawAndPresent() override;
+
 private:
   const void* registerActionImpl(std::type_index index) override;
 
   using PresentationActionFactory = std::function<std::unique_ptr<PresentationAction>()>;
 
-  template<typename T>
+  template <typename T>
+  void addFactory(PresentationActionFactory factory, std::string_view extensionName) {
+    assert(!extensionName.empty());
+    if (_instance->isExtensionEnabled(extensionName)) {
+      _factories.emplace(typeid(T), std::move(factory));
+    }
+  }
+
+  template <typename T>
   void addFactory(PresentationActionFactory factory) {
     _factories.emplace(typeid(T), std::move(factory));
   }

@@ -1,4 +1,4 @@
-add_library(PresentationGraphicsCommunication presentation_graphics_communication.h presentation_graphics_communication.cpp)
+add_library(PresentationGraphicsCommunication presentation_graphics_communication.h presentation_graphics_communication.cpp input_manager.h input_manager.cpp)
 
 target_link_libraries(PresentationGraphicsCommunication PRIVATE CommonAbstractions)
 

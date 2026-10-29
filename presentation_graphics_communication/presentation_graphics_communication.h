@@ -8,6 +8,7 @@
 #include <initializer_list>
 #include <vector>
 #include <span>
+#include <variant>
 #include <memory>
 #include <utility>
 #include <glm/glm.hpp>
@@ -50,13 +51,8 @@ struct PresentationInfo {
     Frustum frustum;
     uint32_t arrayLayer;
   };
-
-  lib::Buffer<PresentationInfo> presentationInfos;
-};
-
-struct EyeTrackingInfo {
-  glm::vec3 position;
-  glm::quat orientation;
+  bool multiview;
+  lib::Buffer<RenderView> presentationInfos;
 };
 
 // This class is responsible for communication between presentation and graphics layers.

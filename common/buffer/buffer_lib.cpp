@@ -1,8 +1,8 @@
 #include "common/buffer/buffer_lib.h"
 
 #include <cassert>
-#include <span>
 #include <cstring>
+#include <span>
 
 namespace common {
 
