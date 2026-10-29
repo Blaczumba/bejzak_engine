@@ -248,20 +248,38 @@ void Presentation::run() {
 }
 
 bool Presentation::shouldClose() {
-  !_platform->shouldClose();
+  _platform->shouldClose();
 }
 
-void Presentation::pollActionsAndEvents() {
+bool Presentation::pollActionsAndEvents() {
   _platform->pollPlatformEvents(_sessionRunning);
   pollEvents();
   if (!_sessionRunning) {
-    return;
+    return false;
   }
   pollActions();
+  return true;
 }
 
-void Presentation::drawAndPresent() {
-  draw();
+void Presentation::beginFrame() {
+  const XrFrameWaitInfo frameWaitInfo{
+    .type = XR_TYPE_FRAME_WAIT_INFO,
+  };
+
+  XrFrameState frameState{
+    .type = XR_TYPE_FRAME_STATE,
+  };
+  CHECK_XRCMD(
+      xrWaitFrame(_session->getXrSession(), &frameWaitInfo, &frameState), "Failed to xrWaitFrame.");
+
+  const XrFrameBeginInfo frameBeginInfo{
+    .type = XR_TYPE_FRAME_BEGIN_INFO,
+  };
+  CHECK_XRCMD(xrBeginFrame(_session->getXrSession(), &frameBeginInfo), "Failed to xrBeginFrame.");
+}
+
+void Presentation::endFrame() {
+  
 }
 
 const void* Presentation::registerActionImpl(std::type_index index) {

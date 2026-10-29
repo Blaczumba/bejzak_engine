@@ -33,10 +33,13 @@ public:
   bool shouldClose() override;
 
   // LEGIT.
-  void pollActionsAndEvents() override;
+  bool pollActionsAndEvents() override;
 
   // LEGIT.
-  void drawAndPresent() override;
+  void beginFrame() override;
+
+  // LEGIT.
+  void endFrame() override;
 
 private:
   const void* registerActionImpl(std::type_index index) override {

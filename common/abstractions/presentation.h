@@ -24,10 +24,14 @@ public:
   virtual bool shouldClose() = 0;
 
   // LEGIT.
-  virtual void pollActionsAndEvents() = 0;
+  // Returns true if is ready to render.
+  virtual bool pollActionsAndEvents() = 0;
 
   // LEGIT.
-  virtual void drawAndPresent() = 0;
+  virtual void beginFrame() = 0;
+
+  // LEGIT.
+  virtual void endFrame() = 0;
 
 protected:
   virtual const void* registerActionImpl(std::type_index index) = 0;

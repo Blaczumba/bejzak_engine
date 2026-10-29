@@ -108,6 +108,7 @@ add_library(${ENGINE_NAME} INTERFACE)
 add_subdirectory(lib)
 
 add_subdirectory(common)
+add_subdirectory(engine)
 set(COMMON_ENGINE_NAME ${ENGINE_NAME}COMMON)
 add_library(${COMMON_ENGINE_NAME} INTERFACE)
 target_include_directories(${COMMON_ENGINE_NAME} INTERFACE
@@ -119,6 +120,9 @@ target_link_libraries(${COMMON_ENGINE_NAME} INTERFACE
     CommonScene CommonFileLoader
     CommonModelLoader CommonMath CommonBuffer
     CommonAbstractions CommonRef CommonNetworking
+
+    # Move it to other place
+    Engine
 )
 target_link_libraries(${ENGINE_NAME} INTERFACE ${COMMON_ENGINE_NAME})
 

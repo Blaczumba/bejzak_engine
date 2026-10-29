@@ -88,6 +88,9 @@ std::unique_ptr<common::Presentation> Presentation::create(
       lib::dynamicUniqueCast<GraphicsContext<false>>(GraphicsContext<false>::create(
           instance, std::move(debugMessenger), std::move(physicalDevice), std::move(logicalDevice),
           extendedFeatures, fileLoader, communicationLayer, std::move(presentationContext)));
+  graphicsContext->createPresentingResources(presentationContextPtr->getPresentResources());
+  graphicsContext->initializeResources();
+
   return std::unique_ptr<Presentation>(new Presentation(
       std::move(window), std::move(instance), std::move(surface), presentationContextPtr,
       std::move(graphicsContext), std::move(communicationLayer), fileLoader));
@@ -115,9 +118,9 @@ void Presentation::run() {
     }
   });
   /////////////////////////
-  _graphicsContext->createPresentingResources(_presentationContext->getPresentResources());
+  //_graphicsContext->createPresentingResources(_presentationContext->getPresentResources());
 
-  _graphicsContext->initializeResources();
+  //_graphicsContext->initializeResources();
   Camera camera(PerspectiveProjection{glm::radians(45.0f), 1920.0f / 1080.f, 0.01f, 500.0f},
                 glm::vec3(0.0f), 5.5f, 0.01f);
   const auto [screenWidth, screenHeight] = _window->getFramebufferSize();
@@ -151,17 +154,55 @@ void Presentation::run() {
 }
 
 bool Presentation::shouldClose() {
-  return _window->open();
+  return !_window->open();
 }
 
-void Presentation::pollActionsAndEvents() {
+bool Presentation::pollActionsAndEvents() {
   _window->pollEvents();
+
+  // To be removed:
+  _mouseKeyboardManager->setKeyboardCallback([&](Keyboard::Key key, int action) {
+    switch (key) {
+      case Keyboard::Key::Escape:
+        _window->close();
+        break;
+    }
+  });
+
+  static const auto [screenWidth, screenHeight] = _window->getFramebufferSize();
+  static Camera camera(PerspectiveProjection{glm::radians(45.0f), 1920.0f / 1080.f, 0.01f, 500.0f},
+                       glm::vec3(0.0f), 5.5f, 0.01f);
+  static glm::mat4 tempViewMat(1.0f);
+
+  static std::chrono::steady_clock::time_point previous, current;
+  current = std::chrono::steady_clock::now();
+  auto deltaTime = std::chrono::duration<float>(current - previous).count();
+  previous = current;
+
+  camera.updateFromKeyboard(*_mouseKeyboardManager, deltaTime);
+  glm::vec2 mousePos = _mouseKeyboardManager->getMousePosition();
+  const glm::vec3 viewDir = common::getWorldSpaceViewDirection(
+      mousePos.x, mousePos.y, screenWidth, screenHeight, glm::inverse(tempViewMat),
+      glm::inverse(camera.getProjectionMatrix()));
+  _communicationLayer->setCameraContexts({
+    common::CameraContext{
+                          camera.getPosition(),
+                          _mouseKeyboardManager->isPressed(Keyboard::Key::R) ? tempViewMat = camera.getViewMatrix() :
+                                                           tempViewMat, camera.getProjectionMatrix(), viewDir}
+  });
+  _communicationLayer->setScreenPoses({
+    {mousePos.x, mousePos.y}
+  });
+  ////
+
+  return true;
 }
 
-void Presentation::drawAndPresent() {
-  _graphicsContext->waitCompleteExecution();
+void Presentation::beginFrame() {
   _communicationLayer->setCurrentSwapchainImageIndex(_presentationContext->acquireNextImage());
-  _graphicsContext->draw();
+}
+
+void Presentation::endFrame() {
   _presentationContext->present();
 }
 
