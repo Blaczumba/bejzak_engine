@@ -21,9 +21,9 @@ public:
 
   ~Swapchain();
 
-  const VkSwapchainKHR getVkSwapchain() const noexcept;
+  VkSwapchainKHR getVkSwapchain() const noexcept;
 
-  const VkFormat getVkFormat() const noexcept;
+  VkFormat getVkFormat() const noexcept;
 
   VkExtent2D getExtent() const noexcept;
 
@@ -31,7 +31,7 @@ public:
 
   std::span<const VkImageView> getImageViews() const noexcept;
 
-  const VkImageView getSwapchainVkImageView(size_t index) const noexcept;
+  VkImageView getSwapchainVkImageView(size_t index) const noexcept;
 
   VkResult acquireNextImage(VkSemaphore presentCompleteSemaphore, uint32_t* imageIndex) const;
 

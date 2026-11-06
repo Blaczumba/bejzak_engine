@@ -10,8 +10,9 @@ void run(common::Presentation* presentation) {
     }
 
     graphicsContext->waitCompleteExecution();
-    presentation->beginFrame();
-    graphicsContext->draw();
+    if (presentation->beginFrame()) {
+      graphicsContext->draw();
+    }
     presentation->endFrame();
   }
 }

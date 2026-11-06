@@ -160,6 +160,11 @@ bool Presentation::shouldClose() {
 bool Presentation::pollActionsAndEvents() {
   _window->pollEvents();
 
+  // This should be calculated in the main loop.
+  std::chrono::steady_clock::time_point current = std::chrono::steady_clock::now();
+  const auto deltaTime = std::chrono::duration<float>(current - _previous).count();
+  _previous = current;
+
   // To be removed:
   _mouseKeyboardManager->setKeyboardCallback([&](Keyboard::Key key, int action) {
     switch (key) {
@@ -174,32 +179,28 @@ bool Presentation::pollActionsAndEvents() {
                        glm::vec3(0.0f), 5.5f, 0.01f);
   static glm::mat4 tempViewMat(1.0f);
 
-  static std::chrono::steady_clock::time_point previous, current;
-  current = std::chrono::steady_clock::now();
-  auto deltaTime = std::chrono::duration<float>(current - previous).count();
-  previous = current;
-
   camera.updateFromKeyboard(*_mouseKeyboardManager, deltaTime);
   glm::vec2 mousePos = _mouseKeyboardManager->getMousePosition();
   const glm::vec3 viewDir = common::getWorldSpaceViewDirection(
       mousePos.x, mousePos.y, screenWidth, screenHeight, glm::inverse(tempViewMat),
       glm::inverse(camera.getProjectionMatrix()));
   _communicationLayer->setCameraContexts({
-    common::CameraContext{
-                          camera.getPosition(),
-                          _mouseKeyboardManager->isPressed(Keyboard::Key::R) ? tempViewMat = camera.getViewMatrix() :
-                                                           tempViewMat, camera.getProjectionMatrix(), viewDir}
-  });
+                                             common::CameraContext{
+                                                 camera.getPosition(),
+                                                 _mouseKeyboardManager->isPressed(Keyboard::Key::R) ? tempViewMat = camera.getViewMatrix() :
+                                                 tempViewMat, camera.getProjectionMatrix(), viewDir}
+                                         });
   _communicationLayer->setScreenPoses({
-    {mousePos.x, mousePos.y}
-  });
+                                          {mousePos.x, mousePos.y}
+                                      });
   ////
 
   return true;
 }
 
-void Presentation::beginFrame() {
+bool Presentation::beginFrame() {
   _communicationLayer->setCurrentSwapchainImageIndex(_presentationContext->acquireNextImage());
+  return true;
 }
 
 void Presentation::endFrame() {

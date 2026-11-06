@@ -63,7 +63,7 @@ Swapchain::~Swapchain() {
   destroy();
 }
 
-const VkSwapchainKHR Swapchain::getVkSwapchain() const noexcept {
+VkSwapchainKHR Swapchain::getVkSwapchain() const noexcept {
   return _swapchain;
 }
 
@@ -71,7 +71,7 @@ VkExtent2D Swapchain::getExtent() const noexcept {
   return _extent;
 }
 
-const VkFormat Swapchain::getVkFormat() const noexcept {
+VkFormat Swapchain::getVkFormat() const noexcept {
   return _surfaceFormat;
 }
 
@@ -83,7 +83,7 @@ std::span<const VkImageView> Swapchain::getImageViews() const noexcept {
   return _views;
 }
 
-const VkImageView Swapchain::getSwapchainVkImageView(size_t index) const noexcept {
+VkImageView Swapchain::getSwapchainVkImageView(size_t index) const noexcept {
   if (index < _views.size()) {
     return _views[index];
   }

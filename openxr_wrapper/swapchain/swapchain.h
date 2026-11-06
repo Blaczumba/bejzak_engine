@@ -10,7 +10,7 @@
 namespace xrw {
 
 class Swapchain {
-  Swapchain(XrSwapchain swapchain, uint32_t width, uint32_t height) noexcept;
+  Swapchain(XrSwapchain swapchain, uint32_t width, uint32_t height, std::vector<uint32_t>&& viewIndices) noexcept;
 
 public:
   Swapchain() noexcept = default;
@@ -25,19 +25,22 @@ public:
 
   XrExtent2Di getXrExtent2Di() const noexcept;
 
+  uint32_t getArraySize() const noexcept;
+
+  std::span<const uint32_t> getViewIndices() const noexcept;
+
 private:
   XrSwapchain _swapchain = XR_NULL_HANDLE;
 
   uint32_t _width;
   uint32_t _height;
+  std::vector<uint32_t> _viewIndices;
 
   friend class SwapchainBuilder;
 };
 
 class SwapchainBuilder {
 public:
-  SwapchainBuilder& withArraySize(uint32_t arraySize);
-
   SwapchainBuilder& withExtent(uint32_t width, uint32_t height);
 
   SwapchainBuilder& withMipCount(uint32_t mipCount);
@@ -53,7 +56,6 @@ public:
   std::vector<Swapchain> build(const Session& session, GraphicsPlugin& graphicsPlugin);
 
 private:
-  uint32_t _arraySize = 1;
   uint32_t _format = 0;
   uint32_t _width = 0;
   uint32_t _height = 0;

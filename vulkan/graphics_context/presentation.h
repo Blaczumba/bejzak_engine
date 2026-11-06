@@ -36,7 +36,7 @@ public:
   bool pollActionsAndEvents() override;
 
   // LEGIT.
-  void beginFrame() override;
+  bool beginFrame() override;
 
   // LEGIT.
   void endFrame() override;
@@ -56,6 +56,8 @@ private:
   PresentationContext* _presentationContext;
 
   std::unique_ptr<const MouseKeyboardManager> _mouseKeyboardManager;
+
+  std::chrono::steady_clock::time_point _previous;
 };
 
 }  // namespace vlkn

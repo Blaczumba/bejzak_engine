@@ -7,12 +7,27 @@
 
 namespace xrw {
 
-Swapchain::Swapchain(XrSwapchain swapchain, uint32_t width, uint32_t height) noexcept
-  : _swapchain(swapchain), _width(width), _height(height) {}
+namespace {
+
+struct SwapchainGroup {
+  XrViewConfigurationView configurationView;
+  std::vector<uint32_t> viewIndices;
+};
+
+bool areConfigurationViewsCompatible(const XrViewConfigurationView& a, const XrViewConfigurationView& b) {
+  return a.recommendedImageRectWidth == b.recommendedImageRectWidth &&
+          a.recommendedImageRectHeight == b.recommendedImageRectHeight &&
+          a.recommendedSwapchainSampleCount == b.recommendedSwapchainSampleCount;
+}
+
+}  // namespace
+
+Swapchain::Swapchain(XrSwapchain swapchain, uint32_t width, uint32_t height, std::vector<uint32_t>&& viewIndices) noexcept
+  : _swapchain(swapchain), _width(width), _height(height), _viewIndices(std::move(viewIndices)) {}
 
 Swapchain::Swapchain(Swapchain&& swapchain) noexcept
   : _swapchain(std::exchange(swapchain._swapchain, XR_NULL_HANDLE)), _width(swapchain._width),
-    _height(swapchain._height) {}
+    _height(swapchain._height), _viewIndices(std::move(swapchain._viewIndices)) {}
 
 Swapchain& Swapchain::operator=(Swapchain&& swapchain) noexcept {
   if (this == &swapchain) {
@@ -22,6 +37,7 @@ Swapchain& Swapchain::operator=(Swapchain&& swapchain) noexcept {
   _swapchain = std::exchange(swapchain._swapchain, XR_NULL_HANDLE);
   _width = swapchain._width;
   _height = swapchain._height;
+  _viewIndices = std::move(swapchain._viewIndices);
   return *this;
 }
 
@@ -39,9 +55,12 @@ XrExtent2Di Swapchain::getXrExtent2Di() const noexcept {
   return {static_cast<int32_t>(_width), static_cast<int32_t>(_height)};
 }
 
-SwapchainBuilder& SwapchainBuilder::withArraySize(uint32_t arraySize) {
-  _arraySize = arraySize;
-  return *this;
+uint32_t Swapchain::getArraySize() const noexcept {
+  return _viewIndices.size();
+}
+
+std::span<const uint32_t> Swapchain::getViewIndices() const noexcept {
+  return _viewIndices;
 }
 
 SwapchainBuilder& SwapchainBuilder::withExtent(uint32_t width, uint32_t height) {
@@ -102,38 +121,43 @@ std::vector<Swapchain> SwapchainBuilder::build(
                                                 &viewCount, configurationViews.data()),
               "Failed to xrEnumerateViewConfigurationViews.");
 
-  std::vector<XrViewConfigurationView> processedConfigViews;
-  if (_arraySize == 2 && configurationViews.size() == 2) {
-    // Multiview feature. Render using 1 swapchain instead of 2.
-    // TODO: Check if configViews have the same properties.
-    processedConfigViews.push_back(configurationViews[0]);
-  } else {
-    processedConfigViews = std::vector<XrViewConfigurationView>(
-        configurationViews.cbegin(), configurationViews.cend());
+  std::vector<SwapchainGroup> swapchainGroup;
+  for (uint32_t i = 0; i < configurationViews.size(); i++) {
+    auto it = std::find_if(swapchainGroup.begin(), swapchainGroup.end(),
+                 [&](const SwapchainGroup& swapchainGroup){
+      return areConfigurationViewsCompatible(swapchainGroup.configurationView, configurationViews[i]);
+    });
+    if (it == swapchainGroup.cend()) {
+      swapchainGroup.emplace_back(configurationViews[i], std::vector<uint32_t>{i});
+    } else {
+      it->viewIndices.push_back(i);
+    }
   }
 
   std::vector<Swapchain> swapchains;
-  for (const XrViewConfigurationView& configView : processedConfigViews) {
+  swapchains.reserve(swapchainGroup.size());
+  for (SwapchainGroup& swapchainGroup : swapchainGroup) {
+    const XrViewConfigurationView& configurationView = swapchainGroup.configurationView;
     const XrSwapchainCreateInfo swapchainCreateInfo = {
       .type = XR_TYPE_SWAPCHAIN_CREATE_INFO,
       .usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT,
       .format = *format,
-      .sampleCount = configView.recommendedSwapchainSampleCount,
-      .width = configView.recommendedImageRectWidth,
-      .height = configView.recommendedImageRectHeight,
+      .sampleCount = configurationView.recommendedSwapchainSampleCount,
+      .width = configurationView.recommendedImageRectWidth,
+      .height = configurationView.recommendedImageRectHeight,
       .faceCount = 1,
-      .arraySize = _arraySize,
+      .arraySize = static_cast<uint32_t>(swapchainGroup.viewIndices.size()),
       .mipCount = 1};
 
     XrSwapchain swapchain;
     CHECK_XRCMD(xrCreateSwapchain(session.getXrSession(), &swapchainCreateInfo, &swapchain),
                 "Failed to create XrSwapchain.");
 
-    graphicsPlugin.createSwapchainContext(swapchain, *format, configView.recommendedImageRectWidth,
-                                          configView.recommendedImageRectHeight, _arraySize);
+    graphicsPlugin.createSwapchainContext(swapchain, *format, configurationView.recommendedImageRectWidth,
+                                          configurationView.recommendedImageRectHeight, swapchainGroup.viewIndices.size());
 
     swapchains.push_back(Swapchain(
-        swapchain, configView.recommendedImageRectWidth, configView.recommendedImageRectHeight));
+        swapchain, configurationView.recommendedImageRectWidth, configurationView.recommendedImageRectHeight, std::move(swapchainGroup.viewIndices)));
   }
   return swapchains;
 }

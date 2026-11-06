@@ -16,8 +16,8 @@ public:
   virtual void run() = 0;
 
   template <typename T>
-  const T* registerAction() {
-    return static_cast<const T*>(registerActionImpl(typeid(T)));
+  const std::optional<T>* registerAction() {
+    return reinterpret_cast<const std::optional<T>*>(registerActionImpl(typeid(T)));
   }
 
   // LEGIT.
@@ -28,7 +28,7 @@ public:
   virtual bool pollActionsAndEvents() = 0;
 
   // LEGIT.
-  virtual void beginFrame() = 0;
+  virtual bool beginFrame() = 0;
 
   // LEGIT.
   virtual void endFrame() = 0;
