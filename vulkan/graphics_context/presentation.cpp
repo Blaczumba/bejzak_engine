@@ -132,14 +132,14 @@ bool Presentation::pollActionsAndEvents() {
       mousePos.x, mousePos.y, screenWidth, screenHeight, glm::inverse(tempViewMat),
       glm::inverse(camera.getProjectionMatrix()));
   _communicationLayer->setCameraContexts({
-                                             common::CameraContext{
-                                                 camera.getPosition(),
-                                                 _mouseKeyboardManager->isPressed(Keyboard::Key::R) ? tempViewMat = camera.getViewMatrix() :
-                                                 tempViewMat, camera.getProjectionMatrix(), viewDir}
-                                         });
+    common::CameraContext{
+                          camera.getPosition(),
+                          _mouseKeyboardManager->isPressed(Keyboard::Key::R) ? tempViewMat = camera.getViewMatrix() :
+                                                           tempViewMat, camera.getProjectionMatrix(), viewDir}
+  });
   _communicationLayer->setScreenPoses({
-                                          {mousePos.x, mousePos.y}
-                                      });
+    {mousePos.x, mousePos.y}
+  });
   ////
 
   return true;

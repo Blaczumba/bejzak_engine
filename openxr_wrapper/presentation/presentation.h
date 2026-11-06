@@ -23,7 +23,8 @@ enum class ViewConfigurationType : uint8_t {
   MONO = 1,
   STEREO = 2,
   STEREO_WITH_FOVEATED_INSET = 4,
-  MAX_VIEWS = STEREO_WITH_FOVEATED_INSET};
+  MAX_VIEWS = STEREO_WITH_FOVEATED_INSET
+};
 
 class PresentationAction {
 public:
@@ -75,7 +76,8 @@ private:
 
   template <typename T>
   void addFactory(PresentationActionFactory factory, std::string_view extensionName) {
-    assert(!_factories.contains(typeid(T)) && "The factor has already been added to the xrw::Presentation.");
+    assert(!_factories.contains(typeid(T))
+           && "The factor has already been added to the xrw::Presentation.");
     assert(!extensionName.empty());
     if (_instance->isExtensionEnabled(extensionName)) {
       _factories.emplace(typeid(T), std::move(factory));
@@ -84,7 +86,8 @@ private:
 
   template <typename T>
   void addFactory(PresentationActionFactory factory) {
-    assert(!_factories.contains(typeid(T)) && "The factor has already been added to the xrw::Presentation.");
+    assert(!_factories.contains(typeid(T))
+           && "The factor has already been added to the xrw::Presentation.");
     _factories.emplace(typeid(T), std::move(factory));
   }
 
@@ -96,9 +99,8 @@ private:
 
   void pollActions();
 
-  bool renderProjectionLayer(
-      std::span<XrCompositionLayerProjectionView> projectionLayerViews,
-      XrCompositionLayerProjection& layer);
+  bool renderProjectionLayer(std::span<XrCompositionLayerProjectionView> projectionLayerViews,
+                             XrCompositionLayerProjection& layer);
 
   std::vector<std::unique_ptr<PresentationAction>> _presentationActions;
   std::unordered_map<std::type_index, PresentationActionFactory> _factories;
@@ -136,8 +138,8 @@ private:
   struct LayerInfo {
     XrCompositionLayerProjection projectionLayer{XR_TYPE_COMPOSITION_LAYER_PROJECTION};
     std::array<XrCompositionLayerProjectionView, VIEWS_NUM> layerViews = {
-        XrCompositionLayerProjectionView{XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW},
-        XrCompositionLayerProjectionView{XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW},
+      XrCompositionLayerProjectionView{XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW},
+      XrCompositionLayerProjectionView{XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW},
     };
   };
   LayerInfo _layerInfo;

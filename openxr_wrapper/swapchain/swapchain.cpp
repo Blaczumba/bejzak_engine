@@ -14,15 +14,17 @@ struct SwapchainGroup {
   std::vector<uint32_t> viewIndices;
 };
 
-bool areConfigurationViewsCompatible(const XrViewConfigurationView& a, const XrViewConfigurationView& b) {
-  return a.recommendedImageRectWidth == b.recommendedImageRectWidth &&
-          a.recommendedImageRectHeight == b.recommendedImageRectHeight &&
-          a.recommendedSwapchainSampleCount == b.recommendedSwapchainSampleCount;
+bool areConfigurationViewsCompatible(
+    const XrViewConfigurationView& a, const XrViewConfigurationView& b) {
+  return a.recommendedImageRectWidth == b.recommendedImageRectWidth
+         && a.recommendedImageRectHeight == b.recommendedImageRectHeight
+         && a.recommendedSwapchainSampleCount == b.recommendedSwapchainSampleCount;
 }
 
 }  // namespace
 
-Swapchain::Swapchain(XrSwapchain swapchain, uint32_t width, uint32_t height, std::vector<uint32_t>&& viewIndices) noexcept
+Swapchain::Swapchain(XrSwapchain swapchain, uint32_t width, uint32_t height,
+                     std::vector<uint32_t>&& viewIndices) noexcept
   : _swapchain(swapchain), _width(width), _height(height), _viewIndices(std::move(viewIndices)) {}
 
 Swapchain::Swapchain(Swapchain&& swapchain) noexcept
@@ -123,10 +125,11 @@ std::vector<Swapchain> SwapchainBuilder::build(
 
   std::vector<SwapchainGroup> swapchainGroup;
   for (uint32_t i = 0; i < configurationViews.size(); i++) {
-    auto it = std::find_if(swapchainGroup.begin(), swapchainGroup.end(),
-                 [&](const SwapchainGroup& swapchainGroup){
-      return areConfigurationViewsCompatible(swapchainGroup.configurationView, configurationViews[i]);
-    });
+    auto it = std::find_if(
+        swapchainGroup.begin(), swapchainGroup.end(), [&](const SwapchainGroup& swapchainGroup) {
+          return areConfigurationViewsCompatible(
+              swapchainGroup.configurationView, configurationViews[i]);
+        });
     if (it == swapchainGroup.cend()) {
       swapchainGroup.emplace_back(configurationViews[i], std::vector<uint32_t>{i});
     } else {
@@ -153,11 +156,13 @@ std::vector<Swapchain> SwapchainBuilder::build(
     CHECK_XRCMD(xrCreateSwapchain(session.getXrSession(), &swapchainCreateInfo, &swapchain),
                 "Failed to create XrSwapchain.");
 
-    graphicsPlugin.createSwapchainContext(swapchain, *format, configurationView.recommendedImageRectWidth,
-                                          configurationView.recommendedImageRectHeight, swapchainGroup.viewIndices.size());
+    graphicsPlugin.createSwapchainContext(
+        swapchain, *format, configurationView.recommendedImageRectWidth,
+        configurationView.recommendedImageRectHeight, swapchainGroup.viewIndices.size());
 
     swapchains.push_back(Swapchain(
-        swapchain, configurationView.recommendedImageRectWidth, configurationView.recommendedImageRectHeight, std::move(swapchainGroup.viewIndices)));
+        swapchain, configurationView.recommendedImageRectWidth,
+        configurationView.recommendedImageRectHeight, std::move(swapchainGroup.viewIndices)));
   }
   return swapchains;
 }
