@@ -100,59 +100,6 @@ common::GraphicsContext* Presentation::getGraphicsContext() {
   return _graphicsContext.get();
 }
 
-void Presentation::run() {
-  if (_graphicsContext == nullptr) {
-    throw EngineException("Graphics context must be created before running presentation.");
-  }
-
-  std::chrono::steady_clock::time_point previous, current;
-  float deltaTime;
-  VkResult result;
-  // This should be handled outside by engine but for now it is ok here:
-  // _mouseKeyboardManager->absorbCursor();
-  _mouseKeyboardManager->setKeyboardCallback([&](Keyboard::Key key, int action) {
-    switch (key) {
-      case Keyboard::Key::Escape:
-        _window->close();
-        break;
-    }
-  });
-  /////////////////////////
-  //_graphicsContext->createPresentingResources(_presentationContext->getPresentResources());
-
-  //_graphicsContext->initializeResources();
-  Camera camera(PerspectiveProjection{glm::radians(45.0f), 1920.0f / 1080.f, 0.01f, 500.0f},
-                glm::vec3(0.0f), 5.5f, 0.01f);
-  const auto [screenWidth, screenHeight] = _window->getFramebufferSize();
-  glm::mat4 tempViewMat(1.0f);
-  while (_window->open()) {
-    current = std::chrono::steady_clock::now();
-    deltaTime = std::chrono::duration<float>(current - previous).count();
-    previous = current;
-    _window->pollEvents();
-    // This should be handled outside by engine but for now it is ok here:
-    camera.updateFromKeyboard(*_mouseKeyboardManager, deltaTime);
-    /////////////////////////
-    _graphicsContext->waitCompleteExecution();
-    _communicationLayer->setCurrentSwapchainImageIndex(_presentationContext->acquireNextImage());
-    glm::vec2 mousePos = _mouseKeyboardManager->getMousePosition();
-    const glm::vec3 viewDir = common::getWorldSpaceViewDirection(
-        mousePos.x, mousePos.y, screenWidth, screenHeight, glm::inverse(tempViewMat),
-        glm::inverse(camera.getProjectionMatrix()));
-    _communicationLayer->setCameraContexts({
-      common::CameraContext{
-                            camera.getPosition(),
-                            _mouseKeyboardManager->isPressed(Keyboard::Key::R) ? tempViewMat = camera.getViewMatrix() :
-                                                             tempViewMat, camera.getProjectionMatrix(), viewDir}
-    });
-    _communicationLayer->setScreenPoses({
-      {mousePos.x, mousePos.y}
-    });
-    _graphicsContext->draw();
-    _presentationContext->present();
-  }
-}
-
 bool Presentation::shouldClose() {
   return !_window->open();
 }

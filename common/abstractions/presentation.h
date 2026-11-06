@@ -13,24 +13,17 @@ public:
 
   virtual GraphicsContext* getGraphicsContext() = 0;
 
-  virtual void run() = 0;
-
   template <typename T>
   const std::optional<T>* registerAction() {
     return reinterpret_cast<const std::optional<T>*>(registerActionImpl(typeid(T)));
   }
 
-  // LEGIT.
   virtual bool shouldClose() = 0;
 
-  // LEGIT.
-  // Returns true if is ready to render.
   virtual bool pollActionsAndEvents() = 0;
 
-  // LEGIT.
   virtual bool beginFrame() = 0;
 
-  // LEGIT.
   virtual void endFrame() = 0;
 
 protected:

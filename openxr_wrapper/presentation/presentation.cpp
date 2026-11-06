@@ -289,61 +289,6 @@ std::unique_ptr<common::Presentation> Presentation::create(
       std::move(swapchains)));
 }
 
-void Presentation::run() {
-//  for (const Swapchain& swapchain : _swapchains) {
-//    _graphicsContext->createPresentingResources(
-//        _graphicsPlugin->getSwapchainContext(swapchain.getSwapchain()));
-//  }
-  // _graphicsContext->initializeResources();
-//  _space = Space::create(_session->getXrSession(), XR_REFERENCE_SPACE_TYPE_LOCAL);
-  // Eye tracker input handlers.
-  _actionSet = ActionSet::create(_instance->getXrInstance(), "eye-gaze", "EyeGaze", 1000);
-  _eyeGazeAction = Action::create(
-      _actionSet.getActionSet(), XR_ACTION_TYPE_POSE_INPUT, "eye-gaze-pose", "EyeGazePose");
-
-  XrPath interactionProfilePath, gazePath;
-  CHECK_XRCMD(
-      xrStringToPath(_instance->getXrInstance(), "/interaction_profiles/ext/eye_gaze_interaction",
-                     &interactionProfilePath),
-      "Failed to xrStringToPath.");
-  CHECK_XRCMD(
-      xrStringToPath(_instance->getXrInstance(), "/user/eyes_ext/input/gaze_ext/pose", &gazePath),
-      "Failed to xrStringToPath.");
-  XrActionSuggestedBinding binding{.action = _eyeGazeAction.getAction(), .binding = gazePath};
-  XrInteractionProfileSuggestedBinding suggestedBinding{
-    .type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING,
-    .interactionProfile = interactionProfilePath,
-    .countSuggestedBindings = 1,
-    .suggestedBindings = &binding,
-  };
-  CHECK_XRCMD(xrSuggestInteractionProfileBindings(_instance->getXrInstance(), &suggestedBinding),
-              "Failed to xrSuggestInteractionProfileBindings.");
-  XrActionSet actionSetHandle = _actionSet.getActionSet();
-  XrSessionActionSetsAttachInfo attachInfo{
-    .type = XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO,
-    .countActionSets = 1,
-    .actionSets = &actionSetHandle};
-  CHECK_XRCMD(xrAttachSessionActionSets(_session->getXrSession(), &attachInfo),
-              "Failed to attach action sets.");
-
-  _actionSpace = Space::create(_session->getXrSession(), _eyeGazeAction.getAction(),
-                               XrPosef{
-                                 {0.f, 0.f, 0.f, 1.f},
-                                 {}
-  });
-
-  while (!_platform->shouldClose()) {
-    _platform->pollPlatformEvents(_sessionRunning);
-    pollEvents();
-    if (!_sessionRunning) {
-      continue;
-    }
-    pollActions();
-
-    draw();
-  }
-}
-
 bool Presentation::shouldClose() {
   return _platform->shouldClose();
 }
@@ -399,7 +344,7 @@ bool Presentation::beginFrame() {
   _layer = nullptr;
   const bool shouldRender = (frameState.shouldRender == XR_TRUE);
   if (shouldRender) {
-    if (renderProjectionLayer(frameState.predictedDisplayTime, _layerInfo.layerViews, _layerInfo.projectionLayer)) {
+    if (renderProjectionLayer(_layerInfo.layerViews, _layerInfo.projectionLayer)) {
       _layer = reinterpret_cast<XrCompositionLayerBaseHeader*>(&_layerInfo.projectionLayer);
     }
   }
@@ -542,88 +487,8 @@ void Presentation::pollActions() {
   }
 }
 
-bool Presentation::renderLayer(
-    XrTime predictedDisplayTime, std::span<XrCompositionLayerProjectionView> projectionLayerViews,
-    XrCompositionLayerProjection& layer) {
-  XrViewState viewState = {.type = XR_TYPE_VIEW_STATE};
-
-  const XrViewLocateInfo viewLocateInfo = {
-    .type = XR_TYPE_VIEW_LOCATE_INFO,
-    .viewConfigurationType = VIEW_CONFIG_TYPE,
-    .displayTime = predictedDisplayTime,
-    .space = _space->getXrSpace()};
-
-  uint32_t viewCountOutput;
-  std::array<XrView, VIEWS_NUM> views = {
-    XrView{.type = XR_TYPE_VIEW}, XrView{.type = XR_TYPE_VIEW}};
-  CHECK_XRCMD(xrLocateViews(_session->getXrSession(), &viewLocateInfo, &viewState, views.size(),
-                            &viewCountOutput, views.data()),
-              "Failed to xrLocateViews.");
-  if ((viewState.viewStateFlags & XR_VIEW_STATE_POSITION_VALID_BIT) == 0
-      || (viewState.viewStateFlags & XR_VIEW_STATE_ORIENTATION_VALID_BIT) == 0) {
-    return false;  // There is no valid tracking poses for the views.
-  }
-
-  const Swapchain& viewSwapchain = _swapchains[0];
-  std::array<common::CameraContext, VIEWS_NUM> cameraContexts;
-  std::array<std::pair<uint32_t, uint32_t>, VIEWS_NUM> screenPoses{};
-
-  // Eye tracker spaceAction.
-  XrSpaceLocation spaceLocation{XR_TYPE_SPACE_LOCATION};
-  XrResult result = xrLocateSpace(
-      _actionSpace->getXrSpace(), _space->getXrSpace(), predictedDisplayTime, &spaceLocation);
-  for (uint32_t i = 0; i < VIEWS_NUM; i++) {
-    const XrCompositionLayerProjectionView& projectionLayerView = projectionLayerViews[i] =
-        XrCompositionLayerProjectionView{
-          .type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW,
-          .pose = views[i].pose,
-          .fov = views[i].fov,
-          .subImage = {.swapchain = viewSwapchain.getSwapchain(),
-                       .imageRect = {.offset = {0, 0}, .extent = viewSwapchain.getXrExtent2Di()},
-                       .imageArrayIndex = i}
-    };
-    const auto [x, y, z] = projectionLayerView.pose.position;
-    cameraContexts[i] = common::CameraContext{
-      glm::vec3(x, y, z), createViewMatrix(projectionLayerView.pose),
-      createProjectionMatrix(projectionLayerView.fov, 0.01f, 50.0f)};
-
-    // Eye tracking.
-    auto [width, height] = viewSwapchain.getXrExtent2Di();
-    screenPoses[i] = calculateScreenPos(
-        spaceLocation.pose, width, height, cameraContexts[i].view, cameraContexts[i].proj);
-  }
-  _communicationLayer->setCameraContexts(cameraContexts);
-  _communicationLayer->setScreenPoses(screenPoses);
-
-  const XrSwapchainImageAcquireInfo acquireInfo = {.type = XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO};
-
-  uint32_t swapchainImageIndex;
-  CHECK_XRCMD(
-      xrAcquireSwapchainImage(viewSwapchain.getSwapchain(), &acquireInfo, &swapchainImageIndex),
-      "Failed to xrAcquireSwapchainImage.");
-  _communicationLayer->setCurrentSwapchainImageIndex(swapchainImageIndex);
-
-  const XrSwapchainImageWaitInfo imageWaitInfo = {
-    .type = XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, .timeout = XR_INFINITE_DURATION};
-
-  CHECK_XRCMD(xrWaitSwapchainImage(viewSwapchain.getSwapchain(), &imageWaitInfo),
-              "Failed to xrWaitSwapchainImage.");
-
-  _graphicsContext->waitCompleteExecution();
-  _graphicsContext->draw();
-
-  const XrSwapchainImageReleaseInfo releaseInfo = {.type = XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO};
-  CHECK_XRCMD(xrReleaseSwapchainImage(viewSwapchain.getSwapchain(), &releaseInfo),
-              "Failed to xrReleaseSwapchainImage.");
-
-  layer.space = _space->getXrSpace();
-  layer.viewCount = static_cast<uint32_t>(projectionLayerViews.size());
-  layer.views = projectionLayerViews.data();
-  return true;
-}
-
 bool Presentation::renderProjectionLayer(
-    XrTime predictedDisplayTime, std::span<XrCompositionLayerProjectionView> projectionLayerViews,
+    std::span<XrCompositionLayerProjectionView> projectionLayerViews,
     XrCompositionLayerProjection& layer) {
   assert(_eyeProjectionInfo != nullptr);
   if (!_eyeProjectionInfo->has_value())  {
@@ -682,58 +547,6 @@ bool Presentation::renderProjectionLayer(
   layer.viewCount = static_cast<uint32_t>(projectionLayerViews.size());
   layer.views = projectionLayerViews.data();
   return true;
-}
-
-void Presentation::draw() {
-  if (_session->getXrSession() == XR_NULL_HANDLE) {
-    throw EngineException("XrSession cannot be XR_NULL_HANDLE when rendering a frame.");
-  }
-
-  const XrFrameWaitInfo frameWaitInfo{
-    .type = XR_TYPE_FRAME_WAIT_INFO,
-  };
-
-  XrFrameState frameState{
-    .type = XR_TYPE_FRAME_STATE,
-  };
-  CHECK_XRCMD(
-      xrWaitFrame(_session->getXrSession(), &frameWaitInfo, &frameState), "Failed to xrWaitFrame.");
-
-  const XrFrameBeginInfo frameBeginInfo{
-    .type = XR_TYPE_FRAME_BEGIN_INFO,
-  };
-  CHECK_XRCMD(xrBeginFrame(_session->getXrSession(), &frameBeginInfo), "Failed to xrBeginFrame.");
-
-  // Sync actions for the current frame
-  XrActiveActionSet activeActionSet{
-    .actionSet = _actionSet.getActionSet(), .subactionPath = XR_NULL_PATH};
-  XrActionsSyncInfo syncInfo{.type = XR_TYPE_ACTIONS_SYNC_INFO,
-                             .countActiveActionSets = 1,
-                             .activeActionSets = &activeActionSet};
-
-  if (_sessionFocused) {
-    CHECK_XRCMD(xrSyncActions(_session->getXrSession(), &syncInfo), "Failed to sync actions.");
-  }
-
-  XrCompositionLayerBaseHeader* layerHeader = nullptr;
-  XrCompositionLayerProjection layer{
-    .type = XR_TYPE_COMPOSITION_LAYER_PROJECTION,
-  };
-  std::array<XrCompositionLayerProjectionView, VIEWS_NUM> projectionLayerViews;
-  if (frameState.shouldRender == XR_TRUE) {
-    if (renderLayer(frameState.predictedDisplayTime, projectionLayerViews, layer)) {
-      layerHeader = reinterpret_cast<XrCompositionLayerBaseHeader*>(&layer);
-    }
-  }
-
-  const XrFrameEndInfo frameEndInfo = {
-    .type = XR_TYPE_FRAME_END_INFO,
-    .displayTime = frameState.predictedDisplayTime,
-    .environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE,
-    .layerCount = layerHeader != nullptr ? 1u : 0u,
-    .layers = layerHeader != nullptr ? &layerHeader : nullptr};
-
-  CHECK_XRCMD(xrEndFrame(_session->getXrSession(), &frameEndInfo), "Failed to xrEndFrame.");
 }
 
 }  // namespace xrw

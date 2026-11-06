@@ -27,18 +27,12 @@ public:
 
   ~Presentation() override = default;
 
-  void run() override;
-
-  // LEGIT.
   bool shouldClose() override;
 
-  // LEGIT.
   bool pollActionsAndEvents() override;
 
-  // LEGIT.
   bool beginFrame() override;
 
-  // LEGIT.
   void endFrame() override;
 
 private:

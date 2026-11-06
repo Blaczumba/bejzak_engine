@@ -57,21 +57,16 @@ public:
 
   common::GraphicsContext* getGraphicsContext() override;
 
-  void run() override;
-
-  // LEGIT.
   bool shouldClose() override;
 
-  // LEGIT.
   bool pollActionsAndEvents() override;
 
-  // LEGIT.
   bool beginFrame() override;
 
-  // LEGIT.
   void endFrame() override;
 
 private:
+  // TODO should not be compile time constant.
   static constexpr size_t VIEWS_NUM = 2;
 
   const void* registerActionImpl(std::type_index index) override;
@@ -101,16 +96,9 @@ private:
 
   void pollActions();
 
-  // TODO: refactor
-  bool renderLayer(
-      XrTime predictedDisplayTime, std::span<XrCompositionLayerProjectionView> projectionLayerViews,
-      XrCompositionLayerProjection& layer);
-
   bool renderProjectionLayer(
-      XrTime predictedDisplayTime, std::span<XrCompositionLayerProjectionView> projectionLayerViews,
+      std::span<XrCompositionLayerProjectionView> projectionLayerViews,
       XrCompositionLayerProjection& layer);
-
-  void draw();
 
   std::vector<std::unique_ptr<PresentationAction>> _presentationActions;
   std::unordered_map<std::type_index, PresentationActionFactory> _factories;
@@ -119,6 +107,7 @@ private:
   const std::optional<engine::EyeProjectionInfo>* _eyeProjectionInfo = nullptr;
   const std::optional<engine::EyeTrackingInfo>* _eyeTrackingInfo = nullptr;
 
+  // TODO: Should not be compile time constant.
   static constexpr inline XrViewConfigurationType VIEW_CONFIG_TYPE =
       XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
 
@@ -131,13 +120,9 @@ private:
   std::unique_ptr<Session> _session;
   std::vector<Swapchain> _swapchains;
   std::unique_ptr<Space> _space;
-
-  // Eye tracking
   ActionSet _actionSet;
-  Action _eyeGazeAction;
-  std::unique_ptr<Space> _actionSpace;
-  bool _sessionFocused = false;
 
+  bool _sessionFocused = false;
   bool _sessionRunning = false;
   XrEventDataBuffer _eventDataBuffer{XR_TYPE_EVENT_DATA_BUFFER};
 
