@@ -62,19 +62,6 @@ enum class Key : uint16_t {
   F10,
   F11,
   F12,
-  F13,
-  F14,
-  F15,
-  F16,
-  F17,
-  F18,
-  F19,
-  F20,
-  F21,
-  F22,
-  F23,
-  F24,
-  F25,
 
   // Special Characters and Symbols
   Space,
@@ -141,22 +128,6 @@ enum class Key : uint16_t {
   NumpadAdd,
   NumpadEnter,
   NumpadEqual,
-
-  // Additional Symbols and Signs
-  World1,
-  World2,
-
-  // Media Keys
-  MediaPlayPause,
-  MediaStop,
-  MediaNextTrack,
-  MediaPrevTrack,
-  VolumeUp,
-  VolumeDown,
-  Mute,
-
-  // Application Keys
-  Menu
 };
 
 using Callback = std::function<void(Key key, int action)>;

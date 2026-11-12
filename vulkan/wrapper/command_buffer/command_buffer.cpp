@@ -99,7 +99,8 @@ VkResult CommandBuffer::begin(const VkCommandBufferBeginInfo& beginInfo) const n
 void CommandBuffer::beginRenderPass(
     VkSubpassContents subpassContents, VkFramebuffer framebuffer, VkExtent2D framebufferExtent,
     VkRenderPass renderpass, std::span<const VkClearValue> clearValues) const {
-  assert(_level == VK_COMMAND_BUFFER_LEVEL_PRIMARY);
+  assert(_level == VK_COMMAND_BUFFER_LEVEL_PRIMARY
+         && "Render Pass can be begun only within Primary Command Buffer.");
   const VkRenderPassBeginInfo renderPassInfo = {
     .sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
     .renderPass = renderpass,

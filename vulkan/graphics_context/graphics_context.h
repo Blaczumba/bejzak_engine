@@ -58,19 +58,19 @@ namespace vlkn {
 template <bool SYNCED_OUTSIDE>
 class GraphicsContext final : public common::GraphicsContext {
   GraphicsContext(
-      std::shared_ptr<Instance> instance, DebugMessenger&& debugMessenger,
-      std::unique_ptr<PhysicalDevice> physicalDevice, std::unique_ptr<LogicalDevice> logicalDevice,
+      std::shared_ptr<Instance> instance, std::shared_ptr<DebugMessenger> debugMessenger,
+      std::shared_ptr<PhysicalDevice> physicalDevice, std::shared_ptr<LogicalDevice> logicalDevice,
       PhysicalDeviceOptionalExtendedFeatures extendedFeatures, const FileLoader& fileLoader,
       std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer,
-      std::unique_ptr<PresentationContext> presentationContext = nullptr);
+      std::shared_ptr<PresentationContext> presentationContext = nullptr);
 
 public:
   static std::unique_ptr<common::GraphicsContext> create(
-      std::shared_ptr<Instance> instance, DebugMessenger&& debugMessenger,
-      std::unique_ptr<PhysicalDevice> physicalDevice, std::unique_ptr<LogicalDevice> logicalDevice,
+      std::shared_ptr<Instance> instance, std::shared_ptr<DebugMessenger> debugMessenger,
+      std::shared_ptr<PhysicalDevice> physicalDevice, std::shared_ptr<LogicalDevice> logicalDevice,
       PhysicalDeviceOptionalExtendedFeatures extendedFeatures, const FileLoader& fileLoader,
       std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer,
-      std::unique_ptr<PresentationContext> presentationContext);
+      std::shared_ptr<PresentationContext> presentationContext);
 
   ~GraphicsContext();
 
@@ -90,11 +90,11 @@ public:
 
 private:
   std::shared_ptr<Instance> _instance;
-  DebugMessenger _debugMessenger;
-  std::unique_ptr<PhysicalDevice> _physicalDevice;
-  std::unique_ptr<LogicalDevice> _logicalDevice;
+  std::shared_ptr<DebugMessenger> _debugMessenger;
+  std::shared_ptr<PhysicalDevice> _physicalDevice;
+  std::shared_ptr<LogicalDevice> _logicalDevice;
   PhysicalDeviceOptionalExtendedFeatures _extendedFeatures;
-  std::unique_ptr<PresentationContext> _presentationContext;
+  std::shared_ptr<PresentationContext> _presentationContext;
   std::shared_ptr<engine::PresentationGraphicsCommunication> _communicationLayer;
 
   const FileLoader& _fileLoader;

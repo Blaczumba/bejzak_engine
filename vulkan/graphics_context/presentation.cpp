@@ -1,8 +1,6 @@
 #include "vulkan/graphics_context/presentation.h"
 
-#include "common/math/engine_math.h"
-#include "common/util/engine_exception.h"
-#include "lib/types/util.h"
+#include "engine/system.h"
 #include "presentation_graphics_communication/presentation_graphics_communication.h"
 #include "vulkan/graphics_context/graphics_context.h"
 #include "vulkan/graphics_context/presentation_lib.h"
@@ -18,18 +16,21 @@
 namespace vlkn {
 
 Presentation::Presentation(
-    std::shared_ptr<Window> window, std::shared_ptr<Instance> instance, Surface&& surface,
-    PresentationContext* presentationContext,
-    std::unique_ptr<GraphicsContext<false>> graphicsContext,
-    std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer,
-    const FileLoader& fileLoader)
-  : _window(std::move(window)), _instance(std::move(instance)), _surface(std::move(surface)),
-    _presentationContext(presentationContext), _graphicsContext(std::move(graphicsContext)),
-    _communicationLayer(std::move(communicationLayer)),
-    _mouseKeyboardManager(_window->createMouseKeyboardManager()) {}
+    engine::System& system, std::shared_ptr<Window> window, std::shared_ptr<Instance> instance,
+    std::shared_ptr<DebugMessenger> debugMessenger, Surface&& surface,
+    std::shared_ptr<PhysicalDevice> physicalDevice,
+    PhysicalDeviceOptionalExtendedFeatures optionalExtendedFeatures,
+    std::shared_ptr<LogicalDevice> logicalDevice,
+    std::shared_ptr<PresentationContext> presentationContext,
+    std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer)
+  : _system(system), _window(std::move(window)), _instance(std::move(instance)),
+    _debugMessenger(std::move(debugMessenger)), _surface(std::move(surface)),
+    _physicalDevice(std::move(physicalDevice)), _optionalExtendedFeatures(optionalExtendedFeatures),
+    _logicalDevice(std::move(logicalDevice)), _presentationContext(presentationContext),
+    _communicationLayer(std::move(communicationLayer)) {}
 
 std::unique_ptr<common::Presentation> Presentation::create(
-    std::shared_ptr<Window> window, const FileLoader& fileLoader) {
+    engine::System& system, std::shared_ptr<Window> window) {
   std::vector<const char*> requiredExtensions = window->getVulkanExtensions();
 #ifdef VALIDATION_LAYERS_ENABLED
   requiredExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -37,13 +38,12 @@ std::unique_ptr<common::Presentation> Presentation::create(
   requiredExtensions.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
   std::shared_ptr<Instance> instance =
       Instance::createPtr("Bejzak Engine", requiredExtensions, debugCallback1);
+  std::shared_ptr<DebugMessenger> debugMessenger;
 #ifdef VALIDATION_LAYERS_ENABLED
-  DebugMessenger debugMessenger = DebugMessenger::create(*instance, debugCallback1);
-#else
-  DebugMessenger debugMessenger;
-#endif  // VALIDATION_LAYERS_ENABLED
+  debugMessenger = DebugMessenger::createPtr(*instance, debugCallback1);
+#endif
   Surface surface = Surface::create(*instance, *window);
-  std::unique_ptr<PhysicalDevice> physicalDevice =
+  std::shared_ptr<PhysicalDevice> physicalDevice =
       PhysicalDevice::create(*instance, surface.getVkSurface());
 
   std::unique_ptr<ExtensionsConnector> extensionsConnector =
@@ -63,7 +63,7 @@ std::unique_ptr<common::Presentation> Presentation::create(
           *physicalDevice, *extensionsConnector,
           AttachmentBasedFragmentShadingRateModifier::SupportedFeature::FRAGMENT_SHADING_RATE);
 
-  std::unique_ptr<LogicalDevice> logicalDevice =
+  std::shared_ptr<LogicalDevice> logicalDevice =
       LogicalDeviceBuilder()
           .withPhysicalDeviceFeatures2(extensionsConnector->getVkPhysicalDeviceFeatures2())
           .withExtensions(extensionsConnector->getAvailableRequestedDeviceExtensions())
@@ -78,26 +78,33 @@ std::unique_ptr<common::Presentation> Presentation::create(
           .withPreferredPresentMode(VK_PRESENT_MODE_MAILBOX_KHR)
           .build(*logicalDevice, surface.getVkSurface(), VkExtent2D{width, height});
 
-  std::unique_ptr<PresentationContext> presentationContext =
+  std::shared_ptr<PresentationContext> presentationContext =
       PresentationContext::create(std::move(swapchain));
-  PresentationContext* presentationContextPtr = presentationContext.get();
 
   std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer =
       engine::PresentationGraphicsCommunication::create(1);
-  auto graphicsContext =
-      lib::dynamicUniqueCast<GraphicsContext<false>>(GraphicsContext<false>::create(
-          instance, std::move(debugMessenger), std::move(physicalDevice), std::move(logicalDevice),
-          extendedFeatures, fileLoader, communicationLayer, std::move(presentationContext)));
-  graphicsContext->createPresentingResources(presentationContextPtr->getPresentResources());
-  graphicsContext->initializeResources();
 
   return std::unique_ptr<Presentation>(new Presentation(
-      std::move(window), std::move(instance), std::move(surface), presentationContextPtr,
-      std::move(graphicsContext), std::move(communicationLayer), fileLoader));
+      system, std::move(window), std::move(instance), std::move(debugMessenger), std::move(surface),
+      std::move(physicalDevice), extendedFeatures, std::move(logicalDevice),
+      std::move(presentationContext), std::move(communicationLayer)));
 }
 
-common::GraphicsContext* Presentation::getGraphicsContext() {
-  return _graphicsContext.get();
+std::unique_ptr<common::GraphicsContext> Presentation::createGraphicsContext() {
+  assert(_graphicsContextCreated == false && "Graphics Context can be created once at maximum.");
+  _graphicsContextCreated = true;
+
+  auto graphicsContext = GraphicsContext<false>::create(
+      _instance, _debugMessenger, _physicalDevice, _logicalDevice, _optionalExtendedFeatures,
+      _system.getFileLoader(), _communicationLayer, _presentationContext);
+  graphicsContext->createPresentingResources(_presentationContext->getPresentResources());
+  graphicsContext->initializeResources();
+  return graphicsContext;
+}
+
+engine::PresentationGraphicsCommunication&
+Presentation::getPresentationGraphicsCommunicationLayer() {
+  return *_communicationLayer;
 }
 
 bool Presentation::shouldClose() {
@@ -106,42 +113,6 @@ bool Presentation::shouldClose() {
 
 bool Presentation::pollActionsAndEvents() {
   _window->pollEvents();
-
-  // This should be calculated in the main loop.
-  std::chrono::steady_clock::time_point current = std::chrono::steady_clock::now();
-  const auto deltaTime = std::chrono::duration<float>(current - _previous).count();
-  _previous = current;
-
-  // To be removed:
-  _mouseKeyboardManager->setKeyboardCallback([&](Keyboard::Key key, int action) {
-    switch (key) {
-      case Keyboard::Key::Escape:
-        _window->close();
-        break;
-    }
-  });
-
-  static const auto [screenWidth, screenHeight] = _window->getFramebufferSize();
-  static Camera camera(PerspectiveProjection{glm::radians(45.0f), 1920.0f / 1080.f, 0.01f, 500.0f},
-                       glm::vec3(0.0f), 5.5f, 0.01f);
-  static glm::mat4 tempViewMat(1.0f);
-
-  camera.updateFromKeyboard(*_mouseKeyboardManager, deltaTime);
-  glm::vec2 mousePos = _mouseKeyboardManager->getMousePosition();
-  const glm::vec3 viewDir = common::getWorldSpaceViewDirection(
-      mousePos.x, mousePos.y, screenWidth, screenHeight, glm::inverse(tempViewMat),
-      glm::inverse(camera.getProjectionMatrix()));
-  _communicationLayer->setCameraContexts({
-    common::CameraContext{
-                          camera.getPosition(),
-                          _mouseKeyboardManager->isPressed(Keyboard::Key::R) ? tempViewMat = camera.getViewMatrix() :
-                                                           tempViewMat, camera.getProjectionMatrix(), viewDir}
-  });
-  _communicationLayer->setScreenPoses({
-    {mousePos.x, mousePos.y}
-  });
-  ////
-
   return true;
 }
 

@@ -44,10 +44,9 @@ public:
 
 class Presentation final : public common::Presentation {
   Presentation(std::unique_ptr<Platform> platform, std::unique_ptr<GraphicsPlugin> graphicsPlugin,
-               std::unique_ptr<common::GraphicsContext> graphicsContext,
                std::shared_ptr<engine::PresentationGraphicsCommunication>& communicationLayer,
                std::unique_ptr<Instance> instance, std::unique_ptr<System> system,
-               std::unique_ptr<Session> session, std::vector<Swapchain>&& swapchains);
+               std::unique_ptr<Session> session, std::vector<Swapchain>&& swapchains, const FileLoader& fileLoader);
 
 public:
   static std::unique_ptr<common::Presentation> create(
@@ -56,7 +55,10 @@ public:
 
   ~Presentation() = default;
 
-  common::GraphicsContext* getGraphicsContext() override;
+  std::unique_ptr<common::GraphicsContext> createGraphicsContext() override;
+
+  engine::PresentationGraphicsCommunication&
+  getPresentationGraphicsCommunicationLayer() override;
 
   bool shouldClose() override;
 
@@ -113,8 +115,9 @@ private:
   static constexpr inline XrViewConfigurationType VIEW_CONFIG_TYPE =
       XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
 
+  const FileLoader& _fileLoader;  // TODO: Should be removed.
+
   std::unique_ptr<Platform> _platform;
-  std::unique_ptr<common::GraphicsContext> _graphicsContext;
   std::shared_ptr<engine::PresentationGraphicsCommunication> _communicationLayer;
   std::unique_ptr<GraphicsPlugin> _graphicsPlugin;
   std::unique_ptr<Instance> _instance;
@@ -145,6 +148,8 @@ private:
   LayerInfo _layerInfo;
   XrCompositionLayerBaseHeader* _layer;
   XrTime _predictedDisplayTime;
+
+  bool _graphicsContextCreated = false;
 };
 
 }  // namespace xrw

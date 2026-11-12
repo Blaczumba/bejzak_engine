@@ -24,8 +24,16 @@ bool areConfigurationViewsCompatible(
 }  // namespace
 
 Swapchain::Swapchain(XrSwapchain swapchain, uint32_t width, uint32_t height,
-                     std::vector<uint32_t>&& viewIndices) noexcept
+                     lib::Buffer<uint32_t>&& viewIndices) noexcept
   : _swapchain(swapchain), _width(width), _height(height), _viewIndices(std::move(viewIndices)) {}
+
+Swapchain Swapchain::create(XrSession session, const XrSwapchainCreateInfo& createInfo,
+                            std::span<const uint32_t> viewIndices) {
+  XrSwapchain swapchain;
+  CHECK_XRCMD(xrCreateSwapchain(session, &createInfo, &swapchain),
+              "Failed to create XrSwapchain.");
+  return Swapchain(swapchain, createInfo.width, createInfo.height, viewIndices);
+}
 
 Swapchain::Swapchain(Swapchain&& swapchain) noexcept
   : _swapchain(std::exchange(swapchain._swapchain, XR_NULL_HANDLE)), _width(swapchain._width),
@@ -141,6 +149,7 @@ std::vector<Swapchain> SwapchainBuilder::build(
   swapchains.reserve(swapchainGroup.size());
   for (SwapchainGroup& swapchainGroup : swapchainGroup) {
     const XrViewConfigurationView& configurationView = swapchainGroup.configurationView;
+    std::span<const uint32_t> viewIndices = swapchainGroup.viewIndices;
     const XrSwapchainCreateInfo swapchainCreateInfo = {
       .type = XR_TYPE_SWAPCHAIN_CREATE_INFO,
       .usageFlags = XR_SWAPCHAIN_USAGE_SAMPLED_BIT | XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT,
@@ -149,20 +158,15 @@ std::vector<Swapchain> SwapchainBuilder::build(
       .width = configurationView.recommendedImageRectWidth,
       .height = configurationView.recommendedImageRectHeight,
       .faceCount = 1,
-      .arraySize = static_cast<uint32_t>(swapchainGroup.viewIndices.size()),
+      .arraySize = static_cast<uint32_t>(viewIndices.size()),
       .mipCount = 1};
 
-    XrSwapchain swapchain;
-    CHECK_XRCMD(xrCreateSwapchain(session.getXrSession(), &swapchainCreateInfo, &swapchain),
-                "Failed to create XrSwapchain.");
+    Swapchain& swapchain = swapchains.emplace_back(
+        Swapchain::create(session.getXrSession(), swapchainCreateInfo, viewIndices));
 
     graphicsPlugin.createSwapchainContext(
-        swapchain, *format, configurationView.recommendedImageRectWidth,
-        configurationView.recommendedImageRectHeight, swapchainGroup.viewIndices.size());
-
-    swapchains.push_back(Swapchain(
-        swapchain, configurationView.recommendedImageRectWidth,
-        configurationView.recommendedImageRectHeight, std::move(swapchainGroup.viewIndices)));
+        swapchain.getSwapchain(), *format, configurationView.recommendedImageRectWidth,
+        configurationView.recommendedImageRectHeight, viewIndices.size());
   }
   return swapchains;
 }

@@ -1,5 +1,6 @@
 #pragma once
 
+#include <memory>
 #include <vulkan/vulkan.h>
 
 #include "vulkan/wrapper/instance/instance.h"
@@ -15,6 +16,9 @@ public:
   DebugMessenger& operator=(DebugMessenger&& debugMessenger) noexcept;
 
   static DebugMessenger create(
+      const Instance& instance, PFN_vkDebugUtilsMessengerCallbackEXT debugCallback);
+
+  static std::unique_ptr<DebugMessenger> createPtr(
       const Instance& instance, PFN_vkDebugUtilsMessengerCallbackEXT debugCallback);
 
   ~DebugMessenger();

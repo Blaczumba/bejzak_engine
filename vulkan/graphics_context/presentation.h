@@ -4,8 +4,8 @@
 
 #include "common/abstractions/graphics_context.h"
 #include "common/abstractions/presentation.h"
-#include "common/input_manager/mouse_keyboard_manager.h"
 #include "common/window/window.h"
+#include "engine/system.h"
 #include "presentation_graphics_communication/presentation_graphics_communication.h"
 #include "vulkan/graphics_context/graphics_context.h"
 #include "vulkan/wrapper/surface/surface.h"
@@ -13,17 +13,21 @@
 namespace vlkn {
 
 class Presentation final : public common::Presentation {
-  Presentation(std::shared_ptr<Window> window, std::shared_ptr<Instance> instance,
-               Surface&& surface, PresentationContext* presentationContext,
-               std::unique_ptr<GraphicsContext<false>> graphicsContext,
-               std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer,
-               const FileLoader& fileLoader);
+  Presentation(engine::System& system, std::shared_ptr<Window> window,
+               std::shared_ptr<Instance> instance, std::shared_ptr<DebugMessenger> debugMessenger,
+               Surface&& surface, std::shared_ptr<PhysicalDevice> physicalDevice,
+               PhysicalDeviceOptionalExtendedFeatures optionalExtendedFeatures,
+               std::shared_ptr<LogicalDevice> logicalDevice,
+               std::shared_ptr<PresentationContext> presentationContext,
+               std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer);
 
 public:
   static std::unique_ptr<common::Presentation> create(
-      std::shared_ptr<Window> window, const FileLoader& fileLoader);
+      engine::System& system, std::shared_ptr<Window> window);
 
-  common::GraphicsContext* getGraphicsContext() override;
+  std::unique_ptr<common::GraphicsContext> createGraphicsContext() override;
+
+  engine::PresentationGraphicsCommunication& getPresentationGraphicsCommunicationLayer() override;
 
   ~Presentation() override = default;
 
@@ -40,18 +44,19 @@ private:
     return nullptr;
   }
 
-  // TODO: Change to unique_ptr.
+  engine::System& _system;
   std::shared_ptr<Window> _window;
   std::shared_ptr<engine::PresentationGraphicsCommunication> _communicationLayer;
 
   std::shared_ptr<Instance> _instance;
+  std::shared_ptr<DebugMessenger> _debugMessenger;
   Surface _surface;
-  std::unique_ptr<GraphicsContext<false>> _graphicsContext;
-  PresentationContext* _presentationContext;
+  std::shared_ptr<PhysicalDevice> _physicalDevice;
+  PhysicalDeviceOptionalExtendedFeatures _optionalExtendedFeatures;
+  std::shared_ptr<LogicalDevice> _logicalDevice;
+  std::shared_ptr<PresentationContext> _presentationContext;
 
-  std::unique_ptr<const MouseKeyboardManager> _mouseKeyboardManager;
-
-  std::chrono::steady_clock::time_point _previous;
+  bool _graphicsContextCreated = false;
 };
 
 }  // namespace vlkn

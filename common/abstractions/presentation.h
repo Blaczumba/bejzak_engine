@@ -1,9 +1,11 @@
 #pragma once
 
+#include <memory>
 #include <typeindex>
 
 #include "common/abstractions/graphics_context.h"
 #include "common/file/file_loader.h"
+#include "presentation_graphics_communication/presentation_graphics_communication.h"
 
 namespace common {
 
@@ -11,7 +13,10 @@ class Presentation {
 public:
   virtual ~Presentation() = default;
 
-  virtual GraphicsContext* getGraphicsContext() = 0;
+  virtual std::unique_ptr<GraphicsContext> createGraphicsContext() = 0;
+
+  virtual engine::PresentationGraphicsCommunication&
+  getPresentationGraphicsCommunicationLayer() = 0;
 
   template <typename T>
   const std::optional<T>* registerAction() {

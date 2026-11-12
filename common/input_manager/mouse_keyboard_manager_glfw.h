@@ -11,7 +11,7 @@ class MouseKeyboardManagerGlfw : public MouseKeyboardManager {
   std::shared_ptr<const Window> _window;
 
 public:
-  MouseKeyboardManagerGlfw(const std::shared_ptr<const WindowGlfw>& window);
+  MouseKeyboardManagerGlfw(std::shared_ptr<const WindowGlfw> window);
 
   bool isPressed(Keyboard::Key key) const override;
 

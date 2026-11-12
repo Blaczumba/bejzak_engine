@@ -152,8 +152,8 @@ constexpr std::array<Key, 349> fromGlfwToKey = [] {
 }  // namespace
 }  // namespace Keyboard
 
-MouseKeyboardManagerGlfw::MouseKeyboardManagerGlfw(const std::shared_ptr<const WindowGlfw>& window)
-  : _window(window) {}
+MouseKeyboardManagerGlfw::MouseKeyboardManagerGlfw(std::shared_ptr<const WindowGlfw> window)
+  : _window(std::move(window)) {}
 
 bool MouseKeyboardManagerGlfw::isPressed(Keyboard::Key key) const {
   return glfwGetKey(static_cast<GLFWwindow*>(_window->getNativeHandler()),

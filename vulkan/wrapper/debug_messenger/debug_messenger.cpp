@@ -39,8 +39,12 @@ DebugMessenger DebugMessenger::create(
   } else {
     throw EngineException("vkCreateDebugUtilsMessengerEXT was not found.");
   }
-
   return DebugMessenger(instance, debugUtilsMessenger);
+}
+
+std::unique_ptr<DebugMessenger> DebugMessenger::createPtr(
+    const Instance& instance, PFN_vkDebugUtilsMessengerCallbackEXT debugCallback) {
+  return std::make_unique<DebugMessenger>(DebugMessenger::create(instance, debugCallback));
 }
 
 DebugMessenger::~DebugMessenger() {

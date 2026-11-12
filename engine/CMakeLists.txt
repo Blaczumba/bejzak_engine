@@ -1,4 +1,4 @@
-add_library(Engine main_loop.h main_loop.cpp)
+add_library(Engine simulation.h simulation.cpp system.h system.cpp input_manager.h input_manager.cpp frame_composer.h frame_composer_default.h frame_composer_default.cpp timer.h timer.cpp)
 
 target_link_libraries(Engine PRIVATE CommonAbstractions)
 

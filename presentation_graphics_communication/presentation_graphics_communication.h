@@ -16,13 +16,6 @@
 
 namespace engine {
 
-struct Viewport {
-  uint32_t xOffset;
-  uint32_t yOffset;
-  uint32_t width;
-  uint32_t height;
-};
-
 struct FrustumAsymmetrical {
   float leftAngle;
   float rightAngle;
@@ -47,7 +40,6 @@ struct PresentationInfo {
   struct RenderView {
     glm::vec3 position;
     glm::quat orientation;
-    Viewport viewport;
     Frustum frustum;
     uint32_t arrayLayer;
   };
