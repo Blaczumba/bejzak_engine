@@ -15,8 +15,6 @@ class GraphicsPlugin {
 public:
   virtual ~GraphicsPlugin() = default;
 
-  virtual std::span<const char* const> getOpenXrInstanceExtensions() const = 0;
-
   virtual const XrBaseInStructure* getGraphicsBinding() const = 0;
 
   virtual std::optional<int64_t> selectSwapchainFormat(
@@ -32,9 +30,13 @@ public:
   virtual void createResources() = 0;
 
   virtual std::unique_ptr<common::GraphicsContext> createGraphicsContext(
-      XrInstance xrInstance, XrSystemId systemId,
       std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer,
       const FileLoader& fileLoader) = 0;
+};
+
+class GraphicsPluginOpenxrExtensions {
+ public:
+  virtual std::span<const char* const> getStaticOpenXrInstanceExtensions() const = 0;
 };
 
 }  // namespace xrw

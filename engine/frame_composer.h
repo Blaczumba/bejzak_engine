@@ -1,6 +1,5 @@
 #pragma once
 
-#include <stdfloat>
 #include <vector>
 
 #include "common/abstractions/graphics_context.h"

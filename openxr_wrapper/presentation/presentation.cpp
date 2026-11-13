@@ -19,10 +19,17 @@ namespace xrw {
 
 namespace {
 
-std::unique_ptr<GraphicsPlugin> createGraphicsPlugin(common::GraphicsApi graphicsApi) {
+std::unique_ptr<GraphicsPluginOpenxrExtensions> getGraphicsPluginInstanceExtensions(common::GraphicsApi graphicsApi) {
   switch (graphicsApi) {
     case common::GraphicsApi::VULKAN:
-      return std::make_unique<GraphicsPluginVulkan>();
+      return std::make_unique<GraphicsPluginOpenxrExtensionsVulkan>();
+  }
+}
+
+std::unique_ptr<GraphicsPlugin> createGraphicsPlugin(common::GraphicsApi graphicsApi, XrInstance instance, XrSystemId system) {
+  switch (graphicsApi) {
+    case common::GraphicsApi::VULKAN:
+      return GraphicsPluginVulkan::create(instance, system);
   }
 }
 
@@ -244,16 +251,15 @@ private:
 
 }  // namespace
 
-Presentation::Presentation(
+Presentation::Presentation(const engine::System& system,
     std::unique_ptr<Platform> platform, std::unique_ptr<GraphicsPlugin> graphicsPlugin,
     std::shared_ptr<engine::PresentationGraphicsCommunication>& communicationLayer,
-    std::unique_ptr<Instance> instance, std::unique_ptr<System> system,
-    std::unique_ptr<Session> session, std::vector<Swapchain>&& swapchains,
-    const FileLoader& fileLoader)
-  : _platform(std::move(platform)), _graphicsPlugin(std::move(graphicsPlugin)),
+    std::unique_ptr<Instance> instance, std::unique_ptr<System> xrsystem,
+    std::unique_ptr<Session> session, std::vector<Swapchain>&& swapchains)
+  : _system(system), _platform(std::move(platform)), _graphicsPlugin(std::move(graphicsPlugin)),
     _communicationLayer(communicationLayer),
-    _instance(std::move(instance)), _system(std::move(system)), _session(std::move(session)),
-    _swapchains(std::move(swapchains)), _fileLoader(fileLoader) {
+    _instance(std::move(instance)), _xrsystem(std::move(xrsystem)), _session(std::move(session)),
+    _swapchains(std::move(swapchains)) {
   _space = Space::create(_session->getXrSession(), XR_REFERENCE_SPACE_TYPE_LOCAL);
   _actionSet = ActionSet::create(_instance->getXrInstance(), "eye-gaze", "EyeGaze", 1000);
   addFactory<engine::EyeProjectionInfo>([this] {
@@ -271,20 +277,20 @@ Presentation::Presentation(
       registerActionImpl(typeid(engine::EyeTrackingInfo)));
 }
 
-std::unique_ptr<common::Presentation> Presentation::create(
-    std::unique_ptr<Platform> platform, common::GraphicsApi graphicsApi,
-    const FileLoader& fileLoader) {
-  std::unique_ptr<GraphicsPlugin> graphicsPlugin = createGraphicsPlugin(graphicsApi);
-  std::unique_ptr<Instance> instance = Instance::create("BejzakEngine", *platform, *graphicsPlugin);
-  std::unique_ptr<System> system = System::create(*instance);
+std::unique_ptr<common::Presentation> Presentation::create(const engine::System& system,
+    std::unique_ptr<Platform> platform, common::GraphicsApi graphicsApi) {
+  std::unique_ptr<Instance> instance = Instance::create("BejzakEngine", *platform, *getGraphicsPluginInstanceExtensions(graphicsApi));
+  std::unique_ptr<System> xrsystem = System::create(*instance);
+  std::unique_ptr<GraphicsPlugin> graphicsPlugin = createGraphicsPlugin(graphicsApi, instance->getXrInstance(),
+                                                                        xrsystem->getXrSystemId());
   std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer =
       engine::PresentationGraphicsCommunication::create(2);
-  std::unique_ptr<Session> session = Session::create(*system, *graphicsPlugin);
+  std::unique_ptr<Session> session = Session::create(*xrsystem, *graphicsPlugin);
   std::vector<Swapchain> swapchains =
       SwapchainBuilder().withViewConfigType(VIEW_CONFIG_TYPE).build(*session, *graphicsPlugin);
-  return std::unique_ptr<common::Presentation>(new Presentation(
+  return std::unique_ptr<common::Presentation>(new Presentation(system,
       std::move(platform), std::move(graphicsPlugin), communicationLayer, std::move(instance),
-      std::move(system), std::move(session), std::move(swapchains), fileLoader));
+      std::move(xrsystem), std::move(session), std::move(swapchains)));
 }
 
 bool Presentation::shouldClose() {
@@ -385,7 +391,7 @@ std::unique_ptr<common::GraphicsContext> Presentation::createGraphicsContext() {
   _graphicsContextCreated = true;
 
   std::unique_ptr<common::GraphicsContext> graphicsContext = _graphicsPlugin->createGraphicsContext(
-      _instance->getXrInstance(), _system->getXrSystemId(), _communicationLayer, _fileLoader);
+      _communicationLayer, _system.getFileLoader());
   for (const Swapchain& swapchain : _swapchains) {
     graphicsContext->createPresentingResources(
         _graphicsPlugin->getSwapchainContext(swapchain.getSwapchain()));

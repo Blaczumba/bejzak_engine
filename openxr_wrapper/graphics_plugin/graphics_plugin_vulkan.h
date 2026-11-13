@@ -21,17 +21,19 @@
 #include "vulkan/wrapper/framebuffer/framebuffer.h"
 #include "vulkan/wrapper/instance/instance.h"
 #include "vulkan/wrapper/logical_device/logical_device.h"
+#include "vulkan/wrapper/physical_device/optional_extended_features.h"
 #include "vulkan/wrapper/physical_device/physical_device.h"
 
 namespace xrw {
 
 class GraphicsPluginVulkan final : public GraphicsPlugin {
-public:
-  GraphicsPluginVulkan() noexcept = default;
+  GraphicsPluginVulkan(std::shared_ptr<Instance> instance, std::shared_ptr<DebugMessenger> debugMessenger,
+                       std::shared_ptr<PhysicalDevice> physicalDevice, PhysicalDeviceOptionalExtendedFeatures extendedFeatures, std::shared_ptr<LogicalDevice> logicalDevice) noexcept;
+
+ public:
+  static std::unique_ptr<GraphicsPlugin> create(XrInstance xrInstance, XrSystemId xrSystemId);
 
   ~GraphicsPluginVulkan() override;
-
-  std::span<const char* const> getOpenXrInstanceExtensions() const override;
 
   const XrBaseInStructure* getGraphicsBinding() const override;
 
@@ -48,17 +50,25 @@ public:
   void createResources() override;
 
   std::unique_ptr<common::GraphicsContext> createGraphicsContext(
-      XrInstance xrInstance, XrSystemId systemId,
       std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer,
       const FileLoader& fileLoader) override;
 
 private:
-  const LogicalDevice* _logicalDevice;
+  std::shared_ptr<Instance> _instance;
+  std::shared_ptr<DebugMessenger> _debugMessenger;
+  std::shared_ptr<PhysicalDevice> _physicalDevice;
+  PhysicalDeviceOptionalExtendedFeatures _extendedFeatures;
+  std::shared_ptr<LogicalDevice> _logicalDevice;
 
   XrGraphicsBindingVulkanKHR _graphicsBinding;
 
   std::unordered_map<XrSwapchain, common::PresentResources> _presentResources;
   std::unordered_map<XrSwapchain, lib::Buffer<VkImageView>> _swapchainViews;
+};
+
+class GraphicsPluginOpenxrExtensionsVulkan : public GraphicsPluginOpenxrExtensions {
+ public:
+  std::span<const char* const> getStaticOpenXrInstanceExtensions() const override;
 };
 
 }  // namespace xrw

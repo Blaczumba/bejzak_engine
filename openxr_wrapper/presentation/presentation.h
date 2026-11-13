@@ -6,6 +6,7 @@
 
 #include "common/abstractions/graphics_context.h"
 #include "common/abstractions/presentation.h"
+#include "engine/system.h"
 #include "openxr_wrapper/action/action.h"
 #include "openxr_wrapper/action/action_set.h"
 #include "openxr_wrapper/graphics_plugin/graphics_plugin.h"
@@ -43,15 +44,14 @@ public:
 };
 
 class Presentation final : public common::Presentation {
-  Presentation(std::unique_ptr<Platform> platform, std::unique_ptr<GraphicsPlugin> graphicsPlugin,
+  Presentation(const engine::System& system, std::unique_ptr<Platform> platform, std::unique_ptr<GraphicsPlugin> graphicsPlugin,
                std::shared_ptr<engine::PresentationGraphicsCommunication>& communicationLayer,
-               std::unique_ptr<Instance> instance, std::unique_ptr<System> system,
-               std::unique_ptr<Session> session, std::vector<Swapchain>&& swapchains, const FileLoader& fileLoader);
+               std::unique_ptr<Instance> instance, std::unique_ptr<System> xrsystem,
+               std::unique_ptr<Session> session, std::vector<Swapchain>&& swapchains);
 
 public:
-  static std::unique_ptr<common::Presentation> create(
-      std::unique_ptr<Platform> platform, common::GraphicsApi graphicsApi,
-      const FileLoader& fileLoader);
+  static std::unique_ptr<common::Presentation> create(const engine::System& system,
+      std::unique_ptr<Platform> platform, common::GraphicsApi graphicsApi);
 
   ~Presentation() = default;
 
@@ -115,13 +115,13 @@ private:
   static constexpr inline XrViewConfigurationType VIEW_CONFIG_TYPE =
       XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
 
-  const FileLoader& _fileLoader;  // TODO: Should be removed.
+  const engine::System& _system;
 
   std::unique_ptr<Platform> _platform;
   std::shared_ptr<engine::PresentationGraphicsCommunication> _communicationLayer;
   std::unique_ptr<GraphicsPlugin> _graphicsPlugin;
   std::unique_ptr<Instance> _instance;
-  std::unique_ptr<System> _system;
+  std::unique_ptr<System> _xrsystem;
   std::unique_ptr<Session> _session;
   std::vector<Swapchain> _swapchains;
   std::unique_ptr<Space> _space;
