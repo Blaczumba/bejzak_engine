@@ -51,10 +51,10 @@ std::unordered_set<std::string> getSupportedOpenXRExtensions() {
 }  // namespace
 
 std::unique_ptr<Instance> Instance::create(
-    std::string_view engineName, const Platform& platform, const GraphicsPluginOpenxrExtensions& graphicsPluginExtensions) {
+    std::string_view engineName, const Platform& platform, std::span<const char* const> graphicsOpenxrInstanceExtensions) {
   assert(engineName.size() < XR_MAX_APPLICATION_NAME_SIZE);
   lib::Buffer<const char*> mergedExtensions = mergeExtensions(
-      platform.getInstanceExtensions(), graphicsPluginExtensions.getStaticOpenXrInstanceExtensions());
+      platform.getInstanceExtensions(), graphicsOpenxrInstanceExtensions);
   std::vector<const char*> openxrExtensions;
   std::unordered_set<std::string> supportedExtensions = getSupportedOpenXRExtensions();
   if (supportedExtensions.contains(XR_EXT_EYE_GAZE_INTERACTION_EXTENSION_NAME)) {

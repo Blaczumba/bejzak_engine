@@ -34,9 +34,4 @@ public:
       const FileLoader& fileLoader) = 0;
 };
 
-class GraphicsPluginOpenxrExtensions {
- public:
-  virtual std::span<const char* const> getStaticOpenXrInstanceExtensions() const = 0;
-};
-
 }  // namespace xrw

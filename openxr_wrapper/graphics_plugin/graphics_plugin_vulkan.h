@@ -66,9 +66,4 @@ private:
   std::unordered_map<XrSwapchain, lib::Buffer<VkImageView>> _swapchainViews;
 };
 
-class GraphicsPluginOpenxrExtensionsVulkan : public GraphicsPluginOpenxrExtensions {
- public:
-  std::span<const char* const> getStaticOpenXrInstanceExtensions() const override;
-};
-
 }  // namespace xrw

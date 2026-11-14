@@ -345,9 +345,4 @@ std::unique_ptr<common::GraphicsContext> GraphicsPluginVulkan::createGraphicsCon
       _extendedFeatures, fileLoader, std::move(communicationLayer), nullptr);
 }
 
-std::span<const char* const> GraphicsPluginOpenxrExtensionsVulkan::getStaticOpenXrInstanceExtensions() const {
-  static constexpr std::array instanceExtensions = {XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME};
-  return instanceExtensions;
-}
-
 }  // namespace xrw

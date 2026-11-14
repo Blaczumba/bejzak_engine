@@ -46,7 +46,7 @@ public:
 class Presentation final : public common::Presentation {
   Presentation(const engine::System& system, std::unique_ptr<Platform> platform, std::unique_ptr<GraphicsPlugin> graphicsPlugin,
                std::shared_ptr<engine::PresentationGraphicsCommunication>& communicationLayer,
-               std::unique_ptr<Instance> instance, std::unique_ptr<System> xrsystem,
+               std::unique_ptr<Instance> instance, std::unique_ptr<System> xrsystem, XrViewConfigurationType viewConfigType,
                std::unique_ptr<Session> session, std::vector<Swapchain>&& swapchains);
 
 public:
@@ -111,10 +111,6 @@ private:
   const std::optional<engine::EyeProjectionInfo>* _eyeProjectionInfo = nullptr;
   const std::optional<engine::EyeTrackingInfo>* _eyeTrackingInfo = nullptr;
 
-  // TODO: Should not be compile time constant.
-  static constexpr inline XrViewConfigurationType VIEW_CONFIG_TYPE =
-      XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO;
-
   const engine::System& _system;
 
   std::unique_ptr<Platform> _platform;
@@ -123,6 +119,7 @@ private:
   std::unique_ptr<Instance> _instance;
   std::unique_ptr<System> _xrsystem;
   std::unique_ptr<Session> _session;
+  const XrViewConfigurationType _viewConfigType;
   std::vector<Swapchain> _swapchains;
   std::unique_ptr<Space> _space;
   ActionSet _actionSet;

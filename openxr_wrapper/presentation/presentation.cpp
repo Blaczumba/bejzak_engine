@@ -16,13 +16,17 @@
 #include "presentation_graphics_communication/presentation_graphics_communication.h"
 
 namespace xrw {
-
 namespace {
 
-std::unique_ptr<GraphicsPluginOpenxrExtensions> getGraphicsPluginInstanceExtensions(common::GraphicsApi graphicsApi) {
+std::span<const char* const> getGraphicsOpnexrInstanceExtensions(common::GraphicsApi graphicsApi) {
   switch (graphicsApi) {
+#ifdef XR_USE_GRAPHICS_API_VULKAN
     case common::GraphicsApi::VULKAN:
-      return std::make_unique<GraphicsPluginOpenxrExtensionsVulkan>();
+      static constexpr const char* graphicsExtensions[] = {XR_KHR_VULKAN_ENABLE2_EXTENSION_NAME};
+      return graphicsExtensions;
+#endif
+    default:
+      throw std::runtime_error("Selected Graphics API is not supported or corresponding library is not detected.");
   }
 }
 
@@ -31,6 +35,16 @@ std::unique_ptr<GraphicsPlugin> createGraphicsPlugin(common::GraphicsApi graphic
     case common::GraphicsApi::VULKAN:
       return GraphicsPluginVulkan::create(instance, system);
   }
+}
+
+XrViewConfigurationType getFirstSupportedViewConfigType(XrInstance instance, XrSystemId system, std::initializer_list<XrViewConfigurationType> viewConfigTypes) {
+  for (XrViewConfigurationType viewConfigType : viewConfigTypes) {
+    XrViewConfigurationProperties viewConfigProperties{XR_TYPE_VIEW_CONFIGURATION_PROPERTIES};
+    if (xrGetViewConfigurationProperties(instance, system, viewConfigType, &viewConfigProperties) == XR_SUCCESS) {
+      return viewConfigType;
+    }
+  }
+  throw std::runtime_error("Could not find the supportded XrViewConfigurationType.");
 }
 
 glm::mat4 createProjectionMatrix(const XrFovf& fov, float near, float far) {
@@ -254,16 +268,16 @@ private:
 Presentation::Presentation(const engine::System& system,
     std::unique_ptr<Platform> platform, std::unique_ptr<GraphicsPlugin> graphicsPlugin,
     std::shared_ptr<engine::PresentationGraphicsCommunication>& communicationLayer,
-    std::unique_ptr<Instance> instance, std::unique_ptr<System> xrsystem,
+    std::unique_ptr<Instance> instance, std::unique_ptr<System> xrsystem, XrViewConfigurationType viewConfigType,
     std::unique_ptr<Session> session, std::vector<Swapchain>&& swapchains)
   : _system(system), _platform(std::move(platform)), _graphicsPlugin(std::move(graphicsPlugin)),
     _communicationLayer(communicationLayer),
-    _instance(std::move(instance)), _xrsystem(std::move(xrsystem)), _session(std::move(session)),
+    _instance(std::move(instance)), _xrsystem(std::move(xrsystem)), _viewConfigType(viewConfigType), _session(std::move(session)),
     _swapchains(std::move(swapchains)) {
   _space = Space::create(_session->getXrSession(), XR_REFERENCE_SPACE_TYPE_LOCAL);
   _actionSet = ActionSet::create(_instance->getXrInstance(), "eye-gaze", "EyeGaze", 1000);
   addFactory<engine::EyeProjectionInfo>([this] {
-    return std::make_unique<EyeProjectionAction>(VIEW_CONFIG_TYPE);
+    return std::make_unique<EyeProjectionAction>(_viewConfigType);
   });
   _eyeProjectionInfo = static_cast<const std::optional<engine::EyeProjectionInfo>*>(
       registerActionImpl(typeid(engine::EyeProjectionInfo)));
@@ -279,18 +293,19 @@ Presentation::Presentation(const engine::System& system,
 
 std::unique_ptr<common::Presentation> Presentation::create(const engine::System& system,
     std::unique_ptr<Platform> platform, common::GraphicsApi graphicsApi) {
-  std::unique_ptr<Instance> instance = Instance::create("BejzakEngine", *platform, *getGraphicsPluginInstanceExtensions(graphicsApi));
+  std::unique_ptr<Instance> instance = Instance::create("BejzakEngine", *platform, getGraphicsOpnexrInstanceExtensions(graphicsApi));
   std::unique_ptr<System> xrsystem = System::create(*instance);
   std::unique_ptr<GraphicsPlugin> graphicsPlugin = createGraphicsPlugin(graphicsApi, instance->getXrInstance(),
                                                                         xrsystem->getXrSystemId());
   std::shared_ptr<engine::PresentationGraphicsCommunication> communicationLayer =
-      engine::PresentationGraphicsCommunication::create(2);
+      engine::PresentationGraphicsCommunication::create(2); // TODO: Based on selected viewConfigType map swapchain model for graphics layer.
   std::unique_ptr<Session> session = Session::create(*xrsystem, *graphicsPlugin);
+  XrViewConfigurationType viewConfigType = getFirstSupportedViewConfigType(instance->getXrInstance(), xrsystem->getXrSystemId(), {XR_VIEW_CONFIGURATION_TYPE_PRIMARY_QUAD_VARJO, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_MONO});
   std::vector<Swapchain> swapchains =
-      SwapchainBuilder().withViewConfigType(VIEW_CONFIG_TYPE).build(*session, *graphicsPlugin);
+      SwapchainBuilder().withViewConfigType(viewConfigType).build(*session, *graphicsPlugin);
   return std::unique_ptr<common::Presentation>(new Presentation(system,
       std::move(platform), std::move(graphicsPlugin), communicationLayer, std::move(instance),
-      std::move(xrsystem), std::move(session), std::move(swapchains)));
+      std::move(xrsystem), viewConfigType, std::move(session), std::move(swapchains)));
 }
 
 bool Presentation::shouldClose() {
@@ -434,7 +449,7 @@ void Presentation::handleSessionStateChangedEvent(
     case XR_SESSION_STATE_READY:
       {
         const XrSessionBeginInfo sessionBeginInfo = {
-          .type = XR_TYPE_SESSION_BEGIN_INFO, .primaryViewConfigurationType = VIEW_CONFIG_TYPE};
+          .type = XR_TYPE_SESSION_BEGIN_INFO, .primaryViewConfigurationType = _viewConfigType};
 
         xrBeginSession(_session->getXrSession(), &sessionBeginInfo);
         _sessionRunning = true;
