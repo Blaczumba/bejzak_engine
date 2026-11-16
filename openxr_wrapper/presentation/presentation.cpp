@@ -82,7 +82,7 @@ std::pair<uint32_t, uint32_t> calculateScreenPos(
     const glm::mat4& proj) {
   const XrQuaternionf& xrGazeOrientation = pose.orientation;
   glm::quat gazeOrientation = {
-    xrGazeOrientation.w, xrGazeOrientation.x, xrGazeOrientation.y, xrGazeOrientation.z};
+      xrGazeOrientation.w, xrGazeOrientation.x, xrGazeOrientation.y, xrGazeOrientation.z};
   const XrVector3f& xrGazePosition = pose.position;
   glm::vec3 gazePosition = {xrGazePosition.x, xrGazePosition.y, xrGazePosition.z};
   glm::vec3 gazeDir = gazeOrientation * glm::vec3(0.0f, 0.0f, -1.0f);
@@ -109,22 +109,14 @@ glm::quat toGlm(const XrQuaternionf& q) {
   return {q.w, q.x, q.y, q.z};
 }
 
-engine::Fov toEngineFov(const XrFovf& f) {
-  return {f.angleLeft, f.angleRight, f.angleUp, f.angleDown};
-}
-
 XrPosef toXr(const glm::vec3& position, const glm::quat& orientation) {
   return XrPosef{
-    .orientation = XrQuaternionf{orientation.x, orientation.y, orientation.z, orientation.w},
-    .position = XrVector3f{position.x, position.y, position.z}
+      .orientation = XrQuaternionf{orientation.x, orientation.y, orientation.z, orientation.w},
+      .position = XrVector3f{position.x, position.y, position.z}
   };
 }
 
-XrFovf toXr(const engine::Fov& fov) {
-  return XrFovf{fov.angleLeft, fov.angleRight, fov.angleUp, fov.angleDown};
-}
-
-size_t getViewCount(XrViewConfigurationType configurationType) {
+uint32_t getViewCount(XrViewConfigurationType configurationType) {
   switch (configurationType) {
     case XR_VIEW_CONFIGURATION_TYPE_PRIMARY_MONO:
       return 1;
@@ -136,68 +128,8 @@ size_t getViewCount(XrViewConfigurationType configurationType) {
   throw std::runtime_error("Configuration Type has not specified view count.");
 }
 
-class EyeProjectionAction final : public PresentationAction {
-public:
-  EyeProjectionAction(XrViewConfigurationType configurationType)
-    : _configurationType(configurationType), _viewCount(getViewCount(configurationType)),
-      _views(_viewCount) {
-    assert(_viewCount <= static_cast<size_t>(ViewConfigurationType::MAX_VIEWS)
-           && "Views count must be smaller than MAX_XR_VIEW_BUFFER_SIZE.");
-  }
-
-  void update(const Context& context) override {
-    assert(context.session != XR_NULL_HANDLE && "XrSession which is the input parameter of EyeTrackingAction update method cannot be XR_NULL_HANDLE.");
-    assert(context.space != XR_NULL_HANDLE && "XrSpace which is the input parameter of EyeTrackingAction update method cannot be XR_NULL_HANDLE.");
-
-    XrViewState viewState = {.type = XR_TYPE_VIEW_STATE};
-    const XrViewLocateInfo viewLocateInfo = {
-      .type = XR_TYPE_VIEW_LOCATE_INFO,
-      .viewConfigurationType = _configurationType,
-      .displayTime = context.predictedDisplayTime,
-      .space = context.space};
-
-    std::array<XrView, static_cast<size_t>(ViewConfigurationType::MAX_VIEWS)> views;
-    for (uint32_t i = 0; i < _viewCount; i++) {
-      views[i] = XrView{XR_TYPE_VIEW};
-    }
-
-    uint32_t viewCountOutput;
-    CHECK_XRCMD(xrLocateViews(context.session, &viewLocateInfo, &viewState, _viewCount,
-                              &viewCountOutput, views.data()),
-                "Failed to xrLocateViews.");
-    if ((viewState.viewStateFlags & XR_VIEW_STATE_POSITION_VALID_BIT) == 0
-        || (viewState.viewStateFlags & XR_VIEW_STATE_ORIENTATION_VALID_BIT) == 0) {
-      if (_data.has_value()) {
-        _views = std::move(_data->views);
-        _data.reset();
-      }
-      return;
-    }
-    if (!_data.has_value()) {
-      _data.emplace(engine::EyeProjectionInfo{std::move(_views)});
-    }
-    for (uint32_t i = 0; i < _data->views.size(); i++) {
-      _data->views[i] = engine::EyeProjectionInfo::View{
-        .position = toGlm(views[i].pose.position),
-        .orientation = toGlm(views[i].pose.orientation),
-        .fov = toEngineFov(views[i].fov)};
-    }
-  }
-
-  const void* getData() const noexcept override {
-    return &_data;
-  }
-
-private:
-  std::optional<engine::EyeProjectionInfo> _data;
-
-  const XrViewConfigurationType _configurationType;
-  const size_t _viewCount;
-  lib::Buffer<engine::EyeProjectionInfo::View> _views;
-};
-
 class EyeTrackingAction final : public PresentationAction {
-public:
+ public:
   EyeTrackingAction(XrInstance instance, XrSession session, XrActionSet actionSet) {
     assert(instance != XR_NULL_HANDLE && "XrInstance which is the input parameter of EyeTrackingAction constructor cannot be XR_NULL_HANDLE.");
     assert(session != XR_NULL_HANDLE && "XrSession which is the input parameter of EyeTrackingAction constructor cannot be XR_NULL_HANDLE.");
@@ -214,24 +146,24 @@ public:
                 "Failed to xrStringToPath.");
     XrActionSuggestedBinding binding{.action = _eyeGazeAction.getAction(), .binding = gazePath};
     XrInteractionProfileSuggestedBinding suggestedBinding{
-      .type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING,
-      .interactionProfile = interactionProfilePath,
-      .countSuggestedBindings = 1,
-      .suggestedBindings = &binding,
+        .type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING,
+        .interactionProfile = interactionProfilePath,
+        .countSuggestedBindings = 1,
+        .suggestedBindings = &binding,
     };
     CHECK_XRCMD(xrSuggestInteractionProfileBindings(instance, &suggestedBinding),
                 "Failed to xrSuggestInteractionProfileBindings.");
     XrSessionActionSetsAttachInfo attachInfo{
-      .type = XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO,
-      .countActionSets = 1,
-      .actionSets = &actionSet};
+        .type = XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO,
+        .countActionSets = 1,
+        .actionSets = &actionSet};
     CHECK_XRCMD(xrAttachSessionActionSets(session, &attachInfo), "Failed to attach action sets.");
 
     _actionSpace = Space::create(session, _eyeGazeAction.getAction(),
                                  XrPosef{
-                                   {0.f, 0.f, 0.f, 1.f},
-                                   {}
-    });
+                                     {0.f, 0.f, 0.f, 1.f},
+                                     {}
+                                 });
   }
 
   void update(const Context& context) override {
@@ -256,7 +188,7 @@ public:
     return &_data;
   }
 
-private:
+ private:
   std::optional<engine::EyeTrackingInfo> _data;
 
   Action _eyeGazeAction;
@@ -265,22 +197,57 @@ private:
 
 }  // namespace
 
+EyeProjection::EyeProjection(XrViewConfigurationType viewConfigType)
+    : _viewConfigType(viewConfigType), _viewCount(getViewCount(viewConfigType)) {
+  assert(_viewCount <= MAX_VIEWS
+             && "View count of the view configuration cannot exceed EyeProjection::MAX_VIEWS.");
+}
+
+void EyeProjection::update(XrSession session, XrSpace space, XrTime predictedDisplayTime) {
+  assert(session != XR_NULL_HANDLE && "XrSession passed to EyeProjection::update cannot be XR_NULL_HANDLE.");
+  assert(space != XR_NULL_HANDLE && "XrSpace passed to EyeProjection::update cannot be XR_NULL_HANDLE.");
+
+  const XrViewLocateInfo viewLocateInfo = {
+      .type = XR_TYPE_VIEW_LOCATE_INFO,
+      .viewConfigurationType = _viewConfigType,
+      .displayTime = predictedDisplayTime,
+      .space = space};
+  XrViewState viewState = {.type = XR_TYPE_VIEW_STATE};
+
+  std::array<XrView, MAX_VIEWS> xrViews;
+  xrViews.fill(XrView{.type = XR_TYPE_VIEW});
+
+  uint32_t viewCountOutput = 0;
+  CHECK_XRCMD(xrLocateViews(session, &viewLocateInfo, &viewState, _viewCount, &viewCountOutput,
+                            xrViews.data()),
+              "Failed to xrLocateViews.");
+  assert(viewCountOutput == _viewCount);
+
+  constexpr XrViewStateFlags requiredFlags =
+      XR_VIEW_STATE_POSITION_VALID_BIT | XR_VIEW_STATE_ORIENTATION_VALID_BIT;
+  if ((viewState.viewStateFlags & requiredFlags) != requiredFlags) {
+    _data.reset();
+    return;
+  }
+
+  Data& data = _data.emplace();
+  data.viewCount = viewCountOutput;
+  for (uint32_t i = 0; i < viewCountOutput; i++) {
+    data.views[i] = View{.pose = xrViews[i].pose, .fov = xrViews[i].fov};
+  }
+}
+
 Presentation::Presentation(const engine::System& system,
-    std::unique_ptr<Platform> platform, std::unique_ptr<GraphicsPlugin> graphicsPlugin,
-    std::shared_ptr<engine::PresentationGraphicsCommunication>& communicationLayer,
-    std::unique_ptr<Instance> instance, std::unique_ptr<System> xrsystem, XrViewConfigurationType viewConfigType,
-    std::unique_ptr<Session> session, std::vector<Swapchain>&& swapchains)
-  : _system(system), _platform(std::move(platform)), _graphicsPlugin(std::move(graphicsPlugin)),
-    _communicationLayer(communicationLayer),
-    _instance(std::move(instance)), _xrsystem(std::move(xrsystem)), _viewConfigType(viewConfigType), _session(std::move(session)),
-    _swapchains(std::move(swapchains)) {
+                           std::unique_ptr<Platform> platform, std::unique_ptr<GraphicsPlugin> graphicsPlugin,
+                           std::shared_ptr<engine::PresentationGraphicsCommunication>& communicationLayer,
+                           std::unique_ptr<Instance> instance, std::unique_ptr<System> xrsystem, XrViewConfigurationType viewConfigType,
+                           std::unique_ptr<Session> session, std::vector<Swapchain>&& swapchains)
+    : _system(system), _platform(std::move(platform)), _graphicsPlugin(std::move(graphicsPlugin)),
+      _communicationLayer(communicationLayer),
+      _instance(std::move(instance)), _xrsystem(std::move(xrsystem)), _viewConfigType(viewConfigType), _session(std::move(session)),
+      _eyeProjection(viewConfigType), _swapchains(std::move(swapchains)) {
   _space = Space::create(_session->getXrSession(), XR_REFERENCE_SPACE_TYPE_LOCAL);
   _actionSet = ActionSet::create(_instance->getXrInstance(), "eye-gaze", "EyeGaze", 1000);
-  addFactory<engine::EyeProjectionInfo>([this] {
-    return std::make_unique<EyeProjectionAction>(_viewConfigType);
-  });
-  _eyeProjectionInfo = static_cast<const std::optional<engine::EyeProjectionInfo>*>(
-      registerActionImpl(typeid(engine::EyeProjectionInfo)));
   addFactory<engine::EyeTrackingInfo>(
       [this] {
         return std::make_unique<EyeTrackingAction>(
@@ -292,7 +259,7 @@ Presentation::Presentation(const engine::System& system,
 }
 
 std::unique_ptr<common::Presentation> Presentation::create(const engine::System& system,
-    std::unique_ptr<Platform> platform, common::GraphicsApi graphicsApi) {
+                                                           std::unique_ptr<Platform> platform, common::GraphicsApi graphicsApi) {
   std::unique_ptr<Instance> instance = Instance::create("BejzakEngine", *platform, getGraphicsOpnexrInstanceExtensions(graphicsApi));
   std::unique_ptr<System> xrsystem = System::create(*instance);
   std::unique_ptr<GraphicsPlugin> graphicsPlugin = createGraphicsPlugin(graphicsApi, instance->getXrInstance(),
@@ -304,8 +271,8 @@ std::unique_ptr<common::Presentation> Presentation::create(const engine::System&
   std::vector<Swapchain> swapchains =
       SwapchainBuilder().withViewConfigType(viewConfigType).build(*session, *graphicsPlugin);
   return std::unique_ptr<common::Presentation>(new Presentation(system,
-      std::move(platform), std::move(graphicsPlugin), communicationLayer, std::move(instance),
-      std::move(xrsystem), viewConfigType, std::move(session), std::move(swapchains)));
+                                                                std::move(platform), std::move(graphicsPlugin), communicationLayer, std::move(instance),
+                                                                std::move(xrsystem), viewConfigType, std::move(session), std::move(swapchains)));
 }
 
 bool Presentation::shouldClose() {
@@ -322,10 +289,10 @@ bool Presentation::pollActionsAndEvents() {
 
   if (_sessionFocused) {
     XrActiveActionSet activeActionSet{
-      .actionSet = _actionSet.getActionSet(), .subactionPath = XR_NULL_PATH};
+        .actionSet = _actionSet.getActionSet(), .subactionPath = XR_NULL_PATH};
     XrActionsSyncInfo syncInfo{.type = XR_TYPE_ACTIONS_SYNC_INFO,
-                               .countActiveActionSets = 1,
-                               .activeActionSets = &activeActionSet};
+        .countActiveActionSets = 1,
+        .activeActionSets = &activeActionSet};
     CHECK_XRCMD(xrSyncActions(_session->getXrSession(), &syncInfo), "Failed to sync actions.");
   }
 
@@ -334,25 +301,27 @@ bool Presentation::pollActionsAndEvents() {
 
 bool Presentation::beginFrame() {
   const XrFrameWaitInfo frameWaitInfo{
-    .type = XR_TYPE_FRAME_WAIT_INFO,
+      .type = XR_TYPE_FRAME_WAIT_INFO,
   };
 
   XrFrameState frameState{
-    .type = XR_TYPE_FRAME_STATE,
+      .type = XR_TYPE_FRAME_STATE,
   };
   CHECK_XRCMD(
       xrWaitFrame(_session->getXrSession(), &frameWaitInfo, &frameState), "Failed to xrWaitFrame.");
 
   const XrFrameBeginInfo frameBeginInfo{
-    .type = XR_TYPE_FRAME_BEGIN_INFO,
+      .type = XR_TYPE_FRAME_BEGIN_INFO,
   };
   CHECK_XRCMD(xrBeginFrame(_session->getXrSession(), &frameBeginInfo), "Failed to xrBeginFrame.");
   _predictedDisplayTime = frameState.predictedDisplayTime;
+  _eyeProjection.update(
+      _session->getXrSession(), _space->getXrSpace(), frameState.predictedDisplayTime);
   const PresentationAction::Context context{
-    .session = _session->getXrSession(),
-    .space = _space->getXrSpace(),
-    .predictedDisplayTime = frameState.predictedDisplayTime,
-    .sessionFocused = _sessionFocused};
+      .session = _session->getXrSession(),
+      .space = _space->getXrSpace(),
+      .predictedDisplayTime = frameState.predictedDisplayTime,
+      .sessionFocused = _sessionFocused};
   for (std::unique_ptr<PresentationAction>& presentationAction : _presentationActions) {
     presentationAction->update(context);
   }
@@ -379,11 +348,11 @@ void Presentation::endFrame() {
   }
 
   const XrFrameEndInfo frameEndInfo = {
-    .type = XR_TYPE_FRAME_END_INFO,
-    .displayTime = _predictedDisplayTime,
-    .environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE,
-    .layerCount = layer != nullptr ? 1u : 0u,
-    .layers = layer};
+      .type = XR_TYPE_FRAME_END_INFO,
+      .displayTime = _predictedDisplayTime,
+      .environmentBlendMode = XR_ENVIRONMENT_BLEND_MODE_OPAQUE,
+      .layerCount = layer != nullptr ? 1u : 0u,
+      .layers = layer};
   CHECK_XRCMD(xrEndFrame(_session->getXrSession(), &frameEndInfo), "Failed to xrEndFrame.");
 }
 
@@ -447,25 +416,25 @@ void Presentation::handleSessionStateChangedEvent(
 
   switch (stateChangedEvent.state) {
     case XR_SESSION_STATE_READY:
-      {
-        const XrSessionBeginInfo sessionBeginInfo = {
+    {
+      const XrSessionBeginInfo sessionBeginInfo = {
           .type = XR_TYPE_SESSION_BEGIN_INFO, .primaryViewConfigurationType = _viewConfigType};
 
-        xrBeginSession(_session->getXrSession(), &sessionBeginInfo);
-        _sessionRunning = true;
-        break;
-      }
+      xrBeginSession(_session->getXrSession(), &sessionBeginInfo);
+      _sessionRunning = true;
+      break;
+    }
     case XR_SESSION_STATE_STOPPING:
-      {
-        _sessionRunning = false;
-        xrEndSession(_session->getXrSession());
-        break;
-      }
+    {
+      _sessionRunning = false;
+      xrEndSession(_session->getXrSession());
+      break;
+    }
     case XR_SESSION_STATE_FOCUSED:
-      {
-        _sessionFocused = true;
-        break;
-      }
+    {
+      _sessionFocused = true;
+      break;
+    }
     default:
       break;
   }
@@ -475,39 +444,39 @@ void Presentation::pollEvents() {
   while (const XrEventDataBaseHeader* event = tryReadNextEvent()) {
     switch (event->type) {
       case XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING:
-        {
-          const auto& instanceLossPending =
-              reinterpret_cast<const XrEventDataInstanceLossPending&>(*event);
-          spdlog::warn("XrEventDataInstanceLossPending by {}", instanceLossPending.lossTime);
-          return;
-        }
+      {
+        const auto& instanceLossPending =
+            reinterpret_cast<const XrEventDataInstanceLossPending&>(*event);
+        spdlog::warn("XrEventDataInstanceLossPending by {}", instanceLossPending.lossTime);
+        return;
+      }
       case XR_TYPE_EVENT_DATA_SESSION_STATE_CHANGED:
-        {
-          const auto& sessionStateChangedEvent =
-              reinterpret_cast<const XrEventDataSessionStateChanged&>(*event);
-          handleSessionStateChangedEvent(sessionStateChangedEvent);
-          break;
-        }
+      {
+        const auto& sessionStateChangedEvent =
+            reinterpret_cast<const XrEventDataSessionStateChanged&>(*event);
+        handleSessionStateChangedEvent(sessionStateChangedEvent);
+        break;
+      }
       case XR_TYPE_EVENT_DATA_INTERACTION_PROFILE_CHANGED:
-        {
-        }
+      {
+      }
         break;
       case XR_TYPE_EVENT_DATA_REFERENCE_SPACE_CHANGE_PENDING:
       default:
-        {
-          spdlog::debug("Ignoring event type");
-          break;
-        }
+      {
+        spdlog::debug("Ignoring event type");
+        break;
+      }
     }
   }
 }
 
 void Presentation::pollActions() {
   const XrActionStateGetInfo getInfo = {
-    .type = XR_TYPE_ACTION_STATE_GET_INFO,
-    .next = nullptr,
-    .action = _input.quitAction,
-    .subactionPath = XR_NULL_PATH};
+      .type = XR_TYPE_ACTION_STATE_GET_INFO,
+      .next = nullptr,
+      .action = _input.quitAction,
+      .subactionPath = XR_NULL_PATH};
 
   XrActionStateBoolean quitValue = {.type = XR_TYPE_ACTION_STATE_BOOLEAN};
 
@@ -523,33 +492,32 @@ void Presentation::pollActions() {
 bool Presentation::renderProjectionLayer(
     std::span<XrCompositionLayerProjectionView> projectionLayerViews,
     XrCompositionLayerProjection& layer) {
-  assert(_eyeProjectionInfo != nullptr);
-  if (!_eyeProjectionInfo->has_value()) {
+  const std::optional<EyeProjection::Data>& eyeProjection = _eyeProjection.getData();
+  if (!eyeProjection.has_value()) {
     return false;
   }
 
-  const engine::EyeProjectionInfo& eyeProjectionInfo = _eyeProjectionInfo->value();
-  assert(projectionLayerViews.size() == eyeProjectionInfo.views.size());
+  const std::span<const EyeProjection::View> views = eyeProjection->getViews();
+  assert(projectionLayerViews.size() == views.size());
 
   const Swapchain& viewSwapchain = _swapchains[0];
   std::array<common::CameraContext, VIEWS_NUM> cameraContexts;
   std::array<std::pair<uint32_t, uint32_t>, VIEWS_NUM> screenPoses{};
 
-  for (uint32_t i = 0; i < eyeProjectionInfo.views.size(); i++) {
-    const engine::EyeProjectionInfo::View& view = eyeProjectionInfo.views[i];
-    const XrCompositionLayerProjectionView& projectionLayerView = projectionLayerViews[i] =
-        XrCompositionLayerProjectionView{
-          .type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW,
-          .pose = toXr(view.position, view.orientation),
-          .fov = toXr(view.fov),
-          .subImage = {.swapchain = viewSwapchain.getSwapchain(),
-                       .imageRect = {.offset = {0, 0}, .extent = viewSwapchain.getXrExtent2Di()},
-                       .imageArrayIndex = i}
+  for (uint32_t i = 0; i < views.size(); i++) {
+    const EyeProjection::View& view = views[i];
+    projectionLayerViews[i] = XrCompositionLayerProjectionView{
+        .type = XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW,
+        .pose = view.pose,
+        .fov = view.fov,
+        .subImage = {.swapchain = viewSwapchain.getSwapchain(),
+            .imageRect = {.offset = {0, 0}, .extent = viewSwapchain.getXrExtent2Di()},
+            .imageArrayIndex = i}
     };
     // TODO: Remove the logic related to input.
     cameraContexts[i] = common::CameraContext{
-      view.position, createViewMatrix(projectionLayerView.pose),
-      createProjectionMatrix(projectionLayerView.fov, 0.01f, 50.0f)};
+        toGlm(view.pose.position), createViewMatrix(view.pose),
+        createProjectionMatrix(view.fov, 0.01f, 50.0f)};
 
     if (_eyeTrackingInfo != nullptr && _eyeTrackingInfo->has_value()) {
       const engine::EyeTrackingInfo& eyeTrackingInfo = _eyeTrackingInfo->value();
@@ -572,7 +540,7 @@ bool Presentation::renderProjectionLayer(
   _communicationLayer->setCurrentSwapchainImageIndex(swapchainImageIndex);
 
   const XrSwapchainImageWaitInfo imageWaitInfo = {
-    .type = XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, .timeout = XR_INFINITE_DURATION};
+      .type = XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO, .timeout = XR_INFINITE_DURATION};
 
   CHECK_XRCMD(xrWaitSwapchainImage(viewSwapchain.getSwapchain(), &imageWaitInfo),
               "Failed to xrWaitSwapchainImage.");
