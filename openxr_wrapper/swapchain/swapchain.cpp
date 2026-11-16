@@ -30,8 +30,7 @@ Swapchain::Swapchain(XrSwapchain swapchain, uint32_t width, uint32_t height,
 Swapchain Swapchain::create(XrSession session, const XrSwapchainCreateInfo& createInfo,
                             std::span<const uint32_t> viewIndices) {
   XrSwapchain swapchain;
-  CHECK_XRCMD(xrCreateSwapchain(session, &createInfo, &swapchain),
-              "Failed to create XrSwapchain.");
+  CHECK_XRCMD(xrCreateSwapchain(session, &createInfo, &swapchain), "Failed to create XrSwapchain.");
   return Swapchain(swapchain, createInfo.width, createInfo.height, viewIndices);
 }
 

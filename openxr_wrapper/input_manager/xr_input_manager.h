@@ -1,8 +1,8 @@
 #pragma once
 
-#include <vector>
-#include <unordered_map>
 #include <typeindex>
+#include <unordered_map>
+#include <vector>
 
 #include "common/input_manager/xr_input_manager.h"
 #include "openxr_wrapper/action/action_set.h"
@@ -11,7 +11,7 @@
 namespace xrw {
 
 class XrInputManager final : public common::XrInputManager {
- public:
+public:
   XrInputManager(XrInstance instance, XrSession session, XrViewConfigurationType viewConfigType);
 
   std::optional<common::EyeProjectionInfo>* getEyeProjectionInfo() const override;
@@ -22,7 +22,7 @@ class XrInputManager final : public common::XrInputManager {
 
   void update(const InputAction::Context& context);
 
- private:
+private:
   ActionSet _actionSet;
   XrInstance _instance;
   XrSession _session;

@@ -19,7 +19,8 @@ public:
   ~Instance();
 
   static std::unique_ptr<Instance> create(
-      std::string_view engineName, const Platform& platform, std::span<const char* const> graphicsOpenxrInstanceExtensions);
+      std::string_view engineName, const Platform& platform,
+      std::span<const char* const> graphicsOpenxrInstanceExtensions);
 
   XrInstance getXrInstance() const;
 

@@ -30,7 +30,7 @@ enum class ViewConfigurationType : uint8_t {
 };
 
 class PresentationAction {
- public:
+public:
   struct Context {
     XrSession session = XR_NULL_HANDLE;
     XrSpace space = XR_NULL_HANDLE;
@@ -45,62 +45,52 @@ class PresentationAction {
   virtual const void* getData() const noexcept = 0;
 };
 
-// Locates the views of the selected view configuration (one per eye, or more for foveated
-// configurations) for the predicted display time of the frame. Views are stored inline in a
-// fixed-size array, so updating does not allocate.
 class EyeProjection {
- public:
   static constexpr uint32_t MAX_VIEWS = static_cast<uint32_t>(ViewConfigurationType::MAX_VIEWS);
 
+public:
   struct View {
     XrPosef pose;
     XrFovf fov;
   };
 
-  // No default member initializers on purpose: Clang would consider Data not default
-  // constructible inside EyeProjection and reject std::optional<Data>::emplace().
-  // emplace() value-initializes it, so all fields start zeroed anyway.
   struct Data {
     std::array<View, MAX_VIEWS> views;
     uint32_t viewCount;
 
-    std::span<const View> getViews() const noexcept {
-      return {views.data(), viewCount};
-    }
+    std::span<const View> getViews() const noexcept;
   };
 
   explicit EyeProjection(XrViewConfigurationType viewConfigType);
 
-  // Has to be called once per frame, after xrWaitFrame.
   void update(XrSession session, XrSpace space, XrTime predictedDisplayTime);
 
-  // Empty when the runtime cannot provide a valid pose for the views (e.g. tracking is lost).
-  const std::optional<Data>& getData() const noexcept {
-    return _data;
-  }
+  const std::optional<Data>& getData() const noexcept;
 
- private:
+private:
   const XrViewConfigurationType _viewConfigType;
   const uint32_t _viewCount;
   std::optional<Data> _data;
 };
 
 class Presentation final : public common::Presentation {
-  Presentation(const engine::System& system, std::unique_ptr<Platform> platform, std::unique_ptr<GraphicsPlugin> graphicsPlugin,
+  Presentation(const engine::System& system, std::unique_ptr<Platform> platform,
+               std::unique_ptr<GraphicsPlugin> graphicsPlugin,
                std::shared_ptr<engine::PresentationGraphicsCommunication>& communicationLayer,
-               std::unique_ptr<Instance> instance, std::unique_ptr<System> xrsystem, XrViewConfigurationType viewConfigType,
-               std::unique_ptr<Session> session, std::vector<Swapchain>&& swapchains);
+               std::unique_ptr<Instance> instance, std::unique_ptr<System> xrsystem,
+               XrViewConfigurationType viewConfigType, std::unique_ptr<Session> session,
+               std::vector<Swapchain>&& swapchains);
 
- public:
-  static std::unique_ptr<common::Presentation> create(const engine::System& system,
-                                                      std::unique_ptr<Platform> platform, common::GraphicsApi graphicsApi);
+public:
+  static std::unique_ptr<common::Presentation> create(
+      const engine::System& system, std::unique_ptr<Platform> platform,
+      common::GraphicsApi graphicsApi);
 
   ~Presentation() = default;
 
   std::unique_ptr<common::GraphicsContext> createGraphicsContext() override;
 
-  engine::PresentationGraphicsCommunication&
-  getPresentationGraphicsCommunicationLayer() override;
+  engine::PresentationGraphicsCommunication& getPresentationGraphicsCommunicationLayer() override;
 
   bool shouldClose() override;
 
@@ -110,7 +100,7 @@ class Presentation final : public common::Presentation {
 
   void endFrame() override;
 
- private:
+private:
   // TODO should not be compile time constant.
   static constexpr size_t VIEWS_NUM = 2;
 
@@ -121,7 +111,7 @@ class Presentation final : public common::Presentation {
   template <typename T>
   void addFactory(PresentationActionFactory factory, std::string_view extensionName) {
     assert(!_factories.contains(typeid(T))
-               && "The factor has already been added to the xrw::Presentation.");
+           && "The factor has already been added to the xrw::Presentation.");
     assert(!extensionName.empty());
     if (_instance->isExtensionEnabled(extensionName)) {
       _factories.emplace(typeid(T), std::move(factory));
@@ -131,7 +121,7 @@ class Presentation final : public common::Presentation {
   template <typename T>
   void addFactory(PresentationActionFactory factory) {
     assert(!_factories.contains(typeid(T))
-               && "The factor has already been added to the xrw::Presentation.");
+           && "The factor has already been added to the xrw::Presentation.");
     _factories.emplace(typeid(T), std::move(factory));
   }
 
@@ -180,8 +170,8 @@ class Presentation final : public common::Presentation {
   struct LayerInfo {
     XrCompositionLayerProjection projectionLayer{XR_TYPE_COMPOSITION_LAYER_PROJECTION};
     std::array<XrCompositionLayerProjectionView, VIEWS_NUM> layerViews = {
-        XrCompositionLayerProjectionView{XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW},
-        XrCompositionLayerProjectionView{XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW},
+      XrCompositionLayerProjectionView{XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW},
+      XrCompositionLayerProjectionView{XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW},
     };
   };
   LayerInfo _layerInfo;

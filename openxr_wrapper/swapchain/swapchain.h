@@ -16,7 +16,8 @@ class Swapchain {
 public:
   Swapchain() noexcept = default;
 
-  static Swapchain create(XrSession session, const XrSwapchainCreateInfo& createInfo, std::span<const uint32_t> viewIndices);
+  static Swapchain create(XrSession session, const XrSwapchainCreateInfo& createInfo,
+                          std::span<const uint32_t> viewIndices);
 
   Swapchain(Swapchain&& swapchain) noexcept;
 

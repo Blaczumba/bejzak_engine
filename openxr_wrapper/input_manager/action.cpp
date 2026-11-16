@@ -3,9 +3,9 @@
 #include <array>
 #include <openxr/openxr.h>
 
-#include "openxr_wrapper/util/check.h"
 #include "openxr_wrapper/action/action.h"
 #include "openxr_wrapper/space/space.h"
+#include "openxr_wrapper/util/check.h"
 
 namespace xrw {
 namespace {
@@ -45,10 +45,10 @@ common::Fov toCommonFov(const XrFovf& f) {
 }  // namespace
 
 EyeProjectionAction::EyeProjectionAction(XrViewConfigurationType configurationType)
-    : _configurationType(configurationType), _viewCount(getViewCount(configurationType)),
-  _views(_viewCount) {
+  : _configurationType(configurationType), _viewCount(getViewCount(configurationType)),
+    _views(_viewCount) {
   assert(_viewCount <= static_cast<size_t>(ViewConfigurationType::MAX_VIEWS)
-             && "Views count must be smaller than MAX_XR_VIEW_BUFFER_SIZE.");
+         && "Views count must be smaller than MAX_XR_VIEW_BUFFER_SIZE.");
 }
 
 void EyeProjectionAction::update(const Context& context) {
@@ -57,10 +57,10 @@ void EyeProjectionAction::update(const Context& context) {
 
   XrViewState viewState = {.type = XR_TYPE_VIEW_STATE};
   const XrViewLocateInfo viewLocateInfo = {
-      .type = XR_TYPE_VIEW_LOCATE_INFO,
-      .viewConfigurationType = _configurationType,
-      .displayTime = context.predictedDisplayTime,
-      .space = context.space};
+    .type = XR_TYPE_VIEW_LOCATE_INFO,
+    .viewConfigurationType = _configurationType,
+    .displayTime = context.predictedDisplayTime,
+    .space = context.space};
 
   std::array<XrView, static_cast<size_t>(ViewConfigurationType::MAX_VIEWS)> views;
   for (uint32_t i = 0; i < _viewCount; i++) {
@@ -69,7 +69,8 @@ void EyeProjectionAction::update(const Context& context) {
 
   uint32_t viewCountOutput;
   CHECK_XRCMD(xrLocateViews(context.session, &viewLocateInfo, &viewState, _viewCount,
-                            &viewCountOutput, views.data()), "Failed to xrLocateViews.");
+                            &viewCountOutput, views.data()),
+              "Failed to xrLocateViews.");
   if ((viewState.viewStateFlags & XR_VIEW_STATE_POSITION_VALID_BIT) == 0
       || (viewState.viewStateFlags & XR_VIEW_STATE_ORIENTATION_VALID_BIT) == 0) {
     if (_data.has_value()) {
@@ -94,20 +95,21 @@ const std::optional<common::EyeProjectionInfo>* EyeProjectionAction::getData() c
   return &_data;
 }
 
-EyeTrackingAction::EyeTrackingAction(XrInstance instance, XrSession session, XrActionSet actionSet) {
+EyeTrackingAction::EyeTrackingAction(
+    XrInstance instance, XrSession session, XrActionSet actionSet) {
   assert(instance != XR_NULL_HANDLE && "XrInstance which is the input parameter of EyeTrackingAction constructor cannot be XR_NULL_HANDLE.");
   assert(session != XR_NULL_HANDLE && "XrSession which is the input parameter of EyeTrackingAction constructor cannot be XR_NULL_HANDLE.");
   assert(actionSet != XR_NULL_HANDLE && "XrActionSet which is the input parameter of EyeTrackingAction constructor cannot be XR_NULL_HANDLE.");
 
   _eyeGazeAction =
-  Action::create(actionSet, XR_ACTION_TYPE_POSE_INPUT, "eye-gaze-pose", "EyeGazePose");
+      Action::create(actionSet, XR_ACTION_TYPE_POSE_INPUT, "eye-gaze-pose", "EyeGazePose");
 
   XrPath interactionProfilePath, gazePath;
   CHECK_XRCMD(xrStringToPath(instance, "/interaction_profiles/ext/eye_gaze_interaction",
-                           &interactionProfilePath),
-            "Failed to xrStringToPath.");
+                             &interactionProfilePath),
+              "Failed to xrStringToPath.");
   CHECK_XRCMD(xrStringToPath(instance, "/user/eyes_ext/input/gaze_ext/pose", &gazePath),
-            "Failed to xrStringToPath.");
+              "Failed to xrStringToPath.");
   XrActionSuggestedBinding binding{.action = _eyeGazeAction.getAction(), .binding = gazePath};
   XrInteractionProfileSuggestedBinding suggestedBinding{
     .type = XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING,
@@ -116,7 +118,7 @@ EyeTrackingAction::EyeTrackingAction(XrInstance instance, XrSession session, XrA
     .suggestedBindings = &binding,
   };
   CHECK_XRCMD(xrSuggestInteractionProfileBindings(instance, &suggestedBinding),
-            "Failed to xrSuggestInteractionProfileBindings.");
+              "Failed to xrSuggestInteractionProfileBindings.");
   XrSessionActionSetsAttachInfo attachInfo{
     .type = XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO,
     .countActionSets = 1,
@@ -124,23 +126,23 @@ EyeTrackingAction::EyeTrackingAction(XrInstance instance, XrSession session, XrA
   CHECK_XRCMD(xrAttachSessionActionSets(session, &attachInfo), "Failed to attach action sets.");
 
   _actionSpace = Space::create(session, _eyeGazeAction.getAction(),
-                             XrPosef{
+                               XrPosef{
                                  {0.f, 0.f, 0.f, 1.f},
                                  {}
-                             });
+  });
 }
 
 void EyeTrackingAction::update(const Context& context) {
-    if (!context.sessionFocused) {
-      _data.reset();
-      return;
-    }
-    assert(context.space != XR_NULL_HANDLE && "XrSpace which is the input parameter of EyeTrackingAction update method cannot be XR_NULL_HANDLE.");
+  if (!context.sessionFocused) {
+    _data.reset();
+    return;
+  }
+  assert(context.space != XR_NULL_HANDLE && "XrSpace which is the input parameter of EyeTrackingAction update method cannot be XR_NULL_HANDLE.");
 
-    XrSpaceLocation spaceLocation{XR_TYPE_SPACE_LOCATION};
-    XrResult result = xrLocateSpace(
+  XrSpaceLocation spaceLocation{XR_TYPE_SPACE_LOCATION};
+  XrResult result = xrLocateSpace(
       _actionSpace->getXrSpace(), context.space, context.predictedDisplayTime, &spaceLocation);
-    if ((spaceLocation.locationFlags & XR_VIEW_STATE_POSITION_VALID_BIT) == 0
+  if ((spaceLocation.locationFlags & XR_VIEW_STATE_POSITION_VALID_BIT) == 0
       || (spaceLocation.locationFlags & XR_VIEW_STATE_ORIENTATION_VALID_BIT) == 0) {
     _data.reset();
     return;

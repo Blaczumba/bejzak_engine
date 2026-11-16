@@ -4,18 +4,15 @@
 
 namespace xrw {
 
-XrInputManager::XrInputManager(XrInstance instance, XrSession session, XrViewConfigurationType viewConfigType)
+XrInputManager::XrInputManager(
+    XrInstance instance, XrSession session, XrViewConfigurationType viewConfigType)
   : _instance(instance), _viewConfigType(viewConfigType) {
   _actionSet = ActionSet::create(_instance, "eye-gaze", "EyeGaze", 1000);
 }
 
-std::optional<common::EyeProjectionInfo>* XrInputManager::getEyeProjectionInfo() const {
+std::optional<common::EyeProjectionInfo>* XrInputManager::getEyeProjectionInfo() const {}
 
-}
-
-std::optional<common::EyeTrackingInfo>* XrInputManager::getEyeTrackingInfo() const {
-
-}
+std::optional<common::EyeTrackingInfo>* XrInputManager::getEyeTrackingInfo() const {}
 
 void XrInputManager::pollActions(std::optional<XrSession> session) const {
   if (!session.has_value()) {
@@ -36,8 +33,6 @@ void XrInputManager::update(const InputAction::Context& context) {
   }
 }
 
-void XrInputMaregisterActionImpl(std::type_index typeIndex) {
-
-}
+void XrInputMaregisterActionImpl(std::type_index typeIndex) {}
 
 }  // namespace xrw

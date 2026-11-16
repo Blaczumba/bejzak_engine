@@ -1,8 +1,8 @@
 #pragma once
 
 #include <memory>
-#include <optional>
 #include <openxr/openxr.h>
+#include <optional>
 
 #include "common/input_manager/xr_input_manager.h"
 #include "openxr_wrapper/action/action.h"
@@ -11,7 +11,7 @@
 namespace xrw {
 
 class InputAction {
- public:
+public:
   struct Context {
     XrSession session = XR_NULL_HANDLE;
     XrSpace space = XR_NULL_HANDLE;
@@ -27,7 +27,7 @@ class InputAction {
 };
 
 class EyeProjectionAction final : public InputAction {
- public:
+public:
   EyeProjectionAction(XrViewConfigurationType configurationType);
 
   ~EyeProjectionAction() = default;
@@ -36,7 +36,7 @@ class EyeProjectionAction final : public InputAction {
 
   const void* getData() const noexcept override;
 
- private:
+private:
   std::optional<common::EyeProjectionInfo> _data;
 
   const XrViewConfigurationType _configurationType;
@@ -46,7 +46,7 @@ class EyeProjectionAction final : public InputAction {
 };
 
 class EyeTrackingAction final : public InputAction {
- public:
+public:
   EyeTrackingAction(XrInstance instance, XrSession session, XrActionSet actionSet);
 
   ~EyeTrackingAction() = default;
@@ -55,12 +55,11 @@ class EyeTrackingAction final : public InputAction {
 
   const void* getData() const noexcept override;
 
- private:
+private:
   std::optional<common::EyeTrackingInfo> _data;
 
   Action _eyeGazeAction;
   std::unique_ptr<Space> _actionSpace;
 };
-
 
 }  // namespace xrw

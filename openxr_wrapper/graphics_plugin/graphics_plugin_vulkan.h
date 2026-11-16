@@ -27,10 +27,13 @@
 namespace xrw {
 
 class GraphicsPluginVulkan final : public GraphicsPlugin {
-  GraphicsPluginVulkan(std::shared_ptr<Instance> instance, std::shared_ptr<DebugMessenger> debugMessenger,
-                       std::shared_ptr<PhysicalDevice> physicalDevice, PhysicalDeviceOptionalExtendedFeatures extendedFeatures, std::shared_ptr<LogicalDevice> logicalDevice) noexcept;
+  GraphicsPluginVulkan(
+      std::shared_ptr<Instance> instance, std::shared_ptr<DebugMessenger> debugMessenger,
+      std::shared_ptr<PhysicalDevice> physicalDevice,
+      PhysicalDeviceOptionalExtendedFeatures extendedFeatures,
+      std::shared_ptr<LogicalDevice> logicalDevice) noexcept;
 
- public:
+public:
   static std::unique_ptr<GraphicsPlugin> create(XrInstance xrInstance, XrSystemId xrSystemId);
 
   ~GraphicsPluginVulkan() override;
