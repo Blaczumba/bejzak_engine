@@ -54,6 +54,45 @@ XrViewConfigurationType getFirstSupportedViewConfigType(
   throw std::runtime_error("Could not find the supportded XrViewConfigurationType.");
 }
 
+struct SwapchainGroup {
+  XrViewConfigurationView configurationView;
+  std::vector<uint32_t> viewIndices;
+};
+
+bool areConfigurationViewsCompatible(
+    const XrViewConfigurationView& a, const XrViewConfigurationView& b) {
+  return a.recommendedImageRectWidth == b.recommendedImageRectWidth
+      && a.recommendedImageRectHeight == b.recommendedImageRectHeight
+      && a.recommendedSwapchainSampleCount == b.recommendedSwapchainSampleCount;
+}
+
+std::vector<SwapchainGroup> createSwapchainGroups(XrInstance instance, XrSystemId system, XrViewConfigurationType viewConfigType) {
+  uint32_t viewCount = 0;
+  CHECK_XRCMD(xrEnumerateViewConfigurationViews(
+      instance, system, viewConfigType, 0, &viewCount, nullptr),
+              "Failed to xrEnumerateViewConfigurationViews.");
+  lib::Buffer<XrViewConfigurationView> configurationViews(
+      viewCount, XrViewConfigurationView{XR_TYPE_VIEW_CONFIGURATION_VIEW});
+  CHECK_XRCMD(xrEnumerateViewConfigurationViews(instance, system, viewConfigType, viewCount,
+                                                &viewCount, configurationViews.data()),
+              "Failed to xrEnumerateViewConfigurationViews.");
+
+  std::vector<SwapchainGroup> swapchainGroups;
+  for (uint32_t i = 0; i < configurationViews.size(); i++) {
+    auto it = std::find_if(
+        swapchainGroups.begin(), swapchainGroups.end(), [&](const SwapchainGroup& swapchainGroup) {
+          return areConfigurationViewsCompatible(
+              swapchainGroup.configurationView, configurationViews[i]);
+        });
+    if (it == swapchainGroups.cend()) {
+      swapchainGroups.emplace_back(configurationViews[i], std::vector<uint32_t>{i});
+    } else {
+      it->viewIndices.push_back(i);
+    }
+  }
+  return swapchainGroups;
+}
+
 glm::mat4 createProjectionMatrix(const XrFovf& fov, float near, float far) {
   const float tanLeft = tanf(fov.angleLeft);
   const float tanRight = tanf(fov.angleRight);
@@ -294,8 +333,31 @@ std::unique_ptr<common::Presentation> Presentation::create(
       instance->getXrInstance(), xrsystem->getXrSystemId(),
       {XR_VIEW_CONFIGURATION_TYPE_PRIMARY_QUAD_VARJO, XR_VIEW_CONFIGURATION_TYPE_PRIMARY_STEREO,
        XR_VIEW_CONFIGURATION_TYPE_PRIMARY_MONO});
-  std::vector<Swapchain> swapchains =
-      SwapchainBuilder().withViewConfigType(viewConfigType).build(*session, *graphicsPlugin);
+  std::optional<int64_t> format = graphicsPlugin->selectFirstSupportedSwapchainFormat(session->getXrSession(),
+                                                                                      {common::Format::FORMAT_B8G8R8A8_SRGB, common::Format::FORMAT_R8G8B8A8_SRGB});
+  if (!format.has_value()) {
+    throw std::runtime_error("Could not find the supported format for the swapchain.");
+  }
+  const std::vector<SwapchainGroup> swapchainGroups = createSwapchainGroups(instance->getXrInstance(),
+                                                                            xrsystem->getXrSystemId(), viewConfigType);
+  std::vector<Swapchain> swapchains;
+  swapchains.reserve(swapchainGroups.size());
+  for (const SwapchainGroup& swapchainGroup : swapchainGroups) {
+    const XrViewConfigurationView& configurationView = swapchainGroup.configurationView;
+    std::span<const uint32_t> viewIndices = swapchainGroup.viewIndices;
+    Swapchain& swapchain = swapchains.emplace_back(SwapchainBuilder()
+        .withUsage(XR_SWAPCHAIN_USAGE_COLOR_ATTACHMENT_BIT)
+        .withFormat(*format)
+        .withSampleCount(configurationView.recommendedSwapchainSampleCount)
+        .withExtent(configurationView.recommendedImageRectWidth, configurationView.recommendedImageRectHeight)
+        .withFaceCount(1)
+        .withArraySize(static_cast<uint32_t>(viewIndices.size()))
+        .withMipCount(1)
+        .build(*session));
+    graphicsPlugin->createSwapchainContext(
+        swapchain.getSwapchain(), *format, configurationView.recommendedImageRectWidth,
+        configurationView.recommendedImageRectHeight, viewIndices.size());
+  }
   return std::unique_ptr<common::Presentation>(new Presentation(
       system, std::move(platform), std::move(graphicsPlugin), communicationLayer,
       std::move(instance), std::move(xrsystem), viewConfigType, std::move(session),
@@ -341,6 +403,7 @@ bool Presentation::beginFrame() {
     .type = XR_TYPE_FRAME_BEGIN_INFO,
   };
   CHECK_XRCMD(xrBeginFrame(_session->getXrSession(), &frameBeginInfo), "Failed to xrBeginFrame.");
+
   _predictedDisplayTime = frameState.predictedDisplayTime;
   _eyeProjection.update(
       _session->getXrSession(), _space->getXrSpace(), frameState.predictedDisplayTime);

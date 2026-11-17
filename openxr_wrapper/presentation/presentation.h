@@ -55,6 +55,7 @@ public:
   };
 
   struct Data {
+    // TODO: Change to std::inplace_vector.
     std::array<View, MAX_VIEWS> views;
     uint32_t viewCount;
 
@@ -169,6 +170,7 @@ private:
   // Transition to new presentation loop.
   struct LayerInfo {
     XrCompositionLayerProjection projectionLayer{XR_TYPE_COMPOSITION_LAYER_PROJECTION};
+    // TODO: Change to std::inplace_vector.
     std::array<XrCompositionLayerProjectionView, VIEWS_NUM> layerViews = {
       XrCompositionLayerProjectionView{XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW},
       XrCompositionLayerProjectionView{XR_TYPE_COMPOSITION_LAYER_PROJECTION_VIEW},

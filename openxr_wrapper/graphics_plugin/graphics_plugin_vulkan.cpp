@@ -11,6 +11,8 @@
 #include <vulkan/vulkan.h>
 
 #include "common/util/engine_exception.h"
+#include "common/format.h"
+#include "vulkan/lib/format.h"
 #include "lib/buffer/buffer.h"
 #include "openxr_wrapper/util/check.h"
 #include "presentation_graphics_communication/presentation_graphics_communication.h"
@@ -213,6 +215,18 @@ VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
   return VK_FALSE;
 }
 
+lib::Buffer<int64_t> enumerateSwapchainFormats(XrSession session) {
+  uint32_t formatCount = 0;
+  CHECK_XRCMD(xrEnumerateSwapchainFormats(session, 0, &formatCount, nullptr),
+              "Failed to xrEnumerateSwapchainFormats.");
+  lib::Buffer<int64_t> swapchainFormats(formatCount);
+  CHECK_XRCMD(xrEnumerateSwapchainFormats(
+      session, static_cast<uint32_t>(swapchainFormats.size()),
+      &formatCount, swapchainFormats.data()),
+              "Failed to xrEnumerateSwapchainFormats.");
+  return swapchainFormats;
+}
+
 }  // namespace
 
 GraphicsPluginVulkan::GraphicsPluginVulkan(
@@ -277,15 +291,24 @@ const XrBaseInStructure* GraphicsPluginVulkan::getGraphicsBinding() const {
   return reinterpret_cast<const XrBaseInStructure*>(&_graphicsBinding);
 }
 
-std::optional<int64_t> GraphicsPluginVulkan::selectSwapchainFormat(
-    std::span<const int64_t> runtimeFormats) const {
-  static constexpr VkFormat preferredFromats[] = {
-    VK_FORMAT_B8G8R8A8_SRGB, VK_FORMAT_R8G8B8A8_SRGB, VK_FORMAT_B8G8R8A8_UNORM,
-    VK_FORMAT_R8G8B8A8_UNORM};
+std::optional<int64_t> GraphicsPluginVulkan::selectFirstSupportedSwapchainFormat(XrSession session,
+                                                                                 std::initializer_list<common::Format> formats) const {
+  lib::Buffer<int64_t> swapchainFormats = enumerateSwapchainFormats(session);
+  for (common::Format format : formats) {
+    const int64_t translatedFormat = vlkn::translateFormat(format);
+    for (int64_t supportedFormat : swapchainFormats) {
+      if (translatedFormat == supportedFormat) {
+        return supportedFormat;
+      }
+    }
+  }
+  return std::nullopt;
+}
 
-  if (auto it = std::find_first_of(std::cbegin(preferredFromats), std::cend(preferredFromats),
-                                   std::cbegin(runtimeFormats), std::cend(runtimeFormats));
-      it != std::cend(preferredFromats)) {
+std::optional<int64_t> GraphicsPluginVulkan::isSupportedSwapchainFormat(XrSession session, common::Format format) const {
+  lib::Buffer<int64_t> swapchainFormats = enumerateSwapchainFormats(session);
+  auto it = std::find(swapchainFormats.cbegin(), swapchainFormats.cend(), vlkn::translateFormat(format));
+  if (it != swapchainFormats.cend()) {
     return *it;
   }
   return std::nullopt;

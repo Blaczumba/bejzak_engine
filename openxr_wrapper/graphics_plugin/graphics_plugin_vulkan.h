@@ -11,6 +11,7 @@
 #include <span>
 #include <unordered_map>
 #include <vector>
+#include <initializer_list>
 
 #include "common/abstractions/contexts.h"
 #include "common/abstractions/graphics_context.h"
@@ -40,8 +41,10 @@ public:
 
   const XrBaseInStructure* getGraphicsBinding() const override;
 
-  std::optional<int64_t> selectSwapchainFormat(
-      std::span<const int64_t> runtimeFormats) const override;
+  std::optional<int64_t> selectFirstSupportedSwapchainFormat(XrSession session,
+                                                             std::initializer_list<common::Format> formats) const override;
+
+  std::optional<int64_t> isSupportedSwapchainFormat(XrSession session, common::Format format) const override;
 
   void createSwapchainContext(XrSwapchain swapchain, int64_t format, uint32_t width,
                               uint32_t height, uint32_t layerCount) override;
